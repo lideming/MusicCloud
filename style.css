@@ -17,6 +17,13 @@ html, body {
     flex: 1;
 }
 
+.no-selection {
+    user-select: none;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+}
+
 #main-container {
     height: calc(100vh - 10px);
 }
@@ -39,6 +46,7 @@ html, body {
     height: 10px;
     background: #9a0007;
     transition: width .3s, transform .3s;
+    cursor: pointer;
 }
 
 #progressbar-fill {
@@ -47,7 +55,43 @@ html, body {
     background: #ff6659;
 }
 
-#bottombar.show #progressbar{
+#bottombar.show #progressbar {
     width: calc(100% - 100px);
-    transform: translate(50px, 5px);
+    transform: translate(50px, 10px);
+}
+
+#progress-outer {
+    position: absolute;
+    top: 9px;
+    height: 12px;
+    width: 100%;
+}
+
+#progressbar-label-cur, #progressbar-label-total {
+    width: 40px;
+    margin: 0 10px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1em;
+    transition: transform .3s;
+}
+
+#progressbar-label-cur {
+    float: left;
+    transform: translate(-50px, 0);
+}
+
+#progressbar-label-total {
+    float: right;
+    transform: translate(50px, 0);
+}
+
+.show #progressbar-label-cur, .show #progressbar-label-total {
+    transform: translate(0, 0);
+}
+
+#bottombar-btns {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
 }

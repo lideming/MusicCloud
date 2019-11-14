@@ -1,20 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>MusicCloud</title>
+    <title>Music Cloud</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div id="main-container">
+        <button onclick="playerCore.playUrl('test.mp3')">
+            Play it
+        </button>
     </div>
     <div id="bottombar">
+        <div id="progress-outer">
+            <div class="no-selection" id="progressbar-label-cur">--:--</div>
+            <div class="no-selection" id="progressbar-label-total">--:--</div>
+        </div>
         <div id="progressbar">
             <div id="progressbar-fill"></div>
+        </div>
+        <div id="bottombar-btns">
+            <button onclick="playerCore.play()">Play</button>
+            <button onclick="playerCore.pause()">Pause</button>
         </div>
     </div>
     <script src="main.js"></script>
 </body>
+
 </html>
