@@ -28,6 +28,25 @@ html, body {
     height: calc(100vh - 10px);
 }
 
+#sidebar, #content-outer {
+    float: left;
+    height: 100%;
+}
+
+#content-outer {
+    width: calc(100% - 200px);
+}
+
+#sidebar {
+    width: 200px;
+    background: #eee;
+}
+
+#main-container::after {
+    content: "";
+    clear: both;
+}
+
 #bottombar {
     height: 60px;
     transform: translate(0, 0);

@@ -11,9 +11,10 @@
 
 <body>
     <div id="main-container">
-        <button onclick="playerCore.playUrl('test.mp3')">
-            Play it
-        </button>
+        <div id="sidebar">
+
+        </div>
+        <div id="content-outer"></div>
     </div>
     <div id="bottombar">
         <div id="progress-outer">
@@ -26,6 +27,7 @@
         <div id="bottombar-btns">
             <button onclick="playerCore.play()">Play</button>
             <button onclick="playerCore.pause()">Pause</button>
+            <button onclick="ui.bottomBar.autoHide ^= true">Auto Hide</button>
         </div>
     </div>
     <script src="main.js"></script>

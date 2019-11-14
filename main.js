@@ -50,6 +50,7 @@ var ui = {
     bottomBar: new /** @class */ (function () {
         function class_3() {
             this.container = document.getElementById("bottombar");
+            this.autoHide = true;
         }
         class_3.prototype.toggle = function (state) {
             helpers.toggleClass(this.container, 'show', state);
@@ -66,7 +67,8 @@ var ui = {
             });
             bar.addEventListener('mouseleave', function () {
                 hideTimer.tryCancel();
-                hideTimer.timeout(200);
+                if (_this.autoHide)
+                    hideTimer.timeout(200);
             });
         };
         return class_3;
@@ -89,7 +91,8 @@ var ui = {
             var _this = this;
             var call = function (e) { cb(helpers.numLimit(e.offsetX / _this.container.clientWidth, 0, 1)); };
             this.container.addEventListener('mousedown', function (e) {
-                call(e);
+                if (e.buttons == 1)
+                    call(e);
             });
             this.container.addEventListener('mousemove', function (e) {
                 if (e.buttons == 1)
@@ -110,6 +113,8 @@ var PlayerCore = /** @class */ (function () {
         ui.progressBar.setProgressChangedCallback(function (x) {
             _this.audio.currentTime = x * _this.audio.duration;
         });
+        var ctx = new AudioContext();
+        var analyzer = ctx.createAnalyser();
     }
     PlayerCore.prototype.loadUrl = function (src) {
         this.audio.src = src;

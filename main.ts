@@ -43,6 +43,7 @@ var helpers = new class {
 var ui = {
     bottomBar: new class {
         container: HTMLElement = document.getElementById("bottombar");
+        autoHide = true;
 
         toggle(state?: boolean) {
             helpers.toggleClass(this.container, 'show', state);
@@ -58,7 +59,7 @@ var ui = {
             });
             bar.addEventListener('mouseleave', () => {
                 hideTimer.tryCancel();
-                hideTimer.timeout(200);
+                if (this.autoHide) hideTimer.timeout(200);
             });
         }
     },
@@ -78,7 +79,7 @@ var ui = {
         setProgressChangedCallback(cb: (percent: number) => void) {
             var call = (e) => { cb(helpers.numLimit(e.offsetX / this.container.clientWidth, 0, 1)); }
             this.container.addEventListener('mousedown', (e) => {
-                call(e);
+                if (e.buttons == 1) call(e);
             });
             this.container.addEventListener('mousemove', (e) => {
                 if (e.buttons == 1) call(e);
@@ -90,7 +91,7 @@ var ui = {
 ui.bottomBar.init();
 
 class PlayerCore {
-    private audio: HTMLAudioElement;
+    audio: HTMLAudioElement;
     constructor() {
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', (e) => {
@@ -99,6 +100,8 @@ class PlayerCore {
         ui.progressBar.setProgressChangedCallback((x) => {
             this.audio.currentTime = x * this.audio.duration;
         });
+        var ctx = new AudioContext();
+        var analyzer = ctx.createAnalyser();
     }
     loadUrl(src: string) {
         this.audio.src = src;
