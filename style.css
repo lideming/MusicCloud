@@ -1,0 +1,53 @@
+
+body {
+    margin: 0;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+.flex-container-v {
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+#main-container {
+    height: calc(100vh - 10px);
+}
+
+#bottombar {
+    height: 60px;
+    transform: translate(0, 0);
+    transition: transform .3s;
+    background: #ddd;
+    box-shadow: 0 -0px 3px #999;
+}
+
+#bottombar.show {
+    transform: translate(0, -50px);
+}
+
+#progressbar {
+    position: absolute;
+    width: 100%;
+    height: 10px;
+    background: #9a0007;
+    transition: width .3s, transform .3s;
+}
+
+#progressbar-fill {
+    width: 13%;
+    height: 100%;
+    background: #ff6659;
+}
+
+#bottombar.show #progressbar{
+    width: calc(100% - 100px);
+    transform: translate(50px, 5px);
+}
