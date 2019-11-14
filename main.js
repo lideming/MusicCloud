@@ -107,15 +107,17 @@ var PlayerCore = /** @class */ (function () {
     function PlayerCore() {
         var _this = this;
         this.audio = document.createElement('audio');
-        this.audio.addEventListener('timeupdate', function (e) {
-            ui.progressBar.setProg(_this.audio.currentTime, _this.audio.duration);
-        });
+        this.audio.addEventListener('timeupdate', function () { return _this.updateProgress(); });
+        this.audio.addEventListener('canplay', function () { return _this.updateProgress(); });
         ui.progressBar.setProgressChangedCallback(function (x) {
             _this.audio.currentTime = x * _this.audio.duration;
         });
         var ctx = new AudioContext();
         var analyzer = ctx.createAnalyser();
     }
+    PlayerCore.prototype.updateProgress = function () {
+        ui.progressBar.setProg(this.audio.currentTime, this.audio.duration);
+    };
     PlayerCore.prototype.loadUrl = function (src) {
         this.audio.src = src;
     };

@@ -40,6 +40,7 @@ html, body {
 #sidebar {
     width: 200px;
     background: #eee;
+    border-right: 1px solid #ccc;
 }
 
 #main-container::after {
@@ -52,7 +53,7 @@ html, body {
     transform: translate(0, 0);
     transition: transform .3s;
     background: #ddd;
-    box-shadow: 0 -0px 3px #999;
+    box-shadow: 0 0px 3px #999;
 }
 
 #bottombar.show {
@@ -69,7 +70,6 @@ html, body {
 }
 
 #progressbar-fill {
-    width: 13%;
     height: 100%;
     background: #ff6659;
 }

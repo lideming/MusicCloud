@@ -94,14 +94,16 @@ class PlayerCore {
     audio: HTMLAudioElement;
     constructor() {
         this.audio = document.createElement('audio');
-        this.audio.addEventListener('timeupdate', (e) => {
-            ui.progressBar.setProg(this.audio.currentTime, this.audio.duration);
-        });
+        this.audio.addEventListener('timeupdate', () => this.updateProgress());
+        this.audio.addEventListener('canplay', () => this.updateProgress());
         ui.progressBar.setProgressChangedCallback((x) => {
             this.audio.currentTime = x * this.audio.duration;
         });
         var ctx = new AudioContext();
         var analyzer = ctx.createAnalyser();
+    }
+    updateProgress() {
+        ui.progressBar.setProg(this.audio.currentTime, this.audio.duration);
     }
     loadUrl(src: string) {
         this.audio.src = src;
