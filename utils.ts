@@ -11,6 +11,7 @@ var utils = new class {
         return str;
     }
     formatTime(sec: number) {
+        if (isNaN(sec)) return '--:--';
         var sec = Math.floor(sec);
         var min = Math.floor(sec / 60);
         sec %= 60;
@@ -57,6 +58,7 @@ type BuildDomReturn = HTMLElement | Text | Node;
 interface BuildDomNode {
     tag: BuildDomTag;
     child?: BuildDomExpr[];
+    [key: string]: any;
 }
 
 utils.buildDOM = (() => {

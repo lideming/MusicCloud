@@ -42,7 +42,7 @@ html, body {
 
 #sidebar {
     width: 200px;
-    background: #eee;
+    background: #f8f8f8;
     border-right: 1px solid #ccc;
     padding: 10px 0;
 }
@@ -63,6 +63,15 @@ html, body {
 
 .item.active {
     background: #ddd;
+}
+
+.trackitem .artist, #bottombar-trackinfo .artist {
+    color: #888;
+}
+
+.trackitem .artist::before, #bottombar-trackinfo .artist::before {
+    content: " - ";
+    color: #888;
 }
 
 #main-container::after {
@@ -135,6 +144,7 @@ html, body {
     position: absolute;
     left: 10px;
     bottom: 10px;
+    width: calc(100% - 20px);
 }
 
 #bottombar-trackinfo {

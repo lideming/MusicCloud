@@ -35,6 +35,8 @@ var utils = new /** @class */ (function () {
         return str;
     };
     class_1.prototype.formatTime = function (sec) {
+        if (isNaN(sec))
+            return '--:--';
         var sec = Math.floor(sec);
         var min = Math.floor(sec / 60);
         sec %= 60;
@@ -206,7 +208,19 @@ var ui = {
             this.element = document.getElementById('bottombar-trackinfo');
         }
         class_5.prototype.setTrack = function (track) {
-            this.element.textContent = "Now playing: " + track.artist + " - " + track.name;
+            if (track) {
+                utils.replaceChild(this.element, utils.buildDOM({
+                    tag: 'span',
+                    child: [
+                        'Now Playing: ',
+                        { tag: 'span.name', textContent: track.name },
+                        { tag: 'span.artist', textContent: track.artist },
+                    ]
+                }));
+            }
+            else {
+                this.element.textContent = "";
+            }
         };
         return class_5;
     }()),
@@ -226,6 +240,8 @@ var ui = {
         class_6.prototype.setContent = function (arg) {
             this.removeCurrent();
             this.container.appendChild(arg.element);
+            if (arg.onShow)
+                arg.onShow();
             this.current = arg;
         };
         return class_6;
@@ -253,6 +269,8 @@ var PlayerCore = /** @class */ (function () {
     PlayerCore.prototype.next = function () {
         if (this.track._bind && this.track._bind.next)
             this.playTrack(this.track._bind.next);
+        else
+            this.setTrack(null);
     };
     PlayerCore.prototype.updateProgress = function () {
         ui.progressBar.setProg(this.audio.currentTime, this.audio.duration);
@@ -260,14 +278,18 @@ var PlayerCore = /** @class */ (function () {
     PlayerCore.prototype.loadUrl = function (src) {
         this.audio.src = src;
     };
-    PlayerCore.prototype.playUrl = function (src) {
-        this.loadUrl(src);
-        this.audio.play();
-    };
-    PlayerCore.prototype.playTrack = function (track) {
+    PlayerCore.prototype.setTrack = function (track) {
         this.track = track;
         ui.trackinfo.setTrack(track);
-        this.playUrl(track.url);
+        if (this.onTrackChanged)
+            this.onTrackChanged();
+        this.loadUrl(track ? track.url : "");
+    };
+    PlayerCore.prototype.playTrack = function (track) {
+        if (track === this.track)
+            return;
+        this.setTrack(track);
+        this.play();
     };
     PlayerCore.prototype.play = function () {
         this.audio.play();
@@ -313,7 +335,7 @@ var api = new /** @class */ (function () {
 var TrackList = /** @class */ (function () {
     function TrackList() {
     }
-    TrackList.prototype.fromObj = function (obj) {
+    TrackList.prototype.loadFromObj = function (obj) {
         this.name = obj.name;
         this.tracks = obj.tracks;
         var i = 0;
@@ -336,8 +358,8 @@ var TrackList = /** @class */ (function () {
                     case 0: return [4 /*yield*/, api.getJson(path)];
                     case 1:
                         obj = _a.sent();
-                        this.fromObj(obj);
-                        if (this.view)
+                        this.loadFromObj(obj);
+                        if (this.contentView)
                             this.renderCore();
                         return [2 /*return*/];
                 }
@@ -345,30 +367,45 @@ var TrackList = /** @class */ (function () {
         }); })();
     };
     TrackList.prototype.render = function (forceRerender) {
-        if (!this.view || forceRerender) {
-            if (!this.view)
-                this.view = { element: utils.buildDOM({ tag: 'div.tracklist' }) };
+        var _this = this;
+        if (!this.contentView || forceRerender) {
+            if (!this.contentView) {
+                this.contentView = {
+                    element: utils.buildDOM({ tag: 'div.tracklist' }),
+                    onShow: function () {
+                        playerCore.onTrackChanged = function () { return _this.trackChanged(); };
+                    },
+                    onRemove: function () { }
+                };
+            }
             this.renderCore();
         }
-        return this.view;
+        return this.contentView;
+    };
+    TrackList.prototype.getViewItem = function (pos) {
+        return this.viewItems ? this.viewItems[pos] : null;
+    };
+    TrackList.prototype.trackChanged = function () {
+        var track = playerCore.track;
+        if (this.curActive)
+            this.curActive.setActive(false);
+        this.curActive = null;
+        if (!track || track._bind.list !== this)
+            return;
+        var item = this.getViewItem(track._bind.location);
+        item.setActive(true);
+        this.curActive = item;
     };
     TrackList.prototype.renderCore = function () {
-        var box = this.view.element;
+        var box = this.contentView.element;
         if (this.tracks) {
             utils.clearChilds(box);
-            var _loop_1 = function (item) {
-                var ele = void 0;
-                box.appendChild(ele = utils.buildDOM({
-                    tag: 'div.item',
-                    textContent: item.name,
-                    onclick: function () {
-                        playerCore.playTrack(item);
-                    }
-                }));
-            };
+            this.viewItems = [];
             for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
-                var item = _a[_i];
-                _loop_1(item);
+                var t = _a[_i];
+                var item = new TrackViewItem(t);
+                this.viewItems.push(item);
+                box.appendChild(item.dom);
             }
         }
         else {
@@ -377,6 +414,26 @@ var TrackList = /** @class */ (function () {
         return box;
     };
     return TrackList;
+}());
+var TrackViewItem = /** @class */ (function () {
+    function TrackViewItem(item) {
+        this.track = item;
+        this.dom = utils.buildDOM({
+            tag: 'div.item.trackitem',
+            child: [
+                { tag: 'span.name', textContent: item.name },
+                { tag: 'span.artist', textContent: item.artist },
+            ],
+            onclick: function () {
+                playerCore.playTrack(item);
+            },
+            _item: this
+        });
+    }
+    TrackViewItem.prototype.setActive = function (active) {
+        utils.toggleClass(this.dom, 'active', active);
+    };
+    return TrackViewItem;
 }());
 var list = new TrackList();
 list.fetch('list');

@@ -49,7 +49,18 @@ var ui = {
     trackinfo: new class {
         element = document.getElementById('bottombar-trackinfo');
         setTrack(track: Track) {
-            this.element.textContent = `Now playing: ${track.artist} - ${track.name}`;
+            if (track) {
+                utils.replaceChild(this.element, utils.buildDOM({
+                    tag: 'span',
+                    child: [
+                        'Now Playing: ',
+                        { tag: 'span.name', textContent: track.name },
+                        { tag: 'span.artist', textContent: track.artist },
+                    ]
+                }));
+            } else {
+                this.element.textContent = "";
+            }
         }
     },
     content: new class {
@@ -64,6 +75,7 @@ var ui = {
         setContent(arg: ContentView) {
             this.removeCurrent();
             this.container.appendChild(arg.element);
+            if (arg.onShow) arg.onShow();
             this.current = arg;
         }
     }
@@ -71,6 +83,7 @@ var ui = {
 
 interface ContentView {
     element: HTMLElement,
+    onShow?: Action,
     onRemove?: Action
 }
 
@@ -79,6 +92,7 @@ ui.bottomBar.init();
 class PlayerCore {
     audio: HTMLAudioElement;
     track: Track;
+    onTrackChanged: Action;
     constructor() {
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.updateProgress());
@@ -98,6 +112,8 @@ class PlayerCore {
     next() {
         if (this.track._bind && this.track._bind.next)
             this.playTrack(this.track._bind.next);
+        else
+            this.setTrack(null);
     }
     updateProgress() {
         ui.progressBar.setProg(this.audio.currentTime, this.audio.duration);
@@ -105,14 +121,16 @@ class PlayerCore {
     loadUrl(src: string) {
         this.audio.src = src;
     }
-    playUrl(src: string) {
-        this.loadUrl(src);
-        this.audio.play();
-    }
-    playTrack(track: Track) {
+    setTrack(track: Track) {
         this.track = track;
         ui.trackinfo.setTrack(track);
-        this.playUrl(track.url);
+        if (this.onTrackChanged) this.onTrackChanged();
+        this.loadUrl(track ? track.url : "");
+    }
+    playTrack(track: Track) {
+        if (track === this.track) return;
+        this.setTrack(track);
+        this.play();
     }
     play() {
         this.audio.play();
@@ -151,9 +169,12 @@ interface Track {
 class TrackList {
     name: string;
     tracks: Track[];
-    view: ContentView;
+    viewItems: TrackViewItem[];
+    contentView: ContentView;
     fetching: Promise<any>;
-    fromObj(obj) {
+    private curActive: TrackViewItem;
+
+    loadFromObj(obj) {
         this.name = obj.name;
         this.tracks = obj.tracks;
         var i = 0;
@@ -168,36 +189,74 @@ class TrackList {
     fetch(path): Promise<void> {
         return this.fetching = (async () => {
             var obj = await api.getJson(path);
-            this.fromObj(obj);
-            if (this.view) this.renderCore();
+            this.loadFromObj(obj);
+            if (this.contentView) this.renderCore();
         })();
     }
     render(forceRerender?: boolean): ContentView {
-        if (!this.view || forceRerender) {
-            if (!this.view)
-                this.view = { element: utils.buildDOM({ tag: 'div.tracklist' }) as HTMLDivElement };
+        if (!this.contentView || forceRerender) {
+            if (!this.contentView) {
+                this.contentView = {
+                    element: utils.buildDOM({ tag: 'div.tracklist' }) as HTMLDivElement,
+                    onShow: () => {
+                        playerCore.onTrackChanged = () => this.trackChanged();
+                    },
+                    onRemove: () => { }
+                };
+            }
             this.renderCore();
         }
-        return this.view;
+        return this.contentView;
+    }
+    private getViewItem(pos: number) {
+        return this.viewItems ? this.viewItems[pos] : null;
+    }
+    private trackChanged() {
+        var track = playerCore.track;
+        if (this.curActive)
+            this.curActive.setActive(false);
+        this.curActive = null;
+        if (!track || track._bind.list !== this) return;
+        var item = this.getViewItem(track._bind.location);
+        item.setActive(true);
+        this.curActive = item;
     }
     private renderCore() {
-        var box = this.view.element as HTMLDivElement;
+        var box = this.contentView.element as HTMLDivElement;
         if (this.tracks) {
             utils.clearChilds(box);
-            for (const item of this.tracks) {
-                let ele: HTMLDivElement;
-                box.appendChild(ele = utils.buildDOM({
-                    tag: 'div.item',
-                    textContent: item.name,
-                    onclick: () => {
-                        playerCore.playTrack(item);
-                    }
-                }) as HTMLDivElement);
+            this.viewItems = [];
+            for (const t of this.tracks) {
+                let item = new TrackViewItem(t);
+                this.viewItems.push(item);
+                box.appendChild(item.dom);
             }
         } else {
             box.textContent = "Loading...";
         }
         return box;
+    }
+}
+
+class TrackViewItem {
+    track: Track;
+    dom: HTMLDivElement;
+    constructor(item: Track) {
+        this.track = item;
+        this.dom = utils.buildDOM({
+            tag: 'div.item.trackitem',
+            child: [
+                { tag: 'span.name', textContent: item.name },
+                { tag: 'span.artist', textContent: item.artist },
+            ],
+            onclick: () => {
+                playerCore.playTrack(item);
+            },
+            _item: this
+        }) as HTMLDivElement
+    }
+    setActive(active: boolean) {
+        utils.toggleClass(this.dom, 'active', active);
     }
 }
 
