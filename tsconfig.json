@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
+        "module": "none",
         "target": "es5",
         "jsx": "preserve",
-        "lib": ["dom", "es2015"]
+        "lib": ["dom", "es2015"],
+        "outFile": "main.js"
     },
     "exclude": [
         "node_modules",

@@ -12,9 +12,10 @@
 <body>
     <div id="main-container">
         <div id="sidebar">
-
+            <div class="item no-selection">Playlist</div>
         </div>
-        <div id="content-outer"></div>
+        <div id="content-outer">
+        </div>
     </div>
     <div id="bottombar">
         <div id="progress-outer">
@@ -28,6 +29,7 @@
             <button onclick="playerCore.play()">Play</button>
             <button onclick="playerCore.pause()">Pause</button>
             <button onclick="ui.bottomBar.autoHide ^= true">Auto Hide</button>
+            <div id="bottombar-trackinfo"></div>
         </div>
     </div>
     <script src="main.js"></script>

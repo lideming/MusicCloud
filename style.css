@@ -1,4 +1,6 @@
-
+* {
+    box-sizing: border-box;
+}
 body {
     margin: 0;
 }
@@ -25,12 +27,13 @@ html, body {
 }
 
 #main-container {
-    height: calc(100vh - 10px);
+    height: calc(100vh - 15px);
 }
 
 #sidebar, #content-outer {
     float: left;
     height: 100%;
+    overflow-y: auto;
 }
 
 #content-outer {
@@ -41,6 +44,25 @@ html, body {
     width: 200px;
     background: #eee;
     border-right: 1px solid #ccc;
+    padding: 10px 0;
+}
+
+.tracklist {
+    padding: 10px 0;
+}
+
+.item {
+    cursor: pointer;
+    padding: 10px;
+    /* background: #ddd; */
+}
+
+.item:hover {
+    background: #eee;
+}
+
+.item.active {
+    background: #ddd;
 }
 
 #main-container::after {
@@ -57,13 +79,13 @@ html, body {
 }
 
 #bottombar.show {
-    transform: translate(0, -50px);
+    transform: translate(0, -45px);
 }
 
 #progressbar {
     position: absolute;
     width: 100%;
-    height: 10px;
+    height: 15px;
     background: #9a0007;
     transition: width .3s, transform .3s;
     cursor: pointer;
@@ -76,7 +98,7 @@ html, body {
 
 #bottombar.show #progressbar {
     width: calc(100% - 100px);
-    transform: translate(50px, 10px);
+    transform: translate(50px, 7px);
 }
 
 #progress-outer {
@@ -113,4 +135,11 @@ html, body {
     position: absolute;
     left: 10px;
     bottom: 10px;
+}
+
+#bottombar-trackinfo {
+    display: inline;
+    /* position: absolute;
+    right: 10px;
+    bottom: 10px; */
 }
