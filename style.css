@@ -10,7 +10,7 @@ html, body {
     overflow: hidden;
 }
 
-.flex-container-v {
+.flexbox-v {
     display: flex;
     flex-direction: column;
 }
@@ -96,18 +96,24 @@ html, body {
     width: 100%;
     height: 15px;
     background: #9a0007;
-    transition: width .3s, transform .3s;
+    transition: width .3s, transform .3s, border-radius .3s;
     cursor: pointer;
+    overflow: hidden;
 }
 
 #progressbar-fill {
     height: 100%;
     background: #ff6659;
+    transition: border-radius .3s;
 }
 
 #bottombar.show #progressbar {
     width: calc(100% - 100px);
-    transform: translate(50px, 7px);
+    transform: translate(50px, 7.5px);
+}
+
+#bottombar.show #progressbar, #bottombar.show #progressbar-filxl {
+    border-radius: 12.5px;
 }
 
 #progress-outer {
@@ -143,7 +149,7 @@ html, body {
 #bottombar-btns {
     position: absolute;
     left: 10px;
-    bottom: 10px;
+    bottom: 8px;
     width: calc(100% - 20px);
 }
 

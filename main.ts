@@ -63,6 +63,10 @@ var ui = {
             }
         }
     },
+    sidebarList: new class {
+        container = document.getElementById('sidebar-list');
+
+    },
     content: new class {
         container = document.getElementById('content-outer');
         current: ContentView;
@@ -72,7 +76,7 @@ var ui = {
             if (cur.onRemove) cur.onRemove();
             if (cur.element) this.container.removeChild(cur.element);
         }
-        setContent(arg: ContentView) {
+        setCurrent(arg: ContentView) {
             this.removeCurrent();
             this.container.appendChild(arg.element);
             if (arg.onShow) arg.onShow();
@@ -166,13 +170,50 @@ interface Track {
     };
 }
 
+class View {
+    private _dom: HTMLElement
+    public get dom() {
+        return this._dom = this._dom || this.createDom();
+    }
+    protected createDom(): HTMLElement {
+        return document.createElement('div');
+    }
+    toggleClass(clsName: string, force?: boolean) {
+        utils.toggleClass(this.dom, clsName, force);
+    }
+}
+
+abstract class ListViewItem extends View {
+}
+
+class ListView<T extends ListViewItem> {
+    container: HTMLElement;
+    items: T[];
+    constructor(container: BuildDomExpr) {
+        this.container = utils.buildDOM(container) as HTMLElement;
+        this.items = [];
+    }
+    add(item: T) {
+        this.container.appendChild(item.dom);
+        this.items.push(item);
+    }
+    clear() {
+        utils.clearChilds(this.container);
+        this.items = [];
+    }
+    get(idx: number) {
+        return this.items[idx];
+    }
+}
+
 class TrackList {
     name: string;
     tracks: Track[];
-    viewItems: TrackViewItem[];
     contentView: ContentView;
     fetching: Promise<any>;
+    fetchError: any;
     private curActive: TrackViewItem;
+    listView: ListView<TrackViewItem>;
 
     loadFromObj(obj) {
         this.name = obj.name;
@@ -188,28 +229,30 @@ class TrackList {
     }
     fetch(path): Promise<void> {
         return this.fetching = (async () => {
-            var obj = await api.getJson(path);
-            this.loadFromObj(obj);
-            if (this.contentView) this.renderCore();
+            try {
+                var obj = await api.getJson(path);
+                this.loadFromObj(obj);
+            } catch (err) {
+                this.fetchError = err;
+            }
+            if (this.listView) this.renderUpdate();
         })();
     }
-    render(forceRerender?: boolean): ContentView {
-        if (!this.contentView || forceRerender) {
-            if (!this.contentView) {
+    createView(forceRerender?: boolean): ContentView {
+        if (!this.listView || forceRerender) {
+            if (!this.listView) {
+                this.listView = new ListView({ tag: 'div.tracklist' });
                 this.contentView = {
-                    element: utils.buildDOM({ tag: 'div.tracklist' }) as HTMLDivElement,
+                    element: this.listView.container,
                     onShow: () => {
                         playerCore.onTrackChanged = () => this.trackChanged();
                     },
                     onRemove: () => { }
                 };
             }
-            this.renderCore();
+            this.renderUpdate();
         }
         return this.contentView;
-    }
-    private getViewItem(pos: number) {
-        return this.viewItems ? this.viewItems[pos] : null;
     }
     private trackChanged() {
         var track = playerCore.track;
@@ -217,49 +260,55 @@ class TrackList {
             this.curActive.setActive(false);
         this.curActive = null;
         if (!track || track._bind.list !== this) return;
-        var item = this.getViewItem(track._bind.location);
+        var item = this.listView.get(track._bind.location);
         item.setActive(true);
         this.curActive = item;
     }
-    private renderCore() {
-        var box = this.contentView.element as HTMLDivElement;
+    private renderUpdate() {
+        var listView = this.listView;
         if (this.tracks) {
-            utils.clearChilds(box);
-            this.viewItems = [];
+            listView.clear();
             for (const t of this.tracks) {
                 let item = new TrackViewItem(t);
-                this.viewItems.push(item);
-                box.appendChild(item.dom);
+                listView.add(item);
             }
         } else {
-            box.textContent = "Loading...";
+            listView.clear();
+            listView.container.textContent = this.fetchError || "Loading...";
         }
-        return box;
     }
 }
 
-class TrackViewItem {
+class TrackViewItem extends ListViewItem {
     track: Track;
     dom: HTMLDivElement;
     constructor(item: Track) {
+        super();
         this.track = item;
-        this.dom = utils.buildDOM({
+    }
+    createDom() {
+        var track = this.track;
+        return utils.buildDOM({
             tag: 'div.item.trackitem',
             child: [
-                { tag: 'span.name', textContent: item.name },
-                { tag: 'span.artist', textContent: item.artist },
+                { tag: 'span.name', textContent: track.name },
+                { tag: 'span.artist', textContent: track.artist },
             ],
             onclick: () => {
-                playerCore.playTrack(item);
+                playerCore.playTrack(track);
             },
             _item: this
         }) as HTMLDivElement
     }
     setActive(active: boolean) {
-        utils.toggleClass(this.dom, 'active', active);
+        this.toggleClass('active', active);
     }
+}
+
+class ListIndex {
+
 }
 
 var list = new TrackList();
 list.fetch('list');
-ui.content.setContent(list.render());
+ui.content.setCurrent(list.createView());

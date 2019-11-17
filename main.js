@@ -112,6 +112,19 @@ utils.buildDOM = (function () {
     };
 })();
 /// <reference path="utils.ts" />
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -224,11 +237,17 @@ var ui = {
         };
         return class_5;
     }()),
-    content: new /** @class */ (function () {
+    sidebarList: new /** @class */ (function () {
         function class_6() {
+            this.container = document.getElementById('sidebar-list');
+        }
+        return class_6;
+    }()),
+    content: new /** @class */ (function () {
+        function class_7() {
             this.container = document.getElementById('content-outer');
         }
-        class_6.prototype.removeCurrent = function () {
+        class_7.prototype.removeCurrent = function () {
             var cur = this.current;
             if (!cur)
                 return;
@@ -237,14 +256,14 @@ var ui = {
             if (cur.element)
                 this.container.removeChild(cur.element);
         };
-        class_6.prototype.setContent = function (arg) {
+        class_7.prototype.setCurrent = function (arg) {
             this.removeCurrent();
             this.container.appendChild(arg.element);
             if (arg.onShow)
                 arg.onShow();
             this.current = arg;
         };
-        return class_6;
+        return class_7;
     }())
 };
 ui.bottomBar.init();
@@ -301,10 +320,10 @@ var PlayerCore = /** @class */ (function () {
 }());
 var playerCore = new PlayerCore();
 var api = new /** @class */ (function () {
-    function class_7() {
+    function class_8() {
         this.baseUrl = 'api/';
     }
-    class_7.prototype.getJson = function (path) {
+    class_8.prototype.getJson = function (path) {
         return __awaiter(this, void 0, void 0, function () {
             var resp;
             return __generator(this, function (_a) {
@@ -318,7 +337,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_7.prototype.getListAsync = function () {
+    class_8.prototype.getListAsync = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -330,7 +349,50 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    return class_7;
+    return class_8;
+}());
+var View = /** @class */ (function () {
+    function View() {
+    }
+    Object.defineProperty(View.prototype, "dom", {
+        get: function () {
+            return this._dom = this._dom || this.createDom();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    View.prototype.createDom = function () {
+        return document.createElement('div');
+    };
+    View.prototype.toggleClass = function (clsName, force) {
+        utils.toggleClass(this.dom, clsName, force);
+    };
+    return View;
+}());
+var ListViewItem = /** @class */ (function (_super) {
+    __extends(ListViewItem, _super);
+    function ListViewItem() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    return ListViewItem;
+}(View));
+var ListView = /** @class */ (function () {
+    function ListView(container) {
+        this.container = utils.buildDOM(container);
+        this.items = [];
+    }
+    ListView.prototype.add = function (item) {
+        this.container.appendChild(item.dom);
+        this.items.push(item);
+    };
+    ListView.prototype.clear = function () {
+        utils.clearChilds(this.container);
+        this.items = [];
+    };
+    ListView.prototype.get = function (idx) {
+        return this.items[idx];
+    };
+    return ListView;
 }());
 var TrackList = /** @class */ (function () {
     function TrackList() {
@@ -352,38 +414,44 @@ var TrackList = /** @class */ (function () {
     TrackList.prototype.fetch = function (path) {
         var _this = this;
         return this.fetching = (function () { return __awaiter(_this, void 0, void 0, function () {
-            var obj;
+            var obj, err_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, api.getJson(path)];
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, api.getJson(path)];
                     case 1:
                         obj = _a.sent();
                         this.loadFromObj(obj);
-                        if (this.contentView)
-                            this.renderCore();
+                        return [3 /*break*/, 3];
+                    case 2:
+                        err_1 = _a.sent();
+                        this.fetchError = err_1;
+                        return [3 /*break*/, 3];
+                    case 3:
+                        if (this.listView)
+                            this.renderUpdate();
                         return [2 /*return*/];
                 }
             });
         }); })();
     };
-    TrackList.prototype.render = function (forceRerender) {
+    TrackList.prototype.createView = function (forceRerender) {
         var _this = this;
-        if (!this.contentView || forceRerender) {
-            if (!this.contentView) {
+        if (!this.listView || forceRerender) {
+            if (!this.listView) {
+                this.listView = new ListView({ tag: 'div.tracklist' });
                 this.contentView = {
-                    element: utils.buildDOM({ tag: 'div.tracklist' }),
+                    element: this.listView.container,
                     onShow: function () {
                         playerCore.onTrackChanged = function () { return _this.trackChanged(); };
                     },
                     onRemove: function () { }
                 };
             }
-            this.renderCore();
+            this.renderUpdate();
         }
         return this.contentView;
-    };
-    TrackList.prototype.getViewItem = function (pos) {
-        return this.viewItems ? this.viewItems[pos] : null;
     };
     TrackList.prototype.trackChanged = function () {
         var track = playerCore.track;
@@ -392,49 +460,58 @@ var TrackList = /** @class */ (function () {
         this.curActive = null;
         if (!track || track._bind.list !== this)
             return;
-        var item = this.getViewItem(track._bind.location);
+        var item = this.listView.get(track._bind.location);
         item.setActive(true);
         this.curActive = item;
     };
-    TrackList.prototype.renderCore = function () {
-        var box = this.contentView.element;
+    TrackList.prototype.renderUpdate = function () {
+        var listView = this.listView;
         if (this.tracks) {
-            utils.clearChilds(box);
-            this.viewItems = [];
+            listView.clear();
             for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
                 var t = _a[_i];
                 var item = new TrackViewItem(t);
-                this.viewItems.push(item);
-                box.appendChild(item.dom);
+                listView.add(item);
             }
         }
         else {
-            box.textContent = "Loading...";
+            listView.clear();
+            listView.container.textContent = this.fetchError || "Loading...";
         }
-        return box;
     };
     return TrackList;
 }());
-var TrackViewItem = /** @class */ (function () {
+var TrackViewItem = /** @class */ (function (_super) {
+    __extends(TrackViewItem, _super);
     function TrackViewItem(item) {
-        this.track = item;
-        this.dom = utils.buildDOM({
+        var _this = _super.call(this) || this;
+        _this.track = item;
+        return _this;
+    }
+    TrackViewItem.prototype.createDom = function () {
+        var track = this.track;
+        return utils.buildDOM({
             tag: 'div.item.trackitem',
             child: [
-                { tag: 'span.name', textContent: item.name },
-                { tag: 'span.artist', textContent: item.artist },
+                { tag: 'span.name', textContent: track.name },
+                { tag: 'span.artist', textContent: track.artist },
             ],
             onclick: function () {
-                playerCore.playTrack(item);
+                playerCore.playTrack(track);
             },
             _item: this
         });
-    }
+    };
     TrackViewItem.prototype.setActive = function (active) {
-        utils.toggleClass(this.dom, 'active', active);
+        this.toggleClass('active', active);
     };
     return TrackViewItem;
+}(ListViewItem));
+var ListIndex = /** @class */ (function () {
+    function ListIndex() {
+    }
+    return ListIndex;
 }());
 var list = new TrackList();
 list.fetch('list');
-ui.content.setContent(list.render());
+ui.content.setCurrent(list.createView());
