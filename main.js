@@ -111,7 +111,7 @@ utils.buildDOM = (function () {
         return buildDomCore(obj, 32);
     };
 })();
-/// <reference path="utils.ts" />
+// TypeScript 3.7 is required.
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -161,12 +161,23 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+// We don't need to use React and Vue.js ;)
+/// <reference path="utils.ts" />
+/// <reference path="apidef.d.ts" />
 var ui = {
     bottomBar: new /** @class */ (function () {
         function class_3() {
             this.container = document.getElementById("bottombar");
+            this.btnAutoHide = document.getElementById('btnAutoHide');
             this.autoHide = true;
         }
+        class_3.prototype.setPinned = function (val) {
+            val = (val !== null && val !== void 0 ? val : !this.autoHide);
+            this.autoHide = val;
+            utils.toggleClass(document.body, 'bottompinned', !val);
+            if (val)
+                this.toggle(true);
+        };
         class_3.prototype.toggle = function (state) {
             utils.toggleClass(this.container, 'show', state);
         };
@@ -436,29 +447,27 @@ var TrackList = /** @class */ (function () {
             });
         }); })();
     };
-    TrackList.prototype.createView = function (forceRerender) {
+    TrackList.prototype.createView = function () {
         var _this = this;
-        if (!this.listView || forceRerender) {
-            if (!this.listView) {
-                this.listView = new ListView({ tag: 'div.tracklist' });
-                this.contentView = {
-                    element: this.listView.container,
-                    onShow: function () {
-                        playerCore.onTrackChanged = function () { return _this.trackChanged(); };
-                    },
-                    onRemove: function () { }
-                };
-            }
+        if (!this.listView) {
+            this.listView = new ListView({ tag: 'div.tracklist' });
+            this.contentView = {
+                element: this.listView.container,
+                onShow: function () {
+                    playerCore.onTrackChanged = function () { return _this.trackChanged(); };
+                },
+                onRemove: function () { }
+            };
             this.renderUpdate();
         }
         return this.contentView;
     };
     TrackList.prototype.trackChanged = function () {
+        var _a, _b;
         var track = playerCore.track;
-        if (this.curActive)
-            this.curActive.setActive(false);
+        (_a = this.curActive) === null || _a === void 0 ? void 0 : _a.setActive(false);
         this.curActive = null;
-        if (!track || track._bind.list !== this)
+        if (((_b = track) === null || _b === void 0 ? void 0 : _b._bind.list) !== this)
             return;
         var item = this.listView.get(track._bind.location);
         item.setActive(true);
@@ -491,7 +500,7 @@ var TrackViewItem = /** @class */ (function (_super) {
     TrackViewItem.prototype.createDom = function () {
         var track = this.track;
         return utils.buildDOM({
-            tag: 'div.item.trackitem',
+            tag: 'div.item.trackitem.no-selection',
             child: [
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },

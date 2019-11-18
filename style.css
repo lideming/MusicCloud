@@ -30,6 +30,10 @@ html, body {
     height: calc(100vh - 15px);
 }
 
+.bottompinned #main-container {
+    height: calc(100vh - 60px);
+}
+
 #sidebar, #content-outer {
     float: left;
     height: 100%;
@@ -55,10 +59,16 @@ html, body {
     cursor: pointer;
     padding: 10px;
     /* background: #ddd; */
+    transition: transform .3s;
 }
 
 .item:hover {
     background: #eee;
+}
+
+.item:active {
+    transition: transform .07s;
+    transform: scale(.98);
 }
 
 .item.active {
@@ -80,11 +90,20 @@ html, body {
 }
 
 #bottombar {
+    position: fixed;
+    bottom: -45px;
+    width: 100%;
     height: 60px;
     transform: translate(0, 0);
     transition: transform .3s;
     background: #ddd;
     box-shadow: 0 0px 3px #999;
+}
+
+.bottompinned #bottombar {
+    box-sizing: content-box;
+    box-shadow: none;
+    border-top: 1px solid #ccc;
 }
 
 #bottombar.show {

@@ -1,10 +1,22 @@
+// TypeScript 3.7 is required.
+
+// We don't need to use React and Vue.js ;)
+
 /// <reference path="utils.ts" />
+/// <reference path="apidef.d.ts" />
+
 
 var ui = {
     bottomBar: new class {
         container: HTMLElement = document.getElementById("bottombar");
-        autoHide = true;
-
+        btnAutoHide: HTMLElement = document.getElementById('btnAutoHide');
+        private autoHide = true;
+        setPinned(val?: boolean) {
+            val = val ?? !this.autoHide;
+            this.autoHide = val;
+            utils.toggleClass(document.body, 'bottompinned', !val);
+            if (val) this.toggle(true);
+        }
         toggle(state?: boolean) {
             utils.toggleClass(this.container, 'show', state);
         }
@@ -158,11 +170,7 @@ var api = new class {
     }
 }
 
-interface Track {
-    id: number;
-    name: string;
-    artist: string;
-    url: string;
+interface Track extends Api.Track {
     _bind?: {
         location?: number;
         list?: TrackList;
@@ -215,7 +223,7 @@ class TrackList {
     private curActive: TrackViewItem;
     listView: ListView<TrackViewItem>;
 
-    loadFromObj(obj) {
+    loadFromObj(obj: Api.TrackList) {
         this.name = obj.name;
         this.tracks = obj.tracks;
         var i = 0;
@@ -227,7 +235,7 @@ class TrackList {
         }
         return this;
     }
-    fetch(path): Promise<void> {
+    fetch(path: string): Promise<void> {
         return this.fetching = (async () => {
             try {
                 var obj = await api.getJson(path);
@@ -238,28 +246,25 @@ class TrackList {
             if (this.listView) this.renderUpdate();
         })();
     }
-    createView(forceRerender?: boolean): ContentView {
-        if (!this.listView || forceRerender) {
-            if (!this.listView) {
-                this.listView = new ListView({ tag: 'div.tracklist' });
-                this.contentView = {
-                    element: this.listView.container,
-                    onShow: () => {
-                        playerCore.onTrackChanged = () => this.trackChanged();
-                    },
-                    onRemove: () => { }
-                };
-            }
+    createView(): ContentView {
+        if (!this.listView) {
+            this.listView = new ListView({ tag: 'div.tracklist' });
+            this.contentView = {
+                element: this.listView.container,
+                onShow: () => {
+                    playerCore.onTrackChanged = () => this.trackChanged();
+                },
+                onRemove: () => { }
+            };
             this.renderUpdate();
         }
         return this.contentView;
     }
     private trackChanged() {
         var track = playerCore.track;
-        if (this.curActive)
-            this.curActive.setActive(false);
+        this.curActive?.setActive(false);
         this.curActive = null;
-        if (!track || track._bind.list !== this) return;
+        if (track?._bind.list !== this) return;
         var item = this.listView.get(track._bind.location);
         item.setActive(true);
         this.curActive = item;
@@ -289,7 +294,7 @@ class TrackViewItem extends ListViewItem {
     createDom() {
         var track = this.track;
         return utils.buildDOM({
-            tag: 'div.item.trackitem',
+            tag: 'div.item.trackitem.no-selection',
             child: [
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },
@@ -305,8 +310,9 @@ class TrackViewItem extends ListViewItem {
     }
 }
 
-class ListIndex {
 
+class ListIndex {
+    
 }
 
 var list = new TrackList();
