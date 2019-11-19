@@ -47,6 +47,11 @@ var utils = new class {
         this.clearChilds(node);
         if (newChild) node.appendChild(newChild);
     }
+    sleepAsync(time: number): Promise<void> {
+        return new Promise((resolve) => {
+            setTimeout(resolve, time);
+        });
+    }
 }
 
 type BuildDomExpr = BuildDomTag | BuildDomNode | HTMLElement | Node;

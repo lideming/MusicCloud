@@ -178,3 +178,26 @@ html, body {
     right: 10px;
     bottom: 10px; */
 }
+
+.loading-indicator {
+    margin: 1em;
+    text-align: center;
+    white-space: pre-wrap;
+}
+
+.loading-indicator.running {
+    animation: loading .5s alternate infinite;
+}
+
+.loading-indicator.error {
+    color: red;
+}
+
+@keyframes loading{
+    0% {
+        color: black;
+    }
+    100% {
+        color: white;
+    }
+}

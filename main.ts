@@ -1,6 +1,6 @@
 // TypeScript 3.7 is required.
 
-// We don't need to use React and Vue.js ;)
+// Why do we need to use React and Vue.js? ;)
 
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
@@ -9,12 +9,13 @@
 var ui = {
     bottomBar: new class {
         container: HTMLElement = document.getElementById("bottombar");
-        btnAutoHide: HTMLElement = document.getElementById('btnAutoHide');
+        btnPin: HTMLElement = document.getElementById('btnPin');
         private autoHide = true;
         setPinned(val?: boolean) {
             val = val ?? !this.autoHide;
             this.autoHide = val;
             utils.toggleClass(document.body, 'bottompinned', !val);
+            this.btnPin.textContent = !val ? 'Pinned' : 'Pin';
             if (val) this.toggle(true);
         }
         toggle(state?: boolean) {
@@ -33,6 +34,7 @@ var ui = {
                 hideTimer.tryCancel();
                 if (this.autoHide) hideTimer.timeout(200);
             });
+            this.btnPin.addEventListener('click', () => this.setPinned());
         }
     },
     progressBar: new class {
@@ -86,11 +88,11 @@ var ui = {
             const cur = this.current;
             if (!cur) return;
             if (cur.onRemove) cur.onRemove();
-            if (cur.element) this.container.removeChild(cur.element);
+            if (cur.dom) this.container.removeChild(cur.dom);
         }
         setCurrent(arg: ContentView) {
             this.removeCurrent();
-            this.container.appendChild(arg.element);
+            this.container.appendChild(arg.dom);
             if (arg.onShow) arg.onShow();
             this.current = arg;
         }
@@ -108,7 +110,7 @@ var ui = {
 };
 
 interface ContentView {
-    element: HTMLElement,
+    dom: HTMLElement,
     onShow?: Action,
     onRemove?: Action
 }
@@ -170,8 +172,13 @@ var playerCore = new PlayerCore();
 
 var api = new class {
     baseUrl = 'api/';
-    async getJson(path): Promise<any> {
+    debugSleep = 500;
+    async getJson(path, options?: { expectedOK?: boolean }): Promise<any> {
+        options = options || {};
+        if (this.debugSleep) await utils.sleepAsync(this.debugSleep - 400 + Math.random() * 800)
         var resp = await fetch(this.baseUrl + path);
+        if (options.expectedOK !== false && resp.status != 200)
+            throw new Error('Remote response HTTP status ' + resp.status);
         return await resp.json();
     }
     async getListAsync(id: number): Promise<Api.TrackList> {
@@ -191,7 +198,7 @@ interface Track extends Api.Track {
 }
 
 class View {
-    private _dom: HTMLElement
+    protected _dom: HTMLElement
     public get dom() {
         return this._dom = this._dom || this.createDom();
     }
@@ -228,6 +235,10 @@ class ListView<T extends ListViewItem> {
     get(idx: number) {
         return this.items[idx];
     }
+    clearAndReplaceDom(dom: Node) {
+        this.clear();
+        this.container.appendChild(dom);
+    }
 }
 
 class TrackList {
@@ -235,9 +246,9 @@ class TrackList {
     tracks: Track[];
     contentView: ContentView;
     fetching: Promise<any>;
-    fetchError: any;
-    private curActive: TrackViewItem;
+    curActive = new ItemActiveHelper<TrackViewItem>();
     listView: ListView<TrackViewItem>;
+    loadIndicator = new LoadingIndicator();
 
     loadFromObj(obj: Api.TrackList) {
         this.name = obj.name;
@@ -255,12 +266,18 @@ class TrackList {
         var func: () => Promise<Api.TrackList>;
         if (typeof arg == 'number') func = () => api.getListAsync(arg as number);
         else func = arg;
+        this.loadIndicator.reset();
         return this.fetching = (async () => {
             try {
                 var obj = await func();
                 this.loadFromObj(obj);
             } catch (err) {
-                this.fetchError = err;
+                this.loadIndicator.status = 'error';
+                this.loadIndicator.content = 'Oh no! Something just goes wrong:\n' + err
+                    + '\nClick here to retry';
+                this.loadIndicator.onclick = () => {
+                    this.fetch(arg);
+                };
             }
             if (this.listView) this.updateView();
         })();
@@ -269,36 +286,35 @@ class TrackList {
         if (!this.contentView) {
             this.listView = new ListView({ tag: 'div.tracklist' });
             this.contentView = {
-                element: this.listView.container,
+                dom: this.listView.container,
                 onShow: () => {
                     playerCore.onTrackChanged = () => this.trackChanged();
+                    this.updateView();
                 },
                 onRemove: () => { }
             };
-            this.updateView();
+            // this.updateView();
         }
         return this.contentView;
     }
     private trackChanged() {
         var track = playerCore.track;
-        this.curActive?.setActive(false);
-        this.curActive = null;
-        if (track?._bind.list !== this) return;
-        var item = this.listView.get(track._bind.location);
-        item.setActive(true);
-        this.curActive = item;
+        var item = (track?._bind.list === this) ? this.listView.get(track._bind.location) : null;
+        this.curActive.set(item);
     }
     private updateView() {
         var listView = this.listView;
-        if (this.tracks) {
-            listView.clear();
-            for (const t of this.tracks) {
-                let item = new TrackViewItem(t);
-                listView.add(item);
-            }
-        } else {
-            listView.clear();
-            listView.container.textContent = this.fetchError || "Loading...";
+        if (!this.tracks) {
+            listView.clearAndReplaceDom(this.loadIndicator.dom);
+            return;
+        }
+        // Well... currently, we just rebuild the DOM.
+        listView.clear();
+        for (const t of this.tracks) {
+            let item = new TrackViewItem(t);
+            if (playerCore.track && t.id === playerCore.track.id)
+                this.curActive.set(item);
+            listView.add(item);
         }
     }
 }
@@ -324,31 +340,70 @@ class TrackViewItem extends ListViewItem {
             _item: this
         }) as HTMLDivElement
     }
-    setActive(active: boolean) {
-        this.toggleClass('active', active);
+}
+
+class ItemActiveHelper<T extends ListViewItem> {
+    funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
+    current: T;
+    set(item: T) {
+        if (this.current) this.funcSetActive(this.current, false);
+        this.current = item;
+        if (this.current) this.funcSetActive(this.current, true);
     }
 }
 
+type LoadingIndicatorState = 'running' | 'error';
+
+class LoadingIndicator extends View {
+    private _status: LoadingIndicatorState = 'running';
+    get status() { return this._status; }
+    set status(val: LoadingIndicatorState) {
+        this._status = val;
+        this.toggleClass('running', val == 'running');
+        this.toggleClass('error', val == 'error');
+    }
+    private _text: string;
+    get content() { return this._text; }
+    set content(val: string) { this._text = val; this.dom.textContent = val; }
+    onclick: (e: MouseEvent) => void;
+    reset() {
+        this.status = 'running';
+        this.content = 'Loading...';
+    }
+    createDom() {
+        this._dom = utils.buildDOM({
+            tag: 'div.loading-indicator',
+            onclick: (e) => this.onclick && this.onclick(e)
+        }) as HTMLElement;
+        this.reset();
+        return this._dom;
+    }
+}
 
 class ListIndex {
     lists: Api.TrackListInfo[];
     listView: ListView<ListIndexViewItem>;
-    curActive: ListIndexViewItem;
+    curActive = new ItemActiveHelper<ListIndexViewItem>();
     dom = document.getElementById('sidebar-list');
+    loadIndicator = new LoadingIndicator();
     async fetch() {
         this.listView = new ListView(this.dom);
         this.listView.onItemClicked = (item) => {
-            this.curActive?.toggleClass('active', false);
-            item.toggleClass('active', true);
-            this.curActive = item;
+            this.curActive.set(item);
             ui.content.openTracklist(item.listInfo.id);
         }
+        this.updateView();
         var index = await api.getListIndexAsync();
         this.lists = index.lists;
         this.updateView();
+        if (this.lists.length > 0) this.listView.onItemClicked(this.listView.items[0]);
     }
     updateView() {
         this.listView.clear();
+        if (!this.lists) {
+            this.listView.clearAndReplaceDom(this.loadIndicator.dom);
+            return;
+        }
         for (const item of this.lists) {
             this.listView.add(new ListIndexViewItem(this, item))
         }
