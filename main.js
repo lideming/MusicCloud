@@ -257,6 +257,7 @@ var ui = {
     content: new /** @class */ (function () {
         function class_7() {
             this.container = document.getElementById('content-outer');
+            this.listCache = {};
         }
         class_7.prototype.removeCurrent = function () {
             var cur = this.current;
@@ -273,6 +274,15 @@ var ui = {
             if (arg.onShow)
                 arg.onShow();
             this.current = arg;
+        };
+        class_7.prototype.openTracklist = function (id) {
+            var list = this.listCache[id];
+            if (!list) {
+                list = new TrackList();
+                list.fetch(id);
+                this.listCache[id] = list;
+            }
+            this.setCurrent(list.createView());
         };
         return class_7;
     }())
@@ -348,14 +358,22 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_8.prototype.getListAsync = function () {
+    class_8.prototype.getListAsync = function (id) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, new TrackList().fetch('list')];
-                    case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                    case 0: return [4 /*yield*/, this.getJson('lists/' + id)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    class_8.prototype.getListIndexAsync = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getJson('lists/index')];
+                    case 1: return [2 /*return*/, _a.sent()];
                 }
             });
         });
@@ -393,6 +411,11 @@ var ListView = /** @class */ (function () {
         this.items = [];
     }
     ListView.prototype.add = function (item) {
+        var _this = this;
+        item.dom.addEventListener('click', function () {
+            if (_this.onItemClicked)
+                _this.onItemClicked(item);
+        });
         this.container.appendChild(item.dom);
         this.items.push(item);
     };
@@ -422,15 +445,20 @@ var TrackList = /** @class */ (function () {
         }
         return this;
     };
-    TrackList.prototype.fetch = function (path) {
+    TrackList.prototype.fetch = function (arg) {
         var _this = this;
+        var func;
+        if (typeof arg == 'number')
+            func = function () { return api.getListAsync(arg); };
+        else
+            func = arg;
         return this.fetching = (function () { return __awaiter(_this, void 0, void 0, function () {
             var obj, err_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, api.getJson(path)];
+                        return [4 /*yield*/, func()];
                     case 1:
                         obj = _a.sent();
                         this.loadFromObj(obj);
@@ -441,7 +469,7 @@ var TrackList = /** @class */ (function () {
                         return [3 /*break*/, 3];
                     case 3:
                         if (this.listView)
-                            this.renderUpdate();
+                            this.updateView();
                         return [2 /*return*/];
                 }
             });
@@ -449,7 +477,7 @@ var TrackList = /** @class */ (function () {
     };
     TrackList.prototype.createView = function () {
         var _this = this;
-        if (!this.listView) {
+        if (!this.contentView) {
             this.listView = new ListView({ tag: 'div.tracklist' });
             this.contentView = {
                 element: this.listView.container,
@@ -458,7 +486,7 @@ var TrackList = /** @class */ (function () {
                 },
                 onRemove: function () { }
             };
-            this.renderUpdate();
+            this.updateView();
         }
         return this.contentView;
     };
@@ -473,7 +501,7 @@ var TrackList = /** @class */ (function () {
         item.setActive(true);
         this.curActive = item;
     };
-    TrackList.prototype.renderUpdate = function () {
+    TrackList.prototype.updateView = function () {
         var listView = this.listView;
         if (this.tracks) {
             listView.clear();
@@ -518,9 +546,57 @@ var TrackViewItem = /** @class */ (function (_super) {
 }(ListViewItem));
 var ListIndex = /** @class */ (function () {
     function ListIndex() {
+        this.dom = document.getElementById('sidebar-list');
     }
+    ListIndex.prototype.fetch = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var index;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.listView = new ListView(this.dom);
+                        this.listView.onItemClicked = function (item) {
+                            var _a;
+                            (_a = _this.curActive) === null || _a === void 0 ? void 0 : _a.toggleClass('active', false);
+                            item.toggleClass('active', true);
+                            _this.curActive = item;
+                            ui.content.openTracklist(item.listInfo.id);
+                        };
+                        return [4 /*yield*/, api.getListIndexAsync()];
+                    case 1:
+                        index = _a.sent();
+                        this.lists = index.lists;
+                        this.updateView();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    ListIndex.prototype.updateView = function () {
+        this.listView.clear();
+        for (var _i = 0, _a = this.lists; _i < _a.length; _i++) {
+            var item = _a[_i];
+            this.listView.add(new ListIndexViewItem(this, item));
+        }
+    };
     return ListIndex;
 }());
-var list = new TrackList();
-list.fetch('list');
-ui.content.setCurrent(list.createView());
+var ListIndexViewItem = /** @class */ (function (_super) {
+    __extends(ListIndexViewItem, _super);
+    function ListIndexViewItem(index, listInfo) {
+        var _this = _super.call(this) || this;
+        _this.index = index;
+        _this.listInfo = listInfo;
+        return _this;
+    }
+    ListIndexViewItem.prototype.createDom = function () {
+        return utils.buildDOM({
+            tag: 'div.item.no-selection',
+            textContent: this.listInfo.name,
+        });
+    };
+    return ListIndexViewItem;
+}(ListViewItem));
+var listIndex = new ListIndex();
+listIndex.fetch();

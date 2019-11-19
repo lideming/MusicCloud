@@ -94,6 +94,16 @@ var ui = {
             if (arg.onShow) arg.onShow();
             this.current = arg;
         }
+        listCache: { [x: number]: TrackList } = {};
+        openTracklist(id: number) {
+            var list = this.listCache[id];
+            if (!list) {
+                list = new TrackList();
+                list.fetch(id);
+                this.listCache[id] = list;
+            }
+            this.setCurrent(list.createView());
+        }
     }
 };
 
@@ -164,9 +174,11 @@ var api = new class {
         var resp = await fetch(this.baseUrl + path);
         return await resp.json();
     }
-    async getListAsync(): Promise<TrackList> {
-        await new TrackList().fetch('list');
-        return
+    async getListAsync(id: number): Promise<Api.TrackList> {
+        return await this.getJson('lists/' + id);
+    }
+    async getListIndexAsync(): Promise<Api.TrackListIndex> {
+        return await this.getJson('lists/index');
     }
 }
 
@@ -197,11 +209,15 @@ abstract class ListViewItem extends View {
 class ListView<T extends ListViewItem> {
     container: HTMLElement;
     items: T[];
+    onItemClicked: (item: T) => void;
     constructor(container: BuildDomExpr) {
         this.container = utils.buildDOM(container) as HTMLElement;
         this.items = [];
     }
     add(item: T) {
+        item.dom.addEventListener('click', () => {
+            if (this.onItemClicked) this.onItemClicked(item);
+        });
         this.container.appendChild(item.dom);
         this.items.push(item);
     }
@@ -235,19 +251,22 @@ class TrackList {
         }
         return this;
     }
-    fetch(path: string): Promise<void> {
+    fetch(arg: number | (() => Promise<Api.TrackList>)): Promise<void> {
+        var func: () => Promise<Api.TrackList>;
+        if (typeof arg == 'number') func = () => api.getListAsync(arg as number);
+        else func = arg;
         return this.fetching = (async () => {
             try {
-                var obj = await api.getJson(path);
+                var obj = await func();
                 this.loadFromObj(obj);
             } catch (err) {
                 this.fetchError = err;
             }
-            if (this.listView) this.renderUpdate();
+            if (this.listView) this.updateView();
         })();
     }
     createView(): ContentView {
-        if (!this.listView) {
+        if (!this.contentView) {
             this.listView = new ListView({ tag: 'div.tracklist' });
             this.contentView = {
                 element: this.listView.container,
@@ -256,7 +275,7 @@ class TrackList {
                 },
                 onRemove: () => { }
             };
-            this.renderUpdate();
+            this.updateView();
         }
         return this.contentView;
     }
@@ -269,7 +288,7 @@ class TrackList {
         item.setActive(true);
         this.curActive = item;
     }
-    private renderUpdate() {
+    private updateView() {
         var listView = this.listView;
         if (this.tracks) {
             listView.clear();
@@ -312,9 +331,45 @@ class TrackViewItem extends ListViewItem {
 
 
 class ListIndex {
-    
+    lists: Api.TrackListInfo[];
+    listView: ListView<ListIndexViewItem>;
+    curActive: ListIndexViewItem;
+    dom = document.getElementById('sidebar-list');
+    async fetch() {
+        this.listView = new ListView(this.dom);
+        this.listView.onItemClicked = (item) => {
+            this.curActive?.toggleClass('active', false);
+            item.toggleClass('active', true);
+            this.curActive = item;
+            ui.content.openTracklist(item.listInfo.id);
+        }
+        var index = await api.getListIndexAsync();
+        this.lists = index.lists;
+        this.updateView();
+    }
+    updateView() {
+        this.listView.clear();
+        for (const item of this.lists) {
+            this.listView.add(new ListIndexViewItem(this, item))
+        }
+    }
 }
 
-var list = new TrackList();
-list.fetch('list');
-ui.content.setCurrent(list.createView());
+class ListIndexViewItem extends ListViewItem {
+    index: ListIndex;
+    listInfo: Api.TrackListInfo;
+    constructor(index: ListIndex, listInfo: Api.TrackListInfo) {
+        super();
+        this.index = index;
+        this.listInfo = listInfo;
+    }
+    createDom() {
+        return utils.buildDOM({
+            tag: 'div.item.no-selection',
+            textContent: this.listInfo.name,
+        }) as HTMLElement;
+    }
+}
+
+var listIndex = new ListIndex();
+listIndex.fetch();
