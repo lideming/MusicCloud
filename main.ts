@@ -5,9 +5,14 @@
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
 
+var settings = {
+    apiBaseUrl: 'api/',
+    debug: true,
+};
 
-var ui = {
-    bottomBar: new class {
+/** （大部分）UI 操作 */
+var ui = new class {
+    bottomBar = new class {
         container: HTMLElement = document.getElementById("bottombar");
         btnPin: HTMLElement = document.getElementById('btnPin');
         private autoHide = true;
@@ -36,8 +41,8 @@ var ui = {
             });
             this.btnPin.addEventListener('click', () => this.setPinned());
         }
-    },
-    progressBar: new class {
+    }
+    progressBar = new class {
         container = document.getElementById('progressbar');
         fill = document.getElementById('progressbar-fill');
         labelCur = document.getElementById('progressbar-label-cur');
@@ -59,15 +64,15 @@ var ui = {
                 if (e.buttons == 1) call(e);
             });
         }
-    },
-    trackinfo: new class {
+    }
+    trackinfo = new class {
         element = document.getElementById('bottombar-trackinfo');
         setTrack(track: Track) {
             if (track) {
                 utils.replaceChild(this.element, utils.buildDOM({
                     tag: 'span',
                     child: [
-                        'Now Playing: ',
+                        // 'Now Playing: ',
                         { tag: 'span.name', textContent: track.name },
                         { tag: 'span.artist', textContent: track.artist },
                     ]
@@ -76,12 +81,15 @@ var ui = {
                 this.element.textContent = "";
             }
         }
-    },
-    sidebarList: new class {
+    }
+    sidebarList = new class {
         container = document.getElementById('sidebar-list');
-
-    },
-    content: new class {
+        currentActive = new ItemActiveHelper<ListViewItem>();
+        setActive(item: ListViewItem) {
+            this.currentActive.set(item);
+        }
+    }
+    content = new class {
         container = document.getElementById('content-outer');
         current: ContentView;
         removeCurrent() {
@@ -107,7 +115,7 @@ var ui = {
             this.setCurrent(list.createView());
         }
     }
-};
+} // ui
 
 interface ContentView {
     dom: HTMLElement,
@@ -117,10 +125,11 @@ interface ContentView {
 
 ui.bottomBar.init();
 
-class PlayerCore {
+// 播放器核心：控制播放逻辑
+var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track;
-    onTrackChanged: Action;
+    onTrackChanged = new Callbacks<Action>();
     constructor() {
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.updateProgress());
@@ -152,7 +161,7 @@ class PlayerCore {
     setTrack(track: Track) {
         this.track = track;
         ui.trackinfo.setTrack(track);
-        if (this.onTrackChanged) this.onTrackChanged();
+        this.onTrackChanged.invoke();
         this.loadUrl(track ? track.url : "");
     }
     playTrack(track: Track) {
@@ -168,33 +177,40 @@ class PlayerCore {
     }
 }
 
-var playerCore = new PlayerCore();
-
+// 封装 API 操作
 var api = new class {
-    baseUrl = 'api/';
-    debugSleep = 500;
-    async getJson(path, options?: { expectedOK?: boolean }): Promise<any> {
+    get baseUrl() { return settings.apiBaseUrl; }
+    debugSleep = settings.debug ? 500 : 0;
+    async _fetch(input: RequestInfo, init?: RequestInit) {
+        if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1))
+        return await fetch(input, init);
+    }
+    async getJson(path: string, options?: { expectedOK?: boolean }): Promise<any> {
         options = options || {};
-        if (this.debugSleep) await utils.sleepAsync(this.debugSleep - 400 + Math.random() * 800)
-        var resp = await fetch(this.baseUrl + path);
+        var resp = await this._fetch(this.baseUrl + path);
         if (options.expectedOK !== false && resp.status != 200)
             throw new Error('Remote response HTTP status ' + resp.status);
         return await resp.json();
     }
-    async getListAsync(id: number): Promise<Api.TrackList> {
+    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT' }) {
+        var resp = await this._fetch(this.baseUrl + arg.path, {
+            body: JSON.stringify(arg.method),
+            method: arg.method
+        });
+    }
+    async getListAsync(id: number): Promise<Api.TrackListGet> {
         return await this.getJson('lists/' + id);
     }
     async getListIndexAsync(): Promise<Api.TrackListIndex> {
         return await this.getJson('lists/index');
     }
-}
-
-interface Track extends Api.Track {
-    _bind?: {
-        location?: number;
-        list?: TrackList;
-        next?: Track;
-    };
+    async putListAsync(list: Api.TrackListPut) {
+        await this.postJson({
+            path: 'lists/' + list.id,
+            method: 'PUT',
+            obj: list,
+        });
+    }
 }
 
 class View {
@@ -241,16 +257,24 @@ class ListView<T extends ListViewItem> {
     }
 }
 
+interface Track extends Api.Track {
+    _bind?: {
+        location?: number;
+        list?: TrackList;
+        next?: Track;
+    };
+}
+
 class TrackList {
     name: string;
     tracks: Track[];
     contentView: ContentView;
-    fetching: Promise<any>;
+    fetching: Promise<void>;
     curActive = new ItemActiveHelper<TrackViewItem>();
     listView: ListView<TrackViewItem>;
     loadIndicator = new LoadingIndicator();
 
-    loadFromObj(obj: Api.TrackList) {
+    loadFromObj(obj: Api.TrackListGet) {
         this.name = obj.name;
         this.tracks = obj.tracks;
         var i = 0;
@@ -262,8 +286,8 @@ class TrackList {
         }
         return this;
     }
-    fetch(arg: number | (() => Promise<Api.TrackList>)): Promise<void> {
-        var func: () => Promise<Api.TrackList>;
+    fetch(arg: number | (AsyncFunc<Api.TrackListGet>)) {
+        var func: AsyncFunc<Api.TrackListGet>;
         if (typeof arg == 'number') func = () => api.getListAsync(arg as number);
         else func = arg;
         this.loadIndicator.reset();
@@ -285,13 +309,16 @@ class TrackList {
     createView(): ContentView {
         if (!this.contentView) {
             this.listView = new ListView({ tag: 'div.tracklist' });
+            let cb = () => this.trackChanged();
             this.contentView = {
                 dom: this.listView.container,
                 onShow: () => {
-                    playerCore.onTrackChanged = () => this.trackChanged();
+                    playerCore.onTrackChanged.add(cb);
                     this.updateView();
                 },
-                onRemove: () => { }
+                onRemove: () => {
+                    playerCore.onTrackChanged.remove(cb);
+                }
             };
             // this.updateView();
         }
@@ -339,16 +366,6 @@ class TrackViewItem extends ListViewItem {
             },
             _item: this
         }) as HTMLDivElement
-    }
-}
-
-class ItemActiveHelper<T extends ListViewItem> {
-    funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
-    current: T;
-    set(item: T) {
-        if (this.current) this.funcSetActive(this.current, false);
-        this.current = item;
-        if (this.current) this.funcSetActive(this.current, true);
     }
 }
 

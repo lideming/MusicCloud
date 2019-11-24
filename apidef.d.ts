@@ -1,6 +1,6 @@
 declare namespace Api {
     /** 
-     * GET /api/lists/index
+     * GET {api}/lists/index
      */
     interface TrackListIndex {
         lists: TrackListInfo[];
@@ -11,17 +11,27 @@ declare namespace Api {
         name: string;
     }
 
-    /**
-     * GET /api/lists/{id}
-     */
     interface TrackList {
         id: number;
         name: string;
+    }
+
+    /**
+     * GET {api}/lists/{id}
+     */
+    interface TrackListGet extends TrackList {
         tracks: Track[];
     }
 
     /**
-     * GET /api/tracks/{id}
+     * POST/PUT {api}/lists/{id}
+     */
+    interface TrackListPut extends TrackList {
+        trackids: number[];
+    }
+
+    /**
+     * GET {api}/tracks/{id}
      */
     interface Track {
         id: number;

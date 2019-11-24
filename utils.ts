@@ -1,10 +1,6 @@
 var utils = new class {
-    toggleClass(element: HTMLElement, clsName: string, force?: boolean) {
-        if (force === undefined) force = !element.classList.contains(clsName);
-        if (force) element.classList.add(clsName);
-        else element.classList.remove(clsName);
-    }
-    strPaddingLeft(str: string, len: number, ch: string = ' ') {
+    // Time & formatting utils:
+    strPadLeft(str: string, len: number, ch: string = ' ') {
         while (str.length < len) {
             str = ch + str;
         }
@@ -15,7 +11,7 @@ var utils = new class {
         var sec = Math.floor(sec);
         var min = Math.floor(sec / 60);
         sec %= 60;
-        return this.strPaddingLeft(min.toString(), 2, '0') + ':' + this.strPaddingLeft(sec.toString(), 2, '0');
+        return this.strPadLeft(min.toString(), 2, '0') + ':' + this.strPadLeft(sec.toString(), 2, '0');
     }
     numLimit(num: number, min: number, max: number) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
@@ -39,6 +35,13 @@ var utils = new class {
             if (this.cancelFunc) this.cancelFunc();
         }
     }
+    sleepAsync(time: number): Promise<void> {
+        return new Promise((resolve) => {
+            setTimeout(resolve, time);
+        });
+    }
+
+    // DOM operations:
     buildDOM: (tree: BuildDomExpr) => BuildDomReturn;
     clearChilds(node: Node) {
         while (node.lastChild) node.removeChild(node.lastChild);
@@ -47,12 +50,29 @@ var utils = new class {
         this.clearChilds(node);
         if (newChild) node.appendChild(newChild);
     }
-    sleepAsync(time: number): Promise<void> {
-        return new Promise((resolve) => {
-            setTimeout(resolve, time);
-        });
+    toggleClass(element: HTMLElement, clsName: string, force?: boolean) {
+        if (force === undefined) force = !element.classList.contains(clsName);
+        if (force) element.classList.add(clsName);
+        else element.classList.remove(clsName);
+    }
+
+    arrayRemove<T>(array: T[], val: T) {
+        for (let i = 0; i < array.length; i++) {
+            const item = array[i];
+            if (item === val) {
+                array.splice(i, 1);
+                i--;
+            }
+        }
     }
 }
+
+
+// Some interesting types:
+type Action<T = void> = (arg: T) => void;
+type Func<TRet> = () => TRet;
+type AsyncFunc<T> = Func<Promise<T>>;
+
 
 type BuildDomExpr = BuildDomTag | BuildDomNode | HTMLElement | Node;
 
@@ -115,4 +135,27 @@ utils.buildDOM = (() => {
     };
 })()
 
-type Action = () => void;
+class ItemActiveHelper<T extends ListViewItem> {
+    funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
+    current: T;
+    set(item: T) {
+        if (this.current) this.funcSetActive(this.current, false);
+        this.current = item;
+        if (this.current) this.funcSetActive(this.current, true);
+    }
+}
+
+class Callbacks<T extends CallableFunction> {
+    list = [] as T[];
+    invoke() {
+        this.list.forEach((x) => x());
+    }
+    add(callback: T) {
+        this.list.push(callback);
+    }
+    remove(callback: T) {
+        utils.arrayRemove(this.list, callback);
+    }
+}
+
+var cbs = new Callbacks()

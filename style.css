@@ -15,6 +15,11 @@ html, body {
     flex-direction: column;
 }
 
+.flexbox-h {
+    display: flex;
+    flex-direction: row;
+}
+
 .flex-1 {
     flex: 1;
 }
@@ -173,10 +178,9 @@ html, body {
 }
 
 #bottombar-trackinfo {
-    display: inline;
-    /* position: absolute;
-    right: 10px;
-    bottom: 10px; */
+    display: block;
+    margin: 0 1em;
+    text-align: center;
 }
 
 .loading-indicator {

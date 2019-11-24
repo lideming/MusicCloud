@@ -19,15 +19,8 @@ var utils = new /** @class */ (function () {
             return class_2;
         }());
     }
-    class_1.prototype.toggleClass = function (element, clsName, force) {
-        if (force === undefined)
-            force = !element.classList.contains(clsName);
-        if (force)
-            element.classList.add(clsName);
-        else
-            element.classList.remove(clsName);
-    };
-    class_1.prototype.strPaddingLeft = function (str, len, ch) {
+    // Time & formatting utils:
+    class_1.prototype.strPadLeft = function (str, len, ch) {
         if (ch === void 0) { ch = ' '; }
         while (str.length < len) {
             str = ch + str;
@@ -40,11 +33,16 @@ var utils = new /** @class */ (function () {
         var sec = Math.floor(sec);
         var min = Math.floor(sec / 60);
         sec %= 60;
-        return this.strPaddingLeft(min.toString(), 2, '0') + ':' + this.strPaddingLeft(sec.toString(), 2, '0');
+        return this.strPadLeft(min.toString(), 2, '0') + ':' + this.strPadLeft(sec.toString(), 2, '0');
     };
     class_1.prototype.numLimit = function (num, min, max) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
             (num > max) ? max : num;
+    };
+    class_1.prototype.sleepAsync = function (time) {
+        return new Promise(function (resolve) {
+            setTimeout(resolve, time);
+        });
     };
     class_1.prototype.clearChilds = function (node) {
         while (node.lastChild)
@@ -55,10 +53,22 @@ var utils = new /** @class */ (function () {
         if (newChild)
             node.appendChild(newChild);
     };
-    class_1.prototype.sleepAsync = function (time) {
-        return new Promise(function (resolve) {
-            setTimeout(resolve, time);
-        });
+    class_1.prototype.toggleClass = function (element, clsName, force) {
+        if (force === undefined)
+            force = !element.classList.contains(clsName);
+        if (force)
+            element.classList.add(clsName);
+        else
+            element.classList.remove(clsName);
+    };
+    class_1.prototype.arrayRemove = function (array, val) {
+        for (var i = 0; i < array.length; i++) {
+            var item = array[i];
+            if (item === val) {
+                array.splice(i, 1);
+                i--;
+            }
+        }
     };
     return class_1;
 }());
@@ -116,6 +126,35 @@ utils.buildDOM = (function () {
         return buildDomCore(obj, 32);
     };
 })();
+var ItemActiveHelper = /** @class */ (function () {
+    function ItemActiveHelper() {
+        this.funcSetActive = function (item, val) { return item.toggleClass('active', val); };
+    }
+    ItemActiveHelper.prototype.set = function (item) {
+        if (this.current)
+            this.funcSetActive(this.current, false);
+        this.current = item;
+        if (this.current)
+            this.funcSetActive(this.current, true);
+    };
+    return ItemActiveHelper;
+}());
+var Callbacks = /** @class */ (function () {
+    function Callbacks() {
+        this.list = [];
+    }
+    Callbacks.prototype.invoke = function () {
+        this.list.forEach(function (x) { return x(); });
+    };
+    Callbacks.prototype.add = function (callback) {
+        this.list.push(callback);
+    };
+    Callbacks.prototype.remove = function (callback) {
+        utils.arrayRemove(this.list, callback);
+    };
+    return Callbacks;
+}());
+var cbs = new Callbacks();
 // TypeScript 3.7 is required.
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
@@ -169,135 +208,149 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 // Why do we need to use React and Vue.js? ;)
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
-var ui = {
-    bottomBar: new /** @class */ (function () {
-        function class_3() {
-            this.container = document.getElementById("bottombar");
-            this.btnPin = document.getElementById('btnPin');
-            this.autoHide = true;
-        }
-        class_3.prototype.setPinned = function (val) {
-            val = (val !== null && val !== void 0 ? val : !this.autoHide);
-            this.autoHide = val;
-            utils.toggleClass(document.body, 'bottompinned', !val);
-            this.btnPin.textContent = !val ? 'Pinned' : 'Pin';
-            if (val)
-                this.toggle(true);
-        };
-        class_3.prototype.toggle = function (state) {
-            utils.toggleClass(this.container, 'show', state);
-        };
-        class_3.prototype.init = function () {
-            var _this = this;
-            var bar = this.container;
-            var hideTimer = new utils.Timer(function () {
-                _this.toggle(false);
-            });
-            bar.addEventListener('mouseenter', function () {
-                hideTimer.tryCancel();
-                _this.toggle(true);
-            });
-            bar.addEventListener('mouseleave', function () {
-                hideTimer.tryCancel();
-                if (_this.autoHide)
-                    hideTimer.timeout(200);
-            });
-            this.btnPin.addEventListener('click', function () { return _this.setPinned(); });
-        };
-        return class_3;
-    }()),
-    progressBar: new /** @class */ (function () {
-        function class_4() {
-            this.container = document.getElementById('progressbar');
-            this.fill = document.getElementById('progressbar-fill');
-            this.labelCur = document.getElementById('progressbar-label-cur');
-            this.labelTotal = document.getElementById('progressbar-label-total');
-        }
-        class_4.prototype.setProg = function (cur, total) {
-            var prog = cur / total;
-            prog = utils.numLimit(prog, 0, 1);
-            this.fill.style.width = (prog * 100) + '%';
-            this.labelCur.textContent = utils.formatTime(cur);
-            this.labelTotal.textContent = utils.formatTime(total);
-        };
-        class_4.prototype.setProgressChangedCallback = function (cb) {
-            var _this = this;
-            var call = function (e) { cb(utils.numLimit(e.offsetX / _this.container.clientWidth, 0, 1)); };
-            this.container.addEventListener('mousedown', function (e) {
-                if (e.buttons == 1)
-                    call(e);
-            });
-            this.container.addEventListener('mousemove', function (e) {
-                if (e.buttons == 1)
-                    call(e);
-            });
-        };
-        return class_4;
-    }()),
-    trackinfo: new /** @class */ (function () {
-        function class_5() {
-            this.element = document.getElementById('bottombar-trackinfo');
-        }
-        class_5.prototype.setTrack = function (track) {
-            if (track) {
-                utils.replaceChild(this.element, utils.buildDOM({
-                    tag: 'span',
-                    child: [
-                        'Now Playing: ',
-                        { tag: 'span.name', textContent: track.name },
-                        { tag: 'span.artist', textContent: track.artist },
-                    ]
-                }));
-            }
-            else {
-                this.element.textContent = "";
-            }
-        };
-        return class_5;
-    }()),
-    sidebarList: new /** @class */ (function () {
-        function class_6() {
-            this.container = document.getElementById('sidebar-list');
-        }
-        return class_6;
-    }()),
-    content: new /** @class */ (function () {
-        function class_7() {
-            this.container = document.getElementById('content-outer');
-            this.listCache = {};
-        }
-        class_7.prototype.removeCurrent = function () {
-            var cur = this.current;
-            if (!cur)
-                return;
-            if (cur.onRemove)
-                cur.onRemove();
-            if (cur.dom)
-                this.container.removeChild(cur.dom);
-        };
-        class_7.prototype.setCurrent = function (arg) {
-            this.removeCurrent();
-            this.container.appendChild(arg.dom);
-            if (arg.onShow)
-                arg.onShow();
-            this.current = arg;
-        };
-        class_7.prototype.openTracklist = function (id) {
-            var list = this.listCache[id];
-            if (!list) {
-                list = new TrackList();
-                list.fetch(id);
-                this.listCache[id] = list;
-            }
-            this.setCurrent(list.createView());
-        };
-        return class_7;
-    }())
+var settings = {
+    apiBaseUrl: 'api/',
+    debug: true,
 };
+/** （大部分）UI 操作 */
+var ui = new /** @class */ (function () {
+    function class_3() {
+        this.bottomBar = new /** @class */ (function () {
+            function class_4() {
+                this.container = document.getElementById("bottombar");
+                this.btnPin = document.getElementById('btnPin');
+                this.autoHide = true;
+            }
+            class_4.prototype.setPinned = function (val) {
+                val = (val !== null && val !== void 0 ? val : !this.autoHide);
+                this.autoHide = val;
+                utils.toggleClass(document.body, 'bottompinned', !val);
+                this.btnPin.textContent = !val ? 'Pinned' : 'Pin';
+                if (val)
+                    this.toggle(true);
+            };
+            class_4.prototype.toggle = function (state) {
+                utils.toggleClass(this.container, 'show', state);
+            };
+            class_4.prototype.init = function () {
+                var _this = this;
+                var bar = this.container;
+                var hideTimer = new utils.Timer(function () {
+                    _this.toggle(false);
+                });
+                bar.addEventListener('mouseenter', function () {
+                    hideTimer.tryCancel();
+                    _this.toggle(true);
+                });
+                bar.addEventListener('mouseleave', function () {
+                    hideTimer.tryCancel();
+                    if (_this.autoHide)
+                        hideTimer.timeout(200);
+                });
+                this.btnPin.addEventListener('click', function () { return _this.setPinned(); });
+            };
+            return class_4;
+        }());
+        this.progressBar = new /** @class */ (function () {
+            function class_5() {
+                this.container = document.getElementById('progressbar');
+                this.fill = document.getElementById('progressbar-fill');
+                this.labelCur = document.getElementById('progressbar-label-cur');
+                this.labelTotal = document.getElementById('progressbar-label-total');
+            }
+            class_5.prototype.setProg = function (cur, total) {
+                var prog = cur / total;
+                prog = utils.numLimit(prog, 0, 1);
+                this.fill.style.width = (prog * 100) + '%';
+                this.labelCur.textContent = utils.formatTime(cur);
+                this.labelTotal.textContent = utils.formatTime(total);
+            };
+            class_5.prototype.setProgressChangedCallback = function (cb) {
+                var _this = this;
+                var call = function (e) { cb(utils.numLimit(e.offsetX / _this.container.clientWidth, 0, 1)); };
+                this.container.addEventListener('mousedown', function (e) {
+                    if (e.buttons == 1)
+                        call(e);
+                });
+                this.container.addEventListener('mousemove', function (e) {
+                    if (e.buttons == 1)
+                        call(e);
+                });
+            };
+            return class_5;
+        }());
+        this.trackinfo = new /** @class */ (function () {
+            function class_6() {
+                this.element = document.getElementById('bottombar-trackinfo');
+            }
+            class_6.prototype.setTrack = function (track) {
+                if (track) {
+                    utils.replaceChild(this.element, utils.buildDOM({
+                        tag: 'span',
+                        child: [
+                            // 'Now Playing: ',
+                            { tag: 'span.name', textContent: track.name },
+                            { tag: 'span.artist', textContent: track.artist },
+                        ]
+                    }));
+                }
+                else {
+                    this.element.textContent = "";
+                }
+            };
+            return class_6;
+        }());
+        this.sidebarList = new /** @class */ (function () {
+            function class_7() {
+                this.container = document.getElementById('sidebar-list');
+                this.currentActive = new ItemActiveHelper();
+            }
+            class_7.prototype.setActive = function (item) {
+                this.currentActive.set(item);
+            };
+            return class_7;
+        }());
+        this.content = new /** @class */ (function () {
+            function class_8() {
+                this.container = document.getElementById('content-outer');
+                this.listCache = {};
+            }
+            class_8.prototype.removeCurrent = function () {
+                var cur = this.current;
+                if (!cur)
+                    return;
+                if (cur.onRemove)
+                    cur.onRemove();
+                if (cur.dom)
+                    this.container.removeChild(cur.dom);
+            };
+            class_8.prototype.setCurrent = function (arg) {
+                this.removeCurrent();
+                this.container.appendChild(arg.dom);
+                if (arg.onShow)
+                    arg.onShow();
+                this.current = arg;
+            };
+            class_8.prototype.openTracklist = function (id) {
+                var list = this.listCache[id];
+                if (!list) {
+                    list = new TrackList();
+                    list.fetch(id);
+                    this.listCache[id] = list;
+                }
+                this.setCurrent(list.createView());
+            };
+            return class_8;
+        }());
+    }
+    return class_3;
+}()); // ui
 ui.bottomBar.init();
-var PlayerCore = /** @class */ (function () {
+// 播放器核心：控制播放逻辑
+var playerCore = new /** @class */ (function () {
     function PlayerCore() {
         var _this = this;
+        this.onTrackChanged = new Callbacks();
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', function () { return _this.updateProgress(); });
         this.audio.addEventListener('canplay', function () { return _this.updateProgress(); });
@@ -328,8 +381,7 @@ var PlayerCore = /** @class */ (function () {
     PlayerCore.prototype.setTrack = function (track) {
         this.track = track;
         ui.trackinfo.setTrack(track);
-        if (this.onTrackChanged)
-            this.onTrackChanged();
+        this.onTrackChanged.invoke();
         this.loadUrl(track ? track.url : "");
     };
     PlayerCore.prototype.playTrack = function (track) {
@@ -346,36 +398,67 @@ var PlayerCore = /** @class */ (function () {
     };
     return PlayerCore;
 }());
-var playerCore = new PlayerCore();
+// 封装 API 操作
 var api = new /** @class */ (function () {
-    function class_8() {
-        this.baseUrl = 'api/';
-        this.debugSleep = 500;
+    function class_9() {
+        this.debugSleep = settings.debug ? 500 : 0;
     }
-    class_8.prototype.getJson = function (path, options) {
+    Object.defineProperty(class_9.prototype, "baseUrl", {
+        get: function () { return settings.apiBaseUrl; },
+        enumerable: true,
+        configurable: true
+    });
+    class_9.prototype._fetch = function (input, init) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!this.debugSleep) return [3 /*break*/, 2];
+                        return [4 /*yield*/, utils.sleepAsync(this.debugSleep * (Math.random() + 1))];
+                    case 1:
+                        _a.sent();
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, fetch(input, init)];
+                    case 3: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    class_9.prototype.getJson = function (path, options) {
         return __awaiter(this, void 0, void 0, function () {
             var resp;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         options = options || {};
-                        if (!this.debugSleep) return [3 /*break*/, 2];
-                        return [4 /*yield*/, utils.sleepAsync(this.debugSleep - 400 + Math.random() * 800)];
+                        return [4 /*yield*/, this._fetch(this.baseUrl + path)];
                     case 1:
-                        _a.sent();
-                        _a.label = 2;
-                    case 2: return [4 /*yield*/, fetch(this.baseUrl + path)];
-                    case 3:
                         resp = _a.sent();
                         if (options.expectedOK !== false && resp.status != 200)
                             throw new Error('Remote response HTTP status ' + resp.status);
                         return [4 /*yield*/, resp.json()];
-                    case 4: return [2 /*return*/, _a.sent()];
+                    case 2: return [2 /*return*/, _a.sent()];
                 }
             });
         });
     };
-    class_8.prototype.getListAsync = function (id) {
+    class_9.prototype.postJson = function (arg) {
+        return __awaiter(this, void 0, void 0, function () {
+            var resp;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this._fetch(this.baseUrl + arg.path, {
+                            body: JSON.stringify(arg.method),
+                            method: arg.method
+                        })];
+                    case 1:
+                        resp = _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    class_9.prototype.getListAsync = function (id) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -385,7 +468,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_8.prototype.getListIndexAsync = function () {
+    class_9.prototype.getListIndexAsync = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -395,7 +478,23 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    return class_8;
+    class_9.prototype.putListAsync = function (list) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.postJson({
+                            path: 'lists/' + list.id,
+                            method: 'PUT',
+                            obj: list,
+                        })];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    return class_9;
 }());
 var View = /** @class */ (function () {
     function View() {
@@ -509,13 +608,16 @@ var TrackList = /** @class */ (function () {
         var _this = this;
         if (!this.contentView) {
             this.listView = new ListView({ tag: 'div.tracklist' });
+            var cb_1 = function () { return _this.trackChanged(); };
             this.contentView = {
                 dom: this.listView.container,
                 onShow: function () {
-                    playerCore.onTrackChanged = function () { return _this.trackChanged(); };
+                    playerCore.onTrackChanged.add(cb_1);
                     _this.updateView();
                 },
-                onRemove: function () { }
+                onRemove: function () {
+                    playerCore.onTrackChanged.remove(cb_1);
+                }
             };
             // this.updateView();
         }
@@ -568,19 +670,6 @@ var TrackViewItem = /** @class */ (function (_super) {
     };
     return TrackViewItem;
 }(ListViewItem));
-var ItemActiveHelper = /** @class */ (function () {
-    function ItemActiveHelper() {
-        this.funcSetActive = function (item, val) { return item.toggleClass('active', val); };
-    }
-    ItemActiveHelper.prototype.set = function (item) {
-        if (this.current)
-            this.funcSetActive(this.current, false);
-        this.current = item;
-        if (this.current)
-            this.funcSetActive(this.current, true);
-    };
-    return ItemActiveHelper;
-}());
 var LoadingIndicator = /** @class */ (function (_super) {
     __extends(LoadingIndicator, _super);
     function LoadingIndicator() {
