@@ -1,9 +1,12 @@
+// file: main.ts
 // TypeScript 3.7 is required.
 
 // Why do we need to use React and Vue.js? ;)
 
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
+/// <reference path="viewlib.ts" />
+
 
 var settings = {
     apiBaseUrl: 'api/',
@@ -104,16 +107,6 @@ var ui = new class {
             if (arg.onShow) arg.onShow();
             this.current = arg;
         }
-        listCache: { [x: number]: TrackList } = {};
-        openTracklist(id: number) {
-            var list = this.listCache[id];
-            if (!list) {
-                list = new TrackList();
-                list.fetch(id);
-                this.listCache[id] = list;
-            }
-            this.setCurrent(list.createView());
-        }
     }
 } // ui
 
@@ -125,7 +118,7 @@ interface ContentView {
 
 ui.bottomBar.init();
 
-// 播放器核心：控制播放逻辑
+/** 播放器核心：控制播放逻辑 */
 var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track;
@@ -177,7 +170,7 @@ var playerCore = new class PlayerCore {
     }
 }
 
-// 封装 API 操作
+/** API 操作 */
 var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     debugSleep = settings.debug ? 500 : 0;
@@ -189,7 +182,7 @@ var api = new class {
         options = options || {};
         var resp = await this._fetch(this.baseUrl + path);
         if (options.expectedOK !== false && resp.status != 200)
-            throw new Error('Remote response HTTP status ' + resp.status);
+            throw new Error('HTTP status ' + resp.status);
         return await resp.json();
     }
     async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT' }) {
@@ -210,50 +203,6 @@ var api = new class {
             method: 'PUT',
             obj: list,
         });
-    }
-}
-
-class View {
-    protected _dom: HTMLElement
-    public get dom() {
-        return this._dom = this._dom || this.createDom();
-    }
-    protected createDom(): HTMLElement {
-        return document.createElement('div');
-    }
-    toggleClass(clsName: string, force?: boolean) {
-        utils.toggleClass(this.dom, clsName, force);
-    }
-}
-
-abstract class ListViewItem extends View {
-}
-
-class ListView<T extends ListViewItem> {
-    container: HTMLElement;
-    items: T[];
-    onItemClicked: (item: T) => void;
-    constructor(container: BuildDomExpr) {
-        this.container = utils.buildDOM(container) as HTMLElement;
-        this.items = [];
-    }
-    add(item: T) {
-        item.dom.addEventListener('click', () => {
-            if (this.onItemClicked) this.onItemClicked(item);
-        });
-        this.container.appendChild(item.dom);
-        this.items.push(item);
-    }
-    clear() {
-        utils.clearChilds(this.container);
-        this.items = [];
-    }
-    get(idx: number) {
-        return this.items[idx];
-    }
-    clearAndReplaceDom(dom: Node) {
-        this.clear();
-        this.container.appendChild(dom);
     }
 }
 
@@ -326,7 +275,7 @@ class TrackList {
     }
     private trackChanged() {
         var track = playerCore.track;
-        var item = (track?._bind.list === this) ? this.listView.get(track._bind.location) : null;
+        var item = (track ?._bind.list === this) ? this.listView.get(track._bind.location) : null;
         this.curActive.set(item);
     }
     private updateView() {
@@ -399,15 +348,16 @@ class LoadingIndicator extends View {
 
 class ListIndex {
     lists: Api.TrackListInfo[];
+    loadedList: { [x: number]: TrackList } = {};
     listView: ListView<ListIndexViewItem>;
-    curActive = new ItemActiveHelper<ListIndexViewItem>();
+    // curActive = new ItemActiveHelper<ListIndexViewItem>();
     dom = document.getElementById('sidebar-list');
     loadIndicator = new LoadingIndicator();
     async fetch() {
         this.listView = new ListView(this.dom);
         this.listView.onItemClicked = (item) => {
-            this.curActive.set(item);
-            ui.content.openTracklist(item.listInfo.id);
+            ui.sidebarList.setActive(item);
+            this.openTracklist(item.listInfo.id);
         }
         this.updateView();
         var index = await api.getListIndexAsync();
@@ -424,6 +374,15 @@ class ListIndex {
         for (const item of this.lists) {
             this.listView.add(new ListIndexViewItem(this, item))
         }
+    }
+    openTracklist(id: number) {
+        var list = this.loadedList[id];
+        if (!list) {
+            list = new TrackList();
+            list.fetch(id);
+            this.loadedList[id] = list;
+        }
+        ui.content.setCurrent(list.createView());
     }
 }
 

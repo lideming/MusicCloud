@@ -1,3 +1,5 @@
+// file: apidef.d.ts
+
 declare namespace Api {
     /** 
      * GET {api}/lists/index

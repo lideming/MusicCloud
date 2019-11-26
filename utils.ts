@@ -1,3 +1,5 @@
+// file: utils.ts
+
 var utils = new class {
     // Time & formatting utils:
     strPadLeft(str: string, len: number, ch: string = ' ') {

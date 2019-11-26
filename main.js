@@ -1,3 +1,4 @@
+// file: utils.ts
 var utils = new /** @class */ (function () {
     function class_1() {
         this.Timer = /** @class */ (function () {
@@ -155,7 +156,7 @@ var Callbacks = /** @class */ (function () {
     return Callbacks;
 }());
 var cbs = new Callbacks();
-// TypeScript 3.7 is required.
+// file: viewlib.ts
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -169,6 +170,60 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var View = /** @class */ (function () {
+    function View() {
+    }
+    Object.defineProperty(View.prototype, "dom", {
+        get: function () {
+            return this._dom = this._dom || this.createDom();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    View.prototype.createDom = function () {
+        return document.createElement('div');
+    };
+    View.prototype.toggleClass = function (clsName, force) {
+        utils.toggleClass(this.dom, clsName, force);
+    };
+    return View;
+}());
+var ListViewItem = /** @class */ (function (_super) {
+    __extends(ListViewItem, _super);
+    function ListViewItem() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    return ListViewItem;
+}(View));
+var ListView = /** @class */ (function () {
+    function ListView(container) {
+        this.container = utils.buildDOM(container);
+        this.items = [];
+    }
+    ListView.prototype.add = function (item) {
+        var _this = this;
+        item.dom.addEventListener('click', function () {
+            if (_this.onItemClicked)
+                _this.onItemClicked(item);
+        });
+        this.container.appendChild(item.dom);
+        this.items.push(item);
+    };
+    ListView.prototype.clear = function () {
+        utils.clearChilds(this.container);
+        this.items = [];
+    };
+    ListView.prototype.get = function (idx) {
+        return this.items[idx];
+    };
+    ListView.prototype.clearAndReplaceDom = function (dom) {
+        this.clear();
+        this.container.appendChild(dom);
+    };
+    return ListView;
+}());
+// file: main.ts
+// TypeScript 3.7 is required.
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -208,6 +263,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 // Why do we need to use React and Vue.js? ;)
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
+/// <reference path="viewlib.ts" />
 var settings = {
     apiBaseUrl: 'api/',
     debug: true,
@@ -313,7 +369,6 @@ var ui = new /** @class */ (function () {
         this.content = new /** @class */ (function () {
             function class_8() {
                 this.container = document.getElementById('content-outer');
-                this.listCache = {};
             }
             class_8.prototype.removeCurrent = function () {
                 var cur = this.current;
@@ -331,22 +386,13 @@ var ui = new /** @class */ (function () {
                     arg.onShow();
                 this.current = arg;
             };
-            class_8.prototype.openTracklist = function (id) {
-                var list = this.listCache[id];
-                if (!list) {
-                    list = new TrackList();
-                    list.fetch(id);
-                    this.listCache[id] = list;
-                }
-                this.setCurrent(list.createView());
-            };
             return class_8;
         }());
     }
     return class_3;
 }()); // ui
 ui.bottomBar.init();
-// 播放器核心：控制播放逻辑
+/** 播放器核心：控制播放逻辑 */
 var playerCore = new /** @class */ (function () {
     function PlayerCore() {
         var _this = this;
@@ -398,7 +444,7 @@ var playerCore = new /** @class */ (function () {
     };
     return PlayerCore;
 }());
-// 封装 API 操作
+/** API 操作 */
 var api = new /** @class */ (function () {
     function class_9() {
         this.debugSleep = settings.debug ? 500 : 0;
@@ -435,7 +481,7 @@ var api = new /** @class */ (function () {
                     case 1:
                         resp = _a.sent();
                         if (options.expectedOK !== false && resp.status != 200)
-                            throw new Error('Remote response HTTP status ' + resp.status);
+                            throw new Error('HTTP status ' + resp.status);
                         return [4 /*yield*/, resp.json()];
                     case 2: return [2 /*return*/, _a.sent()];
                 }
@@ -495,58 +541,6 @@ var api = new /** @class */ (function () {
         });
     };
     return class_9;
-}());
-var View = /** @class */ (function () {
-    function View() {
-    }
-    Object.defineProperty(View.prototype, "dom", {
-        get: function () {
-            return this._dom = this._dom || this.createDom();
-        },
-        enumerable: true,
-        configurable: true
-    });
-    View.prototype.createDom = function () {
-        return document.createElement('div');
-    };
-    View.prototype.toggleClass = function (clsName, force) {
-        utils.toggleClass(this.dom, clsName, force);
-    };
-    return View;
-}());
-var ListViewItem = /** @class */ (function (_super) {
-    __extends(ListViewItem, _super);
-    function ListViewItem() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    return ListViewItem;
-}(View));
-var ListView = /** @class */ (function () {
-    function ListView(container) {
-        this.container = utils.buildDOM(container);
-        this.items = [];
-    }
-    ListView.prototype.add = function (item) {
-        var _this = this;
-        item.dom.addEventListener('click', function () {
-            if (_this.onItemClicked)
-                _this.onItemClicked(item);
-        });
-        this.container.appendChild(item.dom);
-        this.items.push(item);
-    };
-    ListView.prototype.clear = function () {
-        utils.clearChilds(this.container);
-        this.items = [];
-    };
-    ListView.prototype.get = function (idx) {
-        return this.items[idx];
-    };
-    ListView.prototype.clearAndReplaceDom = function (dom) {
-        this.clear();
-        this.container.appendChild(dom);
-    };
-    return ListView;
 }());
 var TrackList = /** @class */ (function () {
     function TrackList() {
@@ -710,7 +704,8 @@ var LoadingIndicator = /** @class */ (function (_super) {
 }(View));
 var ListIndex = /** @class */ (function () {
     function ListIndex() {
-        this.curActive = new ItemActiveHelper();
+        this.loadedList = {};
+        // curActive = new ItemActiveHelper<ListIndexViewItem>();
         this.dom = document.getElementById('sidebar-list');
         this.loadIndicator = new LoadingIndicator();
     }
@@ -723,8 +718,8 @@ var ListIndex = /** @class */ (function () {
                     case 0:
                         this.listView = new ListView(this.dom);
                         this.listView.onItemClicked = function (item) {
-                            _this.curActive.set(item);
-                            ui.content.openTracklist(item.listInfo.id);
+                            ui.sidebarList.setActive(item);
+                            _this.openTracklist(item.listInfo.id);
                         };
                         this.updateView();
                         return [4 /*yield*/, api.getListIndexAsync()];
@@ -749,6 +744,15 @@ var ListIndex = /** @class */ (function () {
             var item = _a[_i];
             this.listView.add(new ListIndexViewItem(this, item));
         }
+    };
+    ListIndex.prototype.openTracklist = function (id) {
+        var list = this.loadedList[id];
+        if (!list) {
+            list = new TrackList();
+            list.fetch(id);
+            this.loadedList[id] = list;
+        }
+        ui.content.setCurrent(list.createView());
     };
     return ListIndex;
 }());
