@@ -3,6 +3,7 @@
 }
 body {
     margin: 0;
+    font-family: sans-serif;
 }
 
 html, body {
@@ -25,6 +26,7 @@ html, body {
 }
 
 .no-selection {
+    cursor: default;
     user-select: none;
     -ms-user-select: none;
     -moz-user-select: none;
@@ -61,9 +63,13 @@ html, body {
 }
 
 .item {
-    cursor: pointer;
     padding: 10px;
     /* background: #ddd; */
+    animation: showing .3s;
+}
+
+.clickable, .item {
+    cursor: pointer;
     transition: transform .3s;
 }
 
@@ -71,13 +77,32 @@ html, body {
     background: #eee;
 }
 
-.item:active {
+.clickable:active, .item:active {
     transition: transform .07s;
-    transform: scale(.98);
+    transform: scale(.97);
 }
 
 .item.active {
     background: #ddd;
+}
+
+.section-header {
+    display: flex;
+    color: gray;
+    padding: 10px;
+    font-size: 85%;
+}
+
+.section-title {
+    flex: 1;
+}
+
+.section-action {
+    cursor: pointer;
+}
+
+.section-action:hover {
+    color: black;
 }
 
 .trackitem .artist, #bottombar-trackinfo .artist {
@@ -187,6 +212,7 @@ html, body {
     margin: 1em;
     text-align: center;
     white-space: pre-wrap;
+    cursor: default;
 }
 
 .loading-indicator.running {
@@ -197,11 +223,22 @@ html, body {
     color: red;
 }
 
-@keyframes loading{
+@keyframes loading {
     0% {
         color: black;
     }
     100% {
         color: white;
+    }
+}
+
+@keyframes showing {
+    0% {
+        opacity: .3;
+        transform: translate(-20px, 0)
+    }
+    100% {
+        opacity: 1;
+        transform: translate(0, 0)
     }
 }

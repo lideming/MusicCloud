@@ -178,10 +178,15 @@ var api = new class {
         if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1))
         return await fetch(input, init);
     }
-    async getJson(path: string, options?: { expectedOK?: boolean }): Promise<any> {
+    /** 
+     * GET JSON from API
+     * @param path - relative path
+     * @param options
+     */
+    async getJson(path: string, options?: { status?: false | number }): Promise<any> {
         options = options || {};
         var resp = await this._fetch(this.baseUrl + path);
-        if (options.expectedOK !== false && resp.status != 200)
+        if (options.status !== false && resp.status != (options.status ?? 200))
             throw new Error('HTTP status ' + resp.status);
         return await resp.json();
     }
@@ -190,6 +195,7 @@ var api = new class {
             body: JSON.stringify(arg.method),
             method: arg.method
         });
+        return await resp.json();
     }
     async getListAsync(id: number): Promise<Api.TrackListGet> {
         return await this.getJson('lists/' + id);
@@ -197,15 +203,16 @@ var api = new class {
     async getListIndexAsync(): Promise<Api.TrackListIndex> {
         return await this.getJson('lists/index');
     }
-    async putListAsync(list: Api.TrackListPut) {
-        await this.postJson({
+    async putListAsync(list: Api.TrackListPut, creating: boolean = false): Promise<Api.TrackListPutResult> {
+        return await this.postJson({
             path: 'lists/' + list.id,
-            method: 'PUT',
+            method: creating ? 'POST' : 'PUT',
             obj: list,
         });
     }
 }
 
+/** A track binding with list */
 interface Track extends Api.Track {
     _bind?: {
         location?: number;
@@ -214,59 +221,85 @@ interface Track extends Api.Track {
     };
 }
 
+var trackStore = new class TrackStore {
+    trackCache: { [id: number]: Api.Track };
+}
+
 class TrackList {
+    id: number;
+    apiid: number;
     name: string;
-    tracks: Track[];
+    tracks: Track[] = [];
     contentView: ContentView;
     fetching: Promise<void>;
     curActive = new ItemActiveHelper<TrackViewItem>();
+    /** Available when loading */
+    loadIndicator: LoadingIndicator;
+    /** Available when the view is created */
     listView: ListView<TrackViewItem>;
-    loadIndicator = new LoadingIndicator();
 
-    loadFromObj(obj: Api.TrackListGet) {
-        this.name = obj.name;
-        this.tracks = obj.tracks;
-        var i = 0;
-        var lastItem: Track;
-        for (const item of this.tracks) {
-            item._bind = { location: i++, list: this };
-            if (lastItem) lastItem._bind.next = item;
-            lastItem = item;
+    loadInfo(info: Api.TrackListInfo) {
+        this.id = info.id;
+        this.apiid = this.id > 0 ? this.id : 0;
+        this.name = info.name;
+    }
+    loadFromGetResult(obj: Api.TrackListGet) {
+        this.loadInfo(obj);
+        for (const t of obj.tracks) {
+            this.addTrack(t);
         }
         return this;
     }
-    fetch(arg: number | (AsyncFunc<Api.TrackListGet>)) {
+    addTrack(t: Api.Track) {
+        var track: Track = {
+            artist: t.artist, id: t.id, name: t.name, url: t.url,
+            _bind: {
+                list: this,
+                location: this.tracks.length,
+                next: null
+            }
+        };
+        if (this.tracks.length) this.tracks[this.tracks.length - 1]._bind.next = track;
+        this.tracks.push(track);
+        return track;
+    }
+    loadFromApi(arg?: number | (AsyncFunc<Api.TrackListGet>)) {
+        return this.fetching = this.fetching ?? this.fetchForce(arg);
+    }
+    async fetchForce(arg: number | (AsyncFunc<Api.TrackListGet>)) {
         var func: AsyncFunc<Api.TrackListGet>;
+        if (arg === undefined) arg = this.apiid;
         if (typeof arg == 'number') func = () => api.getListAsync(arg as number);
         else func = arg;
-        this.loadIndicator.reset();
-        return this.fetching = (async () => {
-            try {
-                var obj = await func();
-                this.loadFromObj(obj);
-            } catch (err) {
-                this.loadIndicator.status = 'error';
-                this.loadIndicator.content = 'Oh no! Something just goes wrong:\n' + err
-                    + '\nClick here to retry';
-                this.loadIndicator.onclick = () => {
-                    this.fetch(arg);
-                };
-            }
-            if (this.listView) this.updateView();
-        })();
+        this.loadIndicator = new LoadingIndicator();
+        this.updateView();
+        try {
+            var obj = await func();
+            this.loadFromGetResult(obj);
+            this.loadIndicator = null;
+        } catch (err) {
+            this.loadIndicator.status = 'error';
+            this.loadIndicator.content = 'Oh no! Something just goes wrong:\n' + err
+                + '\nClick here to retry';
+            this.loadIndicator.onclick = () => {
+                this.fetchForce(arg);
+            };
+        }
+        this.updateView();
     }
     createView(): ContentView {
         if (!this.contentView) {
             this.listView = new ListView({ tag: 'div.tracklist' });
             let cb = () => this.trackChanged();
             this.contentView = {
-                dom: this.listView.container,
+                dom: this.listView.dom,
                 onShow: () => {
                     playerCore.onTrackChanged.add(cb);
                     this.updateView();
                 },
                 onRemove: () => {
                     playerCore.onTrackChanged.remove(cb);
+                    this.listView.clear();
                 }
             };
             // this.updateView();
@@ -275,13 +308,18 @@ class TrackList {
     }
     private trackChanged() {
         var track = playerCore.track;
-        var item = (track ?._bind.list === this) ? this.listView.get(track._bind.location) : null;
+        var item = (track?._bind.list === this) ? this.listView.get(track._bind.location) : null;
         this.curActive.set(item);
     }
     private updateView() {
         var listView = this.listView;
-        if (!this.tracks) {
-            listView.clearAndReplaceDom(this.loadIndicator.dom);
+        if (!listView) return;
+        if (this.loadIndicator) {
+            listView.ReplaceChild(this.loadIndicator);
+            return;
+        }
+        if (this.tracks.length === 0) {
+            listView.ReplaceChild(new LoadingIndicator({ status: 'normal', content: '(Empty)' }));
             return;
         }
         // Well... currently, we just rebuild the DOM.
@@ -310,79 +348,91 @@ class TrackViewItem extends ListViewItem {
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },
             ],
-            onclick: () => {
-                playerCore.playTrack(track);
-            },
+            onclick: () => { playerCore.playTrack(track); },
+            ondragstart: (e) => { e.dataTransfer.setData('text/plain', 'Track: ' + this.dom.textContent) },
+            draggable: true,
             _item: this
         }) as HTMLDivElement
     }
 }
 
-type LoadingIndicatorState = 'running' | 'error';
-
-class LoadingIndicator extends View {
-    private _status: LoadingIndicatorState = 'running';
-    get status() { return this._status; }
-    set status(val: LoadingIndicatorState) {
-        this._status = val;
-        this.toggleClass('running', val == 'running');
-        this.toggleClass('error', val == 'error');
-    }
-    private _text: string;
-    get content() { return this._text; }
-    set content(val: string) { this._text = val; this.dom.textContent = val; }
-    onclick: (e: MouseEvent) => void;
-    reset() {
-        this.status = 'running';
-        this.content = 'Loading...';
-    }
-    createDom() {
-        this._dom = utils.buildDOM({
-            tag: 'div.loading-indicator',
-            onclick: (e) => this.onclick && this.onclick(e)
-        }) as HTMLElement;
-        this.reset();
-        return this._dom;
-    }
-}
-
 class ListIndex {
-    lists: Api.TrackListInfo[];
+    lists: Api.TrackListInfo[] = [];
     loadedList: { [x: number]: TrackList } = {};
     listView: ListView<ListIndexViewItem>;
-    // curActive = new ItemActiveHelper<ListIndexViewItem>();
-    dom = document.getElementById('sidebar-list');
+    section: Section;
     loadIndicator = new LoadingIndicator();
-    async fetch() {
-        this.listView = new ListView(this.dom);
+    constructor() {
+        this.listView = new ListView();
         this.listView.onItemClicked = (item) => {
             ui.sidebarList.setActive(item);
-            this.openTracklist(item.listInfo.id);
-        }
-        this.updateView();
+            this.showTracklist(item.listInfo.id);
+        };
+        this.section = new Section({
+            title: 'Playlists',
+            content: this.listView,
+            actions: [{
+                text: '➕',
+                onclick: () => {
+                    this.newTracklist();
+                }
+            }]
+        });
+    }
+    mount() {
+        ui.sidebarList.container.appendChild(this.section.dom);
+    }
+    /** Fetch lists from API and update the view */
+    async fetch() {
+        this.listView.ReplaceChild(this.loadIndicator.dom);
         var index = await api.getListIndexAsync();
-        this.lists = index.lists;
-        this.updateView();
+        this.listView.clear();
+        for (const item of index.lists) {
+            this.addTracklist(item);
+        }
         if (this.lists.length > 0) this.listView.onItemClicked(this.listView.items[0]);
     }
-    updateView() {
-        this.listView.clear();
-        if (!this.lists) {
-            this.listView.clearAndReplaceDom(this.loadIndicator.dom);
-            return;
-        }
-        for (const item of this.lists) {
-            this.listView.add(new ListIndexViewItem(this, item))
+    addTracklist(list: Api.TrackListInfo) {
+        this.lists.push(list);
+        this.listView.add(new ListIndexViewItem(this, list))
+    }
+    getListInfo(id: number) {
+        for (const l of this.lists) {
+            if (l.id === id) return l;
         }
     }
-    openTracklist(id: number) {
+    getList(id: number) {
         var list = this.loadedList[id];
         if (!list) {
             list = new TrackList();
-            list.fetch(id);
+            list.loadInfo(this.getListInfo(id));
+            if (list.apiid) {
+                list.loadFromApi();
+            }
             this.loadedList[id] = list;
         }
+        return list;
+    }
+    showTracklist(id: number) {
+        var list = this.getList(id);
         ui.content.setCurrent(list.createView());
+    }
+
+    private nextId = -100;
+
+    /** 
+     * Create a Tracklist with an temporary local ID (negative number).
+     * It should be sync to server and get a real ID later.
+     */
+    newTracklist() {
+        var id = this.nextId--;
+        var list: Api.TrackListInfo = {
+            id,
+            name: utils.createName(
+                (x) => x ? `New Playlist (${x + 1})` : 'New Playlist',
+                (x) => !!this.lists.find((l) => l.name == x))
+        };
+        this.addTracklist(list);
     }
 }
 
@@ -403,4 +453,5 @@ class ListIndexViewItem extends ListViewItem {
 }
 
 var listIndex = new ListIndex();
+listIndex.mount();
 listIndex.fetch();

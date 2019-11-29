@@ -1,13 +1,17 @@
 // file: utils.ts
 
-var utils = new class {
+/** The name "utils" tells it all. */
+var utils = new class Utils {
+
     // Time & formatting utils:
+
     strPadLeft(str: string, len: number, ch: string = ' ') {
         while (str.length < len) {
             str = ch + str;
         }
         return str;
     }
+
     formatTime(sec: number) {
         if (isNaN(sec)) return '--:--';
         var sec = Math.floor(sec);
@@ -15,10 +19,19 @@ var utils = new class {
         sec %= 60;
         return this.strPadLeft(min.toString(), 2, '0') + ':' + this.strPadLeft(sec.toString(), 2, '0');
     }
+
     numLimit(num: number, min: number, max: number) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
             (num > max) ? max : num;
     }
+
+    createName(nameFunc: (num: number) => string, existsFunc: (str: string) => boolean) {
+        for (let num = 0; ; num++) {
+            let str = nameFunc(num);
+            if (!existsFunc(str)) return str;
+        }
+    }
+
     Timer = class {
         callback: () => void;
         cancelFunc: () => void;
@@ -37,21 +50,36 @@ var utils = new class {
             if (this.cancelFunc) this.cancelFunc();
         }
     }
+
     sleepAsync(time: number): Promise<void> {
         return new Promise((resolve) => {
             setTimeout(resolve, time);
         });
     }
 
-    // DOM operations:
+    /** 
+     * Build a DOM tree from a JavaScript object.
+     * @example utils.buildDOM({
+            tag: 'div.item#firstitem',
+            child: ['Name: ', { tag: 'span.name', textContent: name } ],
+        })
+     */
     buildDOM: (tree: BuildDomExpr) => BuildDomReturn;
+
+    /** Remove all childs from the node */
     clearChilds(node: Node) {
         while (node.lastChild) node.removeChild(node.lastChild);
     }
-    replaceChild(node: Node, newChild: Node) {
+
+    /** Remove all childs from the node (if needed) and append one (if present) */
+    replaceChild(node: Node, newChild?: Node) {
         this.clearChilds(node);
         if (newChild) node.appendChild(newChild);
     }
+
+    /** Add or remove a classname for the element
+     * @param force - true -> add; false -> remove; undefined -> toggle.
+     */
     toggleClass(element: HTMLElement, clsName: string, force?: boolean) {
         if (force === undefined) force = !element.classList.contains(clsName);
         if (force) element.classList.add(clsName);
@@ -76,6 +104,7 @@ type Func<TRet> = () => TRet;
 type AsyncFunc<T> = Func<Promise<T>>;
 
 
+// BuildDOM types & implementation:
 type BuildDomExpr = BuildDomTag | BuildDomNode | HTMLElement | Node;
 
 type BuildDomTag = string;
@@ -89,7 +118,7 @@ interface BuildDomNode {
 }
 
 utils.buildDOM = (() => {
-    var createElementFromTag = function (tag: string): HTMLElement {
+    var createElementFromTag = function (tag: BuildDomTag): HTMLElement {
         var reg = /[#\.^]?[\w\-]+/y;
         var match;
         var ele;

@@ -13,23 +13,24 @@ declare namespace Api {
         name: string;
     }
 
-    interface TrackList {
-        id: number;
-        name: string;
-    }
-
     /**
      * GET {api}/lists/{id}
      */
-    interface TrackListGet extends TrackList {
+    interface TrackListGet extends TrackListInfo {
         tracks: Track[];
     }
 
     /**
-     * POST/PUT {api}/lists/{id}
+     * Create list:
+     *   POST {api}/list/-
+     * Update list:
+     *   PUT {api}/lists/{id}
      */
-    interface TrackListPut extends TrackList {
+    interface TrackListPut extends TrackListInfo {
         trackids: number[];
+    }
+
+    interface TrackListPutResult extends TrackListInfo {
     }
 
     /**

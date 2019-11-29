@@ -1,34 +1,35 @@
 // file: utils.ts
+/** The name "utils" tells it all. */
 var utils = new /** @class */ (function () {
-    function class_1() {
+    function Utils() {
+        // Time & formatting utils:
         this.Timer = /** @class */ (function () {
-            function class_2(callback) {
+            function class_1(callback) {
                 this.callback = callback;
             }
-            class_2.prototype.timeout = function (time) {
+            class_1.prototype.timeout = function (time) {
                 var handle = setTimeout(this.callback, time);
                 this.cancelFunc = function () { return window.clearTimeout(handle); };
             };
-            class_2.prototype.interval = function (time) {
+            class_1.prototype.interval = function (time) {
                 var handle = setInterval(this.callback, time);
                 this.cancelFunc = function () { return window.clearInterval(handle); };
             };
-            class_2.prototype.tryCancel = function () {
+            class_1.prototype.tryCancel = function () {
                 if (this.cancelFunc)
                     this.cancelFunc();
             };
-            return class_2;
+            return class_1;
         }());
     }
-    // Time & formatting utils:
-    class_1.prototype.strPadLeft = function (str, len, ch) {
+    Utils.prototype.strPadLeft = function (str, len, ch) {
         if (ch === void 0) { ch = ' '; }
         while (str.length < len) {
             str = ch + str;
         }
         return str;
     };
-    class_1.prototype.formatTime = function (sec) {
+    Utils.prototype.formatTime = function (sec) {
         if (isNaN(sec))
             return '--:--';
         var sec = Math.floor(sec);
@@ -36,25 +37,37 @@ var utils = new /** @class */ (function () {
         sec %= 60;
         return this.strPadLeft(min.toString(), 2, '0') + ':' + this.strPadLeft(sec.toString(), 2, '0');
     };
-    class_1.prototype.numLimit = function (num, min, max) {
+    Utils.prototype.numLimit = function (num, min, max) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
             (num > max) ? max : num;
     };
-    class_1.prototype.sleepAsync = function (time) {
+    Utils.prototype.createName = function (nameFunc, existsFunc) {
+        for (var num = 0;; num++) {
+            var str = nameFunc(num);
+            if (!existsFunc(str))
+                return str;
+        }
+    };
+    Utils.prototype.sleepAsync = function (time) {
         return new Promise(function (resolve) {
             setTimeout(resolve, time);
         });
     };
-    class_1.prototype.clearChilds = function (node) {
+    /** Remove all childs from the node */
+    Utils.prototype.clearChilds = function (node) {
         while (node.lastChild)
             node.removeChild(node.lastChild);
     };
-    class_1.prototype.replaceChild = function (node, newChild) {
+    /** Remove all childs from the node (if needed) and append one (if present) */
+    Utils.prototype.replaceChild = function (node, newChild) {
         this.clearChilds(node);
         if (newChild)
             node.appendChild(newChild);
     };
-    class_1.prototype.toggleClass = function (element, clsName, force) {
+    /** Add or remove a classname for the element
+     * @param force - true -> add; false -> remove; undefined -> toggle.
+     */
+    Utils.prototype.toggleClass = function (element, clsName, force) {
         if (force === undefined)
             force = !element.classList.contains(clsName);
         if (force)
@@ -62,7 +75,7 @@ var utils = new /** @class */ (function () {
         else
             element.classList.remove(clsName);
     };
-    class_1.prototype.arrayRemove = function (array, val) {
+    Utils.prototype.arrayRemove = function (array, val) {
         for (var i = 0; i < array.length; i++) {
             var item = array[i];
             if (item === val) {
@@ -71,7 +84,7 @@ var utils = new /** @class */ (function () {
             }
         }
     };
-    return class_1;
+    return Utils;
 }());
 utils.buildDOM = (function () {
     var createElementFromTag = function (tag) {
@@ -171,20 +184,35 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 var View = /** @class */ (function () {
-    function View() {
+    function View(dom) {
+        if (dom)
+            this._dom = utils.buildDOM(dom);
     }
     Object.defineProperty(View.prototype, "dom", {
         get: function () {
-            return this._dom = this._dom || this.createDom();
+            return this._dom = this._dom || utils.buildDOM(this.createDom());
         },
         enumerable: true,
         configurable: true
     });
+    View.prototype.ensureDom = function () {
+        return this.dom;
+    };
     View.prototype.createDom = function () {
         return document.createElement('div');
     };
     View.prototype.toggleClass = function (clsName, force) {
         utils.toggleClass(this.dom, clsName, force);
+    };
+    View.getDOM = function (view) {
+        if (!view)
+            throw new Error('view is undefined or null');
+        if (view instanceof View)
+            return view.dom;
+        if (view instanceof HTMLElement)
+            return view;
+        console.error('getDOM(): unknown type: ', view);
+        throw new Error('Cannot get DOM: unknown type');
     };
     return View;
 }());
@@ -195,10 +223,12 @@ var ListViewItem = /** @class */ (function (_super) {
     }
     return ListViewItem;
 }(View));
-var ListView = /** @class */ (function () {
+var ListView = /** @class */ (function (_super) {
+    __extends(ListView, _super);
     function ListView(container) {
-        this.container = utils.buildDOM(container);
-        this.items = [];
+        var _this = _super.call(this, container) || this;
+        _this.items = [];
+        return _this;
     }
     ListView.prototype.add = function (item) {
         var _this = this;
@@ -206,22 +236,118 @@ var ListView = /** @class */ (function () {
             if (_this.onItemClicked)
                 _this.onItemClicked(item);
         });
-        this.container.appendChild(item.dom);
+        this.dom.appendChild(item.dom);
         this.items.push(item);
     };
     ListView.prototype.clear = function () {
-        utils.clearChilds(this.container);
+        utils.clearChilds(this.dom);
         this.items = [];
     };
     ListView.prototype.get = function (idx) {
         return this.items[idx];
     };
-    ListView.prototype.clearAndReplaceDom = function (dom) {
+    ListView.prototype.ReplaceChild = function (dom) {
         this.clear();
-        this.container.appendChild(dom);
+        this.dom.appendChild(View.getDOM(dom));
     };
     return ListView;
-}());
+}(View));
+var Section = /** @class */ (function (_super) {
+    __extends(Section, _super);
+    function Section(arg) {
+        var _this = _super.call(this) || this;
+        _this.ensureDom();
+        if (arg) {
+            if (arg.title)
+                _this.setTitle(arg.title);
+            if (arg.content)
+                _this.setContent(arg.content);
+            if (arg.actions)
+                arg.actions.forEach(function (x) { return _this.addAction(x); });
+        }
+        return _this;
+    }
+    Section.prototype.createDom = function () {
+        var DOM = utils.buildDOM;
+        return DOM({
+            tag: 'div.section',
+            child: [
+                {
+                    tag: 'div.section-header',
+                    child: [
+                        this.titleDom = DOM({ tag: 'span.section-title' })
+                    ]
+                }
+                // content element(s) here
+            ]
+        });
+    };
+    Section.prototype.setTitle = function (text) {
+        this.titleDom.textContent = text;
+    };
+    Section.prototype.setContent = function (view) {
+        var dom = this.dom;
+        var firstChild = dom.firstChild;
+        while (dom.lastChild !== firstChild)
+            dom.removeChild(dom.lastChild);
+        dom.appendChild(View.getDOM(view));
+    };
+    Section.prototype.addAction = function (arg) {
+        this.titleDom.parentElement.appendChild(utils.buildDOM({
+            tag: 'div.section-action.clickable',
+            textContent: arg.text,
+            onclick: arg.onclick
+        }));
+    };
+    return Section;
+}(View));
+var LoadingIndicator = /** @class */ (function (_super) {
+    __extends(LoadingIndicator, _super);
+    function LoadingIndicator(arg) {
+        var _this = _super.call(this) || this;
+        _this._status = 'running';
+        if (arg) {
+            if (arg.status)
+                _this.status = arg.status;
+            if (arg.content)
+                _this.content = arg.content;
+            if (arg.onclick)
+                _this.onclick = arg.onclick;
+        }
+        return _this;
+    }
+    Object.defineProperty(LoadingIndicator.prototype, "status", {
+        get: function () { return this._status; },
+        set: function (val) {
+            this._status = val;
+            this.toggleClass('running', val == 'running');
+            this.toggleClass('error', val == 'error');
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(LoadingIndicator.prototype, "content", {
+        get: function () { return this._text; },
+        set: function (val) { this._text = val; this.dom.textContent = val; },
+        enumerable: true,
+        configurable: true
+    });
+    LoadingIndicator.prototype.reset = function () {
+        this.status = 'running';
+        this.content = 'Loading...';
+    };
+    LoadingIndicator.prototype.createDom = function () {
+        var _this = this;
+        this._dom = utils.buildDOM({
+            tag: 'div.loading-indicator',
+            onclick: function (e) { return _this.onclick && _this.onclick(e); }
+        });
+        this.reset();
+        return this._dom;
+    };
+    return LoadingIndicator;
+}(View));
+// TODO: class ContextMenu
 // file: main.ts
 // TypeScript 3.7 is required.
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -270,14 +396,14 @@ var settings = {
 };
 /** （大部分）UI 操作 */
 var ui = new /** @class */ (function () {
-    function class_3() {
+    function class_2() {
         this.bottomBar = new /** @class */ (function () {
-            function class_4() {
+            function class_3() {
                 this.container = document.getElementById("bottombar");
                 this.btnPin = document.getElementById('btnPin');
                 this.autoHide = true;
             }
-            class_4.prototype.setPinned = function (val) {
+            class_3.prototype.setPinned = function (val) {
                 val = (val !== null && val !== void 0 ? val : !this.autoHide);
                 this.autoHide = val;
                 utils.toggleClass(document.body, 'bottompinned', !val);
@@ -285,10 +411,10 @@ var ui = new /** @class */ (function () {
                 if (val)
                     this.toggle(true);
             };
-            class_4.prototype.toggle = function (state) {
+            class_3.prototype.toggle = function (state) {
                 utils.toggleClass(this.container, 'show', state);
             };
-            class_4.prototype.init = function () {
+            class_3.prototype.init = function () {
                 var _this = this;
                 var bar = this.container;
                 var hideTimer = new utils.Timer(function () {
@@ -305,23 +431,23 @@ var ui = new /** @class */ (function () {
                 });
                 this.btnPin.addEventListener('click', function () { return _this.setPinned(); });
             };
-            return class_4;
+            return class_3;
         }());
         this.progressBar = new /** @class */ (function () {
-            function class_5() {
+            function class_4() {
                 this.container = document.getElementById('progressbar');
                 this.fill = document.getElementById('progressbar-fill');
                 this.labelCur = document.getElementById('progressbar-label-cur');
                 this.labelTotal = document.getElementById('progressbar-label-total');
             }
-            class_5.prototype.setProg = function (cur, total) {
+            class_4.prototype.setProg = function (cur, total) {
                 var prog = cur / total;
                 prog = utils.numLimit(prog, 0, 1);
                 this.fill.style.width = (prog * 100) + '%';
                 this.labelCur.textContent = utils.formatTime(cur);
                 this.labelTotal.textContent = utils.formatTime(total);
             };
-            class_5.prototype.setProgressChangedCallback = function (cb) {
+            class_4.prototype.setProgressChangedCallback = function (cb) {
                 var _this = this;
                 var call = function (e) { cb(utils.numLimit(e.offsetX / _this.container.clientWidth, 0, 1)); };
                 this.container.addEventListener('mousedown', function (e) {
@@ -333,13 +459,13 @@ var ui = new /** @class */ (function () {
                         call(e);
                 });
             };
-            return class_5;
+            return class_4;
         }());
         this.trackinfo = new /** @class */ (function () {
-            function class_6() {
+            function class_5() {
                 this.element = document.getElementById('bottombar-trackinfo');
             }
-            class_6.prototype.setTrack = function (track) {
+            class_5.prototype.setTrack = function (track) {
                 if (track) {
                     utils.replaceChild(this.element, utils.buildDOM({
                         tag: 'span',
@@ -354,23 +480,23 @@ var ui = new /** @class */ (function () {
                     this.element.textContent = "";
                 }
             };
-            return class_6;
+            return class_5;
         }());
         this.sidebarList = new /** @class */ (function () {
-            function class_7() {
+            function class_6() {
                 this.container = document.getElementById('sidebar-list');
                 this.currentActive = new ItemActiveHelper();
             }
-            class_7.prototype.setActive = function (item) {
+            class_6.prototype.setActive = function (item) {
                 this.currentActive.set(item);
             };
-            return class_7;
+            return class_6;
         }());
         this.content = new /** @class */ (function () {
-            function class_8() {
+            function class_7() {
                 this.container = document.getElementById('content-outer');
             }
-            class_8.prototype.removeCurrent = function () {
+            class_7.prototype.removeCurrent = function () {
                 var cur = this.current;
                 if (!cur)
                     return;
@@ -379,17 +505,17 @@ var ui = new /** @class */ (function () {
                 if (cur.dom)
                     this.container.removeChild(cur.dom);
             };
-            class_8.prototype.setCurrent = function (arg) {
+            class_7.prototype.setCurrent = function (arg) {
                 this.removeCurrent();
                 this.container.appendChild(arg.dom);
                 if (arg.onShow)
                     arg.onShow();
                 this.current = arg;
             };
-            return class_8;
+            return class_7;
         }());
     }
-    return class_3;
+    return class_2;
 }()); // ui
 ui.bottomBar.init();
 /** 播放器核心：控制播放逻辑 */
@@ -446,15 +572,15 @@ var playerCore = new /** @class */ (function () {
 }());
 /** API 操作 */
 var api = new /** @class */ (function () {
-    function class_9() {
+    function class_8() {
         this.debugSleep = settings.debug ? 500 : 0;
     }
-    Object.defineProperty(class_9.prototype, "baseUrl", {
+    Object.defineProperty(class_8.prototype, "baseUrl", {
         get: function () { return settings.apiBaseUrl; },
         enumerable: true,
         configurable: true
     });
-    class_9.prototype._fetch = function (input, init) {
+    class_8.prototype._fetch = function (input, init) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -470,25 +596,31 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_9.prototype.getJson = function (path, options) {
+    /**
+     * GET JSON from API
+     * @param path - relative path
+     * @param options
+     */
+    class_8.prototype.getJson = function (path, options) {
+        var _a;
         return __awaiter(this, void 0, void 0, function () {
             var resp;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         options = options || {};
                         return [4 /*yield*/, this._fetch(this.baseUrl + path)];
                     case 1:
-                        resp = _a.sent();
-                        if (options.expectedOK !== false && resp.status != 200)
+                        resp = _b.sent();
+                        if (options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200)))
                             throw new Error('HTTP status ' + resp.status);
                         return [4 /*yield*/, resp.json()];
-                    case 2: return [2 /*return*/, _a.sent()];
+                    case 2: return [2 /*return*/, _b.sent()];
                 }
             });
         });
     };
-    class_9.prototype.postJson = function (arg) {
+    class_8.prototype.postJson = function (arg) {
         return __awaiter(this, void 0, void 0, function () {
             var resp;
             return __generator(this, function (_a) {
@@ -499,12 +631,12 @@ var api = new /** @class */ (function () {
                         })];
                     case 1:
                         resp = _a.sent();
-                        return [2 /*return*/];
+                        return [2 /*return*/, resp];
                 }
             });
         });
     };
-    class_9.prototype.getListAsync = function (id) {
+    class_8.prototype.getListAsync = function (id) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -514,7 +646,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_9.prototype.getListIndexAsync = function () {
+    class_8.prototype.getListIndexAsync = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -524,79 +656,106 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_9.prototype.putListAsync = function (list) {
+    class_8.prototype.putListAsync = function (list, creating) {
+        if (creating === void 0) { creating = false; }
         return __awaiter(this, void 0, void 0, function () {
+            var resp;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.postJson({
                             path: 'lists/' + list.id,
-                            method: 'PUT',
+                            method: creating ? 'POST' : 'PUT',
                             obj: list,
                         })];
                     case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                        resp = _a.sent();
+                        return [2 /*return*/, resp.json()];
                 }
             });
         });
     };
-    return class_9;
+    return class_8;
+}());
+var trackStore = new /** @class */ (function () {
+    function TrackStore() {
+    }
+    return TrackStore;
 }());
 var TrackList = /** @class */ (function () {
     function TrackList() {
+        this.tracks = [];
         this.curActive = new ItemActiveHelper();
-        this.loadIndicator = new LoadingIndicator();
     }
-    TrackList.prototype.loadFromObj = function (obj) {
-        this.name = obj.name;
-        this.tracks = obj.tracks;
-        var i = 0;
-        var lastItem;
-        for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
-            var item = _a[_i];
-            item._bind = { location: i++, list: this };
-            if (lastItem)
-                lastItem._bind.next = item;
-            lastItem = item;
+    TrackList.prototype.loadInfo = function (info) {
+        this.id = info.id;
+        this.apiid = this.id > 0 ? this.id : 0;
+        this.name = info.name;
+    };
+    TrackList.prototype.loadFromGetResult = function (obj) {
+        this.loadInfo(obj);
+        for (var _i = 0, _a = obj.tracks; _i < _a.length; _i++) {
+            var t = _a[_i];
+            this.addTrack(t);
         }
         return this;
     };
-    TrackList.prototype.fetch = function (arg) {
-        var _this = this;
-        var func;
-        if (typeof arg == 'number')
-            func = function () { return api.getListAsync(arg); };
-        else
-            func = arg;
-        this.loadIndicator.reset();
-        return this.fetching = (function () { return __awaiter(_this, void 0, void 0, function () {
-            var obj, err_1;
+    TrackList.prototype.addTrack = function (t) {
+        var track = {
+            artist: t.artist, id: t.id, name: t.name, url: t.url,
+            _bind: {
+                list: this,
+                location: this.tracks.length,
+                next: null
+            }
+        };
+        if (this.tracks.length)
+            this.tracks[this.tracks.length - 1]._bind.next = track;
+        this.tracks.push(track);
+        return track;
+    };
+    TrackList.prototype.loadFromApi = function (arg) {
+        var _a;
+        return this.fetching = (_a = this.fetching, (_a !== null && _a !== void 0 ? _a : this.fetchForce(arg)));
+    };
+    TrackList.prototype.fetchForce = function (arg) {
+        return __awaiter(this, void 0, void 0, function () {
+            var func, obj, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, func()];
+                        if (arg === undefined)
+                            arg = this.apiid;
+                        if (typeof arg == 'number')
+                            func = function () { return api.getListAsync(arg); };
+                        else
+                            func = arg;
+                        this.loadIndicator = new LoadingIndicator();
+                        this.updateView();
+                        _a.label = 1;
                     case 1:
-                        obj = _a.sent();
-                        this.loadFromObj(obj);
-                        return [3 /*break*/, 3];
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, func()];
                     case 2:
+                        obj = _a.sent();
+                        this.loadFromGetResult(obj);
+                        this.loadIndicator = null;
+                        return [3 /*break*/, 4];
+                    case 3:
                         err_1 = _a.sent();
                         this.loadIndicator.status = 'error';
                         this.loadIndicator.content = 'Oh no! Something just goes wrong:\n' + err_1
                             + '\nClick here to retry';
                         this.loadIndicator.onclick = function () {
-                            _this.fetch(arg);
+                            _this.fetchForce(arg);
                         };
-                        return [3 /*break*/, 3];
-                    case 3:
-                        if (this.listView)
-                            this.updateView();
+                        return [3 /*break*/, 4];
+                    case 4:
+                        this.updateView();
                         return [2 /*return*/];
                 }
             });
-        }); })();
+        });
     };
     TrackList.prototype.createView = function () {
         var _this = this;
@@ -604,13 +763,14 @@ var TrackList = /** @class */ (function () {
             this.listView = new ListView({ tag: 'div.tracklist' });
             var cb_1 = function () { return _this.trackChanged(); };
             this.contentView = {
-                dom: this.listView.container,
+                dom: this.listView.dom,
                 onShow: function () {
                     playerCore.onTrackChanged.add(cb_1);
                     _this.updateView();
                 },
                 onRemove: function () {
                     playerCore.onTrackChanged.remove(cb_1);
+                    _this.listView.clear();
                 }
             };
             // this.updateView();
@@ -625,8 +785,14 @@ var TrackList = /** @class */ (function () {
     };
     TrackList.prototype.updateView = function () {
         var listView = this.listView;
-        if (!this.tracks) {
-            listView.clearAndReplaceDom(this.loadIndicator.dom);
+        if (!listView)
+            return;
+        if (this.loadIndicator) {
+            listView.ReplaceChild(this.loadIndicator);
+            return;
+        }
+        if (this.tracks.length === 0) {
+            listView.ReplaceChild(new LoadingIndicator({ status: 'normal', content: '(Empty)' }));
             return;
         }
         // Well... currently, we just rebuild the DOM.
@@ -649,6 +815,7 @@ var TrackViewItem = /** @class */ (function (_super) {
         return _this;
     }
     TrackViewItem.prototype.createDom = function () {
+        var _this = this;
         var track = this.track;
         return utils.buildDOM({
             tag: 'div.item.trackitem.no-selection',
@@ -656,77 +823,56 @@ var TrackViewItem = /** @class */ (function (_super) {
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },
             ],
-            onclick: function () {
-                playerCore.playTrack(track);
-            },
+            onclick: function () { playerCore.playTrack(track); },
+            ondragstart: function (e) { e.dataTransfer.setData('text/plain', 'Track: ' + _this.dom.textContent); },
+            draggable: true,
             _item: this
         });
     };
     return TrackViewItem;
 }(ListViewItem));
-var LoadingIndicator = /** @class */ (function (_super) {
-    __extends(LoadingIndicator, _super);
-    function LoadingIndicator() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._status = 'running';
-        return _this;
-    }
-    Object.defineProperty(LoadingIndicator.prototype, "status", {
-        get: function () { return this._status; },
-        set: function (val) {
-            this._status = val;
-            this.toggleClass('running', val == 'running');
-            this.toggleClass('error', val == 'error');
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(LoadingIndicator.prototype, "content", {
-        get: function () { return this._text; },
-        set: function (val) { this._text = val; this.dom.textContent = val; },
-        enumerable: true,
-        configurable: true
-    });
-    LoadingIndicator.prototype.reset = function () {
-        this.status = 'running';
-        this.content = 'Loading...';
-    };
-    LoadingIndicator.prototype.createDom = function () {
-        var _this = this;
-        this._dom = utils.buildDOM({
-            tag: 'div.loading-indicator',
-            onclick: function (e) { return _this.onclick && _this.onclick(e); }
-        });
-        this.reset();
-        return this._dom;
-    };
-    return LoadingIndicator;
-}(View));
 var ListIndex = /** @class */ (function () {
     function ListIndex() {
+        var _this = this;
+        this.lists = [];
         this.loadedList = {};
-        // curActive = new ItemActiveHelper<ListIndexViewItem>();
-        this.dom = document.getElementById('sidebar-list');
         this.loadIndicator = new LoadingIndicator();
+        this.nextId = -100;
+        this.listView = new ListView();
+        this.listView.onItemClicked = function (item) {
+            ui.sidebarList.setActive(item);
+            _this.showTracklist(item.listInfo.id);
+        };
+        this.section = new Section({
+            title: 'Playlists',
+            content: this.listView,
+            actions: [{
+                    text: '➕',
+                    onclick: function () {
+                        _this.newTracklist();
+                    }
+                }]
+        });
     }
+    ListIndex.prototype.mount = function () {
+        ui.sidebarList.container.appendChild(this.section.dom);
+    };
+    /** Fetch lists from API and update the view */
     ListIndex.prototype.fetch = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var index;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var index, _i, _a, item;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        this.listView = new ListView(this.dom);
-                        this.listView.onItemClicked = function (item) {
-                            ui.sidebarList.setActive(item);
-                            _this.openTracklist(item.listInfo.id);
-                        };
-                        this.updateView();
+                        this.listView.ReplaceChild(this.loadIndicator.dom);
                         return [4 /*yield*/, api.getListIndexAsync()];
                     case 1:
-                        index = _a.sent();
-                        this.lists = index.lists;
-                        this.updateView();
+                        index = _b.sent();
+                        this.listView.clear();
+                        for (_i = 0, _a = index.lists; _i < _a.length; _i++) {
+                            item = _a[_i];
+                            this.addTracklist(item);
+                        }
                         if (this.lists.length > 0)
                             this.listView.onItemClicked(this.listView.items[0]);
                         return [2 /*return*/];
@@ -734,25 +880,45 @@ var ListIndex = /** @class */ (function () {
             });
         });
     };
-    ListIndex.prototype.updateView = function () {
-        this.listView.clear();
-        if (!this.lists) {
-            this.listView.clearAndReplaceDom(this.loadIndicator.dom);
-            return;
-        }
+    ListIndex.prototype.addTracklist = function (list) {
+        this.lists.push(list);
+        this.listView.add(new ListIndexViewItem(this, list));
+    };
+    ListIndex.prototype.getListInfo = function (id) {
         for (var _i = 0, _a = this.lists; _i < _a.length; _i++) {
-            var item = _a[_i];
-            this.listView.add(new ListIndexViewItem(this, item));
+            var l = _a[_i];
+            if (l.id === id)
+                return l;
         }
     };
-    ListIndex.prototype.openTracklist = function (id) {
+    ListIndex.prototype.getList = function (id) {
         var list = this.loadedList[id];
         if (!list) {
             list = new TrackList();
-            list.fetch(id);
+            list.loadInfo(this.getListInfo(id));
+            if (list.apiid) {
+                list.loadFromApi();
+            }
             this.loadedList[id] = list;
         }
+        return list;
+    };
+    ListIndex.prototype.showTracklist = function (id) {
+        var list = this.getList(id);
         ui.content.setCurrent(list.createView());
+    };
+    /**
+     * Create a Tracklist and allocate an temporary local ID (negative number).
+     * It should be sync to server and get an real ID later.
+     */
+    ListIndex.prototype.newTracklist = function () {
+        var _this = this;
+        var id = this.nextId--;
+        var list = {
+            id: id,
+            name: utils.createName(function (x) { return x ? "New Playlist (" + (x + 1) + ")" : 'New Playlist'; }, function (x) { return !!_this.lists.find(function (l) { return l.name == x; }); })
+        };
+        this.addTracklist(list);
     };
     return ListIndex;
 }());
@@ -773,4 +939,5 @@ var ListIndexViewItem = /** @class */ (function (_super) {
     return ListIndexViewItem;
 }(ListViewItem));
 var listIndex = new ListIndex();
+listIndex.mount();
 listIndex.fetch();
