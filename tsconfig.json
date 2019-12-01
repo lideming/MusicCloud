@@ -1,10 +1,13 @@
 {
+    "files": ["main.ts"],
     "compilerOptions": {
         "module": "none",
         "target": "es5",
         "jsx": "preserve",
         "lib": ["dom", "es2015"],
-        "outFile": "main.js"
+        "outFile": "main.js",
+        "sourceMap": true,
+        "downlevelIteration": true
     },
     "exclude": [
         "node_modules",

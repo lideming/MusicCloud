@@ -11,6 +11,7 @@
 var settings = {
     apiBaseUrl: 'api/',
     debug: true,
+    apiDebugDelay: 300,
 };
 
 /** （大部分）UI 操作 */
@@ -23,7 +24,7 @@ var ui = new class {
             val = val ?? !this.autoHide;
             this.autoHide = val;
             utils.toggleClass(document.body, 'bottompinned', !val);
-            this.btnPin.textContent = !val ? 'Pinned' : 'Pin';
+            this.btnPin.textContent = !val ? 'Unpin' : 'Pin';
             if (val) this.toggle(true);
         }
         toggle(state?: boolean) {
@@ -103,8 +104,8 @@ var ui = new class {
         }
         setCurrent(arg: ContentView) {
             this.removeCurrent();
-            this.container.appendChild(arg.dom);
             if (arg.onShow) arg.onShow();
+            this.container.appendChild(arg.dom);
             this.current = arg;
         }
     };
@@ -140,8 +141,9 @@ var playerCore = new class PlayerCore {
         var analyzer = ctx.createAnalyser();
     }
     next() {
-        if (this.track._bind && this.track._bind.next)
-            this.playTrack(this.track._bind.next);
+        var nextTrack = this.track?._bind?.list?.getNextTrack(this.track);
+        if (nextTrack)
+            this.playTrack(nextTrack);
         else
             this.setTrack(null);
     }
@@ -173,16 +175,11 @@ var playerCore = new class PlayerCore {
 /** API 操作 */
 var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
-    debugSleep = settings.debug ? 500 : 0;
+    debugSleep = settings.debug ? settings.apiDebugDelay : 0;
     async _fetch(input: RequestInfo, init?: RequestInit) {
         if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
         return await fetch(input, init);
     }
-    /** 
-     * GET JSON from API
-     * @param path - relative path
-     * @param options
-     */
     async getJson(path: string, options?: { status?: false | number; }): Promise<any> {
         options = options || {};
         var resp = await this._fetch(this.baseUrl + path);
@@ -215,9 +212,8 @@ var api = new class {
 /** A track binding with list */
 interface Track extends Api.Track {
     _bind?: {
-        location?: number;
+        position?: number;
         list?: TrackList;
-        next?: Track;
     };
 }
 
@@ -255,12 +251,11 @@ class TrackList {
             artist: t.artist, id: t.id, name: t.name, url: t.url,
             _bind: {
                 list: this,
-                location: this.tracks.length,
-                next: null
+                position: this.tracks.length
             }
         };
-        if (this.tracks.length) this.tracks[this.tracks.length - 1]._bind.next = track;
         this.tracks.push(track);
+        // TODO: update listview?
         return track;
     }
     loadFromApi(arg?: number | (AsyncFunc<Api.TrackListGet>)) {
@@ -278,22 +273,27 @@ class TrackList {
             this.loadFromGetResult(obj);
             this.loadIndicator = null;
         } catch (err) {
-            this.loadIndicator.status = 'error';
-            this.loadIndicator.content = 'Oh no! Something just goes wrong:\n' + err
-                + '\nClick here to retry';
-            this.loadIndicator.onclick = () => {
-                this.fetchForce(arg);
-            };
+            this.loadIndicator.error(err, () => this.fetchForce(arg));
         }
         this.updateView();
     }
     createView(): ContentView {
         if (!this.contentView) {
-            this.listView = new ListView({ tag: 'div.tracklist' });
             let cb = () => this.trackChanged();
             this.contentView = {
-                dom: this.listView.dom,
+                dom: null,
                 onShow: () => {
+                    var lv = this.listView = this.listView || new ListView({ tag: 'div.tracklist' });
+                    lv.dragging = true;
+                    lv.moveByDragging = true;
+                    lv.onItemMoved = (item, from) => {
+                        this.tracks = this.listView.map(lvi => {
+                            lvi.track._bind.position = lvi.position;
+                            lvi.updatePos();
+                            return lvi.track;
+                        })
+                    };
+                    this.contentView.dom = lv.dom;
                     playerCore.onTrackChanged.add(cb);
                     this.updateView();
                 },
@@ -306,9 +306,15 @@ class TrackList {
         }
         return this.contentView;
     }
+    getNextTrack(track: Track): Track {
+        if (track._bind?.list === this) {
+            return this.tracks[track._bind.position + 1] ?? null;
+        }
+        return null;
+    }
     private trackChanged() {
         var track = playerCore.track;
-        var item = (track?._bind.list === this) ? this.listView.get(track._bind.location) : null;
+        var item = (track?._bind.list === this) ? this.listView.get(track._bind.position) : null;
         this.curActive.set(item);
     }
     private updateView() {
@@ -340,19 +346,23 @@ class TrackViewItem extends ListViewItem {
         super();
         this.track = item;
     }
+    get dragData() { return `${this.track.name} - ${this.track.artist}`; }
     createDom() {
         var track = this.track;
-        return utils.buildDOM({
+        return {
             tag: 'div.item.trackitem.no-selection',
             child: [
+                { tag: 'span.pos', textContent: (track._bind.position + 1).toString() },
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },
             ],
             onclick: () => { playerCore.playTrack(track); },
-            ondragstart: (e) => { e.dataTransfer.setData('text/plain', 'Track: ' + this.dom.textContent); },
             draggable: true,
             _item: this
-        }) as HTMLDivElement;
+        };
+    }
+    updatePos() {
+        this.dom.querySelector('.pos').textContent = (this.track._bind.position + 1).toString();
     }
 }
 
@@ -364,6 +374,11 @@ class ListIndex {
     loadIndicator = new LoadingIndicator();
     constructor() {
         this.listView = new ListView();
+        this.listView.dragging = true;
+        this.listView.moveByDragging = true;
+        this.listView.onItemMoved = (item, from) => {
+            this.lists = this.listView.map(x => x.listInfo);
+        };
         this.listView.onItemClicked = (item) => {
             ui.sidebarList.setActive(item);
             this.showTracklist(item.listInfo.id);
@@ -379,22 +394,28 @@ class ListIndex {
             }]
         });
     }
-    mount() {
+    init() {
         ui.sidebarList.container.appendChild(this.section.dom);
+        listIndex.fetch();
     }
     /** Fetch lists from API and update the view */
     async fetch() {
+        this.loadIndicator.reset();
         this.listView.ReplaceChild(this.loadIndicator.dom);
-        var index = await api.getListIndexAsync();
-        this.listView.clear();
-        for (const item of index.lists) {
-            this.addTracklist(item);
+        try {
+            var index = await api.getListIndexAsync();
+            this.listView.clear();
+            for (const item of index.lists) {
+                this.addListInfo(item);
+            }
+        } catch (err) {
+            this.loadIndicator.error(err, () => this.fetch());
         }
-        if (this.lists.length > 0) this.listView.onItemClicked(this.listView.items[0]);
+        if (this.lists.length > 0) this.listView.onItemClicked(this.listView.get(0));
     }
-    addTracklist(list: Api.TrackListInfo) {
-        this.lists.push(list);
-        this.listView.add(new ListIndexViewItem(this, list));
+    addListInfo(listinfo: Api.TrackListInfo) {
+        this.lists.push(listinfo);
+        this.listView.add(new ListIndexViewItem(this, listinfo));
     }
     getListInfo(id: number) {
         for (const l of this.lists) {
@@ -432,7 +453,7 @@ class ListIndex {
                 (x) => x ? `New Playlist (${x + 1})` : 'New Playlist',
                 (x) => !!this.lists.find((l) => l.name == x))
         };
-        this.addTracklist(list);
+        this.addListInfo(list);
     }
 }
 
@@ -445,13 +466,16 @@ class ListIndexViewItem extends ListViewItem {
         this.listInfo = listInfo;
     }
     createDom() {
-        return utils.buildDOM({
+        return {
             tag: 'div.item.no-selection',
             textContent: this.listInfo.name,
-        }) as HTMLElement;
+        };
     }
 }
 
+document.addEventListener('drop', (ev) => {
+    ev.preventDefault();
+});
+
 var listIndex = new ListIndex();
-listIndex.mount();
-listIndex.fetch();
+listIndex.init();

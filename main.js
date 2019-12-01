@@ -1,4 +1,15 @@
 // file: utils.ts
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 /** The name "utils" tells it all. */
 var utils = new /** @class */ (function () {
     function Utils() {
@@ -77,11 +88,49 @@ var utils = new /** @class */ (function () {
     };
     Utils.prototype.arrayRemove = function (array, val) {
         for (var i = 0; i < array.length; i++) {
-            var item = array[i];
-            if (item === val) {
+            if (array[i] === val) {
                 array.splice(i, 1);
                 i--;
             }
+        }
+    };
+    Utils.prototype.arrayMap = function (arr, func) {
+        var e_1, _a;
+        if (arr instanceof Array)
+            return arr.map(func);
+        var idx = 0;
+        var ret = new Array(arr.length);
+        try {
+            for (var arr_1 = __values(arr), arr_1_1 = arr_1.next(); !arr_1_1.done; arr_1_1 = arr_1.next()) {
+                var item = arr_1_1.value;
+                ret[idx] = (func(item, idx));
+                idx++;
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (arr_1_1 && !arr_1_1.done && (_a = arr_1.return)) _a.call(arr_1);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
+        return ret;
+    };
+    Utils.prototype.arrayForeach = function (arr, func) {
+        var e_2, _a;
+        var idx = 0;
+        try {
+            for (var arr_2 = __values(arr), arr_2_1 = arr_2.next(); !arr_2_1.done; arr_2_1 = arr_2.next()) {
+                var item = arr_2_1.value;
+                func(item, idx++);
+            }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (arr_2_1 && !arr_2_1.done && (_a = arr_2.return)) _a.call(arr_2);
+            }
+            finally { if (e_2) throw e_2.error; }
         }
     };
     return Utils;
@@ -190,16 +239,23 @@ var View = /** @class */ (function () {
     }
     Object.defineProperty(View.prototype, "dom", {
         get: function () {
-            return this._dom = this._dom || utils.buildDOM(this.createDom());
+            this.ensureDom();
+            return this._dom;
         },
         enumerable: true,
         configurable: true
     });
     View.prototype.ensureDom = function () {
-        return this.dom;
+        if (!this._dom) {
+            this._dom = utils.buildDOM(this.createDom());
+            this.postCreateDom(this._dom);
+        }
     };
     View.prototype.createDom = function () {
         return document.createElement('div');
+    };
+    /** Will be called when the dom is created */
+    View.prototype.postCreateDom = function (element) {
     };
     View.prototype.toggleClass = function (clsName, force) {
         utils.toggleClass(this.dom, clsName, force);
@@ -216,11 +272,81 @@ var View = /** @class */ (function () {
     };
     return View;
 }());
+/** DragManager is used to help exchange infomation between views */
+var dragManager = new /** @class */ (function () {
+    function DragManager() {
+    }
+    Object.defineProperty(DragManager.prototype, "currentItem", {
+        get: function () { return this._currentItem; },
+        enumerable: true,
+        configurable: true
+    });
+    ;
+    DragManager.prototype.start = function (item) {
+        this._currentItem = item;
+    };
+    DragManager.prototype.end = function (item) {
+        this._currentItem = null;
+    };
+    return DragManager;
+}());
 var ListViewItem = /** @class */ (function (_super) {
     __extends(ListViewItem, _super);
     function ListViewItem() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    Object.defineProperty(ListViewItem.prototype, "listview", {
+        get: function () { return this._listView; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(ListViewItem.prototype, "position", {
+        get: function () { return this._position; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(ListViewItem.prototype, "dragData", {
+        get: function () { return this.dom.textContent; },
+        enumerable: true,
+        configurable: true
+    });
+    ListViewItem.prototype.postCreateDom = function (element) {
+        var _this = this;
+        _super.prototype.postCreateDom.call(this, element);
+        this.dom.addEventListener('click', function () {
+            var _a, _b, _c;
+            (_c = (_a = _this._listView) === null || _a === void 0 ? void 0 : (_b = _a).onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, _this);
+        });
+        this.dom.addEventListener('dragstart', function (ev) {
+            var _a;
+            if (!((_a = _this._listView) === null || _a === void 0 ? void 0 : _a.dragging))
+                return;
+            dragManager.start(_this);
+            ev.dataTransfer.setData('text/plain', _this.dragData);
+        });
+        this.dom.addEventListener('dragend', function (ev) {
+            dragManager.end(_this);
+            ev.preventDefault();
+        });
+        this.dom.addEventListener('dragover', function (ev) {
+            var item = dragManager.currentItem;
+            if (item instanceof ListViewItem && item.listview === _this.listview) {
+                ev.preventDefault();
+                ev.dataTransfer.dropEffect = 'move';
+            }
+        });
+        this.dom.addEventListener('drop', function (ev) {
+            var item = dragManager.currentItem;
+            if (item instanceof ListViewItem && item.listview === _this.listview) {
+                ev.preventDefault();
+                if (item === _this)
+                    return;
+                console.log('move pre', item.position, _this.position);
+                _this.listview.move(item, _this.position);
+                console.log('move post', item.position, _this.position);
+            }
+        });
+    };
     return ListViewItem;
 }(View));
 var ListView = /** @class */ (function (_super) {
@@ -228,23 +354,73 @@ var ListView = /** @class */ (function (_super) {
     function ListView(container) {
         var _this = _super.call(this, container) || this;
         _this.items = [];
+        /**
+         * Allow user to drag an item.
+         */
+        _this.dragging = false;
+        /**
+         * Allow user to drag an item and change its position.
+         */
+        _this.moveByDragging = false;
         return _this;
     }
-    ListView.prototype.add = function (item) {
-        var _this = this;
-        item.dom.addEventListener('click', function () {
-            if (_this.onItemClicked)
-                _this.onItemClicked(item);
-        });
-        this.dom.appendChild(item.dom);
-        this.items.push(item);
+    ListView.prototype.add = function (item, pos) {
+        if (item._listView)
+            throw new Error('the item is already in a listview');
+        item._listView = this;
+        if (pos === undefined || pos >= this.items.length) {
+            this.dom.appendChild(item.dom);
+            item._position = this.items.length;
+            this.items.push(item);
+        }
+        else {
+            this.dom.insertBefore(item.dom, this.get(pos).dom);
+            this.items.splice(pos, 0, item);
+            for (var i = pos; i < this.items.length; i++) {
+                this.items[i]._position = i;
+            }
+        }
+        if (this.dragging)
+            item.dom.draggable = true;
+    };
+    ListView.prototype.remove = function (item) {
+        item = this._ensureItem(item);
+        item.dom.remove();
+        this.items.splice(item._position, 1);
+        var pos = item.position;
+        item._listView = item._position = null;
+        for (var i = pos; i < this.items.length; i++) {
+            this.items[i]._position = i;
+        }
+    };
+    ListView.prototype.move = function (item, newpos) {
+        item = this._ensureItem(item);
+        this.remove(item);
+        this.add(item, newpos);
+        this.onItemMoved(item, item.position);
     };
     ListView.prototype.clear = function () {
         utils.clearChilds(this.dom);
         this.items = [];
     };
+    ListView.prototype[Symbol.iterator] = function () { return this.items[Symbol.iterator](); };
+    Object.defineProperty(ListView.prototype, "length", {
+        get: function () { return this.items.length; },
+        enumerable: true,
+        configurable: true
+    });
     ListView.prototype.get = function (idx) {
         return this.items[idx];
+    };
+    ListView.prototype.map = function (func) { return utils.arrayMap(this, func); };
+    ListView.prototype._ensureItem = function (item) {
+        if (typeof item === 'number')
+            item = this.get(item);
+        else if (!item)
+            throw new Error('item is null or undefined.');
+        else if (item._listView !== this)
+            throw new Error('the item is not in this listview.');
+        return item;
     };
     ListView.prototype.ReplaceChild = function (dom) {
         this.clear();
@@ -268,19 +444,18 @@ var Section = /** @class */ (function (_super) {
         return _this;
     }
     Section.prototype.createDom = function () {
-        var DOM = utils.buildDOM;
-        return DOM({
+        return {
             tag: 'div.section',
             child: [
                 {
                     tag: 'div.section-header',
                     child: [
-                        this.titleDom = DOM({ tag: 'span.section-title' })
+                        this.titleDom = utils.buildDOM({ tag: 'span.section-title' })
                     ]
                 }
                 // content element(s) here
             ]
-        });
+        };
     };
     Section.prototype.setTitle = function (text) {
         this.titleDom.textContent = text;
@@ -306,9 +481,10 @@ var LoadingIndicator = /** @class */ (function (_super) {
     function LoadingIndicator(arg) {
         var _this = _super.call(this) || this;
         _this._status = 'running';
+        _this.reset();
         if (arg) {
             if (arg.status)
-                _this.status = arg.status;
+                _this.state = arg.status;
             if (arg.content)
                 _this.content = arg.content;
             if (arg.onclick)
@@ -316,7 +492,7 @@ var LoadingIndicator = /** @class */ (function (_super) {
         }
         return _this;
     }
-    Object.defineProperty(LoadingIndicator.prototype, "status", {
+    Object.defineProperty(LoadingIndicator.prototype, "state", {
         get: function () { return this._status; },
         set: function (val) {
             this._status = val;
@@ -333,8 +509,17 @@ var LoadingIndicator = /** @class */ (function (_super) {
         configurable: true
     });
     LoadingIndicator.prototype.reset = function () {
-        this.status = 'running';
+        this.state = 'running';
         this.content = 'Loading...';
+        this.onclick = null;
+    };
+    LoadingIndicator.prototype.error = function (err, retry) {
+        this.state = 'error';
+        this.content = 'Oh no! Something just goes wrong:\n' + err;
+        if (retry) {
+            this.content += '\n[Click here to retry]';
+        }
+        this.onclick = retry;
     };
     LoadingIndicator.prototype.createDom = function () {
         var _this = this;
@@ -342,7 +527,6 @@ var LoadingIndicator = /** @class */ (function (_super) {
             tag: 'div.loading-indicator',
             onclick: function (e) { return _this.onclick && _this.onclick(e); }
         });
-        this.reset();
         return this._dom;
     };
     return LoadingIndicator;
@@ -393,6 +577,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var settings = {
     apiBaseUrl: 'api/',
     debug: true,
+    apiDebugDelay: 300,
 };
 /** （大部分）UI 操作 */
 var ui = new /** @class */ (function () {
@@ -407,7 +592,7 @@ var ui = new /** @class */ (function () {
                 val = (val !== null && val !== void 0 ? val : !this.autoHide);
                 this.autoHide = val;
                 utils.toggleClass(document.body, 'bottompinned', !val);
-                this.btnPin.textContent = !val ? 'Pinned' : 'Pin';
+                this.btnPin.textContent = !val ? 'Unpin' : 'Pin';
                 if (val)
                     this.toggle(true);
             };
@@ -507,9 +692,9 @@ var ui = new /** @class */ (function () {
             };
             class_7.prototype.setCurrent = function (arg) {
                 this.removeCurrent();
-                this.container.appendChild(arg.dom);
                 if (arg.onShow)
                     arg.onShow();
+                this.container.appendChild(arg.dom);
                 this.current = arg;
             };
             return class_7;
@@ -539,8 +724,10 @@ var playerCore = new /** @class */ (function () {
         var analyzer = ctx.createAnalyser();
     }
     PlayerCore.prototype.next = function () {
-        if (this.track._bind && this.track._bind.next)
-            this.playTrack(this.track._bind.next);
+        var _a, _b, _c;
+        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track);
+        if (nextTrack)
+            this.playTrack(nextTrack);
         else
             this.setTrack(null);
     };
@@ -573,7 +760,7 @@ var playerCore = new /** @class */ (function () {
 /** API 操作 */
 var api = new /** @class */ (function () {
     function class_8() {
-        this.debugSleep = settings.debug ? 500 : 0;
+        this.debugSleep = settings.debug ? settings.apiDebugDelay : 0;
     }
     Object.defineProperty(class_8.prototype, "baseUrl", {
         get: function () { return settings.apiBaseUrl; },
@@ -596,11 +783,6 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    /**
-     * GET JSON from API
-     * @param path - relative path
-     * @param options
-     */
     class_8.prototype.getJson = function (path, options) {
         var _a;
         return __awaiter(this, void 0, void 0, function () {
@@ -631,7 +813,8 @@ var api = new /** @class */ (function () {
                         })];
                     case 1:
                         resp = _a.sent();
-                        return [2 /*return*/, resp];
+                        return [4 /*yield*/, resp.json()];
+                    case 2: return [2 /*return*/, _a.sent()];
                 }
             });
         });
@@ -659,7 +842,6 @@ var api = new /** @class */ (function () {
     class_8.prototype.putListAsync = function (list, creating) {
         if (creating === void 0) { creating = false; }
         return __awaiter(this, void 0, void 0, function () {
-            var resp;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.postJson({
@@ -667,9 +849,7 @@ var api = new /** @class */ (function () {
                             method: creating ? 'POST' : 'PUT',
                             obj: list,
                         })];
-                    case 1:
-                        resp = _a.sent();
-                        return [2 /*return*/, resp.json()];
+                    case 1: return [2 /*return*/, _a.sent()];
                 }
             });
         });
@@ -692,10 +872,20 @@ var TrackList = /** @class */ (function () {
         this.name = info.name;
     };
     TrackList.prototype.loadFromGetResult = function (obj) {
+        var e_3, _a;
         this.loadInfo(obj);
-        for (var _i = 0, _a = obj.tracks; _i < _a.length; _i++) {
-            var t = _a[_i];
-            this.addTrack(t);
+        try {
+            for (var _b = __values(obj.tracks), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var t = _c.value;
+                this.addTrack(t);
+            }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_3) throw e_3.error; }
         }
         return this;
     };
@@ -704,13 +894,11 @@ var TrackList = /** @class */ (function () {
             artist: t.artist, id: t.id, name: t.name, url: t.url,
             _bind: {
                 list: this,
-                location: this.tracks.length,
-                next: null
+                position: this.tracks.length
             }
         };
-        if (this.tracks.length)
-            this.tracks[this.tracks.length - 1]._bind.next = track;
         this.tracks.push(track);
+        // TODO: update listview?
         return track;
     };
     TrackList.prototype.loadFromApi = function (arg) {
@@ -743,12 +931,7 @@ var TrackList = /** @class */ (function () {
                         return [3 /*break*/, 4];
                     case 3:
                         err_1 = _a.sent();
-                        this.loadIndicator.status = 'error';
-                        this.loadIndicator.content = 'Oh no! Something just goes wrong:\n' + err_1
-                            + '\nClick here to retry';
-                        this.loadIndicator.onclick = function () {
-                            _this.fetchForce(arg);
-                        };
+                        this.loadIndicator.error(err_1, function () { return _this.fetchForce(arg); });
                         return [3 /*break*/, 4];
                     case 4:
                         this.updateView();
@@ -760,11 +943,21 @@ var TrackList = /** @class */ (function () {
     TrackList.prototype.createView = function () {
         var _this = this;
         if (!this.contentView) {
-            this.listView = new ListView({ tag: 'div.tracklist' });
             var cb_1 = function () { return _this.trackChanged(); };
             this.contentView = {
-                dom: this.listView.dom,
+                dom: null,
                 onShow: function () {
+                    var lv = _this.listView = _this.listView || new ListView({ tag: 'div.tracklist' });
+                    lv.dragging = true;
+                    lv.moveByDragging = true;
+                    lv.onItemMoved = function (item, from) {
+                        _this.tracks = _this.listView.map(function (lvi) {
+                            lvi.track._bind.position = lvi.position;
+                            lvi.updatePos();
+                            return lvi.track;
+                        });
+                    };
+                    _this.contentView.dom = lv.dom;
                     playerCore.onTrackChanged.add(cb_1);
                     _this.updateView();
                 },
@@ -777,13 +970,21 @@ var TrackList = /** @class */ (function () {
         }
         return this.contentView;
     };
+    TrackList.prototype.getNextTrack = function (track) {
+        var _a, _b;
+        if (((_a = track._bind) === null || _a === void 0 ? void 0 : _a.list) === this) {
+            return _b = this.tracks[track._bind.position + 1], (_b !== null && _b !== void 0 ? _b : null);
+        }
+        return null;
+    };
     TrackList.prototype.trackChanged = function () {
         var _a;
         var track = playerCore.track;
-        var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this) ? this.listView.get(track._bind.location) : null;
+        var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this) ? this.listView.get(track._bind.position) : null;
         this.curActive.set(item);
     };
     TrackList.prototype.updateView = function () {
+        var e_4, _a;
         var listView = this.listView;
         if (!listView)
             return;
@@ -797,12 +998,21 @@ var TrackList = /** @class */ (function () {
         }
         // Well... currently, we just rebuild the DOM.
         listView.clear();
-        for (var _i = 0, _a = this.tracks; _i < _a.length; _i++) {
-            var t = _a[_i];
-            var item = new TrackViewItem(t);
-            if (playerCore.track && t.id === playerCore.track.id)
-                this.curActive.set(item);
-            listView.add(item);
+        try {
+            for (var _b = __values(this.tracks), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var t = _c.value;
+                var item = new TrackViewItem(t);
+                if (playerCore.track && t.id === playerCore.track.id)
+                    this.curActive.set(item);
+                listView.add(item);
+            }
+        }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_4) throw e_4.error; }
         }
     };
     return TrackList;
@@ -814,20 +1024,27 @@ var TrackViewItem = /** @class */ (function (_super) {
         _this.track = item;
         return _this;
     }
+    Object.defineProperty(TrackViewItem.prototype, "dragData", {
+        get: function () { return this.track.name + " - " + this.track.artist; },
+        enumerable: true,
+        configurable: true
+    });
     TrackViewItem.prototype.createDom = function () {
-        var _this = this;
         var track = this.track;
-        return utils.buildDOM({
+        return {
             tag: 'div.item.trackitem.no-selection',
             child: [
+                { tag: 'span.pos', textContent: (track._bind.position + 1).toString() },
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },
             ],
             onclick: function () { playerCore.playTrack(track); },
-            ondragstart: function (e) { e.dataTransfer.setData('text/plain', 'Track: ' + _this.dom.textContent); },
             draggable: true,
             _item: this
-        });
+        };
+    };
+    TrackViewItem.prototype.updatePos = function () {
+        this.dom.querySelector('.pos').textContent = (this.track._bind.position + 1).toString();
     };
     return TrackViewItem;
 }(ListViewItem));
@@ -839,6 +1056,11 @@ var ListIndex = /** @class */ (function () {
         this.loadIndicator = new LoadingIndicator();
         this.nextId = -100;
         this.listView = new ListView();
+        this.listView.dragging = true;
+        this.listView.moveByDragging = true;
+        this.listView.onItemMoved = function (item, from) {
+            _this.lists = _this.listView.map(function (x) { return x.listInfo; });
+        };
         this.listView.onItemClicked = function (item) {
             ui.sidebarList.setActive(item);
             _this.showTracklist(item.listInfo.id);
@@ -854,41 +1076,73 @@ var ListIndex = /** @class */ (function () {
                 }]
         });
     }
-    ListIndex.prototype.mount = function () {
+    ListIndex.prototype.init = function () {
         ui.sidebarList.container.appendChild(this.section.dom);
+        listIndex.fetch();
     };
     /** Fetch lists from API and update the view */
     ListIndex.prototype.fetch = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var index, _i, _a, item;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var index, _a, _b, item, err_2;
+            var e_5, _c;
+            var _this = this;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
+                        this.loadIndicator.reset();
                         this.listView.ReplaceChild(this.loadIndicator.dom);
-                        return [4 /*yield*/, api.getListIndexAsync()];
+                        _d.label = 1;
                     case 1:
-                        index = _b.sent();
+                        _d.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, api.getListIndexAsync()];
+                    case 2:
+                        index = _d.sent();
                         this.listView.clear();
-                        for (_i = 0, _a = index.lists; _i < _a.length; _i++) {
-                            item = _a[_i];
-                            this.addTracklist(item);
+                        try {
+                            for (_a = __values(index.lists), _b = _a.next(); !_b.done; _b = _a.next()) {
+                                item = _b.value;
+                                this.addListInfo(item);
+                            }
                         }
+                        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                        finally {
+                            try {
+                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            }
+                            finally { if (e_5) throw e_5.error; }
+                        }
+                        return [3 /*break*/, 4];
+                    case 3:
+                        err_2 = _d.sent();
+                        this.loadIndicator.error(err_2, function () { return _this.fetch(); });
+                        return [3 /*break*/, 4];
+                    case 4:
                         if (this.lists.length > 0)
-                            this.listView.onItemClicked(this.listView.items[0]);
+                            this.listView.onItemClicked(this.listView.get(0));
                         return [2 /*return*/];
                 }
             });
         });
     };
-    ListIndex.prototype.addTracklist = function (list) {
-        this.lists.push(list);
-        this.listView.add(new ListIndexViewItem(this, list));
+    ListIndex.prototype.addListInfo = function (listinfo) {
+        this.lists.push(listinfo);
+        this.listView.add(new ListIndexViewItem(this, listinfo));
     };
     ListIndex.prototype.getListInfo = function (id) {
-        for (var _i = 0, _a = this.lists; _i < _a.length; _i++) {
-            var l = _a[_i];
-            if (l.id === id)
-                return l;
+        var e_6, _a;
+        try {
+            for (var _b = __values(this.lists), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var l = _c.value;
+                if (l.id === id)
+                    return l;
+            }
+        }
+        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_6) throw e_6.error; }
         }
     };
     ListIndex.prototype.getList = function (id) {
@@ -908,8 +1162,8 @@ var ListIndex = /** @class */ (function () {
         ui.content.setCurrent(list.createView());
     };
     /**
-     * Create a Tracklist and allocate an temporary local ID (negative number).
-     * It should be sync to server and get an real ID later.
+     * Create a Tracklist with an temporary local ID (negative number).
+     * It should be sync to server and get a real ID later.
      */
     ListIndex.prototype.newTracklist = function () {
         var _this = this;
@@ -918,7 +1172,7 @@ var ListIndex = /** @class */ (function () {
             id: id,
             name: utils.createName(function (x) { return x ? "New Playlist (" + (x + 1) + ")" : 'New Playlist'; }, function (x) { return !!_this.lists.find(function (l) { return l.name == x; }); })
         };
-        this.addTracklist(list);
+        this.addListInfo(list);
     };
     return ListIndex;
 }());
@@ -931,13 +1185,16 @@ var ListIndexViewItem = /** @class */ (function (_super) {
         return _this;
     }
     ListIndexViewItem.prototype.createDom = function () {
-        return utils.buildDOM({
+        return {
             tag: 'div.item.no-selection',
             textContent: this.listInfo.name,
-        });
+        };
     };
     return ListIndexViewItem;
 }(ListViewItem));
+document.addEventListener('drop', function (ev) {
+    ev.preventDefault();
+});
 var listIndex = new ListIndex();
-listIndex.mount();
-listIndex.fetch();
+listIndex.init();
+//# sourceMappingURL=main.js.map

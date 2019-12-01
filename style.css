@@ -62,6 +62,7 @@ html, body {
     padding: 10px 0;
 }
 
+/* listview item */
 .item {
     padding: 10px;
     /* background: #ddd; */
@@ -103,6 +104,14 @@ html, body {
 
 .section-action:hover {
     color: black;
+}
+
+.trackitem .pos {
+    display: inline-block;
+    text-align: center;
+    margin-right: .5em;
+    min-width: 2em;
+    color: gray;
 }
 
 .trackitem .artist, #bottombar-trackinfo .artist {
@@ -216,7 +225,7 @@ html, body {
 }
 
 .loading-indicator.running {
-    animation: loading .5s alternate infinite;
+    animation: loading .5s ease-in alternate infinite;
 }
 
 .loading-indicator.error {
@@ -225,10 +234,10 @@ html, body {
 
 @keyframes loading {
     0% {
-        color: black;
+        opacity: 0;
     }
     100% {
-        color: white;
+        opacity: 1;
     }
 }
 

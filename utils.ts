@@ -88,11 +88,28 @@ var utils = new class Utils {
 
     arrayRemove<T>(array: T[], val: T) {
         for (let i = 0; i < array.length; i++) {
-            const item = array[i];
-            if (item === val) {
+            if (array[i] === val) {
                 array.splice(i, 1);
                 i--;
             }
+        }
+    }
+
+    arrayMap<T, TRet>(arr: Iterable<T>, func: (item: T, idx: number) => TRet) {
+        if (arr instanceof Array) return arr.map(func);
+        var idx = 0;
+        var ret = new Array<TRet>((arr as any).length);
+        for (var item of arr) {
+            ret[idx] = (func(item, idx));
+            idx++;
+        }
+        return ret;
+    }
+
+    arrayForeach<T>(arr: Iterable<T>, func: (item: T, idx: number) => void) {
+        var idx = 0;
+        for (var item of arr) {
+            func(item, idx++);
         }
     }
 };
