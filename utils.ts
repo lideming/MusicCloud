@@ -49,7 +49,7 @@ var utils = new class Utils {
         tryCancel() {
             if (this.cancelFunc) this.cancelFunc();
         }
-    }
+    };
 
     sleepAsync(time: number): Promise<void> {
         return new Promise((resolve) => {
@@ -95,7 +95,7 @@ var utils = new class Utils {
             }
         }
     }
-}
+};
 
 
 // Some interesting types:
@@ -164,7 +164,7 @@ utils.buildDOM = (() => {
     return function (obj: BuildDomExpr): BuildDomReturn {
         return buildDomCore(obj, 32);
     };
-})()
+})();
 
 class ItemActiveHelper<T extends ListViewItem> {
     funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
@@ -189,4 +189,4 @@ class Callbacks<T extends CallableFunction> {
     }
 }
 
-var cbs = new Callbacks()
+var cbs = new Callbacks();

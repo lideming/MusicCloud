@@ -44,7 +44,7 @@ var ui = new class {
             });
             this.btnPin.addEventListener('click', () => this.setPinned());
         }
-    }
+    };
     progressBar = new class {
         container = document.getElementById('progressbar');
         fill = document.getElementById('progressbar-fill');
@@ -59,7 +59,7 @@ var ui = new class {
             this.labelTotal.textContent = utils.formatTime(total);
         }
         setProgressChangedCallback(cb: (percent: number) => void) {
-            var call = (e) => { cb(utils.numLimit(e.offsetX / this.container.clientWidth, 0, 1)); }
+            var call = (e) => { cb(utils.numLimit(e.offsetX / this.container.clientWidth, 0, 1)); };
             this.container.addEventListener('mousedown', (e) => {
                 if (e.buttons == 1) call(e);
             });
@@ -67,7 +67,7 @@ var ui = new class {
                 if (e.buttons == 1) call(e);
             });
         }
-    }
+    };
     trackinfo = new class {
         element = document.getElementById('bottombar-trackinfo');
         setTrack(track: Track) {
@@ -84,14 +84,14 @@ var ui = new class {
                 this.element.textContent = "";
             }
         }
-    }
+    };
     sidebarList = new class {
         container = document.getElementById('sidebar-list');
         currentActive = new ItemActiveHelper<ListViewItem>();
         setActive(item: ListViewItem) {
             this.currentActive.set(item);
         }
-    }
+    };
     content = new class {
         container = document.getElementById('content-outer');
         current: ContentView;
@@ -107,13 +107,13 @@ var ui = new class {
             if (arg.onShow) arg.onShow();
             this.current = arg;
         }
-    }
-} // ui
+    };
+}; // ui
 
 interface ContentView {
     dom: HTMLElement,
     onShow?: Action,
-    onRemove?: Action
+    onRemove?: Action;
 }
 
 ui.bottomBar.init();
@@ -168,14 +168,14 @@ var playerCore = new class PlayerCore {
     pause() {
         this.audio.pause();
     }
-}
+};
 
 /** API 操作 */
 var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     debugSleep = settings.debug ? 500 : 0;
     async _fetch(input: RequestInfo, init?: RequestInit) {
-        if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1))
+        if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
         return await fetch(input, init);
     }
     /** 
@@ -183,14 +183,14 @@ var api = new class {
      * @param path - relative path
      * @param options
      */
-    async getJson(path: string, options?: { status?: false | number }): Promise<any> {
+    async getJson(path: string, options?: { status?: false | number; }): Promise<any> {
         options = options || {};
         var resp = await this._fetch(this.baseUrl + path);
         if (options.status !== false && resp.status != (options.status ?? 200))
             throw new Error('HTTP status ' + resp.status);
         return await resp.json();
     }
-    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT' }) {
+    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT'; }) {
         var resp = await this._fetch(this.baseUrl + arg.path, {
             body: JSON.stringify(arg.method),
             method: arg.method
@@ -210,7 +210,7 @@ var api = new class {
             obj: list,
         });
     }
-}
+};
 
 /** A track binding with list */
 interface Track extends Api.Track {
@@ -222,8 +222,8 @@ interface Track extends Api.Track {
 }
 
 var trackStore = new class TrackStore {
-    trackCache: { [id: number]: Api.Track };
-}
+    trackCache: { [id: number]: Api.Track; };
+};
 
 class TrackList {
     id: number;
@@ -349,16 +349,16 @@ class TrackViewItem extends ListViewItem {
                 { tag: 'span.artist', textContent: track.artist },
             ],
             onclick: () => { playerCore.playTrack(track); },
-            ondragstart: (e) => { e.dataTransfer.setData('text/plain', 'Track: ' + this.dom.textContent) },
+            ondragstart: (e) => { e.dataTransfer.setData('text/plain', 'Track: ' + this.dom.textContent); },
             draggable: true,
             _item: this
-        }) as HTMLDivElement
+        }) as HTMLDivElement;
     }
 }
 
 class ListIndex {
     lists: Api.TrackListInfo[] = [];
-    loadedList: { [x: number]: TrackList } = {};
+    loadedList: { [x: number]: TrackList; } = {};
     listView: ListView<ListIndexViewItem>;
     section: Section;
     loadIndicator = new LoadingIndicator();
@@ -394,7 +394,7 @@ class ListIndex {
     }
     addTracklist(list: Api.TrackListInfo) {
         this.lists.push(list);
-        this.listView.add(new ListIndexViewItem(this, list))
+        this.listView.add(new ListIndexViewItem(this, list));
     }
     getListInfo(id: number) {
         for (const l of this.lists) {

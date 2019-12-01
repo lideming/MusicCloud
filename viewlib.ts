@@ -6,7 +6,7 @@ class View {
     constructor(dom?: BuildDomExpr) {
         if (dom) this._dom = utils.buildDOM(dom) as HTMLElement;
     }
-    protected _dom: HTMLElement
+    protected _dom: HTMLElement;
     public get dom() {
         return this._dom = this._dom || utils.buildDOM(this.createDom()) as HTMLElement;
     }
@@ -58,12 +58,12 @@ class ListView<T extends ListViewItem> extends View {
     }
 }
 
-type SectionActionOptions = { text: string, onclick: Action };
+type SectionActionOptions = { text: string, onclick: Action; };
 
 class Section extends View {
     titleDom: HTMLSpanElement;
-    constructor(arg?: { title?: string, content?: ViewArg, actions?: SectionActionOptions[] }) {
-        super()
+    constructor(arg?: { title?: string, content?: ViewArg, actions?: SectionActionOptions[]; }) {
+        super();
         this.ensureDom();
         if (arg) {
             if (arg.title) this.setTitle(arg.title);
@@ -84,7 +84,7 @@ class Section extends View {
                 }
                 // content element(s) here
             ]
-        }) as HTMLElement
+        }) as HTMLElement;
     }
     setTitle(text: string) {
         this.titleDom.textContent = text;
@@ -107,7 +107,7 @@ class Section extends View {
 type LoadingIndicatorState = 'normal' | 'running' | 'error';
 
 class LoadingIndicator extends View {
-    constructor(arg?: { status?: LoadingIndicatorState, content?: string, onclick?: Action<MouseEvent> }) {
+    constructor(arg?: { status?: LoadingIndicatorState, content?: string, onclick?: Action<MouseEvent>; }) {
         super();
         if (arg) {
             if (arg.status) this.status = arg.status;
