@@ -19,12 +19,13 @@ var ui = new class {
     bottomBar = new class {
         container: HTMLElement = document.getElementById("bottombar");
         btnPin: HTMLElement = document.getElementById('btnPin');
-        private autoHide = true;
+        siPin: SettingItem<boolean>;
+        private pinned = true;
         setPinned(val?: boolean) {
-            val = val ?? !this.autoHide;
-            this.autoHide = val;
-            utils.toggleClass(document.body, 'bottompinned', !val);
-            this.btnPin.textContent = !val ? 'Unpin' : 'Pin';
+            val = val ?? !this.pinned;
+            this.pinned = val;
+            utils.toggleClass(document.body, 'bottompinned', val);
+            this.btnPin.textContent = val ? 'Unpin' : 'Pin';
             if (val) this.toggle(true);
         }
         toggle(state?: boolean) {
@@ -41,9 +42,12 @@ var ui = new class {
             });
             bar.addEventListener('mouseleave', () => {
                 hideTimer.tryCancel();
-                if (this.autoHide) hideTimer.timeout(200);
+                if (!this.pinned) hideTimer.timeout(200);
             });
-            this.btnPin.addEventListener('click', () => this.setPinned());
+            this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
+                .render(x => this.setPinned(x))
+                .bindToBtn(this.btnPin, ['', '']);
+            // this.btnPin.addEventListener('click', () => this.setPinned());
         }
     };
     progressBar = new class {
@@ -291,7 +295,7 @@ class TrackList {
                             lvi.track._bind.position = lvi.position;
                             lvi.updatePos();
                             return lvi.track;
-                        })
+                        });
                     };
                     this.contentView.dom = lv.dom;
                     playerCore.onTrackChanged.add(cb);

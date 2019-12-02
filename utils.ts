@@ -183,6 +183,79 @@ utils.buildDOM = (() => {
     };
 })();
 
+
+class SettingItem<T> {
+    key: string;
+    type: SiType<T>;
+    data: T;
+    onRender: (obj: T) => void;
+    constructor(key: string, type: string | SiType<T>, initial: T) {
+        this.key = key;
+        this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+        var str = key ? localStorage.getItem(key) : null;
+        this.set(str ? this.type.deserilize(str) : initial, true);
+    }
+    render(fn: (obj: T) => void, dontRaiseNow?: boolean) {
+        if (!dontRaiseNow) fn(this.data);
+        var oldFn = this.onRender;
+        var newFn = fn;
+        if (oldFn) fn = function (x) { oldFn(x); newFn(x); };
+        this.onRender = fn;
+        return this;
+    };
+    bindToBtn(btn: HTMLElement, prefix: string[]) {
+        if (this.type as any !== SettingItem.types.bool) throw new Error('only for bool type');
+        var span = document.createElement('span');
+        btn.insertBefore(span, btn.firstChild);
+        this.render(function (x) {
+            btn.classList.toggle('disabled', !x);
+            prefix = prefix || ["❌", "✅"];
+            span.textContent = prefix[+x];
+        });
+        var thiz = this;
+        btn.addEventListener('click', function () { thiz.toggle(); });
+        return this;
+    };
+    set(data: T, dontSave?: boolean) {
+        this.data = data;
+        this.onRender && this.onRender(data);
+        if (!dontSave && this.key) localStorage.setItem(this.key, this.type.serialize(data));
+    };
+    get() {
+        return this.data;
+    };
+    toggle() {
+        if (this.type as any !== SettingItem.types.bool) throw new Error('only for bool type');
+        this.set((!(this.data as any)) as any);
+    };
+    loop(arr) {
+        var curData = this.data;
+        var oldIndex = arr.findIndex(function (x) { return x == curData; });
+        var newData = arr[(oldIndex + 1) % arr.length];
+        this.set(newData);
+    };
+
+    static types = {
+        bool: {
+            serialize: function (data) { return data ? 'true' : 'false'; },
+            deserilize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
+        },
+        str: {
+            serialize: function (x) { return x; },
+            deserilize: function (x) { return x; }
+        },
+        json: {
+            serialize: function (x) { return JSON.stringify(x); },
+            deserilize: function (x) { return JSON.parse(x); }
+        }
+    };
+}
+
+interface SiType<T> {
+    serialize: (obj: T) => string;
+    deserilize: (str: string) => T;
+}
+
 class ItemActiveHelper<T extends ListViewItem> {
     funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
     current: T;
@@ -205,5 +278,3 @@ class Callbacks<T extends CallableFunction> {
         utils.arrayRemove(this.list, callback);
     }
 }
-
-var cbs = new Callbacks();

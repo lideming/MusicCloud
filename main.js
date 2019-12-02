@@ -189,6 +189,79 @@ utils.buildDOM = (function () {
         return buildDomCore(obj, 32);
     };
 })();
+var SettingItem = /** @class */ (function () {
+    function SettingItem(key, type, initial) {
+        this.key = key;
+        this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+        var str = key ? localStorage.getItem(key) : null;
+        this.set(str ? this.type.deserilize(str) : initial, true);
+    }
+    SettingItem.prototype.render = function (fn, dontRaiseNow) {
+        if (!dontRaiseNow)
+            fn(this.data);
+        var oldFn = this.onRender;
+        var newFn = fn;
+        if (oldFn)
+            fn = function (x) { oldFn(x); newFn(x); };
+        this.onRender = fn;
+        return this;
+    };
+    ;
+    SettingItem.prototype.bindToBtn = function (btn, prefix) {
+        if (this.type !== SettingItem.types.bool)
+            throw new Error('only for bool type');
+        var span = document.createElement('span');
+        btn.insertBefore(span, btn.firstChild);
+        this.render(function (x) {
+            btn.classList.toggle('disabled', !x);
+            prefix = prefix || ["❌", "✅"];
+            span.textContent = prefix[+x];
+        });
+        var thiz = this;
+        btn.addEventListener('click', function () { thiz.toggle(); });
+        return this;
+    };
+    ;
+    SettingItem.prototype.set = function (data, dontSave) {
+        this.data = data;
+        this.onRender && this.onRender(data);
+        if (!dontSave && this.key)
+            localStorage.setItem(this.key, this.type.serialize(data));
+    };
+    ;
+    SettingItem.prototype.get = function () {
+        return this.data;
+    };
+    ;
+    SettingItem.prototype.toggle = function () {
+        if (this.type !== SettingItem.types.bool)
+            throw new Error('only for bool type');
+        this.set((!this.data));
+    };
+    ;
+    SettingItem.prototype.loop = function (arr) {
+        var curData = this.data;
+        var oldIndex = arr.findIndex(function (x) { return x == curData; });
+        var newData = arr[(oldIndex + 1) % arr.length];
+        this.set(newData);
+    };
+    ;
+    SettingItem.types = {
+        bool: {
+            serialize: function (data) { return data ? 'true' : 'false'; },
+            deserilize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
+        },
+        str: {
+            serialize: function (x) { return x; },
+            deserilize: function (x) { return x; }
+        },
+        json: {
+            serialize: function (x) { return JSON.stringify(x); },
+            deserilize: function (x) { return JSON.parse(x); }
+        }
+    };
+    return SettingItem;
+}());
 var ItemActiveHelper = /** @class */ (function () {
     function ItemActiveHelper() {
         this.funcSetActive = function (item, val) { return item.toggleClass('active', val); };
@@ -217,7 +290,6 @@ var Callbacks = /** @class */ (function () {
     };
     return Callbacks;
 }());
-var cbs = new Callbacks();
 // file: viewlib.ts
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
@@ -586,13 +658,13 @@ var ui = new /** @class */ (function () {
             function class_3() {
                 this.container = document.getElementById("bottombar");
                 this.btnPin = document.getElementById('btnPin');
-                this.autoHide = true;
+                this.pinned = true;
             }
             class_3.prototype.setPinned = function (val) {
-                val = (val !== null && val !== void 0 ? val : !this.autoHide);
-                this.autoHide = val;
-                utils.toggleClass(document.body, 'bottompinned', !val);
-                this.btnPin.textContent = !val ? 'Unpin' : 'Pin';
+                val = (val !== null && val !== void 0 ? val : !this.pinned);
+                this.pinned = val;
+                utils.toggleClass(document.body, 'bottompinned', val);
+                this.btnPin.textContent = val ? 'Unpin' : 'Pin';
                 if (val)
                     this.toggle(true);
             };
@@ -611,10 +683,13 @@ var ui = new /** @class */ (function () {
                 });
                 bar.addEventListener('mouseleave', function () {
                     hideTimer.tryCancel();
-                    if (_this.autoHide)
+                    if (!_this.pinned)
                         hideTimer.timeout(200);
                 });
-                this.btnPin.addEventListener('click', function () { return _this.setPinned(); });
+                this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
+                    .render(function (x) { return _this.setPinned(x); })
+                    .bindToBtn(this.btnPin, ['', '']);
+                // this.btnPin.addEventListener('click', () => this.setPinned());
             };
             return class_3;
         }());
