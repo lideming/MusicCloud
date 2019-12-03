@@ -14,7 +14,7 @@ var settings = {
     apiDebugDelay: 300,
 };
 
-/** （大部分）UI 操作 */
+/** 常驻 UI 元素操作 */
 var ui = new class {
     bottomBar = new class {
         container: HTMLElement = document.getElementById("bottombar");
@@ -50,8 +50,8 @@ var ui = new class {
             // this.btnPin.addEventListener('click', () => this.setPinned());
         }
     };
-    progressBar = new class {
-        container = document.getElementById('progressbar');
+    playerControl = new class {
+        progbar = document.getElementById('progressbar');
         fill = document.getElementById('progressbar-fill');
         labelCur = document.getElementById('progressbar-label-cur');
         labelTotal = document.getElementById('progressbar-label-total');
@@ -64,11 +64,11 @@ var ui = new class {
             this.labelTotal.textContent = utils.formatTime(total);
         }
         setProgressChangedCallback(cb: (percent: number) => void) {
-            var call = (e) => { cb(utils.numLimit(e.offsetX / this.container.clientWidth, 0, 1)); };
-            this.container.addEventListener('mousedown', (e) => {
+            var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
+            this.progbar.addEventListener('mousedown', (e) => {
                 if (e.buttons == 1) call(e);
             });
-            this.container.addEventListener('mousemove', (e) => {
+            this.progbar.addEventListener('mousemove', (e) => {
                 if (e.buttons == 1) call(e);
             });
         }
@@ -128,6 +128,9 @@ var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track;
     onTrackChanged = new Callbacks<Action>();
+    get isPlaying() { return this.audio.duration && !this.audio.paused; }
+    get isPaused() { return this.audio.paused; }
+    get canPlay() { return this.audio.readyState >= 2; }
     constructor() {
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.updateProgress());
@@ -138,7 +141,7 @@ var playerCore = new class PlayerCore {
         this.audio.addEventListener('ended', () => {
             this.next();
         });
-        ui.progressBar.setProgressChangedCallback((x) => {
+        ui.playerControl.setProgressChangedCallback((x) => {
             this.audio.currentTime = x * this.audio.duration;
         });
         var ctx = new AudioContext();
@@ -152,7 +155,7 @@ var playerCore = new class PlayerCore {
             this.setTrack(null);
     }
     updateProgress() {
-        ui.progressBar.setProg(this.audio.currentTime, this.audio.duration);
+        ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
     }
     loadUrl(src: string) {
         this.audio.src = src;
@@ -262,6 +265,9 @@ class TrackList {
         // TODO: update listview?
         return track;
     }
+    loadEmpty() {
+        return this.fetching = Promise.resolve();
+    }
     loadFromApi(arg?: number | (AsyncFunc<Api.TrackListGet>)) {
         return this.fetching = this.fetching ?? this.fetchForce(arg);
     }
@@ -278,6 +284,7 @@ class TrackList {
             this.loadIndicator = null;
         } catch (err) {
             this.loadIndicator.error(err, () => this.fetchForce(arg));
+            throw err;
         }
         this.updateView();
     }
@@ -334,9 +341,12 @@ class TrackList {
         }
         // Well... currently, we just rebuild the DOM.
         listView.clear();
+        var playing = playerCore.track;
         for (const t of this.tracks) {
             let item = new TrackViewItem(t);
-            if (playerCore.track && t.id === playerCore.track.id)
+            if (playing
+                && ((playing._bind.list !== this && t.id === playing.id)
+                    || playing._bind.list === this && playing._bind.position === t._bind.position))
                 this.curActive.set(item);
             listView.add(item);
         }
@@ -383,7 +393,23 @@ class ListIndex {
         this.listView.onItemMoved = (item, from) => {
             this.lists = this.listView.map(x => x.listInfo);
         };
+        this.listView.onDragover = (arg) => {
+            var src = arg.source;
+            if (src instanceof TrackViewItem) {
+                arg.accept = true;
+                if (arg.drop) {
+                    var listinfo = arg.target.listInfo;
+                    var list = this.getList(listinfo.id);
+                    if (list.fetching) list.fetching.then(r => {
+                        list.addTrack((src as TrackViewItem).track);
+                    }).catch(err => {
+                        console.error('error adding track:', err);
+                    });
+                }
+            }
+        };
         this.listView.onItemClicked = (item) => {
+            if (ui.sidebarList.currentActive.current === item) return;
             ui.sidebarList.setActive(item);
             this.showTracklist(item.listInfo.id);
         };
@@ -433,6 +459,8 @@ class ListIndex {
             list.loadInfo(this.getListInfo(id));
             if (list.apiid) {
                 list.loadFromApi();
+            } else {
+                list.loadEmpty();
             }
             this.loadedList[id] = list;
         }

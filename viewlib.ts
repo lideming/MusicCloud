@@ -71,23 +71,39 @@ abstract class ListViewItem extends View {
             ev.preventDefault();
         });
         this.dom.addEventListener('dragover', (ev) => {
-            var item = dragManager.currentItem;
-            if (item instanceof ListViewItem && item.listview === this.listview) {
-                ev.preventDefault();
-                ev.dataTransfer.dropEffect = 'move';
-            }
+            this.dragHanlder(ev, false);
         });
         this.dom.addEventListener('drop', (ev) => {
-            var item = dragManager.currentItem;
-            if (item instanceof ListViewItem && item.listview === this.listview) {
-                ev.preventDefault();
-                if (item === this) return;
-                console.log('move pre', item.position, this.position);
-                this.listview.move(item, this.position);
-                console.log('move post', item.position, this.position);
-            }
+            this.dragHanlder(ev, true);
         });
     }
+    dragHanlder(ev: DragEvent, drop: boolean) {
+        var item = dragManager.currentItem;
+        if (item instanceof ListViewItem) {
+            if (item.listview === this.listview) {
+                if (!drop) {
+                    ev.preventDefault();
+                    ev.dataTransfer.dropEffect = 'move';
+                } else {
+                    ev.preventDefault();
+                    if (item === this) return;
+                    console.log('move pre', item.position, this.position);
+                    this.listview.move(item, this.position);
+                    console.log('move post', item.position, this.position);
+                }
+            } else {
+                if (this.listview.onDragover) {
+                    var arg = {
+                        source: item, target: this,
+                        event: ev, drop: drop,
+                        accept: false
+                    };
+                    this.listview.onDragover(arg);
+                    if (drop || arg.accept) ev.preventDefault();
+                }
+            }
+        }
+    };
 }
 
 class ListView<T extends ListViewItem = ListViewItem> extends View implements Iterable<T> {
@@ -102,6 +118,10 @@ class ListView<T extends ListViewItem = ListViewItem> extends View implements It
      */
     moveByDragging = false;
     onItemMoved: (item: T, from: number) => void;
+    /** 
+     * When an item from another list is dragover or drop
+     */
+    onDragover: (arg: { source: ListViewItem, target: T, drop: boolean, accept: boolean, event: DragEvent; }) => void;
     constructor(container?: BuildDomExpr) {
         super(container);
     }

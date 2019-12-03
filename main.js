@@ -401,24 +401,44 @@ var ListViewItem = /** @class */ (function (_super) {
             ev.preventDefault();
         });
         this.dom.addEventListener('dragover', function (ev) {
-            var item = dragManager.currentItem;
-            if (item instanceof ListViewItem && item.listview === _this.listview) {
-                ev.preventDefault();
-                ev.dataTransfer.dropEffect = 'move';
-            }
+            _this.dragHanlder(ev, false);
         });
         this.dom.addEventListener('drop', function (ev) {
-            var item = dragManager.currentItem;
-            if (item instanceof ListViewItem && item.listview === _this.listview) {
-                ev.preventDefault();
-                if (item === _this)
-                    return;
-                console.log('move pre', item.position, _this.position);
-                _this.listview.move(item, _this.position);
-                console.log('move post', item.position, _this.position);
-            }
+            _this.dragHanlder(ev, true);
         });
     };
+    ListViewItem.prototype.dragHanlder = function (ev, drop) {
+        var item = dragManager.currentItem;
+        if (item instanceof ListViewItem) {
+            if (item.listview === this.listview) {
+                if (!drop) {
+                    ev.preventDefault();
+                    ev.dataTransfer.dropEffect = 'move';
+                }
+                else {
+                    ev.preventDefault();
+                    if (item === this)
+                        return;
+                    console.log('move pre', item.position, this.position);
+                    this.listview.move(item, this.position);
+                    console.log('move post', item.position, this.position);
+                }
+            }
+            else {
+                if (this.listview.onDragover) {
+                    var arg = {
+                        source: item, target: this,
+                        event: ev, drop: drop,
+                        accept: false
+                    };
+                    this.listview.onDragover(arg);
+                    if (drop || arg.accept)
+                        ev.preventDefault();
+                }
+            }
+        }
+    };
+    ;
     return ListViewItem;
 }(View));
 var ListView = /** @class */ (function (_super) {
@@ -651,7 +671,7 @@ var settings = {
     debug: true,
     apiDebugDelay: 300,
 };
-/** （大部分）UI 操作 */
+/** 常驻 UI 元素操作 */
 var ui = new /** @class */ (function () {
     function class_2() {
         this.bottomBar = new /** @class */ (function () {
@@ -693,9 +713,9 @@ var ui = new /** @class */ (function () {
             };
             return class_3;
         }());
-        this.progressBar = new /** @class */ (function () {
+        this.playerControl = new /** @class */ (function () {
             function class_4() {
-                this.container = document.getElementById('progressbar');
+                this.progbar = document.getElementById('progressbar');
                 this.fill = document.getElementById('progressbar-fill');
                 this.labelCur = document.getElementById('progressbar-label-cur');
                 this.labelTotal = document.getElementById('progressbar-label-total');
@@ -709,12 +729,12 @@ var ui = new /** @class */ (function () {
             };
             class_4.prototype.setProgressChangedCallback = function (cb) {
                 var _this = this;
-                var call = function (e) { cb(utils.numLimit(e.offsetX / _this.container.clientWidth, 0, 1)); };
-                this.container.addEventListener('mousedown', function (e) {
+                var call = function (e) { cb(utils.numLimit(e.offsetX / _this.progbar.clientWidth, 0, 1)); };
+                this.progbar.addEventListener('mousedown', function (e) {
                     if (e.buttons == 1)
                         call(e);
                 });
-                this.container.addEventListener('mousemove', function (e) {
+                this.progbar.addEventListener('mousemove', function (e) {
                     if (e.buttons == 1)
                         call(e);
                 });
@@ -792,12 +812,27 @@ var playerCore = new /** @class */ (function () {
         this.audio.addEventListener('ended', function () {
             _this.next();
         });
-        ui.progressBar.setProgressChangedCallback(function (x) {
+        ui.playerControl.setProgressChangedCallback(function (x) {
             _this.audio.currentTime = x * _this.audio.duration;
         });
         var ctx = new AudioContext();
         var analyzer = ctx.createAnalyser();
     }
+    Object.defineProperty(PlayerCore.prototype, "isPlaying", {
+        get: function () { return this.audio.duration && !this.audio.paused; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(PlayerCore.prototype, "isPaused", {
+        get: function () { return this.audio.paused; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(PlayerCore.prototype, "canPlay", {
+        get: function () { return this.audio.readyState >= 2; },
+        enumerable: true,
+        configurable: true
+    });
     PlayerCore.prototype.next = function () {
         var _a, _b, _c;
         var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track);
@@ -807,7 +842,7 @@ var playerCore = new /** @class */ (function () {
             this.setTrack(null);
     };
     PlayerCore.prototype.updateProgress = function () {
-        ui.progressBar.setProg(this.audio.currentTime, this.audio.duration);
+        ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
     };
     PlayerCore.prototype.loadUrl = function (src) {
         this.audio.src = src;
@@ -976,6 +1011,9 @@ var TrackList = /** @class */ (function () {
         // TODO: update listview?
         return track;
     };
+    TrackList.prototype.loadEmpty = function () {
+        return this.fetching = Promise.resolve();
+    };
     TrackList.prototype.loadFromApi = function (arg) {
         var _a;
         return this.fetching = (_a = this.fetching, (_a !== null && _a !== void 0 ? _a : this.fetchForce(arg)));
@@ -1007,7 +1045,7 @@ var TrackList = /** @class */ (function () {
                     case 3:
                         err_1 = _a.sent();
                         this.loadIndicator.error(err_1, function () { return _this.fetchForce(arg); });
-                        return [3 /*break*/, 4];
+                        throw err_1;
                     case 4:
                         this.updateView();
                         return [2 /*return*/];
@@ -1073,11 +1111,14 @@ var TrackList = /** @class */ (function () {
         }
         // Well... currently, we just rebuild the DOM.
         listView.clear();
+        var playing = playerCore.track;
         try {
             for (var _b = __values(this.tracks), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var t = _c.value;
                 var item = new TrackViewItem(t);
-                if (playerCore.track && t.id === playerCore.track.id)
+                if (playing
+                    && ((playing._bind.list !== this && t.id === playing.id)
+                        || playing._bind.list === this && playing._bind.position === t._bind.position))
                     this.curActive.set(item);
                 listView.add(item);
             }
@@ -1136,7 +1177,25 @@ var ListIndex = /** @class */ (function () {
         this.listView.onItemMoved = function (item, from) {
             _this.lists = _this.listView.map(function (x) { return x.listInfo; });
         };
+        this.listView.onDragover = function (arg) {
+            var src = arg.source;
+            if (src instanceof TrackViewItem) {
+                arg.accept = true;
+                if (arg.drop) {
+                    var listinfo = arg.target.listInfo;
+                    var list = _this.getList(listinfo.id);
+                    if (list.fetching)
+                        list.fetching.then(function (r) {
+                            list.addTrack(src.track);
+                        }).catch(function (err) {
+                            console.error('error adding track:', err);
+                        });
+                }
+            }
+        };
         this.listView.onItemClicked = function (item) {
+            if (ui.sidebarList.currentActive.current === item)
+                return;
             ui.sidebarList.setActive(item);
             _this.showTracklist(item.listInfo.id);
         };
@@ -1227,6 +1286,9 @@ var ListIndex = /** @class */ (function () {
             list.loadInfo(this.getListInfo(id));
             if (list.apiid) {
                 list.loadFromApi();
+            }
+            else {
+                list.loadEmpty();
             }
             this.loadedList[id] = list;
         }
