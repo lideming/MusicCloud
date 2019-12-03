@@ -395,15 +395,28 @@ var ListViewItem = /** @class */ (function (_super) {
                 return;
             dragManager.start(_this);
             ev.dataTransfer.setData('text/plain', _this.dragData);
+            _this.dom.style.opacity = '.5';
         });
         this.dom.addEventListener('dragend', function (ev) {
             dragManager.end(_this);
             ev.preventDefault();
+            _this.dom.style.opacity = null;
         });
         this.dom.addEventListener('dragover', function (ev) {
             _this.dragHanlder(ev, false);
         });
+        // https://stackoverflow.com/questions/7110353
+        var enterctr = 0;
+        this.dom.addEventListener('dragenter', function (ev) {
+            if (!enterctr++)
+                _this.toggleClass('dragover', true);
+        });
+        this.dom.addEventListener('dragleave', function (ev) {
+            if (!--enterctr)
+                _this.toggleClass('dragover', false);
+        });
         this.dom.addEventListener('drop', function (ev) {
+            _this.toggleClass('dragover', false);
             _this.dragHanlder(ev, true);
         });
     };
@@ -411,17 +424,14 @@ var ListViewItem = /** @class */ (function (_super) {
         var item = dragManager.currentItem;
         if (item instanceof ListViewItem) {
             if (item.listview === this.listview) {
+                ev.preventDefault();
                 if (!drop) {
-                    ev.preventDefault();
                     ev.dataTransfer.dropEffect = 'move';
                 }
                 else {
-                    ev.preventDefault();
                     if (item === this)
                         return;
-                    console.log('move pre', item.position, this.position);
                     this.listview.move(item, this.position);
-                    console.log('move post', item.position, this.position);
                 }
             }
             else {
@@ -596,13 +606,13 @@ var LoadingIndicator = /** @class */ (function (_super) {
     });
     Object.defineProperty(LoadingIndicator.prototype, "content", {
         get: function () { return this._text; },
-        set: function (val) { this._text = val; this.dom.textContent = val; },
+        set: function (val) { this._text = val; this.dom.firstChild.firstChild.textContent = val; },
         enumerable: true,
         configurable: true
     });
     LoadingIndicator.prototype.reset = function () {
         this.state = 'running';
-        this.content = 'Loading...';
+        this.content = 'Loading';
         this.onclick = null;
     };
     LoadingIndicator.prototype.error = function (err, retry) {
@@ -617,6 +627,12 @@ var LoadingIndicator = /** @class */ (function (_super) {
         var _this = this;
         this._dom = utils.buildDOM({
             tag: 'div.loading-indicator',
+            child: [{
+                    tag: 'div.loading-indicator-inner',
+                    child: [{
+                            tag: 'div.loading-indicator-text'
+                        }]
+                }],
             onclick: function (e) { return _this.onclick && _this.onclick(e); }
         });
         return this._dom;
@@ -1008,7 +1024,9 @@ var TrackList = /** @class */ (function () {
             }
         };
         this.tracks.push(track);
-        // TODO: update listview?
+        if (this.listView) {
+            this.listView.add(new TrackViewItem(track));
+        }
         return track;
     };
     TrackList.prototype.loadEmpty = function () {
@@ -1058,9 +1076,9 @@ var TrackList = /** @class */ (function () {
         if (!this.contentView) {
             var cb_1 = function () { return _this.trackChanged(); };
             this.contentView = {
-                dom: null,
+                dom: utils.buildDOM({ tag: 'div.tracklist' }),
                 onShow: function () {
-                    var lv = _this.listView = _this.listView || new ListView({ tag: 'div.tracklist' });
+                    var lv = _this.listView = _this.listView || new ListView(_this.contentView.dom);
                     lv.dragging = true;
                     lv.moveByDragging = true;
                     lv.onItemMoved = function (item, from) {
@@ -1076,7 +1094,7 @@ var TrackList = /** @class */ (function () {
                 },
                 onRemove: function () {
                     playerCore.onTrackChanged.remove(cb_1);
-                    _this.listView.clear();
+                    _this.listView = null;
                 }
             };
             // this.updateView();
@@ -1181,6 +1199,7 @@ var ListIndex = /** @class */ (function () {
             var src = arg.source;
             if (src instanceof TrackViewItem) {
                 arg.accept = true;
+                arg.event.dataTransfer.dropEffect = 'copy';
                 if (arg.drop) {
                     var listinfo = arg.target.listInfo;
                     var list = _this.getList(listinfo.id);
@@ -1334,4 +1353,9 @@ document.addEventListener('drop', function (ev) {
 });
 var listIndex = new ListIndex();
 listIndex.init();
+var userState = new /** @class */ (function () {
+    function UserState() {
+    }
+    return UserState;
+}());
 //# sourceMappingURL=main.js.map

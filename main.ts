@@ -262,7 +262,9 @@ class TrackList {
             }
         };
         this.tracks.push(track);
-        // TODO: update listview?
+        if (this.listView) {
+            this.listView.add(new TrackViewItem(track));
+        }
         return track;
     }
     loadEmpty() {
@@ -292,9 +294,9 @@ class TrackList {
         if (!this.contentView) {
             let cb = () => this.trackChanged();
             this.contentView = {
-                dom: null,
+                dom: utils.buildDOM({ tag: 'div.tracklist' }) as HTMLElement,
                 onShow: () => {
-                    var lv = this.listView = this.listView || new ListView({ tag: 'div.tracklist' });
+                    var lv = this.listView = this.listView || new ListView(this.contentView.dom);
                     lv.dragging = true;
                     lv.moveByDragging = true;
                     lv.onItemMoved = (item, from) => {
@@ -310,7 +312,7 @@ class TrackList {
                 },
                 onRemove: () => {
                     playerCore.onTrackChanged.remove(cb);
-                    this.listView.clear();
+                    this.listView = null;
                 }
             };
             // this.updateView();
@@ -397,6 +399,7 @@ class ListIndex {
             var src = arg.source;
             if (src instanceof TrackViewItem) {
                 arg.accept = true;
+                arg.event.dataTransfer.dropEffect = 'copy';
                 if (arg.drop) {
                     var listinfo = arg.target.listInfo;
                     var list = this.getList(listinfo.id);
@@ -511,3 +514,7 @@ document.addEventListener('drop', (ev) => {
 
 var listIndex = new ListIndex();
 listIndex.init();
+
+var userState = new class UserState {
+
+}

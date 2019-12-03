@@ -74,7 +74,7 @@ html, body {
     transition: transform .3s;
 }
 
-.item:hover {
+.item:hover, .dragover {
     background: #eee;
 }
 
@@ -218,26 +218,79 @@ html, body {
 }
 
 .loading-indicator {
-    margin: 1em;
+    position: relative;
+    margin: .3em;
+    margin-top: 3em;
     text-align: center;
     white-space: pre-wrap;
     cursor: default;
 }
 
-.loading-indicator.running {
-    animation: loading .5s ease-in alternate infinite;
+.loading-indicator-text {
+    margin: 0 auto;
+}
+
+.loading-indicator.running .loading-indicator-inner {
+    display: inline-block;
+    position: relative;
+    vertical-align: bottom;
+}
+
+.loading-indicator.running .loading-indicator-inner::after {
+    content: "";
+    height: 1px;
+    margin: 0%;
+    background: black;
+    display: block;
+    animation: fadein .5s 1s backwards;
+}
+
+.loading-indicator.running .loading-indicator-text {
+    margin: 0 .5em;
+    animation:
+        fadein .3s,
+        loading-first .3s .5s cubic-bezier(0.55, 0.055, 0.675, 0.19) reverse,
+        loading-second .3s .8s cubic-bezier(0.55, 0.055, 0.675, 0.19),
+        loading .25s 1.1s cubic-bezier(0.55, 0.055, 0.675, 0.19) alternate-reverse infinite;
 }
 
 .loading-indicator.error {
     color: red;
 }
 
-@keyframes loading {
+@keyframes fadein {
     0% {
         opacity: 0;
     }
     100% {
         opacity: 1;
+    }
+}
+
+@keyframes loading-first {
+    0% {
+        transform: translate(0, -2em) scale(1) rotate(360deg);
+    }
+    100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+}
+
+@keyframes loading-second {
+    0% {
+        transform: translate(0, -2em);
+    }
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes loading {
+    0% {
+        transform: translate(0, -1em);
+    }
+    100% {
+        transform: translate(0, 0);
     }
 }
 

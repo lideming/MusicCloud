@@ -65,15 +65,28 @@ abstract class ListViewItem extends View {
             if (!this._listView?.dragging) return;
             dragManager.start(this);
             ev.dataTransfer.setData('text/plain', this.dragData);
+            this.dom.style.opacity = '.5';
         });
         this.dom.addEventListener('dragend', (ev) => {
             dragManager.end(this);
             ev.preventDefault();
+            this.dom.style.opacity = null;
         });
         this.dom.addEventListener('dragover', (ev) => {
             this.dragHanlder(ev, false);
         });
+        // https://stackoverflow.com/questions/7110353
+        var enterctr = 0;
+        this.dom.addEventListener('dragenter', (ev) => {
+            if (!enterctr++)
+                this.toggleClass('dragover', true);
+        });
+        this.dom.addEventListener('dragleave', (ev) => {
+            if (!--enterctr)
+                this.toggleClass('dragover', false);
+        });
         this.dom.addEventListener('drop', (ev) => {
+            this.toggleClass('dragover', false);
             this.dragHanlder(ev, true);
         });
     }
@@ -81,15 +94,12 @@ abstract class ListViewItem extends View {
         var item = dragManager.currentItem;
         if (item instanceof ListViewItem) {
             if (item.listview === this.listview) {
+                ev.preventDefault();
                 if (!drop) {
-                    ev.preventDefault();
                     ev.dataTransfer.dropEffect = 'move';
                 } else {
-                    ev.preventDefault();
                     if (item === this) return;
-                    console.log('move pre', item.position, this.position);
                     this.listview.move(item, this.position);
-                    console.log('move post', item.position, this.position);
                 }
             } else {
                 if (this.listview.onDragover) {
@@ -245,11 +255,11 @@ class LoadingIndicator extends View {
     }
     private _text: string;
     get content() { return this._text; }
-    set content(val: string) { this._text = val; this.dom.textContent = val; }
+    set content(val: string) { this._text = val; this.dom.firstChild.firstChild.textContent = val; }
     onclick: (e: MouseEvent) => void;
     reset() {
         this.state = 'running';
-        this.content = 'Loading...';
+        this.content = 'Loading';
         this.onclick = null;
     }
     error(err, retry: Action) {
@@ -263,6 +273,12 @@ class LoadingIndicator extends View {
     createDom() {
         this._dom = utils.buildDOM({
             tag: 'div.loading-indicator',
+            child: [{
+                tag: 'div.loading-indicator-inner',
+                child: [{
+                    tag: 'div.loading-indicator-text'
+                }]
+            }],
             onclick: (e) => this.onclick && this.onclick(e)
         }) as HTMLElement;
         return this._dom;
