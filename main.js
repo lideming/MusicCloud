@@ -135,6 +135,11 @@ var utils = new /** @class */ (function () {
     };
     return Utils;
 }());
+var BuildDOMCtx = /** @class */ (function () {
+    function BuildDOMCtx() {
+    }
+    return BuildDOMCtx;
+}());
 utils.buildDOM = (function () {
     var createElementFromTag = function (tag) {
         var reg = /[#\.^]?[\w\-]+/y;
@@ -157,26 +162,33 @@ utils.buildDOM = (function () {
         }
         return ele;
     };
-    var buildDomCore = function (obj, ttl) {
+    var buildDomCore = function (obj, ttl, ctx) {
         if (ttl-- < 0)
             throw new Error('ran out of TTL');
-        if (typeof (obj) === 'string')
+        if (typeof (obj) === 'string') {
             return document.createTextNode(obj);
+        }
         if (Node && obj instanceof Node)
             return obj;
         var node = createElementFromTag(obj.tag);
+        if (obj['_ctx'])
+            ctx = obj['_ctx'];
         for (var key in obj) {
-            if (key != 'tag' && obj.hasOwnProperty(key)) {
+            if (obj.hasOwnProperty(key)) {
                 var val = obj[key];
                 if (key == 'child') {
                     if (val instanceof Array) {
                         val.forEach(function (x) {
-                            node.appendChild(buildDomCore(x, ttl));
+                            node.appendChild(buildDomCore(x, ttl, ctx));
                         });
                     }
                     else {
-                        node.appendChild(buildDomCore(val, ttl));
+                        node.appendChild(buildDomCore(val, ttl, ctx));
                     }
+                }
+                else if (key === '_key') {
+                    if (ctx)
+                        ctx[val] = node;
                 }
                 else {
                     node[key] = val;
@@ -185,8 +197,8 @@ utils.buildDOM = (function () {
         }
         return node;
     };
-    return function (obj) {
-        return buildDomCore(obj, 32);
+    return function (obj, ctx) {
+        return buildDomCore(obj, 32, ctx);
     };
 })();
 var SettingItem = /** @class */ (function () {
@@ -222,11 +234,14 @@ var SettingItem = /** @class */ (function () {
         return this;
     };
     ;
+    SettingItem.prototype.save = function () {
+        localStorage.setItem(this.key, this.type.serialize(this.data));
+    };
     SettingItem.prototype.set = function (data, dontSave) {
         this.data = data;
         this.onRender && this.onRender(data);
         if (!dontSave && this.key)
-            localStorage.setItem(this.key, this.type.serialize(data));
+            this.save();
     };
     ;
     SettingItem.prototype.get = function () {
@@ -365,7 +380,10 @@ var dragManager = new /** @class */ (function () {
 var ListViewItem = /** @class */ (function (_super) {
     __extends(ListViewItem, _super);
     function ListViewItem() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        // https://stackoverflow.com/questions/7110353
+        _this.enterctr = 0;
+        return _this;
     }
     Object.defineProperty(ListViewItem.prototype, "listview", {
         get: function () { return this._listView; },
@@ -403,47 +421,72 @@ var ListViewItem = /** @class */ (function (_super) {
             _this.dom.style.opacity = null;
         });
         this.dom.addEventListener('dragover', function (ev) {
-            _this.dragHanlder(ev, false);
+            _this.dragHanlder(ev, 'dragover');
         });
-        // https://stackoverflow.com/questions/7110353
-        var enterctr = 0;
         this.dom.addEventListener('dragenter', function (ev) {
-            if (!enterctr++)
-                _this.toggleClass('dragover', true);
+            _this.dragHanlder(ev, 'dragenter');
         });
         this.dom.addEventListener('dragleave', function (ev) {
-            if (!--enterctr)
-                _this.toggleClass('dragover', false);
+            _this.dragHanlder(ev, 'dragleave');
         });
         this.dom.addEventListener('drop', function (ev) {
-            _this.toggleClass('dragover', false);
-            _this.dragHanlder(ev, true);
+            _this.dragHanlder(ev, 'drop');
         });
     };
-    ListViewItem.prototype.dragHanlder = function (ev, drop) {
+    ListViewItem.prototype.dragHanlder = function (ev, type) {
+        var _a;
         var item = dragManager.currentItem;
+        var drop = type === 'drop';
         if (item instanceof ListViewItem) {
-            if (item.listview === this.listview) {
+            var arg = {
+                source: item, target: this,
+                event: ev, drop: drop,
+                accept: false
+            };
+            if (item.listview === this.listview && ((_a = this._listView) === null || _a === void 0 ? void 0 : _a.moveByDragging)) {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
+                    arg.accept = item !== this ? 'move' : true;
+                    if (arg.accept === 'move' && this.position > item.position)
+                        arg.accept = 'move-after';
                 }
                 else {
-                    if (item === this)
-                        return;
-                    this.listview.move(item, this.position);
+                    if (item !== this) {
+                        this.listview.move(item, this.position);
+                    }
                 }
             }
+            if (!arg.accept && this.listview.onDragover) {
+                this.listview.onDragover(arg);
+                if (drop || arg.accept)
+                    ev.preventDefault();
+            }
+        }
+        if (type === 'dragenter' || type === 'dragleave' || drop) {
+            if (type === 'dragenter') {
+                this.enterctr++;
+            }
+            else if (type === 'dragleave') {
+                this.enterctr--;
+            }
             else {
-                if (this.listview.onDragover) {
-                    var arg = {
-                        source: item, target: this,
-                        event: ev, drop: drop,
-                        accept: false
-                    };
-                    this.listview.onDragover(arg);
-                    if (drop || arg.accept)
-                        ev.preventDefault();
+                this.enterctr = 0;
+            }
+            var hover = this.enterctr > 0;
+            this.toggleClass('dragover', hover);
+            var placeholder = hover && (arg.accept === 'move' || arg.accept === 'move-after');
+            if (placeholder != !!this.dragoverPlaceholder) {
+                if (placeholder) {
+                    this.dragoverPlaceholder = utils.buildDOM({ tag: 'div.dragover-placeholder' });
+                    var before = this.dom;
+                    if (arg.accept === 'move-after')
+                        before = before.nextElementSibling;
+                    this.dom.parentElement.insertBefore(this.dragoverPlaceholder, before);
+                }
+                else {
+                    this.dragoverPlaceholder.remove();
+                    this.dragoverPlaceholder = null;
                 }
             }
         }
@@ -639,7 +682,102 @@ var LoadingIndicator = /** @class */ (function (_super) {
     };
     return LoadingIndicator;
 }(View));
+var Overlay = /** @class */ (function (_super) {
+    __extends(Overlay, _super);
+    function Overlay() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    Overlay.prototype.createDom = function () {
+        return {
+            tag: 'div.overlay'
+        };
+    };
+    Overlay.prototype.setCenterChild = function (centerChild) {
+        this.toggleClass('centerchild', centerChild);
+        return this;
+    };
+    return Overlay;
+}(View));
 // TODO: class ContextMenu
+// file: user.ts
+/// <reference path="main.ts" />
+var user = new /** @class */ (function () {
+    function User() {
+        this.siLogin = new SettingItem('mcloud-login', 'json', {
+            id: -1,
+            username: null,
+            passwd: null
+        });
+        this.uishown = false;
+    }
+    Object.defineProperty(User.prototype, "info", {
+        get: function () { return this.siLogin.data; },
+        enumerable: true,
+        configurable: true
+    });
+    User.prototype.init = function () {
+        ui.sidebarLogin.update();
+    };
+    User.prototype.initUI = function () {
+        var overlay = this.uioverlay = new Overlay().setCenterChild(true);
+        var domctx = this.uictx = new BuildDOMCtx();
+        var reg = false;
+        var dialog = utils.buildDOM({
+            _ctx: domctx,
+            _key: 'dialog',
+            tag: 'div.dialog',
+            child: [{
+                    tag: 'div.dialog-title',
+                    child: [
+                        { tag: 'span', textContent: 'Login', _key: 'title' },
+                        {
+                            tag: 'div.clickable.no-selection', style: 'float: right; color: gray;',
+                            textContent: 'Close', onclick: function () {
+                                overlay.dom.remove();
+                            }
+                        }
+                    ]
+                }, {
+                    tag: 'div.dialog-content',
+                    child: [
+                        { tag: 'div.input-label', textContent: 'Username:' },
+                        { tag: 'input.input-text', type: 'text', _key: 'user' },
+                        { tag: 'div.input-label', textContent: 'Password:' },
+                        { tag: 'input.input-text', type: 'password', _key: 'passwd' },
+                        { tag: 'div.input-label', textContent: 'Confirm password:', _key: 'passwd2_label' },
+                        { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
+                        { tag: 'div.btn', textContent: 'Login', _key: 'btn' }
+                    ]
+                }, {
+                    tag: 'div.dialog-bottom',
+                    style: 'text-align: center',
+                    child: [{
+                            tag: 'div.clickable.no-selection', textContent: 'Create account',
+                            _key: 'switch', onclick: function () {
+                                reg = !reg;
+                                domctx.passwd2_label.hidden = domctx.passwd2.hidden = !reg;
+                                var tmp = domctx.title.textContent;
+                                domctx.title.textContent = domctx.btn.textContent = domctx.switch.textContent;
+                                domctx.switch.textContent = tmp;
+                            }
+                        }]
+                }]
+        });
+        dialog.style.width = '300px';
+        domctx.passwd2_label.hidden = domctx.passwd2.hidden = true;
+        overlay.dom.appendChild(dialog);
+    };
+    User.prototype.loginUI = function () {
+        if (!this.uioverlay)
+            this.initUI();
+        ui.mainContainer.dom.appendChild(this.uioverlay.dom);
+    };
+    User.prototype.closeUI = function () {
+        var _a;
+        (_a = this.uioverlay) === null || _a === void 0 ? void 0 : _a.dom.remove();
+    };
+    return User;
+}());
 // file: main.ts
 // TypeScript 3.7 is required.
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -682,10 +820,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
 /// <reference path="viewlib.ts" />
+/// <reference path="user.ts" />
 var settings = {
     apiBaseUrl: 'api/',
     debug: true,
-    apiDebugDelay: 300,
+    apiDebugDelay: 200,
 };
 /** 常驻 UI 元素操作 */
 var ui = new /** @class */ (function () {
@@ -778,21 +917,47 @@ var ui = new /** @class */ (function () {
             };
             return class_5;
         }());
-        this.sidebarList = new /** @class */ (function () {
+        this.mainContainer = new /** @class */ (function () {
             function class_6() {
+                this.dom = document.getElementById('main-container');
+            }
+            return class_6;
+        }());
+        this.sidebarLogin = new /** @class */ (function () {
+            function class_7() {
+                this.container = document.getElementById('sidebar-login');
+                this.loginState = document.getElementById('login-state');
+            }
+            class_7.prototype.init = function () {
+                this.loginState.addEventListener('click', function (ev) {
+                    user.loginUI();
+                });
+            };
+            class_7.prototype.update = function () {
+                if (user.info.username) {
+                    this.loginState.textContent = user.info.username;
+                }
+                else {
+                    this.loginState.textContent = 'Guest (click to login)';
+                }
+            };
+            return class_7;
+        }());
+        this.sidebarList = new /** @class */ (function () {
+            function class_8() {
                 this.container = document.getElementById('sidebar-list');
                 this.currentActive = new ItemActiveHelper();
             }
-            class_6.prototype.setActive = function (item) {
+            class_8.prototype.setActive = function (item) {
                 this.currentActive.set(item);
             };
-            return class_6;
+            return class_8;
         }());
         this.content = new /** @class */ (function () {
-            function class_7() {
+            function class_9() {
                 this.container = document.getElementById('content-outer');
             }
-            class_7.prototype.removeCurrent = function () {
+            class_9.prototype.removeCurrent = function () {
                 var cur = this.current;
                 if (!cur)
                     return;
@@ -801,19 +966,23 @@ var ui = new /** @class */ (function () {
                 if (cur.dom)
                     this.container.removeChild(cur.dom);
             };
-            class_7.prototype.setCurrent = function (arg) {
+            class_9.prototype.setCurrent = function (arg) {
                 this.removeCurrent();
                 if (arg.onShow)
                     arg.onShow();
                 this.container.appendChild(arg.dom);
                 this.current = arg;
             };
-            return class_7;
+            return class_9;
         }());
     }
+    class_2.prototype.init = function () {
+        this.bottomBar.init();
+        this.sidebarLogin.init();
+    };
     return class_2;
 }()); // ui
-ui.bottomBar.init();
+ui.init();
 /** 播放器核心：控制播放逻辑 */
 var playerCore = new /** @class */ (function () {
     function PlayerCore() {
@@ -885,15 +1054,15 @@ var playerCore = new /** @class */ (function () {
 }());
 /** API 操作 */
 var api = new /** @class */ (function () {
-    function class_8() {
+    function class_10() {
         this.debugSleep = settings.debug ? settings.apiDebugDelay : 0;
     }
-    Object.defineProperty(class_8.prototype, "baseUrl", {
+    Object.defineProperty(class_10.prototype, "baseUrl", {
         get: function () { return settings.apiBaseUrl; },
         enumerable: true,
         configurable: true
     });
-    class_8.prototype._fetch = function (input, init) {
+    class_10.prototype._fetch = function (input, init) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -909,7 +1078,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_8.prototype.getJson = function (path, options) {
+    class_10.prototype.getJson = function (path, options) {
         var _a;
         return __awaiter(this, void 0, void 0, function () {
             var resp;
@@ -928,7 +1097,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_8.prototype.postJson = function (arg) {
+    class_10.prototype.postJson = function (arg) {
         return __awaiter(this, void 0, void 0, function () {
             var resp;
             return __generator(this, function (_a) {
@@ -945,7 +1114,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_8.prototype.getListAsync = function (id) {
+    class_10.prototype.getListAsync = function (id) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -955,7 +1124,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_8.prototype.getListIndexAsync = function () {
+    class_10.prototype.getListIndexAsync = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -965,7 +1134,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    class_8.prototype.putListAsync = function (list, creating) {
+    class_10.prototype.putListAsync = function (list, creating) {
         if (creating === void 0) { creating = false; }
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
@@ -980,7 +1149,7 @@ var api = new /** @class */ (function () {
             });
         });
     };
-    return class_8;
+    return class_10;
 }());
 var trackStore = new /** @class */ (function () {
     function TrackStore() {
@@ -1353,9 +1522,4 @@ document.addEventListener('drop', function (ev) {
 });
 var listIndex = new ListIndex();
 listIndex.init();
-var userState = new /** @class */ (function () {
-    function UserState() {
-    }
-    return UserState;
-}());
-//# sourceMappingURL=main.js.map
+user.init();

@@ -73,47 +73,76 @@ abstract class ListViewItem extends View {
             this.dom.style.opacity = null;
         });
         this.dom.addEventListener('dragover', (ev) => {
-            this.dragHanlder(ev, false);
+            this.dragHanlder(ev, 'dragover');
         });
-        // https://stackoverflow.com/questions/7110353
-        var enterctr = 0;
         this.dom.addEventListener('dragenter', (ev) => {
-            if (!enterctr++)
-                this.toggleClass('dragover', true);
+            this.dragHanlder(ev, 'dragenter');
         });
         this.dom.addEventListener('dragleave', (ev) => {
-            if (!--enterctr)
-                this.toggleClass('dragover', false);
+            this.dragHanlder(ev, 'dragleave');
         });
         this.dom.addEventListener('drop', (ev) => {
-            this.toggleClass('dragover', false);
-            this.dragHanlder(ev, true);
+            this.dragHanlder(ev, 'drop');
         });
     }
-    dragHanlder(ev: DragEvent, drop: boolean) {
+    // https://stackoverflow.com/questions/7110353
+    private enterctr = 0;
+    private dragoverPlaceholder: HTMLElement;
+    dragHanlder(ev: DragEvent, type: string) {
         var item = dragManager.currentItem;
+        var drop = type === 'drop';
         if (item instanceof ListViewItem) {
-            if (item.listview === this.listview) {
+            var arg: DragArg<ListViewItem> = {
+                source: item, target: this,
+                event: ev, drop: drop,
+                accept: false
+            };
+            if (item.listview === this.listview && this._listView?.moveByDragging) {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
+                    arg.accept = item !== this ? 'move' : true;
+                    if (arg.accept === 'move' && this.position > item.position) arg.accept = 'move-after';
                 } else {
-                    if (item === this) return;
-                    this.listview.move(item, this.position);
+                    if (item !== this) {
+                        this.listview.move(item, this.position);
+                    }
                 }
+            }
+            if (!arg.accept && this.listview.onDragover) {
+                this.listview.onDragover(arg);
+                if (drop || arg.accept) ev.preventDefault();
+            }
+        }
+        if (type === 'dragenter' || type === 'dragleave' || drop) {
+            if (type === 'dragenter') {
+                this.enterctr++;
+            } else if (type === 'dragleave') {
+                this.enterctr--;
             } else {
-                if (this.listview.onDragover) {
-                    var arg = {
-                        source: item, target: this,
-                        event: ev, drop: drop,
-                        accept: false
-                    };
-                    this.listview.onDragover(arg);
-                    if (drop || arg.accept) ev.preventDefault();
+                this.enterctr = 0;
+            }
+            let hover = this.enterctr > 0;
+            this.toggleClass('dragover', hover);
+            let placeholder = hover && (arg.accept === 'move' || arg.accept === 'move-after');
+            if (placeholder != !!this.dragoverPlaceholder) {
+                if (placeholder) {
+                    this.dragoverPlaceholder = utils.buildDOM({ tag: 'div.dragover-placeholder' }) as HTMLElement;
+                    var before = this.dom;
+                    if (arg.accept === 'move-after') before = before.nextElementSibling as HTMLElement;
+                    this.dom.parentElement.insertBefore(this.dragoverPlaceholder, before);
+                } else {
+                    this.dragoverPlaceholder.remove();
+                    this.dragoverPlaceholder = null;
                 }
             }
         }
     };
+}
+
+interface DragArg<T> {
+    source: ListViewItem, target: T, drop: boolean,
+    accept: boolean | 'move' | 'move-after', event: DragEvent;
 }
 
 class ListView<T extends ListViewItem = ListViewItem> extends View implements Iterable<T> {
@@ -131,7 +160,7 @@ class ListView<T extends ListViewItem = ListViewItem> extends View implements It
     /** 
      * When an item from another list is dragover or drop
      */
-    onDragover: (arg: { source: ListViewItem, target: T, drop: boolean, accept: boolean, event: DragEvent; }) => void;
+    onDragover: (arg: DragArg<T>) => void;
     constructor(container?: BuildDomExpr) {
         super(container);
     }
@@ -282,6 +311,18 @@ class LoadingIndicator extends View {
             onclick: (e) => this.onclick && this.onclick(e)
         }) as HTMLElement;
         return this._dom;
+    }
+}
+
+class Overlay extends View {
+    createDom(){
+        return {
+            tag: 'div.overlay'
+        }
+    }
+    setCenterChild(centerChild: boolean) {
+        this.toggleClass('centerchild', centerChild);
+        return this;
     }
 }
 

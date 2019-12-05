@@ -6,16 +6,22 @@
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
 /// <reference path="viewlib.ts" />
+/// <reference path="user.ts" />
+
 
 
 var settings = {
     apiBaseUrl: 'api/',
     debug: true,
-    apiDebugDelay: 300,
+    apiDebugDelay: 200,
 };
 
 /** 常驻 UI 元素操作 */
 var ui = new class {
+    init() {
+        this.bottomBar.init();
+        this.sidebarLogin.init();
+    }
     bottomBar = new class {
         container: HTMLElement = document.getElementById("bottombar");
         btnPin: HTMLElement = document.getElementById('btnPin');
@@ -90,6 +96,25 @@ var ui = new class {
             }
         }
     };
+    mainContainer = new class {
+        dom = document.getElementById('main-container');
+    };
+    sidebarLogin = new class {
+        container = document.getElementById('sidebar-login');
+        loginState = document.getElementById('login-state');
+        init() {
+            this.loginState.addEventListener('click', (ev) => {
+                user.loginUI();
+            });
+        }
+        update() {
+            if (user.info.username) {
+                this.loginState.textContent = user.info.username;
+            } else {
+                this.loginState.textContent = 'Guest (click to login)';
+            }
+        }
+    };
     sidebarList = new class {
         container = document.getElementById('sidebar-list');
         currentActive = new ItemActiveHelper<ListViewItem>();
@@ -121,7 +146,7 @@ interface ContentView {
     onRemove?: Action;
 }
 
-ui.bottomBar.init();
+ui.init();
 
 /** 播放器核心：控制播放逻辑 */
 var playerCore = new class PlayerCore {
@@ -514,7 +539,4 @@ document.addEventListener('drop', (ev) => {
 
 var listIndex = new ListIndex();
 listIndex.init();
-
-var userState = new class UserState {
-
-}
+user.init();

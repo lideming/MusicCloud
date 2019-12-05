@@ -64,7 +64,7 @@ var utils = new class Utils {
             child: ['Name: ', { tag: 'span.name', textContent: name } ],
         })
      */
-    buildDOM: (tree: BuildDomExpr) => BuildDomReturn;
+    buildDOM: (tree: BuildDomExpr, ctx?: BuildDOMCtx) => BuildDomReturn;
 
     /** Remove all childs from the node */
     clearChilds(node: Node) {
@@ -129,9 +129,15 @@ type BuildDomTag = string;
 type BuildDomReturn = HTMLElement | Text | Node;
 
 interface BuildDomNode {
-    tag: BuildDomTag;
-    child?: BuildDomExpr[];
+    tag?: BuildDomTag;
+    child?: BuildDomExpr[] | BuildDomExpr;
+    _ctx?: BuildDOMCtx;
+    _key?:string;
     [key: string]: any;
+}
+
+class BuildDOMCtx {
+    [name: string]: HTMLElement;
 }
 
 utils.buildDOM = (() => {
@@ -154,32 +160,36 @@ utils.buildDOM = (() => {
         return ele;
     };
 
-    var buildDomCore = function (obj: BuildDomExpr, ttl: number): BuildDomReturn {
+    var buildDomCore = function (obj: BuildDomExpr, ttl: number, ctx: BuildDOMCtx): BuildDomReturn {
         if (ttl-- < 0) throw new Error('ran out of TTL');
-        if (typeof (obj) === 'string') return document.createTextNode(obj);
+        if (typeof (obj) === 'string') { return document.createTextNode(obj); }
         if (Node && obj instanceof Node) return obj as Node;
         var node = createElementFromTag((obj as BuildDomNode).tag);
+        if (obj['_ctx']) ctx = obj['_ctx'];
         for (var key in obj) {
-            if (key != 'tag' && obj.hasOwnProperty(key)) {
+            if (obj.hasOwnProperty(key)) {
                 var val = obj[key];
                 if (key == 'child') {
                     if (val instanceof Array) {
                         val.forEach(function (x) {
-                            node.appendChild(buildDomCore(x, ttl));
+                            node.appendChild(buildDomCore(x, ttl, ctx));
                         });
                     } else {
-                        node.appendChild(buildDomCore(val, ttl));
+                        node.appendChild(buildDomCore(val, ttl, ctx));
                     }
+                } else if (key === '_key') {
+                    if (ctx) ctx[val] = node;
                 } else {
                     node[key] = val;
                 }
             }
         }
+
         return node;
     };
 
-    return function (obj: BuildDomExpr): BuildDomReturn {
-        return buildDomCore(obj, 32);
+    return function (obj: BuildDomExpr, ctx: BuildDOMCtx): BuildDomReturn {
+        return buildDomCore(obj, 32, ctx);
     };
 })();
 
@@ -216,10 +226,13 @@ class SettingItem<T> {
         btn.addEventListener('click', function () { thiz.toggle(); });
         return this;
     };
+    save() {
+        localStorage.setItem(this.key, this.type.serialize(this.data));
+    }
     set(data: T, dontSave?: boolean) {
         this.data = data;
         this.onRender && this.onRender(data);
-        if (!dontSave && this.key) localStorage.setItem(this.key, this.type.serialize(data));
+        if (!dontSave && this.key) this.save();
     };
     get() {
         return this.data;

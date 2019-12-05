@@ -21,16 +21,18 @@ declare namespace Api {
     }
 
     /**
-     * Create list:
-     *   POST {api}/list/-
-     * Update list:
-     *   PUT {api}/lists/{id}
+     * [Create list]
+     * POST {api}/lists/-
+     * 
+     * [Update list]
+     * PUT {api}/lists/{id}
      */
     interface TrackListPut extends TrackListInfo {
         trackids: number[];
     }
 
     interface TrackListPutResult extends TrackListInfo {
+
     }
 
     /**
@@ -43,4 +45,46 @@ declare namespace Api {
         /** URL to audio file */
         url: string;
     }
+
+    /** 
+     * [Get info of existing user]
+     * GET {api}/users/{id}
+     * GET {api}/users/{username}
+     * 
+     * [Register a new user]
+     * POST {api}/users/new
+     */
+    interface UserInfo {
+        id: number;
+        username: string;
+
+        /** When GET */
+        lists?: TrackListInfo[];
+
+        /** When register */
+        passwd?: string;
+    }
+
+
+    //// Another plan for password:
+    //
+    // /**
+    //  * User password is encrypted by HMAC-SHA256 on client-side when
+    //  * sending request and storing locally/remotely.
+    //  * Neither the server nor crackers can see the plaintext of password.
+    //  * 
+    //  * When register:
+    //  *  1) passwd <- [user input], salt <- random()
+    //  *  2) hash <- HMAC(passwd, salt)
+    //  *  3) POST hash and salt to register
+    //  * 
+    //  * When login:
+    //  *  1) passwd <- [user input], salt <- [GET from server]
+    //  *  2) hash <- HMAC(passwd, salt)
+    //  *  3) Use hash to login
+    //  */
+    // interface PasswordInfo {
+    //     passwd_hash?: string;
+    //     passwd_salt?: string;
+    // }
 }

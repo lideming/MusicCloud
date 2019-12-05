@@ -35,6 +35,7 @@ html, body {
 
 #main-container {
     height: calc(100vh - 15px);
+    position: relative;
 }
 
 .bottompinned #main-container {
@@ -45,6 +46,7 @@ html, body {
     float: left;
     height: 100%;
     overflow-y: auto;
+    position: relative;
 }
 
 #content-outer {
@@ -76,6 +78,16 @@ html, body {
 
 .item:hover, .dragover {
     background: #eee;
+}
+
+.dragover-placeholder {
+    /* border-top: 2px solid gray; */
+    position: absolute;
+    transform: translate(0, -1px);
+    height: 2px;
+    width: 100%;
+    background: gray;
+    z-index: 100;
 }
 
 .clickable:active, .item:active {
@@ -114,11 +126,22 @@ html, body {
     color: gray;
 }
 
+.trackitem .name, .trackitem .artist {
+    display: inline-block;
+    vertical-align: middle;
+    width: calc((100% - 2.5em - 20px) * .6);
+}
+
+.trackitem .artist {
+    width: calc((100% - 2.5em - 20px) * .4);
+}
+
 .trackitem .artist, #bottombar-trackinfo .artist {
     color: #888;
 }
 
-.trackitem .artist::before, #bottombar-trackinfo .artist::before {
+/* .trackitem .artist::before,  */
+#bottombar-trackinfo .artist::before {
     content: " - ";
     color: #888;
 }
@@ -303,4 +326,115 @@ html, body {
         opacity: 1;
         transform: translate(0, 0)
     }
+}
+
+#sidebar-login {
+    border-bottom: 1px solid #ccc;
+    padding: 10px;
+    padding-top: 0;
+}
+
+#sidebar-login > * {
+    
+}
+
+#login-actions {
+    color: gray;
+}
+
+#login-actions :hover {
+    color: black;
+}
+
+.overlay {
+    background: rgba(0, 0, 0, .2);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.overlay.centerchild {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dialog * {
+    box-sizing: border-box;
+}
+
+.dialog {
+    font-size: 14px;
+    position: relative;
+    overflow: hidden;
+    overflow-y: auto;
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0 0 6px #666;
+}
+
+.dialog-title, .dialog-content, .dialog-bottom {
+    padding: 10px;
+}
+
+.dialog-content {
+    padding: 5px 10px;
+    background: #f0f0f0;
+}
+
+.dialog-bottom {
+    padding: 5px 10px;
+}
+
+.input-label {
+    font-size: 80%;
+    color: gray;
+    margin: 5px 0 3px 0;
+}
+
+.input-text {
+    display: block;
+    width: 100%;
+    padding: 5px;
+}
+
+.btn {
+    display: block;
+    text-align: center;
+    transition: all .3s;
+    padding: 0 .4em;
+    min-width: 3em;
+    line-height: 1.5em;
+    background: hsl(5, 100%, 67%);
+    color: white;
+    box-shadow: 0 0 3px gray;
+    cursor: pointer;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:hover {
+    transition: all .05s;
+    background: hsl(5, 100%, 60%);
+}
+
+.btn.btn-down,
+.btn:active {
+    transition: all .05s;
+    background: hsl(5, 100%, 40%);
+    box-shadow: 0 0 1px gray;
+}
+
+.dialog .btn {
+    margin: 10px 0;
+}
+
+*[hidden]{
+    display: none;
 }
