@@ -801,13 +801,15 @@ var user = new /** @class */ (function () {
                 }]
         });
         domctx.passwd2_label.hidden = domctx.passwd2.hidden = true;
-        overlay.dom.addEventListener('click', function (ev) {
-            if (ev.target === overlay.dom)
+        overlay.dom.addEventListener('mousedown', function (ev) {
+            if (ev.button === 0 && ev.target === overlay.dom)
                 _this.closeUI();
         });
         overlay.dom.appendChild(dialog);
         var domuser = domctx.user, dompasswd = domctx.passwd, dompasswd2 = domctx.passwd2, domstatus = domctx.status, dombtn = domctx.btn;
         dombtn.addEventListener('click', function (ev) {
+            if (dombtn.classList.contains('disabled'))
+                return;
             var precheckErr = [];
             if (!domuser.value)
                 precheckErr.push('Please input the username!');
@@ -819,10 +821,43 @@ var user = new /** @class */ (function () {
             if (precheckErr.length) {
                 return;
             }
-            _this.login({
-                username: domuser.value,
-                password: dompasswd.value
-            });
+            (function () { return __awaiter(_this, void 0, void 0, function () {
+                var e_3;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            domstatus.textContent = 'Requesting...';
+                            utils.toggleClass(dombtn, 'disabled', true);
+                            _a.label = 1;
+                        case 1:
+                            _a.trys.push([1, 6, 7, 8]);
+                            if (!registering) return [3 /*break*/, 3];
+                            return [4 /*yield*/, this.register({
+                                    username: domuser.value,
+                                    passwd: dompasswd.value
+                                })];
+                        case 2:
+                            _a.sent();
+                            return [3 /*break*/, 5];
+                        case 3: return [4 /*yield*/, this.login({
+                                username: domuser.value,
+                                passwd: dompasswd.value
+                            })];
+                        case 4:
+                            _a.sent();
+                            _a.label = 5;
+                        case 5: return [3 /*break*/, 8];
+                        case 6:
+                            e_3 = _a.sent();
+                            domstatus.textContent = e_3;
+                            return [3 /*break*/, 8];
+                        case 7:
+                            utils.toggleClass(dombtn, 'disabled', false);
+                            return [7 /*endfinally*/];
+                        case 8: return [2 /*return*/];
+                    }
+                });
+            }); })();
         });
     };
     User.prototype.loginUI = function () {
@@ -852,9 +887,75 @@ var user = new /** @class */ (function () {
         this.uioverlay.dom.addEventListener('transitionend', end);
         setTimeout(end, 500); // failsafe
     };
+    User.prototype.getBasicAuth = function (info) {
+        return info.username + ':' + info.passwd;
+    };
     User.prototype.login = function (info) {
         return __awaiter(this, void 0, void 0, function () {
+            var resp, err_1;
             return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, api.getJson('users/me', {
+                                basicAuth: this.getBasicAuth(info)
+                            })];
+                    case 1:
+                        resp = _a.sent();
+                        return [3 /*break*/, 3];
+                    case 2:
+                        err_1 = _a.sent();
+                        if (err_1.message == 'user_not_found')
+                            throw new Error('username or password is not correct.');
+                        throw err_1;
+                    case 3:
+                        // fill the passwd because the server won't return it
+                        resp.passwd = info.passwd;
+                        return [4 /*yield*/, this.handleLoginResult(resp)];
+                    case 4:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    User.prototype.register = function (info) {
+        return __awaiter(this, void 0, void 0, function () {
+            var resp;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, api.postJson({
+                            method: 'POST',
+                            path: 'users/new',
+                            obj: info
+                        })];
+                    case 1:
+                        resp = _a.sent();
+                        if (resp.error) {
+                            if (resp.error == 'dup_user')
+                                throw new Error('A user with the same username exists');
+                            throw new Error(resp.error);
+                        }
+                        // fill the passwd because the server won't return it
+                        resp.passwd = info.passwd;
+                        return [4 /*yield*/, this.handleLoginResult(resp)];
+                    case 2:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    User.prototype.handleLoginResult = function (info) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                if (!info.username)
+                    throw new Error('iNTernEL eRRoR');
+                this.info.id = info.id;
+                this.info.username = info.username;
+                this.info.passwd = info.passwd;
+                ui.sidebarLogin.update();
+                this.closeUI();
                 return [2 /*return*/];
             });
         });
@@ -863,13 +964,24 @@ var user = new /** @class */ (function () {
 }());
 // file: main.ts
 // TypeScript 3.7 is required.
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 // Why do we need to use React and Vue.js? ;)
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
 /// <reference path="viewlib.ts" />
 /// <reference path="user.ts" />
 var settings = {
-    apiBaseUrl: 'api/',
+    apiBaseUrl: 'http://localhost:50074/api/',
     debug: true,
     apiDebugDelay: 200,
 };
@@ -1125,38 +1237,63 @@ var api = new /** @class */ (function () {
             });
         });
     };
+    class_10.prototype.getHeaders = function (arg) {
+        var headers = {};
+        if (arg.basicAuth)
+            headers['Authorization'] = 'Basic ' + btoa(arg.basicAuth);
+        return headers;
+    };
     class_10.prototype.getJson = function (path, options) {
         var _a;
         return __awaiter(this, void 0, void 0, function () {
-            var resp;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var resp, resperr, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         options = options || {};
-                        return [4 /*yield*/, this._fetch(this.baseUrl + path)];
+                        return [4 /*yield*/, this._fetch(this.baseUrl + path, {
+                                headers: __assign({}, this.getHeaders(options))
+                            })];
                     case 1:
-                        resp = _b.sent();
-                        if (options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200)))
-                            throw new Error('HTTP status ' + resp.status);
+                        resp = _c.sent();
+                        if (!(options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200)))) return [3 /*break*/, 7];
+                        if (!(resp.status === 450)) return [3 /*break*/, 6];
+                        _c.label = 2;
+                    case 2:
+                        _c.trys.push([2, 4, , 5]);
                         return [4 /*yield*/, resp.json()];
-                    case 2: return [2 /*return*/, _b.sent()];
+                    case 3:
+                        resperr = (_c.sent()).error;
+                        return [3 /*break*/, 5];
+                    case 4:
+                        _b = _c.sent();
+                        return [3 /*break*/, 5];
+                    case 5:
+                        if (resperr)
+                            throw new Error(resperr);
+                        _c.label = 6;
+                    case 6: throw new Error('HTTP status ' + resp.status);
+                    case 7: return [4 /*yield*/, resp.json()];
+                    case 8: return [2 /*return*/, _c.sent()];
                 }
             });
         });
     };
     class_10.prototype.postJson = function (arg) {
+        var _a;
         return __awaiter(this, void 0, void 0, function () {
             var resp;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0: return [4 /*yield*/, this._fetch(this.baseUrl + arg.path, {
-                            body: JSON.stringify(arg.method),
-                            method: arg.method
+                            body: JSON.stringify(arg.obj),
+                            method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
+                            headers: __assign({ 'Content-Type': 'application/json' }, this.getHeaders(arg))
                         })];
                     case 1:
-                        resp = _a.sent();
+                        resp = _b.sent();
                         return [4 /*yield*/, resp.json()];
-                    case 2: return [2 /*return*/, _a.sent()];
+                    case 2: return [2 /*return*/, _b.sent()];
                 }
             });
         });
@@ -1214,7 +1351,7 @@ var TrackList = /** @class */ (function () {
         this.name = info.name;
     };
     TrackList.prototype.loadFromGetResult = function (obj) {
-        var e_3, _a;
+        var e_4, _a;
         this.loadInfo(obj);
         try {
             for (var _b = __values(obj.tracks), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -1222,12 +1359,12 @@ var TrackList = /** @class */ (function () {
                 this.addTrack(t);
             }
         }
-        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_3) throw e_3.error; }
+            finally { if (e_4) throw e_4.error; }
         }
         return this;
     };
@@ -1254,7 +1391,7 @@ var TrackList = /** @class */ (function () {
     };
     TrackList.prototype.fetchForce = function (arg) {
         return __awaiter(this, void 0, void 0, function () {
-            var func, obj, err_1;
+            var func, obj, err_2;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -1277,9 +1414,9 @@ var TrackList = /** @class */ (function () {
                         this.loadIndicator = null;
                         return [3 /*break*/, 4];
                     case 3:
-                        err_1 = _a.sent();
-                        this.loadIndicator.error(err_1, function () { return _this.fetchForce(arg); });
-                        throw err_1;
+                        err_2 = _a.sent();
+                        this.loadIndicator.error(err_2, function () { return _this.fetchForce(arg); });
+                        throw err_2;
                     case 4:
                         this.updateView();
                         return [2 /*return*/];
@@ -1331,7 +1468,7 @@ var TrackList = /** @class */ (function () {
         this.curActive.set(item);
     };
     TrackList.prototype.updateView = function () {
-        var e_4, _a;
+        var e_5, _a;
         var listView = this.listView;
         if (!listView)
             return;
@@ -1357,12 +1494,12 @@ var TrackList = /** @class */ (function () {
                 listView.add(item);
             }
         }
-        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        catch (e_5_1) { e_5 = { error: e_5_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_4) throw e_4.error; }
+            finally { if (e_5) throw e_5.error; }
         }
     };
     return TrackList;
@@ -1452,8 +1589,8 @@ var ListIndex = /** @class */ (function () {
     /** Fetch lists from API and update the view */
     ListIndex.prototype.fetch = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var index, _a, _b, item, err_2;
-            var e_5, _c;
+            var index, _a, _b, item, err_3;
+            var e_6, _c;
             var _this = this;
             return __generator(this, function (_d) {
                 switch (_d.label) {
@@ -1473,17 +1610,17 @@ var ListIndex = /** @class */ (function () {
                                 this.addListInfo(item);
                             }
                         }
-                        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                        catch (e_6_1) { e_6 = { error: e_6_1 }; }
                         finally {
                             try {
                                 if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                             }
-                            finally { if (e_5) throw e_5.error; }
+                            finally { if (e_6) throw e_6.error; }
                         }
                         return [3 /*break*/, 4];
                     case 3:
-                        err_2 = _d.sent();
-                        this.loadIndicator.error(err_2, function () { return _this.fetch(); });
+                        err_3 = _d.sent();
+                        this.loadIndicator.error(err_3, function () { return _this.fetch(); });
                         return [3 /*break*/, 4];
                     case 4:
                         if (this.lists.length > 0)
@@ -1498,7 +1635,7 @@ var ListIndex = /** @class */ (function () {
         this.listView.add(new ListIndexViewItem(this, listinfo));
     };
     ListIndex.prototype.getListInfo = function (id) {
-        var e_6, _a;
+        var e_7, _a;
         try {
             for (var _b = __values(this.lists), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var l = _c.value;
@@ -1506,12 +1643,12 @@ var ListIndex = /** @class */ (function () {
                     return l;
             }
         }
-        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+        catch (e_7_1) { e_7 = { error: e_7_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_6) throw e_6.error; }
+            finally { if (e_7) throw e_7.error; }
         }
     };
     ListIndex.prototype.getList = function (id) {

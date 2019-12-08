@@ -55,14 +55,19 @@ declare namespace Api {
      * POST {api}/users/new
      */
     interface UserInfo {
-        id: number;
         username: string;
 
+        /** When GET */
+        id?: number;
         /** When GET */
         lists?: TrackListInfo[];
 
         /** When register */
         passwd?: string;
+    }
+
+    interface Error {
+        error: string;
     }
 
 

@@ -62,8 +62,8 @@ var user = new class User {
             }]
         }) as HTMLElement;
         domctx.passwd2_label.hidden = domctx.passwd2.hidden = true;
-        overlay.dom.addEventListener('click', (ev) => {
-            if (ev.target === overlay.dom) this.closeUI();
+        overlay.dom.addEventListener('mousedown', (ev) => {
+            if (ev.button === 0 && ev.target === overlay.dom) this.closeUI();
         });
         overlay.dom.appendChild(dialog);
         var domuser = domctx.user as HTMLInputElement,
@@ -72,6 +72,7 @@ var user = new class User {
             domstatus = domctx.status as HTMLElement,
             dombtn = domctx.btn as HTMLElement;
         dombtn.addEventListener('click', (ev) => {
+            if (dombtn.classList.contains('disabled')) return;
             var precheckErr = [];
             if (!domuser.value) precheckErr.push('Please input the username!');
             if (!dompasswd.value) precheckErr.push('Please input the password!');
@@ -81,10 +82,27 @@ var user = new class User {
             if (precheckErr.length) {
                 return;
             }
-            this.login({
-                username: domuser.value,
-                password: dompasswd.value
-            });
+            (async () => {
+                domstatus.textContent = 'Requesting...';
+                utils.toggleClass(dombtn, 'disabled', true);
+                try {
+                    if (registering) {
+                        await this.register({
+                            username: domuser.value,
+                            passwd: dompasswd.value
+                        });
+                    } else {
+                        await this.login({
+                            username: domuser.value,
+                            passwd: dompasswd.value
+                        });
+                    }
+                } catch (e) {
+                    domstatus.textContent = e;
+                } finally {
+                    utils.toggleClass(dombtn, 'disabled', false);
+                }
+            })();
         });
     }
     loginUI() {
@@ -108,8 +126,45 @@ var user = new class User {
         this.uioverlay.dom.addEventListener('transitionend', end);
         setTimeout(end, 500); // failsafe
     }
-
-    async login(info: { username, password; }) {
-
+    getBasicAuth(info: Api.UserInfo) {
+        return info.username + ':' + info.passwd;
+    }
+    async login(info: Api.UserInfo) {
+        // try GET `api/users/me` using the new info
+        try {
+            // thanks to the keyword `var` of JavaScript.
+            var resp = await api.getJson('users/me', {
+                basicAuth: this.getBasicAuth(info)
+            });
+        } catch (err) {
+            if (err.message == 'user_not_found')
+                throw new Error('username or password is not correct.');
+            throw err;
+        }
+        // fill the passwd because the server won't return it
+        resp.passwd = info.passwd;
+        await this.handleLoginResult(resp);
+    }
+    async register(info: Api.UserInfo) {
+        var resp = await api.postJson({
+            method: 'POST',
+            path: 'users/new',
+            obj: info
+        });
+        if (resp.error) {
+            if (resp.error == 'dup_user') throw new Error('A user with the same username exists');
+            throw new Error(resp.error);
+        }
+        // fill the passwd because the server won't return it
+        resp.passwd = info.passwd;
+        await this.handleLoginResult(resp);
+    }
+    async handleLoginResult(info: Api.UserInfo) {
+        if (!info.username) throw new Error('iNTernEL eRRoR');
+        this.info.id = info.id;
+        this.info.username = info.username;
+        this.info.passwd = info.passwd;
+        ui.sidebarLogin.update();
+        this.closeUI();
     }
 };

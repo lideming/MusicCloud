@@ -431,6 +431,10 @@ html, body {
     box-shadow: 0 0 1px gray;
 }
 
+.btn.disabled {
+    background: hsl(5, 100%, 83%);
+}
+
 .dialog .btn {
     margin: 10px 0;
 }
@@ -455,7 +459,7 @@ html, body {
 
 @keyframes dialogin {
     0% {
-        transform: scale(.5);
+        transform: scale(.7);
     }
     100% {
         transform: scale(1);

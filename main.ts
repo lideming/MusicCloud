@@ -11,7 +11,8 @@
 
 
 var settings = {
-    apiBaseUrl: 'api/',
+    // apiBaseUrl: 'api/',
+    apiBaseUrl: 'http://localhost:50074/api/',
     debug: true,
     apiDebugDelay: 200,
 };
@@ -212,20 +213,32 @@ var api = new class {
         if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
         return await fetch(input, init);
     }
-    async getJson(path: string, options?: { status?: false | number, auth?: string; }): Promise<any> {
+    getHeaders(arg: { basicAuth?: string; }) {
+        var headers = {};
+        if (arg.basicAuth) headers['Authorization'] = 'Basic ' + btoa(arg.basicAuth);
+        return headers;
+    }
+    async getJson(path: string, options?: { status?: false | number, basicAuth?: string; }): Promise<any> {
         options = options || {};
-        var resp = await this._fetch(this.baseUrl + path);
-        if (options.status !== false && resp.status != (options.status ?? 200))
+        var resp = await this._fetch(this.baseUrl + path, {
+            headers: { ...this.getHeaders(options) }
+        });
+        if (options.status !== false && resp.status != (options.status ?? 200)) {
+            if (resp.status === 450) {
+                try {
+                    var resperr = (await resp.json()).error;
+                } catch { }
+                if (resperr) throw new Error(resperr);
+            }
             throw new Error('HTTP status ' + resp.status);
+        }
         return await resp.json();
     }
-    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT', auth?: string; }) {
+    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT', basicAuth?: string; }) {
         var resp = await this._fetch(this.baseUrl + arg.path, {
-            body: JSON.stringify(arg.method),
-            method: arg.method,
-            headers: {
-                
-            }
+            body: JSON.stringify(arg.obj),
+            method: arg.method ?? 'POST',
+            headers: { 'Content-Type': 'application/json', ...this.getHeaders(arg) }
         });
         return await resp.json();
     }
