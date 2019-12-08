@@ -1,6 +1,7 @@
 * {
     box-sizing: border-box;
 }
+
 body {
     margin: 0;
     font-family: sans-serif;
@@ -65,6 +66,7 @@ html, body {
 }
 
 /* listview item */
+
 .item {
     padding: 10px;
     /* background: #ddd; */
@@ -141,6 +143,7 @@ html, body {
 }
 
 /* .trackitem .artist::before,  */
+
 #bottombar-trackinfo .artist::before {
     content: " - ";
     color: #888;
@@ -270,11 +273,7 @@ html, body {
 
 .loading-indicator.running .loading-indicator-text {
     margin: 0 .5em;
-    animation:
-        fadein .3s,
-        loading-first .3s .5s cubic-bezier(0.55, 0.055, 0.675, 0.19) reverse,
-        loading-second .3s .8s cubic-bezier(0.55, 0.055, 0.675, 0.19),
-        loading .25s 1.1s cubic-bezier(0.55, 0.055, 0.675, 0.19) alternate-reverse infinite;
+    animation: fadein .3s, loading-first .3s .5s cubic-bezier(0.55, 0.055, 0.675, 0.19) reverse, loading-second .3s .8s cubic-bezier(0.55, 0.055, 0.675, 0.19), loading .25s 1.1s cubic-bezier(0.55, 0.055, 0.675, 0.19) alternate-reverse infinite;
 }
 
 .loading-indicator.error {
@@ -334,9 +333,7 @@ html, body {
     padding-top: 0;
 }
 
-#sidebar-login > * {
-    
-}
+#sidebar-login>* {}
 
 #login-actions {
     color: gray;
@@ -353,6 +350,7 @@ html, body {
     left: 0;
     right: 0;
     bottom: 0;
+    animation: fadein .3s;
 }
 
 .overlay.centerchild {
@@ -368,20 +366,23 @@ html, body {
 .dialog {
     font-size: 14px;
     position: relative;
-    overflow: hidden;
-    overflow-y: auto;
+    overflow: auto;
     background: white;
     border-radius: 5px;
     box-shadow: 0 0 6px #666;
+    animation: dialogin .3s;
 }
 
 .dialog-title, .dialog-content, .dialog-bottom {
     padding: 10px;
 }
 
+.dialog-title {
+    background: #f0f0f0;
+}
+
 .dialog-content {
     padding: 5px 10px;
-    background: #f0f0f0;
 }
 
 .dialog-bottom {
@@ -424,8 +425,7 @@ html, body {
     background: hsl(5, 100%, 60%);
 }
 
-.btn.btn-down,
-.btn:active {
+.btn.btn-down, .btn:active {
     transition: all .05s;
     background: hsl(5, 100%, 40%);
     box-shadow: 0 0 1px gray;
@@ -435,6 +435,29 @@ html, body {
     margin: 10px 0;
 }
 
-*[hidden]{
+#login-btn {
+    padding: 5px;
+}
+
+.tab {
+    display: inline-block;
+    color: gray;
+    margin: 0 5px;
+}
+
+.tab.active {
+    color: black;
+}
+
+*[hidden] {
     display: none;
+}
+
+@keyframes dialogin {
+    0% {
+        transform: scale(.5);
+    }
+    100% {
+        transform: scale(1);
+    }
 }

@@ -212,17 +212,20 @@ var api = new class {
         if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
         return await fetch(input, init);
     }
-    async getJson(path: string, options?: { status?: false | number; }): Promise<any> {
+    async getJson(path: string, options?: { status?: false | number, auth?: string; }): Promise<any> {
         options = options || {};
         var resp = await this._fetch(this.baseUrl + path);
         if (options.status !== false && resp.status != (options.status ?? 200))
             throw new Error('HTTP status ' + resp.status);
         return await resp.json();
     }
-    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT'; }) {
+    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT', auth?: string; }) {
         var resp = await this._fetch(this.baseUrl + arg.path, {
             body: JSON.stringify(arg.method),
-            method: arg.method
+            method: arg.method,
+            headers: {
+                
+            }
         });
         return await resp.json();
     }

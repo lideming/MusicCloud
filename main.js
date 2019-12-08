@@ -700,86 +700,6 @@ var Overlay = /** @class */ (function (_super) {
 }(View));
 // TODO: class ContextMenu
 // file: user.ts
-/// <reference path="main.ts" />
-var user = new /** @class */ (function () {
-    function User() {
-        this.siLogin = new SettingItem('mcloud-login', 'json', {
-            id: -1,
-            username: null,
-            passwd: null
-        });
-        this.uishown = false;
-    }
-    Object.defineProperty(User.prototype, "info", {
-        get: function () { return this.siLogin.data; },
-        enumerable: true,
-        configurable: true
-    });
-    User.prototype.init = function () {
-        ui.sidebarLogin.update();
-    };
-    User.prototype.initUI = function () {
-        var overlay = this.uioverlay = new Overlay().setCenterChild(true);
-        var domctx = this.uictx = new BuildDOMCtx();
-        var reg = false;
-        var dialog = utils.buildDOM({
-            _ctx: domctx,
-            _key: 'dialog',
-            tag: 'div.dialog',
-            child: [{
-                    tag: 'div.dialog-title',
-                    child: [
-                        { tag: 'span', textContent: 'Login', _key: 'title' },
-                        {
-                            tag: 'div.clickable.no-selection', style: 'float: right; color: gray;',
-                            textContent: 'Close', onclick: function () {
-                                overlay.dom.remove();
-                            }
-                        }
-                    ]
-                }, {
-                    tag: 'div.dialog-content',
-                    child: [
-                        { tag: 'div.input-label', textContent: 'Username:' },
-                        { tag: 'input.input-text', type: 'text', _key: 'user' },
-                        { tag: 'div.input-label', textContent: 'Password:' },
-                        { tag: 'input.input-text', type: 'password', _key: 'passwd' },
-                        { tag: 'div.input-label', textContent: 'Confirm password:', _key: 'passwd2_label' },
-                        { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
-                        { tag: 'div.btn', textContent: 'Login', _key: 'btn' }
-                    ]
-                }, {
-                    tag: 'div.dialog-bottom',
-                    style: 'text-align: center',
-                    child: [{
-                            tag: 'div.clickable.no-selection', textContent: 'Create account',
-                            _key: 'switch', onclick: function () {
-                                reg = !reg;
-                                domctx.passwd2_label.hidden = domctx.passwd2.hidden = !reg;
-                                var tmp = domctx.title.textContent;
-                                domctx.title.textContent = domctx.btn.textContent = domctx.switch.textContent;
-                                domctx.switch.textContent = tmp;
-                            }
-                        }]
-                }]
-        });
-        dialog.style.width = '300px';
-        domctx.passwd2_label.hidden = domctx.passwd2.hidden = true;
-        overlay.dom.appendChild(dialog);
-    };
-    User.prototype.loginUI = function () {
-        if (!this.uioverlay)
-            this.initUI();
-        ui.mainContainer.dom.appendChild(this.uioverlay.dom);
-    };
-    User.prototype.closeUI = function () {
-        var _a;
-        (_a = this.uioverlay) === null || _a === void 0 ? void 0 : _a.dom.remove();
-    };
-    return User;
-}());
-// file: main.ts
-// TypeScript 3.7 is required.
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -816,6 +736,133 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+/// <reference path="main.ts" />
+var user = new /** @class */ (function () {
+    function User() {
+        this.siLogin = new SettingItem('mcloud-login', 'json', {
+            id: -1,
+            username: null,
+            passwd: null
+        });
+        this.uishown = false;
+    }
+    Object.defineProperty(User.prototype, "info", {
+        get: function () { return this.siLogin.data; },
+        enumerable: true,
+        configurable: true
+    });
+    User.prototype.init = function () {
+        ui.sidebarLogin.update();
+    };
+    User.prototype.initUI = function () {
+        var _this = this;
+        var overlay = this.uioverlay = new Overlay().setCenterChild(true);
+        var domctx = this.uictx = new BuildDOMCtx();
+        var registering = false;
+        var toggle = function () {
+            registering = !registering;
+            domctx.passwd2_label.hidden = domctx.passwd2.hidden = !registering;
+            var tmp = domctx.title.textContent;
+            domctx.title.textContent = domctx.btn.textContent = domctx.title2.textContent;
+            domctx.title2.textContent = tmp;
+        };
+        var dialog = utils.buildDOM({
+            _ctx: domctx,
+            _key: 'dialog',
+            tag: 'div.dialog',
+            style: 'width: 300px',
+            child: [{
+                    tag: 'div.dialog-title',
+                    child: [
+                        { tag: 'span.clickable.no-selection.tab.active', textContent: 'Login', _key: 'title' },
+                        {
+                            tag: 'span.clickable.no-selection.tab', textContent: 'Create account', _key: 'title2',
+                            onclick: toggle
+                        },
+                        {
+                            tag: 'div.clickable.no-selection', style: 'float: right; color: gray;',
+                            textContent: 'Close', onclick: function () {
+                                _this.closeUI();
+                            }
+                        }
+                    ]
+                }, {
+                    tag: 'div.dialog-content',
+                    child: [
+                        { tag: 'div.input-label', textContent: 'Username:' },
+                        { tag: 'input.input-text', type: 'text', _key: 'user' },
+                        { tag: 'div.input-label', textContent: 'Password:' },
+                        { tag: 'input.input-text', type: 'password', _key: 'passwd' },
+                        { tag: 'div.input-label', textContent: 'Confirm password:', _key: 'passwd2_label' },
+                        { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
+                        { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
+                        { tag: 'div.btn#login-btn', textContent: 'Login', _key: 'btn' }
+                    ]
+                }]
+        });
+        domctx.passwd2_label.hidden = domctx.passwd2.hidden = true;
+        overlay.dom.addEventListener('click', function (ev) {
+            if (ev.target === overlay.dom)
+                _this.closeUI();
+        });
+        overlay.dom.appendChild(dialog);
+        var domuser = domctx.user, dompasswd = domctx.passwd, dompasswd2 = domctx.passwd2, domstatus = domctx.status, dombtn = domctx.btn;
+        dombtn.addEventListener('click', function (ev) {
+            var precheckErr = [];
+            if (!domuser.value)
+                precheckErr.push('Please input the username!');
+            if (!dompasswd.value)
+                precheckErr.push('Please input the password!');
+            else if (registering && dompasswd.value !== dompasswd2.value)
+                precheckErr.push('Password confirmation does not match!');
+            domstatus.textContent = precheckErr.join('\r\n');
+            if (precheckErr.length) {
+                return;
+            }
+            _this.login({
+                username: domuser.value,
+                password: dompasswd.value
+            });
+        });
+    };
+    User.prototype.loginUI = function () {
+        if (this.uishown)
+            return;
+        this.uishown = true;
+        if (!this.uioverlay)
+            this.initUI();
+        ui.mainContainer.dom.appendChild(this.uioverlay.dom);
+    };
+    User.prototype.closeUI = function () {
+        var _this = this;
+        if (!this.uishown)
+            return;
+        this.uishown = false;
+        this.uioverlay.dom.style.transition = 'opacity .3s';
+        this.uioverlay.dom.style.opacity = '0';
+        var end = function () {
+            var _a;
+            if (!end)
+                return; // use a random variable as flag ;)
+            end = null;
+            _this.uioverlay.dom.style.transition = null;
+            _this.uioverlay.dom.style.opacity = null;
+            (_a = _this.uioverlay) === null || _a === void 0 ? void 0 : _a.dom.remove();
+        };
+        this.uioverlay.dom.addEventListener('transitionend', end);
+        setTimeout(end, 500); // failsafe
+    };
+    User.prototype.login = function (info) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/];
+            });
+        });
+    };
+    return User;
+}());
+// file: main.ts
+// TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
 /// <reference path="utils.ts" />
 /// <reference path="apidef.d.ts" />
