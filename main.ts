@@ -13,8 +13,9 @@
 var settings = {
     // apiBaseUrl: 'api/',
     apiBaseUrl: 'http://localhost:50074/api/',
+    // apiBaseUrl: 'http://localhost:5000/api/',
     debug: true,
-    apiDebugDelay: 200,
+    apiDebugDelay: 0,
 };
 
 /** 常驻 UI 元素操作 */
@@ -209,13 +210,16 @@ var playerCore = new class PlayerCore {
 var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;
+    defaultBasicAuth: string;
     async _fetch(input: RequestInfo, init?: RequestInit) {
         if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
         return await fetch(input, init);
     }
     getHeaders(arg: { basicAuth?: string; }) {
+        arg = arg || {};
         var headers = {};
-        if (arg.basicAuth) headers['Authorization'] = 'Basic ' + btoa(arg.basicAuth);
+        var basicAuth = arg.basicAuth ?? this.defaultBasicAuth;
+        if (basicAuth) headers['Authorization'] = 'Basic ' + btoa(basicAuth);
         return headers;
     }
     async getJson(path: string, options?: { status?: false | number, basicAuth?: string; }): Promise<any> {
@@ -313,6 +317,19 @@ class TrackList {
     }
     loadFromApi(arg?: number | (AsyncFunc<Api.TrackListGet>)) {
         return this.fetching = this.fetching ?? this.fetchForce(arg);
+    }
+    async postToUser() {
+        var obj: Api.TrackListPut = {
+            id: 0,
+            name: this.name,
+            trackids: this.tracks.map(t => t.id)
+        };
+        var resp: Api.TrackListPutResult = await api.postJson({
+            path: 'users/me/lists/new',
+            method: 'POST',
+            obj: obj
+        });
+        this.apiid = resp.id;
     }
     async fetchForce(arg: number | (AsyncFunc<Api.TrackListGet>)) {
         var func: AsyncFunc<Api.TrackListGet>;
@@ -435,6 +452,7 @@ class ListIndex {
         this.listView.moveByDragging = true;
         this.listView.onItemMoved = (item, from) => {
             this.lists = this.listView.map(x => x.listInfo);
+            user.setLists(this.lists.map(l => l.id));
         };
         this.listView.onDragover = (arg) => {
             var src = arg.source;
@@ -470,7 +488,7 @@ class ListIndex {
     }
     init() {
         ui.sidebarList.container.appendChild(this.section.dom);
-        listIndex.fetch();
+        // listIndex.fetch();
     }
     /** Fetch lists from API and update the view */
     async fetch() {
@@ -478,14 +496,17 @@ class ListIndex {
         this.listView.ReplaceChild(this.loadIndicator.dom);
         try {
             var index = await api.getListIndexAsync();
-            this.listView.clear();
-            for (const item of index.lists) {
-                this.addListInfo(item);
-            }
+            this.setIndex(index);
         } catch (err) {
             this.loadIndicator.error(err, () => this.fetch());
         }
         if (this.lists.length > 0) this.listView.onItemClicked(this.listView.get(0));
+    }
+    setIndex(index: Api.TrackListIndex) {
+        this.listView.clear();
+        for (const item of index.lists) {
+            this.addListInfo(item);
+        }
     }
     addListInfo(listinfo: Api.TrackListInfo) {
         this.lists.push(listinfo);
@@ -516,7 +537,6 @@ class ListIndex {
     }
 
     private nextId = -100;
-
     /** 
      * Create a Tracklist with an temporary local ID (negative number).
      * It should be sync to server and get a real ID later.
@@ -530,6 +550,10 @@ class ListIndex {
                 (x) => !!this.lists.find((l) => l.name == x))
         };
         this.addListInfo(list);
+        var listview = this.getList(id);
+        listview.postToUser().then(() => {
+            list.id = listview.apiid;
+        });
     }
 }
 

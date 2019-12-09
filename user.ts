@@ -15,6 +15,9 @@ var user = new class User {
     get info() { return this.siLogin.data; }
     init() {
         ui.sidebarLogin.update();
+        if (this.info.username) {
+            this.login(this.info);
+        }
     }
     initUI() {
         var overlay = this.uioverlay = new Overlay().setCenterChild(true);
@@ -97,6 +100,7 @@ var user = new class User {
                             passwd: dompasswd.value
                         });
                     }
+                    domstatus.textContent = '';
                 } catch (e) {
                     domstatus.textContent = e;
                 } finally {
@@ -164,7 +168,22 @@ var user = new class User {
         this.info.id = info.id;
         this.info.username = info.username;
         this.info.passwd = info.passwd;
+        this.siLogin.save();
+        api.defaultBasicAuth = this.getBasicAuth(this.info);
         ui.sidebarLogin.update();
+        listIndex.setIndex(info as any);
         this.closeUI();
+    }
+    async setLists(listids: number[]) {
+        var obj: Api.UserInfo  = {
+            id: this.info.id,
+            username: this.info.username,
+            listids: listids
+        };
+        await api.postJson({
+            path: 'users/me',
+            method: 'PUT',
+            obj
+        });
     }
 };

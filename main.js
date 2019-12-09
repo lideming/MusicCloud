@@ -753,6 +753,9 @@ var user = new /** @class */ (function () {
     });
     User.prototype.init = function () {
         ui.sidebarLogin.update();
+        if (this.info.username) {
+            this.login(this.info);
+        }
     };
     User.prototype.initUI = function () {
         var _this = this;
@@ -846,7 +849,9 @@ var user = new /** @class */ (function () {
                         case 4:
                             _a.sent();
                             _a.label = 5;
-                        case 5: return [3 /*break*/, 8];
+                        case 5:
+                            domstatus.textContent = '';
+                            return [3 /*break*/, 8];
                         case 6:
                             e_3 = _a.sent();
                             domstatus.textContent = e_3;
@@ -954,9 +959,35 @@ var user = new /** @class */ (function () {
                 this.info.id = info.id;
                 this.info.username = info.username;
                 this.info.passwd = info.passwd;
+                this.siLogin.save();
+                api.defaultBasicAuth = this.getBasicAuth(this.info);
                 ui.sidebarLogin.update();
+                listIndex.setIndex(info);
                 this.closeUI();
                 return [2 /*return*/];
+            });
+        });
+    };
+    User.prototype.setLists = function (listids) {
+        return __awaiter(this, void 0, void 0, function () {
+            var obj;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        obj = {
+                            id: this.info.id,
+                            username: this.info.username,
+                            listids: listids
+                        };
+                        return [4 /*yield*/, api.postJson({
+                                path: 'users/me',
+                                method: 'PUT',
+                                obj: obj
+                            })];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
             });
         });
     };
@@ -981,9 +1012,11 @@ var __assign = (this && this.__assign) || function () {
 /// <reference path="viewlib.ts" />
 /// <reference path="user.ts" />
 var settings = {
+    // apiBaseUrl: 'api/',
     apiBaseUrl: 'http://localhost:50074/api/',
+    // apiBaseUrl: 'http://localhost:5000/api/',
     debug: true,
-    apiDebugDelay: 200,
+    apiDebugDelay: 0,
 };
 /** 常驻 UI 元素操作 */
 var ui = new /** @class */ (function () {
@@ -1238,9 +1271,12 @@ var api = new /** @class */ (function () {
         });
     };
     class_10.prototype.getHeaders = function (arg) {
+        var _a;
+        arg = arg || {};
         var headers = {};
-        if (arg.basicAuth)
-            headers['Authorization'] = 'Basic ' + btoa(arg.basicAuth);
+        var basicAuth = (_a = arg.basicAuth, (_a !== null && _a !== void 0 ? _a : this.defaultBasicAuth));
+        if (basicAuth)
+            headers['Authorization'] = 'Basic ' + btoa(basicAuth);
         return headers;
     };
     class_10.prototype.getJson = function (path, options) {
@@ -1388,6 +1424,30 @@ var TrackList = /** @class */ (function () {
     TrackList.prototype.loadFromApi = function (arg) {
         var _a;
         return this.fetching = (_a = this.fetching, (_a !== null && _a !== void 0 ? _a : this.fetchForce(arg)));
+    };
+    TrackList.prototype.postToUser = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var obj, resp;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        obj = {
+                            id: 0,
+                            name: this.name,
+                            trackids: this.tracks.map(function (t) { return t.id; })
+                        };
+                        return [4 /*yield*/, api.postJson({
+                                path: 'users/me/lists/new',
+                                method: 'POST',
+                                obj: obj
+                            })];
+                    case 1:
+                        resp = _a.sent();
+                        this.apiid = resp.id;
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     TrackList.prototype.fetchForce = function (arg) {
         return __awaiter(this, void 0, void 0, function () {
@@ -1547,6 +1607,7 @@ var ListIndex = /** @class */ (function () {
         this.listView.moveByDragging = true;
         this.listView.onItemMoved = function (item, from) {
             _this.lists = _this.listView.map(function (x) { return x.listInfo; });
+            user.setLists(_this.lists.map(function (l) { return l.id; }));
         };
         this.listView.onDragover = function (arg) {
             var src = arg.source;
@@ -1584,42 +1645,28 @@ var ListIndex = /** @class */ (function () {
     }
     ListIndex.prototype.init = function () {
         ui.sidebarList.container.appendChild(this.section.dom);
-        listIndex.fetch();
+        // listIndex.fetch();
     };
     /** Fetch lists from API and update the view */
     ListIndex.prototype.fetch = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var index, _a, _b, item, err_3;
-            var e_6, _c;
+            var index, err_3;
             var _this = this;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
                         this.loadIndicator.reset();
                         this.listView.ReplaceChild(this.loadIndicator.dom);
-                        _d.label = 1;
+                        _a.label = 1;
                     case 1:
-                        _d.trys.push([1, 3, , 4]);
+                        _a.trys.push([1, 3, , 4]);
                         return [4 /*yield*/, api.getListIndexAsync()];
                     case 2:
-                        index = _d.sent();
-                        this.listView.clear();
-                        try {
-                            for (_a = __values(index.lists), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                item = _b.value;
-                                this.addListInfo(item);
-                            }
-                        }
-                        catch (e_6_1) { e_6 = { error: e_6_1 }; }
-                        finally {
-                            try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
-                            }
-                            finally { if (e_6) throw e_6.error; }
-                        }
+                        index = _a.sent();
+                        this.setIndex(index);
                         return [3 /*break*/, 4];
                     case 3:
-                        err_3 = _d.sent();
+                        err_3 = _a.sent();
                         this.loadIndicator.error(err_3, function () { return _this.fetch(); });
                         return [3 /*break*/, 4];
                     case 4:
@@ -1629,6 +1676,23 @@ var ListIndex = /** @class */ (function () {
                 }
             });
         });
+    };
+    ListIndex.prototype.setIndex = function (index) {
+        var e_6, _a;
+        this.listView.clear();
+        try {
+            for (var _b = __values(index.lists), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var item = _c.value;
+                this.addListInfo(item);
+            }
+        }
+        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+        finally {
+            try {
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+            }
+            finally { if (e_6) throw e_6.error; }
+        }
     };
     ListIndex.prototype.addListInfo = function (listinfo) {
         this.lists.push(listinfo);
@@ -1682,6 +1746,10 @@ var ListIndex = /** @class */ (function () {
             name: utils.createName(function (x) { return x ? "New Playlist (" + (x + 1) + ")" : 'New Playlist'; }, function (x) { return !!_this.lists.find(function (l) { return l.name == x; }); })
         };
         this.addListInfo(list);
+        var listview = this.getList(id);
+        listview.postToUser().then(function () {
+            list.id = listview.apiid;
+        });
     };
     return ListIndex;
 }());

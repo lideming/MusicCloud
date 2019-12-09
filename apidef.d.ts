@@ -48,8 +48,12 @@ declare namespace Api {
 
     /** 
      * [Get info of existing user]
+     * GET {api}/users/me
      * GET {api}/users/{id}
      * GET {api}/users/{username}
+     * 
+     * [Update info of existing user]
+     * PUT {api}/users/me
      * 
      * [Register a new user]
      * POST {api}/users/new
@@ -61,6 +65,9 @@ declare namespace Api {
         id?: number;
         /** When GET */
         lists?: TrackListInfo[];
+
+        /** When PUT */
+        listids?: number[];
 
         /** When register */
         passwd?: string;
