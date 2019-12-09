@@ -274,6 +274,7 @@ var trackStore = new class TrackStore {
 };
 
 class TrackList {
+    info: Api.TrackListInfo;
     id: number;
     apiid: number;
     name: string;
@@ -331,6 +332,18 @@ class TrackList {
         });
         this.apiid = resp.id;
     }
+    async put() {
+        var obj: Api.TrackListPut = {
+            id: this.apiid,
+            name: this.name,
+            trackids: this.tracks.map(t => t.id)
+        };
+        var resp: Api.TrackListPutResult = await api.postJson({
+            path: 'lists/' + this.apiid,
+            method: 'PUT',
+            obj: obj
+        });
+    }
     async fetchForce(arg: number | (AsyncFunc<Api.TrackListGet>)) {
         var func: AsyncFunc<Api.TrackListGet>;
         if (arg === undefined) arg = this.apiid;
@@ -347,6 +360,11 @@ class TrackList {
             throw err;
         }
         this.updateView();
+    }
+    async rename(newName: string) {
+        this.name = newName;
+        listIndex.onrename(this.id, newName);
+        await this.put();
     }
     createView(): ContentView {
         if (!this.contentView) {
@@ -391,16 +409,17 @@ class TrackList {
     private updateView() {
         var listView = this.listView;
         if (!listView) return;
+        listView.clear();
+        listView.dom.appendChild(this.buildHeader());
         if (this.loadIndicator) {
-            listView.ReplaceChild(this.loadIndicator);
+            listView.dom.appendChild(this.loadIndicator.dom);
             return;
         }
         if (this.tracks.length === 0) {
-            listView.ReplaceChild(new LoadingIndicator({ status: 'normal', content: '(Empty)' }));
+            listView.dom.appendChild(new LoadingIndicator({ status: 'normal', content: '(Empty)' }).dom);
             return;
         }
         // Well... currently, we just rebuild the DOM.
-        listView.clear();
         var playing = playerCore.track;
         for (const t of this.tracks) {
             let item = new TrackViewItem(t);
@@ -410,6 +429,47 @@ class TrackList {
                 this.curActive.set(item);
             listView.add(item);
         }
+    }
+    private buildHeader() {
+        return utils.buildDOM({
+            tag: 'div.content-header',
+            child: [
+                { tag: 'span.catalog', textContent: 'Tracklist' },
+                {
+                    tag: 'span.title', textContent: this.name, onclick: (ev) => {
+                        var span = ev.target as HTMLSpanElement;
+                        var beforeEdit = span.textContent;
+                        if (span.isContentEditable) return;
+                        span.contentEditable = 'true';
+                        span.focus();
+                        var stopEdit = () => {
+                            span.contentEditable = 'false';
+                            events.forEach(x => x.remove());
+                            if (span.textContent !== beforeEdit) {
+                                this.rename(span.textContent);
+                            }
+                        };
+                        var events = [
+                            utils.addEvent(span, 'keydown', (evv) => {
+                                if (evv.keyCode == 13) {
+                                    stopEdit();
+                                    evv.preventDefault();
+                                }
+                            }),
+                            utils.addEvent(span, 'focusout', (evv) => { stopEdit(); }),
+                            utils.addEvent(span, 'input', (evv) => {
+                                // in case user paste an image
+                                for (var next, node = span.firstChild; node; node = next) {
+                                    next = node.nextSibling;
+                                    if (node.nodeType !== Node.TEXT_NODE)
+                                        node.remove();
+                                }
+                            })
+                        ];
+                    }
+                },
+            ]
+        });
     }
 }
 
@@ -441,7 +501,6 @@ class TrackViewItem extends ListViewItem {
 }
 
 class ListIndex {
-    lists: Api.TrackListInfo[] = [];
     loadedList: { [x: number]: TrackList; } = {};
     listView: ListView<ListIndexViewItem>;
     section: Section;
@@ -451,8 +510,7 @@ class ListIndex {
         this.listView.dragging = true;
         this.listView.moveByDragging = true;
         this.listView.onItemMoved = (item, from) => {
-            this.lists = this.listView.map(x => x.listInfo);
-            user.setLists(this.lists.map(l => l.id));
+            user.setListids(this.listView.map(l => l.listInfo.id));
         };
         this.listView.onDragover = (arg) => {
             var src = arg.source;
@@ -500,7 +558,7 @@ class ListIndex {
         } catch (err) {
             this.loadIndicator.error(err, () => this.fetch());
         }
-        if (this.lists.length > 0) this.listView.onItemClicked(this.listView.get(0));
+        if (this.listView.length > 0) this.listView.onItemClicked(this.listView.get(0));
     }
     setIndex(index: Api.TrackListIndex) {
         this.listView.clear();
@@ -509,12 +567,11 @@ class ListIndex {
         }
     }
     addListInfo(listinfo: Api.TrackListInfo) {
-        this.lists.push(listinfo);
         this.listView.add(new ListIndexViewItem(this, listinfo));
     }
     getListInfo(id: number) {
-        for (const l of this.lists) {
-            if (l.id === id) return l;
+        for (const l of this.listView) {
+            if (l.listInfo.id === id) return l.listInfo;
         }
     }
     getList(id: number) {
@@ -535,6 +592,11 @@ class ListIndex {
         var list = this.getList(id);
         ui.content.setCurrent(list.createView());
     }
+    onrename(id: number, newName: string) {
+        var lvi = this.listView.find(lvi => lvi.listInfo.id == id);
+        lvi.listInfo.name = newName;
+        lvi.updateDom();
+    }
 
     private nextId = -100;
     /** 
@@ -547,7 +609,7 @@ class ListIndex {
             id,
             name: utils.createName(
                 (x) => x ? `New Playlist (${x + 1})` : 'New Playlist',
-                (x) => !!this.lists.find((l) => l.name == x))
+                (x) => !!this.listView.find((l) => l.listInfo.name == x))
         };
         this.addListInfo(list);
         var listview = this.getList(id);
@@ -566,10 +628,10 @@ class ListIndexViewItem extends ListViewItem {
         this.listInfo = listInfo;
     }
     createDom() {
-        return {
-            tag: 'div.item.no-selection',
-            textContent: this.listInfo.name,
-        };
+        return { tag: 'div.item.no-selection' };
+    }
+    updateDom() {
+        this.dom.textContent = this.listInfo.name;
     }
 }
 

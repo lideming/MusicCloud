@@ -86,6 +86,13 @@ var utils = new class Utils {
         else element.classList.remove(clsName);
     }
 
+    addEvent<K extends keyof HTMLElementEventMap>(element: HTMLElement, event: K, handler: (ev: HTMLElementEventMap[K]) => any) {
+        element.addEventListener(event, handler);
+        return {
+            remove: () => element.removeEventListener(event, handler)
+        };
+    }
+
     arrayRemove<T>(array: T[], val: T) {
         for (let i = 0; i < array.length; i++) {
             if (array[i] === val) {
@@ -112,6 +119,14 @@ var utils = new class Utils {
             func(item, idx++);
         }
     }
+
+    arrayFind<T>(arr: Iterable<T>, func: (item: T, idx: number) => any): T {
+        if (arr instanceof Array) return arr.find(func);
+        var idx = 0;
+        for (var item of arr) {
+            if (func(item, idx++)) return item;
+        }
+    }
 };
 
 
@@ -131,8 +146,8 @@ type BuildDomReturn = HTMLElement | Text | Node;
 interface BuildDomNode {
     tag?: BuildDomTag;
     child?: BuildDomExpr[] | BuildDomExpr;
-    _ctx?: BuildDOMCtx;
-    _key?:string;
+    _ctx?: BuildDOMCtx | {};
+    _key?: string;
     [key: string]: any;
 }
 

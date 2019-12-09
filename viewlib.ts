@@ -15,6 +15,7 @@ class View {
         if (!this._dom) {
             this._dom = utils.buildDOM(this.createDom()) as HTMLElement;
             this.postCreateDom(this._dom);
+            this.updateDom();
         }
     }
     protected createDom(): BuildDomExpr {
@@ -22,6 +23,9 @@ class View {
     }
     /** Will be called when the dom is created */
     protected postCreateDom(element: HTMLElement) {
+    }
+    /** Will be called when the dom is created, after postCreateDom() */
+    public updateDom() {
     }
     toggleClass(clsName: string, force?: boolean) {
         utils.toggleClass(this.dom, clsName, force);
@@ -206,6 +210,7 @@ class ListView<T extends ListViewItem = ListViewItem> extends View implements It
         return this.items[idx];
     }
     map<TRet>(func: (lvi: T) => TRet) { return utils.arrayMap(this, func); }
+    find(func: (lvi: T, idx: number) => any) { return utils.arrayFind(this, func); }
     private _ensureItem(item: T | number) {
         if (typeof item === 'number') item = this.get(item);
         else if (!item) throw new Error('item is null or undefined.');
@@ -233,12 +238,13 @@ class Section extends View {
     }
     createDom() {
         return {
+            _ctx: this,
             tag: 'div.section',
             child: [
                 {
                     tag: 'div.section-header',
                     child: [
-                        this.titleDom = utils.buildDOM({ tag: 'span.section-title' }) as HTMLSpanElement
+                        { tag: 'span.section-title', _key: 'titleDom' }
                     ]
                 }
                 // content element(s) here
@@ -315,10 +321,8 @@ class LoadingIndicator extends View {
 }
 
 class Overlay extends View {
-    createDom(){
-        return {
-            tag: 'div.overlay'
-        }
+    createDom() {
+        return { tag: 'div.overlay' };
     }
     setCenterChild(centerChild: boolean) {
         this.toggleClass('centerchild', centerChild);

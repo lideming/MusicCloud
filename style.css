@@ -61,6 +61,37 @@ html, body {
     padding: 10px 0;
 }
 
+@media only screen and (min-width: 800px) {
+    #sidebar {
+        width: calc(200px + (100vw - 800px) * .2);
+    }
+    #content-outer {
+        width: calc(100% - (200px + (100vw - 800px) * .2));
+    }
+}
+
+.content-header {
+    position: relative;
+    margin: 10px;
+}
+
+.content-header .catalog {
+    font-size: 120%;
+    color: gray;
+    margin-right: .5em;
+}
+
+.content-header .title {
+    vertical-align: baseline;
+    display: inline-block;
+    font-size: 120%;
+    padding: 5px;
+}
+
+.content-header .title[contentEditable=true] {
+    background: #eeeeee;
+}
+
 .tracklist {
     padding: 10px 0;
 }

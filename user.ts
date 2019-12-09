@@ -174,7 +174,7 @@ var user = new class User {
         listIndex.setIndex(info as any);
         this.closeUI();
     }
-    async setLists(listids: number[]) {
+    async setListids(listids: number[]) {
         var obj: Api.UserInfo  = {
             id: this.info.id,
             username: this.info.username,
