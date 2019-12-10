@@ -274,7 +274,6 @@ type LoadingIndicatorState = 'normal' | 'running' | 'error';
 class LoadingIndicator extends View {
     constructor(arg?: { status?: LoadingIndicatorState, content?: string, onclick?: Action<MouseEvent>; }) {
         super();
-        this.reset();
         if (arg) {
             if (arg.status) this.state = arg.status;
             if (arg.content) this.content = arg.content;
@@ -285,12 +284,12 @@ class LoadingIndicator extends View {
     get state() { return this._status; }
     set state(val: LoadingIndicatorState) {
         this._status = val;
-        this.toggleClass('running', val == 'running');
-        this.toggleClass('error', val == 'error');
+        ['running', 'error', 'normal'].forEach(x => this.toggleClass(x, val == x));
     }
     private _text: string;
+    private _textdom: HTMLElement;
     get content() { return this._text; }
-    set content(val: string) { this._text = val; this.dom.firstChild.firstChild.textContent = val; }
+    set content(val: string) { this._text = val; this.ensureDom(); this._textdom.textContent = val; }
     onclick: (e: MouseEvent) => void;
     reset() {
         this.state = 'running';
@@ -306,17 +305,18 @@ class LoadingIndicator extends View {
         this.onclick = retry as any;
     }
     createDom() {
-        this._dom = utils.buildDOM({
+        return {
+            _ctx: this,
             tag: 'div.loading-indicator',
             child: [{
                 tag: 'div.loading-indicator-inner',
-                child: [{
-                    tag: 'div.loading-indicator-text'
-                }]
+                child: [{ tag: 'div.loading-indicator-text', _key: '_textdom' }]
             }],
             onclick: (e) => this.onclick && this.onclick(e)
-        }) as HTMLElement;
-        return this._dom;
+        };
+    }
+    postCreateDom() {
+        this.reset();
     }
 }
 

@@ -2,7 +2,7 @@
     "files": ["main.ts"],
     "compilerOptions": {
         "module": "none",
-        "target": "es5",
+        "target": "ES2015",
         "jsx": "preserve",
         "lib": ["dom", "es2015"],
         "outFile": "main.js",

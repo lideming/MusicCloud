@@ -13,10 +13,17 @@ var user = new class User {
     uictx: BuildDOMCtx;
     uishown = false;
     get info() { return this.siLogin.data; }
-    init() {
+    state: 'none' | 'logging' | 'error' | 'logged';
+    pendingInfo: User['info'];
+    setState(state: User['state']) {
+        this.state = state;
         ui.sidebarLogin.update();
+    }
+    init() {
         if (this.info.username) {
             this.login(this.info);
+        } else {
+            this.setState('none');
         }
     }
     initUI() {
@@ -105,22 +112,25 @@ var user = new class User {
             (async () => {
                 domstatus.textContent = 'Requesting...';
                 utils.toggleClass(dombtn, 'disabled', true);
+                var info = { username: domuser.value, passwd: dompasswd.value };
                 try {
+                    this.pendingInfo = info as any;
                     if (registering) {
-                        await this.register({
-                            username: domuser.value,
-                            passwd: dompasswd.value
-                        });
+                        await this.register(info);
                     } else {
-                        await this.login({
-                            username: domuser.value,
-                            passwd: dompasswd.value
-                        });
+                        await this.login(info);
                     }
                     domstatus.textContent = '';
+                    this.closeUI();
                 } catch (e) {
                     domstatus.textContent = e;
+                    // fallback to previous login info
+                    if (this.info.username) {
+                        await this.login(this.info);
+                        domstatus.textContent += '\r\n' + 'Logged in with previous working account.';
+                    }
                 } finally {
+                    this.pendingInfo = null;
                     utils.toggleClass(dombtn, 'disabled', false);
                 }
             })();
@@ -142,6 +152,7 @@ var user = new class User {
         return info.username + ':' + info.passwd;
     }
     async login(info: Api.UserInfo) {
+        this.setState('logging');
         // try GET `api/users/me` using the new info
         try {
             // thanks to the keyword `var` of JavaScript.
@@ -149,21 +160,26 @@ var user = new class User {
                 basicAuth: this.getBasicAuth(info)
             });
         } catch (err) {
+            this.setState('error');
             if (err.message == 'user_not_found')
                 throw new Error('username or password is not correct.');
             throw err;
+        } finally {
+            this.pendingInfo = null;
         }
         // fill the passwd because the server won't return it
         resp.passwd = info.passwd;
         await this.handleLoginResult(resp);
     }
     async register(info: Api.UserInfo) {
+        this.setState('logging');
         var resp = await api.postJson({
             method: 'POST',
             path: 'users/new',
             obj: info
         });
         if (resp.error) {
+            this.setState('error');
             if (resp.error == 'dup_user') throw new Error('A user with the same username exists');
             throw new Error(resp.error);
         }
@@ -180,7 +196,7 @@ var user = new class User {
         api.defaultBasicAuth = this.getBasicAuth(this.info);
         ui.sidebarLogin.update();
         listIndex.setIndex(info as any);
-        this.closeUI();
+        this.setState('logged');
     }
     async setListids(listids: number[]) {
         var obj: Api.UserInfo = {

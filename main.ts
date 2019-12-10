@@ -111,11 +111,18 @@ var ui = new class {
             });
         }
         update() {
-            if (user.info.username) {
-                this.loginState.textContent = user.info.username;
+            var text = this.loginState.textContent;
+            var username = user.pendingInfo?.username ?? user.info.username;
+            if (username) {
+                text = username;
+                if (user.state == 'logging') text += ' (logging in...)';
+                if (user.state == 'error') text += ' (error!)';
+                if (user.state == 'none') text += ' (not logged in)';
             } else {
-                this.loginState.textContent = 'Guest (click to login)';
+                if (user.state == 'logging') text = '(logging...)';
+                else text = 'Guest (click to login)';
             }
+            this.loginState.textContent = text;
         }
     };
     sidebarList = new class {
