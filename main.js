@@ -1046,389 +1046,8 @@ var user = new /** @class */ (function () {
     };
     return User;
 }());
-// file: main.ts
-// TypeScript 3.7 is required.
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-// Why do we need to use React and Vue.js? ;)
-/// <reference path="utils.ts" />
-/// <reference path="apidef.d.ts" />
-/// <reference path="viewlib.ts" />
-/// <reference path="user.ts" />
-var settings = {
-    // apiBaseUrl: 'api/',
-    apiBaseUrl: 'http://localhost:50074/api/',
-    // apiBaseUrl: 'http://localhost:5000/api/',
-    debug: true,
-    apiDebugDelay: 0,
-};
-/** 常驻 UI 元素操作 */
-var ui = new /** @class */ (function () {
-    function class_2() {
-        this.bottomBar = new /** @class */ (function () {
-            function class_3() {
-                this.container = document.getElementById("bottombar");
-                this.btnPin = document.getElementById('btnPin');
-                this.pinned = true;
-            }
-            class_3.prototype.setPinned = function (val) {
-                val = (val !== null && val !== void 0 ? val : !this.pinned);
-                this.pinned = val;
-                utils.toggleClass(document.body, 'bottompinned', val);
-                this.btnPin.textContent = val ? 'Unpin' : 'Pin';
-                if (val)
-                    this.toggle(true);
-            };
-            class_3.prototype.toggle = function (state) {
-                utils.toggleClass(this.container, 'show', state);
-            };
-            class_3.prototype.init = function () {
-                var _this = this;
-                var bar = this.container;
-                var hideTimer = new utils.Timer(function () {
-                    _this.toggle(false);
-                });
-                bar.addEventListener('mouseenter', function () {
-                    hideTimer.tryCancel();
-                    _this.toggle(true);
-                });
-                bar.addEventListener('mouseleave', function () {
-                    hideTimer.tryCancel();
-                    if (!_this.pinned)
-                        hideTimer.timeout(200);
-                });
-                this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
-                    .render(function (x) { return _this.setPinned(x); })
-                    .bindToBtn(this.btnPin, ['', '']);
-                // this.btnPin.addEventListener('click', () => this.setPinned());
-            };
-            return class_3;
-        }());
-        this.playerControl = new /** @class */ (function () {
-            function class_4() {
-                this.progbar = document.getElementById('progressbar');
-                this.fill = document.getElementById('progressbar-fill');
-                this.labelCur = document.getElementById('progressbar-label-cur');
-                this.labelTotal = document.getElementById('progressbar-label-total');
-            }
-            class_4.prototype.setProg = function (cur, total) {
-                var prog = cur / total;
-                prog = utils.numLimit(prog, 0, 1);
-                this.fill.style.width = (prog * 100) + '%';
-                this.labelCur.textContent = utils.formatTime(cur);
-                this.labelTotal.textContent = utils.formatTime(total);
-            };
-            class_4.prototype.setProgressChangedCallback = function (cb) {
-                var _this = this;
-                var call = function (e) { cb(utils.numLimit(e.offsetX / _this.progbar.clientWidth, 0, 1)); };
-                this.progbar.addEventListener('mousedown', function (e) {
-                    if (e.buttons == 1)
-                        call(e);
-                });
-                this.progbar.addEventListener('mousemove', function (e) {
-                    if (e.buttons == 1)
-                        call(e);
-                });
-            };
-            return class_4;
-        }());
-        this.trackinfo = new /** @class */ (function () {
-            function class_5() {
-                this.element = document.getElementById('bottombar-trackinfo');
-            }
-            class_5.prototype.setTrack = function (track) {
-                if (track) {
-                    utils.replaceChild(this.element, utils.buildDOM({
-                        tag: 'span',
-                        child: [
-                            // 'Now Playing: ',
-                            { tag: 'span.name', textContent: track.name },
-                            { tag: 'span.artist', textContent: track.artist },
-                        ]
-                    }));
-                }
-                else {
-                    this.element.textContent = "";
-                }
-            };
-            return class_5;
-        }());
-        this.mainContainer = new /** @class */ (function () {
-            function class_6() {
-                this.dom = document.getElementById('main-container');
-            }
-            return class_6;
-        }());
-        this.sidebarLogin = new /** @class */ (function () {
-            function class_7() {
-                this.container = document.getElementById('sidebar-login');
-                this.loginState = document.getElementById('login-state');
-            }
-            class_7.prototype.init = function () {
-                this.loginState.addEventListener('click', function (ev) {
-                    user.loginUI();
-                });
-            };
-            class_7.prototype.update = function () {
-                if (user.info.username) {
-                    this.loginState.textContent = user.info.username;
-                }
-                else {
-                    this.loginState.textContent = 'Guest (click to login)';
-                }
-            };
-            return class_7;
-        }());
-        this.sidebarList = new /** @class */ (function () {
-            function class_8() {
-                this.container = document.getElementById('sidebar-list');
-                this.currentActive = new ItemActiveHelper();
-            }
-            class_8.prototype.setActive = function (item) {
-                this.currentActive.set(item);
-            };
-            return class_8;
-        }());
-        this.content = new /** @class */ (function () {
-            function class_9() {
-                this.container = document.getElementById('content-outer');
-            }
-            class_9.prototype.removeCurrent = function () {
-                var cur = this.current;
-                if (!cur)
-                    return;
-                if (cur.onRemove)
-                    cur.onRemove();
-                if (cur.dom)
-                    this.container.removeChild(cur.dom);
-            };
-            class_9.prototype.setCurrent = function (arg) {
-                this.removeCurrent();
-                if (arg.onShow)
-                    arg.onShow();
-                this.container.appendChild(arg.dom);
-                this.current = arg;
-            };
-            return class_9;
-        }());
-    }
-    class_2.prototype.init = function () {
-        this.bottomBar.init();
-        this.sidebarLogin.init();
-    };
-    return class_2;
-}()); // ui
-ui.init();
-/** 播放器核心：控制播放逻辑 */
-var playerCore = new /** @class */ (function () {
-    function PlayerCore() {
-        var _this = this;
-        this.onTrackChanged = new Callbacks();
-        this.audio = document.createElement('audio');
-        this.audio.addEventListener('timeupdate', function () { return _this.updateProgress(); });
-        this.audio.addEventListener('canplay', function () { return _this.updateProgress(); });
-        this.audio.addEventListener('error', function (e) {
-            console.log(e);
-        });
-        this.audio.addEventListener('ended', function () {
-            _this.next();
-        });
-        ui.playerControl.setProgressChangedCallback(function (x) {
-            _this.audio.currentTime = x * _this.audio.duration;
-        });
-        var ctx = new AudioContext();
-        var analyzer = ctx.createAnalyser();
-    }
-    Object.defineProperty(PlayerCore.prototype, "isPlaying", {
-        get: function () { return this.audio.duration && !this.audio.paused; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(PlayerCore.prototype, "isPaused", {
-        get: function () { return this.audio.paused; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(PlayerCore.prototype, "canPlay", {
-        get: function () { return this.audio.readyState >= 2; },
-        enumerable: true,
-        configurable: true
-    });
-    PlayerCore.prototype.next = function () {
-        var _a, _b, _c;
-        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track);
-        if (nextTrack)
-            this.playTrack(nextTrack);
-        else
-            this.setTrack(null);
-    };
-    PlayerCore.prototype.updateProgress = function () {
-        ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
-    };
-    PlayerCore.prototype.loadUrl = function (src) {
-        this.audio.src = src;
-    };
-    PlayerCore.prototype.setTrack = function (track) {
-        this.track = track;
-        ui.trackinfo.setTrack(track);
-        this.onTrackChanged.invoke();
-        this.loadUrl(track ? track.url : "");
-    };
-    PlayerCore.prototype.playTrack = function (track) {
-        if (track === this.track)
-            return;
-        this.setTrack(track);
-        this.play();
-    };
-    PlayerCore.prototype.play = function () {
-        this.audio.play();
-    };
-    PlayerCore.prototype.pause = function () {
-        this.audio.pause();
-    };
-    return PlayerCore;
-}());
-/** API 操作 */
-var api = new /** @class */ (function () {
-    function class_10() {
-        this.debugSleep = settings.debug ? settings.apiDebugDelay : 0;
-    }
-    Object.defineProperty(class_10.prototype, "baseUrl", {
-        get: function () { return settings.apiBaseUrl; },
-        enumerable: true,
-        configurable: true
-    });
-    class_10.prototype._fetch = function (input, init) {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.debugSleep) return [3 /*break*/, 2];
-                        return [4 /*yield*/, utils.sleepAsync(this.debugSleep * (Math.random() + 1))];
-                    case 1:
-                        _a.sent();
-                        _a.label = 2;
-                    case 2: return [4 /*yield*/, fetch(input, init)];
-                    case 3: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
-    };
-    class_10.prototype.getHeaders = function (arg) {
-        var _a;
-        arg = arg || {};
-        var headers = {};
-        var basicAuth = (_a = arg.basicAuth, (_a !== null && _a !== void 0 ? _a : this.defaultBasicAuth));
-        if (basicAuth)
-            headers['Authorization'] = 'Basic ' + btoa(basicAuth);
-        return headers;
-    };
-    class_10.prototype.getJson = function (path, options) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function () {
-            var resp, resperr, _b;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
-                    case 0:
-                        options = options || {};
-                        return [4 /*yield*/, this._fetch(this.baseUrl + path, {
-                                headers: __assign({}, this.getHeaders(options))
-                            })];
-                    case 1:
-                        resp = _c.sent();
-                        if (!(options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200)))) return [3 /*break*/, 7];
-                        if (!(resp.status === 450)) return [3 /*break*/, 6];
-                        _c.label = 2;
-                    case 2:
-                        _c.trys.push([2, 4, , 5]);
-                        return [4 /*yield*/, resp.json()];
-                    case 3:
-                        resperr = (_c.sent()).error;
-                        return [3 /*break*/, 5];
-                    case 4:
-                        _b = _c.sent();
-                        return [3 /*break*/, 5];
-                    case 5:
-                        if (resperr)
-                            throw new Error(resperr);
-                        _c.label = 6;
-                    case 6: throw new Error('HTTP status ' + resp.status);
-                    case 7: return [4 /*yield*/, resp.json()];
-                    case 8: return [2 /*return*/, _c.sent()];
-                }
-            });
-        });
-    };
-    class_10.prototype.postJson = function (arg) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function () {
-            var resp;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0: return [4 /*yield*/, this._fetch(this.baseUrl + arg.path, {
-                            body: JSON.stringify(arg.obj),
-                            method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
-                            headers: __assign({ 'Content-Type': 'application/json' }, this.getHeaders(arg))
-                        })];
-                    case 1:
-                        resp = _b.sent();
-                        return [4 /*yield*/, resp.json()];
-                    case 2: return [2 /*return*/, _b.sent()];
-                }
-            });
-        });
-    };
-    class_10.prototype.getListAsync = function (id) {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getJson('lists/' + id)];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
-    };
-    class_10.prototype.getListIndexAsync = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.getJson('lists/index')];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
-    };
-    class_10.prototype.putListAsync = function (list, creating) {
-        if (creating === void 0) { creating = false; }
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.postJson({
-                            path: 'lists/' + list.id,
-                            method: creating ? 'POST' : 'PUT',
-                            obj: list,
-                        })];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
-    };
-    return class_10;
-}());
-var trackStore = new /** @class */ (function () {
-    function TrackStore() {
-    }
-    return TrackStore;
-}());
+// file: tracklist.ts
+/// <reference path="main.ts" />
 var TrackList = /** @class */ (function () {
     function TrackList() {
         this.tracks = [];
@@ -1730,6 +1349,8 @@ var TrackViewItem = /** @class */ (function (_super) {
     };
     return TrackViewItem;
 }(ListViewItem));
+// file: listindex.ts
+/// <reference path="main.ts" />
 var ListIndex = /** @class */ (function () {
     function ListIndex() {
         var _this = this;
@@ -1906,9 +1527,394 @@ var ListIndexViewItem = /** @class */ (function (_super) {
     };
     return ListIndexViewItem;
 }(ListViewItem));
+// file: main.ts
+// TypeScript 3.7 is required.
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+// Why do we need to use React and Vue.js? ;)
+/// <reference path="utils.ts" />
+/// <reference path="apidef.d.ts" />
+/// <reference path="viewlib.ts" />
+/// <reference path="user.ts" />
+/// <reference path="tracklist.ts" />
+/// <reference path="listindex.ts" />
+var settings = {
+    // apiBaseUrl: 'api/',
+    apiBaseUrl: 'http://localhost:50074/api/',
+    // apiBaseUrl: 'http://localhost:5000/api/',
+    debug: true,
+    apiDebugDelay: 0,
+};
+/** 常驻 UI 元素操作 */
+var ui = new /** @class */ (function () {
+    function class_2() {
+        this.bottomBar = new /** @class */ (function () {
+            function class_3() {
+                this.container = document.getElementById("bottombar");
+                this.btnPin = document.getElementById('btnPin');
+                this.pinned = true;
+            }
+            class_3.prototype.setPinned = function (val) {
+                val = (val !== null && val !== void 0 ? val : !this.pinned);
+                this.pinned = val;
+                utils.toggleClass(document.body, 'bottompinned', val);
+                this.btnPin.textContent = val ? 'Unpin' : 'Pin';
+                if (val)
+                    this.toggle(true);
+            };
+            class_3.prototype.toggle = function (state) {
+                utils.toggleClass(this.container, 'show', state);
+            };
+            class_3.prototype.init = function () {
+                var _this = this;
+                var bar = this.container;
+                var hideTimer = new utils.Timer(function () {
+                    _this.toggle(false);
+                });
+                bar.addEventListener('mouseenter', function () {
+                    hideTimer.tryCancel();
+                    _this.toggle(true);
+                });
+                bar.addEventListener('mouseleave', function () {
+                    hideTimer.tryCancel();
+                    if (!_this.pinned)
+                        hideTimer.timeout(200);
+                });
+                this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
+                    .render(function (x) { return _this.setPinned(x); })
+                    .bindToBtn(this.btnPin, ['', '']);
+                // this.btnPin.addEventListener('click', () => this.setPinned());
+            };
+            return class_3;
+        }());
+        this.playerControl = new /** @class */ (function () {
+            function class_4() {
+                this.progbar = document.getElementById('progressbar');
+                this.fill = document.getElementById('progressbar-fill');
+                this.labelCur = document.getElementById('progressbar-label-cur');
+                this.labelTotal = document.getElementById('progressbar-label-total');
+            }
+            class_4.prototype.setProg = function (cur, total) {
+                var prog = cur / total;
+                prog = utils.numLimit(prog, 0, 1);
+                this.fill.style.width = (prog * 100) + '%';
+                this.labelCur.textContent = utils.formatTime(cur);
+                this.labelTotal.textContent = utils.formatTime(total);
+            };
+            class_4.prototype.setProgressChangedCallback = function (cb) {
+                var _this = this;
+                var call = function (e) { cb(utils.numLimit(e.offsetX / _this.progbar.clientWidth, 0, 1)); };
+                this.progbar.addEventListener('mousedown', function (e) {
+                    if (e.buttons == 1)
+                        call(e);
+                });
+                this.progbar.addEventListener('mousemove', function (e) {
+                    if (e.buttons == 1)
+                        call(e);
+                });
+            };
+            return class_4;
+        }());
+        this.trackinfo = new /** @class */ (function () {
+            function class_5() {
+                this.element = document.getElementById('bottombar-trackinfo');
+            }
+            class_5.prototype.setTrack = function (track) {
+                if (track) {
+                    utils.replaceChild(this.element, utils.buildDOM({
+                        tag: 'span',
+                        child: [
+                            // 'Now Playing: ',
+                            { tag: 'span.name', textContent: track.name },
+                            { tag: 'span.artist', textContent: track.artist },
+                        ]
+                    }));
+                }
+                else {
+                    this.element.textContent = "";
+                }
+            };
+            return class_5;
+        }());
+        this.mainContainer = new /** @class */ (function () {
+            function class_6() {
+                this.dom = document.getElementById('main-container');
+            }
+            return class_6;
+        }());
+        this.sidebarLogin = new /** @class */ (function () {
+            function class_7() {
+                this.container = document.getElementById('sidebar-login');
+                this.loginState = document.getElementById('login-state');
+            }
+            class_7.prototype.init = function () {
+                this.loginState.addEventListener('click', function (ev) {
+                    user.loginUI();
+                });
+            };
+            class_7.prototype.update = function () {
+                if (user.info.username) {
+                    this.loginState.textContent = user.info.username;
+                }
+                else {
+                    this.loginState.textContent = 'Guest (click to login)';
+                }
+            };
+            return class_7;
+        }());
+        this.sidebarList = new /** @class */ (function () {
+            function class_8() {
+                this.container = document.getElementById('sidebar-list');
+                this.currentActive = new ItemActiveHelper();
+            }
+            class_8.prototype.setActive = function (item) {
+                this.currentActive.set(item);
+            };
+            return class_8;
+        }());
+        this.content = new /** @class */ (function () {
+            function class_9() {
+                this.container = document.getElementById('content-outer');
+            }
+            class_9.prototype.removeCurrent = function () {
+                var cur = this.current;
+                if (!cur)
+                    return;
+                if (cur.onRemove)
+                    cur.onRemove();
+                if (cur.dom)
+                    this.container.removeChild(cur.dom);
+            };
+            class_9.prototype.setCurrent = function (arg) {
+                this.removeCurrent();
+                if (arg.onShow)
+                    arg.onShow();
+                this.container.appendChild(arg.dom);
+                this.current = arg;
+            };
+            return class_9;
+        }());
+    }
+    class_2.prototype.init = function () {
+        this.bottomBar.init();
+        this.sidebarLogin.init();
+    };
+    return class_2;
+}()); // ui
+/** 播放器核心：控制播放逻辑 */
+var playerCore = new /** @class */ (function () {
+    function PlayerCore() {
+        var _this = this;
+        this.onTrackChanged = new Callbacks();
+        this.audio = document.createElement('audio');
+        this.audio.addEventListener('timeupdate', function () { return _this.updateProgress(); });
+        this.audio.addEventListener('canplay', function () { return _this.updateProgress(); });
+        this.audio.addEventListener('error', function (e) {
+            console.log(e);
+        });
+        this.audio.addEventListener('ended', function () {
+            _this.next();
+        });
+        ui.playerControl.setProgressChangedCallback(function (x) {
+            _this.audio.currentTime = x * _this.audio.duration;
+        });
+        var ctx = new AudioContext();
+        var analyzer = ctx.createAnalyser();
+    }
+    Object.defineProperty(PlayerCore.prototype, "isPlaying", {
+        get: function () { return this.audio.duration && !this.audio.paused; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(PlayerCore.prototype, "isPaused", {
+        get: function () { return this.audio.paused; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(PlayerCore.prototype, "canPlay", {
+        get: function () { return this.audio.readyState >= 2; },
+        enumerable: true,
+        configurable: true
+    });
+    PlayerCore.prototype.next = function () {
+        var _a, _b, _c;
+        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track);
+        if (nextTrack)
+            this.playTrack(nextTrack);
+        else
+            this.setTrack(null);
+    };
+    PlayerCore.prototype.updateProgress = function () {
+        ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
+    };
+    PlayerCore.prototype.loadUrl = function (src) {
+        this.audio.src = src;
+    };
+    PlayerCore.prototype.setTrack = function (track) {
+        this.track = track;
+        ui.trackinfo.setTrack(track);
+        this.onTrackChanged.invoke();
+        this.loadUrl(track ? track.url : "");
+    };
+    PlayerCore.prototype.playTrack = function (track) {
+        if (track === this.track)
+            return;
+        this.setTrack(track);
+        this.play();
+    };
+    PlayerCore.prototype.play = function () {
+        this.audio.play();
+    };
+    PlayerCore.prototype.pause = function () {
+        this.audio.pause();
+    };
+    return PlayerCore;
+}());
+/** API 操作 */
+var api = new /** @class */ (function () {
+    function class_10() {
+        this.debugSleep = settings.debug ? settings.apiDebugDelay : 0;
+    }
+    Object.defineProperty(class_10.prototype, "baseUrl", {
+        get: function () { return settings.apiBaseUrl; },
+        enumerable: true,
+        configurable: true
+    });
+    class_10.prototype._fetch = function (input, init) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!this.debugSleep) return [3 /*break*/, 2];
+                        return [4 /*yield*/, utils.sleepAsync(this.debugSleep * (Math.random() + 1))];
+                    case 1:
+                        _a.sent();
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, fetch(input, init)];
+                    case 3: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    class_10.prototype.getHeaders = function (arg) {
+        var _a;
+        arg = arg || {};
+        var headers = {};
+        var basicAuth = (_a = arg.basicAuth, (_a !== null && _a !== void 0 ? _a : this.defaultBasicAuth));
+        if (basicAuth)
+            headers['Authorization'] = 'Basic ' + btoa(basicAuth);
+        return headers;
+    };
+    class_10.prototype.getJson = function (path, options) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function () {
+            var resp, resperr, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        options = options || {};
+                        return [4 /*yield*/, this._fetch(this.baseUrl + path, {
+                                headers: __assign({}, this.getHeaders(options))
+                            })];
+                    case 1:
+                        resp = _c.sent();
+                        if (!(options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200)))) return [3 /*break*/, 7];
+                        if (!(resp.status === 450)) return [3 /*break*/, 6];
+                        _c.label = 2;
+                    case 2:
+                        _c.trys.push([2, 4, , 5]);
+                        return [4 /*yield*/, resp.json()];
+                    case 3:
+                        resperr = (_c.sent()).error;
+                        return [3 /*break*/, 5];
+                    case 4:
+                        _b = _c.sent();
+                        return [3 /*break*/, 5];
+                    case 5:
+                        if (resperr)
+                            throw new Error(resperr);
+                        _c.label = 6;
+                    case 6: throw new Error('HTTP status ' + resp.status);
+                    case 7: return [4 /*yield*/, resp.json()];
+                    case 8: return [2 /*return*/, _c.sent()];
+                }
+            });
+        });
+    };
+    class_10.prototype.postJson = function (arg) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function () {
+            var resp;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this._fetch(this.baseUrl + arg.path, {
+                            body: JSON.stringify(arg.obj),
+                            method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
+                            headers: __assign({ 'Content-Type': 'application/json' }, this.getHeaders(arg))
+                        })];
+                    case 1:
+                        resp = _b.sent();
+                        return [4 /*yield*/, resp.json()];
+                    case 2: return [2 /*return*/, _b.sent()];
+                }
+            });
+        });
+    };
+    class_10.prototype.getListAsync = function (id) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getJson('lists/' + id)];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    class_10.prototype.getListIndexAsync = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.getJson('lists/index')];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    class_10.prototype.putListAsync = function (list, creating) {
+        if (creating === void 0) { creating = false; }
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.postJson({
+                            path: 'lists/' + list.id,
+                            method: creating ? 'POST' : 'PUT',
+                            obj: list,
+                        })];
+                    case 1: return [2 /*return*/, _a.sent()];
+                }
+            });
+        });
+    };
+    return class_10;
+}());
+var trackStore = new /** @class */ (function () {
+    function TrackStore() {
+    }
+    return TrackStore;
+}());
 document.addEventListener('drop', function (ev) {
     ev.preventDefault();
 });
+ui.init();
 var listIndex = new ListIndex();
 listIndex.init();
 user.init();
