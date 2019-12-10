@@ -293,14 +293,14 @@ class LoadingIndicator extends View {
     onclick: (e: MouseEvent) => void;
     reset() {
         this.state = 'running';
-        this.content = 'Loading';
+        this.content = I`Loading`;
         this.onclick = null;
     }
     error(err, retry: Action) {
         this.state = 'error';
-        this.content = 'Oh no! Something just goes wrong:\n' + err;
+        this.content = I`Oh no! Something just goes wrong:` + '\r\n' + err;
         if (retry) {
-            this.content += '\n[Click here to retry]';
+            this.content += '\r\n' + I`[Click here to retry]`;
         }
         this.onclick = retry as any;
     }

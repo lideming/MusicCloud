@@ -48,16 +48,16 @@ var user = new class User {
                 tag: 'div.dialog-title',
                 child: [
                     {
-                        tag: 'span.clickable.no-selection.tab.active', textContent: 'Login', _key: 'title',
+                        tag: 'span.clickable.no-selection.tab.active', textContent: I`Login`, _key: 'title',
                         onclick: toggle
                     },
                     {
-                        tag: 'span.clickable.no-selection.tab', textContent: 'Create account', _key: 'title2',
+                        tag: 'span.clickable.no-selection.tab', textContent: I`Create account`, _key: 'title2',
                         onclick: toggle
                     },
                     {
                         tag: 'div.clickable.no-selection', style: 'float: right; color: gray;',
-                        textContent: 'Close', onclick: () => {
+                        textContent: I`Close`, onclick: () => {
                             this.closeUI();
                         }
                     }
@@ -65,14 +65,14 @@ var user = new class User {
             }, {
                 tag: 'div.dialog-content',
                 child: [
-                    { tag: 'div.input-label', textContent: 'Username:' },
+                    { tag: 'div.input-label', textContent: I`Username:` },
                     { tag: 'input.input-text', type: 'text', _key: 'user' },
-                    { tag: 'div.input-label', textContent: 'Password:' },
+                    { tag: 'div.input-label', textContent: I`Password:` },
                     { tag: 'input.input-text', type: 'password', _key: 'passwd' },
-                    { tag: 'div.input-label', textContent: 'Confirm password:', _key: 'passwd2_label' },
+                    { tag: 'div.input-label', textContent: I`Confirm password:`, _key: 'passwd2_label' },
                     { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
                     { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
-                    { tag: 'div.btn#login-btn', textContent: 'Login', _key: 'btn' }
+                    { tag: 'div.btn#login-btn', textContent: I`Login`, _key: 'btn' }
                 ]
             }]
         }) as HTMLElement;
@@ -101,16 +101,16 @@ var user = new class User {
         var btnClick = () => {
             if (dombtn.classList.contains('disabled')) return;
             var precheckErr = [];
-            if (!domuser.value) precheckErr.push('Please input the username!');
-            if (!dompasswd.value) precheckErr.push('Please input the password!');
+            if (!domuser.value) precheckErr.push(I`Please input the username!`);
+            if (!dompasswd.value) precheckErr.push(I`Please input the password!`);
             else if (registering && dompasswd.value !== dompasswd2.value)
-                precheckErr.push('Password confirmation does not match!');
+                precheckErr.push(I`Password confirmation does not match!`);
             domstatus.textContent = precheckErr.join('\r\n');
             if (precheckErr.length) {
                 return;
             }
             (async () => {
-                domstatus.textContent = 'Requesting...';
+                domstatus.textContent = I`Requesting...`;
                 utils.toggleClass(dombtn, 'disabled', true);
                 var info = { username: domuser.value, passwd: dompasswd.value };
                 try {
@@ -127,7 +127,7 @@ var user = new class User {
                     // fallback to previous login info
                     if (this.info.username) {
                         await this.login(this.info);
-                        domstatus.textContent += '\r\n' + 'Logged in with previous working account.';
+                        domstatus.textContent += '\r\n' + I`Logged in with previous working account.`;
                     }
                 } finally {
                     this.pendingInfo = null;
@@ -162,7 +162,7 @@ var user = new class User {
         } catch (err) {
             this.setState('error');
             if (err.message == 'user_not_found')
-                throw new Error('username or password is not correct.');
+                throw new Error(I`username or password is not correct.`);
             throw err;
         } finally {
             this.pendingInfo = null;
@@ -180,7 +180,7 @@ var user = new class User {
         });
         if (resp.error) {
             this.setState('error');
-            if (resp.error == 'dup_user') throw new Error('A user with the same username exists');
+            if (resp.error == 'dup_user') throw new Error(I`A user with the same username exists`);
             throw new Error(resp.error);
         }
         // fill the passwd because the server won't return it
@@ -188,7 +188,7 @@ var user = new class User {
         await this.handleLoginResult(resp);
     }
     async handleLoginResult(info: Api.UserInfo) {
-        if (!info.username) throw new Error('iNTernEL eRRoR');
+        if (!info.username) throw new Error(I`iNTernEL eRRoR`);
         this.info.id = info.id;
         this.info.username = info.username;
         this.info.passwd = info.passwd;

@@ -46,6 +46,15 @@ var utils = new class Utils {
                 return str;
         }
     }
+    /**
+     * btoa, but supports Unicode and uses UTF-8 encoding.
+     * @see https://stackoverflow.com/questions/30106476
+     */
+    base64EncodeUtf8(str) {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function toSolidBytes(match, p1) {
+            return String.fromCharCode(('0x' + p1));
+        }));
+    }
     sleepAsync(time) {
         return new Promise((resolve) => {
             setTimeout(resolve, time);
@@ -293,6 +302,133 @@ class Callbacks {
         utils.arrayRemove(this.list, callback);
     }
 }
+/** I18n helper class */
+class I18n {
+    constructor() {
+        this.data = {};
+        this.curLang = 'en';
+        this.missing = new Map();
+    }
+    /** Get i18n string for `key`, return `key` when not found. */
+    get(key, arg) {
+        return this.get2(key, arg) || key;
+    }
+    /** Get i18n string for `key`, return `null` when not found. */
+    get2(key, arg, lang) {
+        lang = lang || this.curLang;
+        var langObj = this.data[lang];
+        if (!langObj) {
+            console.log('i18n missing lang: ' + lang);
+            return null;
+        }
+        var r = langObj[key];
+        if (!r) {
+            if (!this.missing.has(key)) {
+                this.missing.set(key, 1);
+                console.log('i18n missing key: ' + key);
+            }
+            return null;
+        }
+        if (arg) {
+            for (const key in arg) {
+                if (arg.hasOwnProperty(key)) {
+                    const val = arg[key];
+                    r = r.replace('{' + key + '}', val);
+                    // Note that it only replaces the first occurrence.
+                }
+            }
+        }
+        return r;
+    }
+    /** Fills data with an 2darray */
+    add2dArray(array) {
+        const langObjs = [];
+        const langs = array[0];
+        for (const lang of langs) {
+            langObjs.push(this.data[lang] = this.data[lang] || {});
+        }
+        for (let i = 1; i < array.length; i++) {
+            const line = array[i];
+            const key = line[0];
+            for (let j = 0; j < line.length; j++) {
+                const val = line[j];
+                langObjs[j][key] = val;
+            }
+        }
+    }
+    renderElements(elements) {
+        console.log('i18n rendering');
+        elements.forEach(x => {
+            for (const node of x.childNodes) {
+                if (node.nodeType == Node.TEXT_NODE) {
+                    // console.log('node', node);
+                    var r = this.get2(node.beforeI18n || node.textContent);
+                    if (r) {
+                        node.beforeI18n = node.beforeI18n || node.textContent;
+                        node.textContent = r;
+                    }
+                    else {
+                        if (node.beforeI18n) {
+                            node.textContent = node.beforeI18n;
+                        }
+                        console.log('missing key for node', node);
+                    }
+                }
+            }
+        });
+    }
+}
+var i18n = new I18n();
+function I(literals, ...placeholders) {
+    if (placeholders.length == 0) {
+        return i18n.get(literals[0]);
+    }
+    // Generate format string from template string:
+    var formatString = '';
+    for (var i = 0; i < literals.length; i++) {
+        var lit = literals[i];
+        formatString += lit;
+        if (i < placeholders.length) {
+            formatString += '{' + i + '}';
+        }
+    }
+    var r = i18n.get(formatString);
+    for (var i = 0; i < placeholders.length; i++) {
+        r = r.replace('{' + i + '}', placeholders[i]);
+    }
+    return r;
+}
+// Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
+i18n.add2dArray(JSON.parse(`[
+    ["en", "zh"],
+    ["Pin", "钉住"],
+    ["Unpin", "取消钉住"],
+    ["Pause", "暂停"],
+    ["Play", "播放"],
+    [" (logging in...)", " （登录中...）"],
+    ["Login", "登录"],
+    ["Create account", "创建账户"],
+    ["Close", "关闭"],
+    ["Username:", "用户名："],
+    ["Password:", "密码："],
+    ["Confirm password:", "确认密码："],
+    ["Requesting...", "请求中……"],
+    [" (error!)", "（错误！）"],
+    ["username or password is not correct.", "用户名或密码不正确。"],
+    ["Logged in with previous working account.", "已登录为之前的用户。"],
+    ["Please input the username!", "请输入用户名！"],
+    ["Please input the password!", "请输入密码！"],
+    ["Password confirmation does not match!", "确认密码不相同！"],
+    ["Playlist", "播放列表"],
+    ["Playlists", "播放列表"],
+    ["New Playlist", "新播放列表"],
+    ["New Playlist ({0})", "新播放列表（{0}）"],
+    ["Click to rename", "点击重命名"],
+    ["(Empty)", "（空）"],
+    ["Loading", "加载中"],
+    ["Oh no! Something just goes wrong:", "发生错误："],
+    ["Music Cloud", "Music Cloud"]
+]`));
 // file: viewlib.ts
 class View {
     constructor(dom) {
@@ -586,14 +722,14 @@ class LoadingIndicator extends View {
     set content(val) { this._text = val; this.ensureDom(); this._textdom.textContent = val; }
     reset() {
         this.state = 'running';
-        this.content = 'Loading';
+        this.content = I `Loading`;
         this.onclick = null;
     }
     error(err, retry) {
         this.state = 'error';
-        this.content = 'Oh no! Something just goes wrong:\n' + err;
+        this.content = I `Oh no! Something just goes wrong:` + '\r\n' + err;
         if (retry) {
-            this.content += '\n[Click here to retry]';
+            this.content += '\r\n' + I `[Click here to retry]`;
         }
         this.onclick = retry;
     }
@@ -679,16 +815,16 @@ var user = new class User {
                     tag: 'div.dialog-title',
                     child: [
                         {
-                            tag: 'span.clickable.no-selection.tab.active', textContent: 'Login', _key: 'title',
+                            tag: 'span.clickable.no-selection.tab.active', textContent: I `Login`, _key: 'title',
                             onclick: toggle
                         },
                         {
-                            tag: 'span.clickable.no-selection.tab', textContent: 'Create account', _key: 'title2',
+                            tag: 'span.clickable.no-selection.tab', textContent: I `Create account`, _key: 'title2',
                             onclick: toggle
                         },
                         {
                             tag: 'div.clickable.no-selection', style: 'float: right; color: gray;',
-                            textContent: 'Close', onclick: () => {
+                            textContent: I `Close`, onclick: () => {
                                 this.closeUI();
                             }
                         }
@@ -696,14 +832,14 @@ var user = new class User {
                 }, {
                     tag: 'div.dialog-content',
                     child: [
-                        { tag: 'div.input-label', textContent: 'Username:' },
+                        { tag: 'div.input-label', textContent: I `Username:` },
                         { tag: 'input.input-text', type: 'text', _key: 'user' },
-                        { tag: 'div.input-label', textContent: 'Password:' },
+                        { tag: 'div.input-label', textContent: I `Password:` },
                         { tag: 'input.input-text', type: 'password', _key: 'passwd' },
-                        { tag: 'div.input-label', textContent: 'Confirm password:', _key: 'passwd2_label' },
+                        { tag: 'div.input-label', textContent: I `Confirm password:`, _key: 'passwd2_label' },
                         { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
                         { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
-                        { tag: 'div.btn#login-btn', textContent: 'Login', _key: 'btn' }
+                        { tag: 'div.btn#login-btn', textContent: I `Login`, _key: 'btn' }
                     ]
                 }]
         });
@@ -732,17 +868,17 @@ var user = new class User {
                 return;
             var precheckErr = [];
             if (!domuser.value)
-                precheckErr.push('Please input the username!');
+                precheckErr.push(I `Please input the username!`);
             if (!dompasswd.value)
-                precheckErr.push('Please input the password!');
+                precheckErr.push(I `Please input the password!`);
             else if (registering && dompasswd.value !== dompasswd2.value)
-                precheckErr.push('Password confirmation does not match!');
+                precheckErr.push(I `Password confirmation does not match!`);
             domstatus.textContent = precheckErr.join('\r\n');
             if (precheckErr.length) {
                 return;
             }
             (() => __awaiter(this, void 0, void 0, function* () {
-                domstatus.textContent = 'Requesting...';
+                domstatus.textContent = I `Requesting...`;
                 utils.toggleClass(dombtn, 'disabled', true);
                 var info = { username: domuser.value, passwd: dompasswd.value };
                 try {
@@ -761,7 +897,7 @@ var user = new class User {
                     // fallback to previous login info
                     if (this.info.username) {
                         yield this.login(this.info);
-                        domstatus.textContent += '\r\n' + 'Logged in with previous working account.';
+                        domstatus.textContent += '\r\n' + I `Logged in with previous working account.`;
                     }
                 }
                 finally {
@@ -802,7 +938,7 @@ var user = new class User {
             catch (err) {
                 this.setState('error');
                 if (err.message == 'user_not_found')
-                    throw new Error('username or password is not correct.');
+                    throw new Error(I `username or password is not correct.`);
                 throw err;
             }
             finally {
@@ -824,7 +960,7 @@ var user = new class User {
             if (resp.error) {
                 this.setState('error');
                 if (resp.error == 'dup_user')
-                    throw new Error('A user with the same username exists');
+                    throw new Error(I `A user with the same username exists`);
                 throw new Error(resp.error);
             }
             // fill the passwd because the server won't return it
@@ -835,7 +971,7 @@ var user = new class User {
     handleLoginResult(info) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!info.username)
-                throw new Error('iNTernEL eRRoR');
+                throw new Error(I `iNTernEL eRRoR`);
             this.info.id = info.id;
             this.info.username = info.username;
             this.info.passwd = info.passwd;
@@ -1013,7 +1149,7 @@ class TrackList {
             return;
         }
         if (this.tracks.length === 0) {
-            listView.dom.appendChild(new LoadingIndicator({ status: 'normal', content: '(Empty)' }).dom);
+            listView.dom.appendChild(new LoadingIndicator({ status: 'normal', content: I `(Empty)` }).dom);
             return;
         }
         // Well... currently, we just rebuild the DOM.
@@ -1031,9 +1167,10 @@ class TrackList {
         return utils.buildDOM({
             tag: 'div.content-header',
             child: [
-                { tag: 'span.catalog', textContent: 'Tracklist' },
+                { tag: 'span.catalog', textContent: I `Playlist` },
                 {
-                    tag: 'span.title', textContent: this.name, onclick: (ev) => {
+                    tag: 'span.title', textContent: this.name, title: I `Click to rename`,
+                    onclick: (ev) => {
                         var span = ev.target;
                         var beforeEdit = span.textContent;
                         if (span.isContentEditable)
@@ -1131,7 +1268,7 @@ class ListIndex {
             this.showTracklist(item.listInfo.id);
         };
         this.section = new Section({
-            title: 'Playlists',
+            title: I `Playlists`,
             content: this.listView,
             actions: [{
                     text: '➕',
@@ -1208,7 +1345,7 @@ class ListIndex {
         var id = this.nextId--;
         var list = {
             id,
-            name: utils.createName((x) => x ? `New Playlist (${x + 1})` : 'New Playlist', (x) => !!this.listView.find((l) => l.listInfo.name == x))
+            name: utils.createName((x) => x ? I `New Playlist (${x + 1})` : I `New Playlist`, (x) => !!this.listView.find((l) => l.listInfo.name == x))
         };
         this.addListInfo(list);
         var listview = this.getList(id);
@@ -1249,6 +1386,7 @@ var settings = {
 /** 常驻 UI 元素操作 */
 var ui = new class {
     constructor() {
+        this.siLang = new SettingItem('mcloud-lang', 'str', 'en');
         this.bottomBar = new class {
             constructor() {
                 this.container = document.getElementById("bottombar");
@@ -1259,7 +1397,7 @@ var ui = new class {
                 val = (val !== null && val !== void 0 ? val : !this.pinned);
                 this.pinned = val;
                 utils.toggleClass(document.body, 'bottompinned', val);
-                this.btnPin.textContent = val ? 'Unpin' : 'Pin';
+                this.btnPin.textContent = val ? I `Unpin` : I `Pin`;
                 if (val)
                     this.toggle(true);
             }
@@ -1354,17 +1492,17 @@ var ui = new class {
                 if (username) {
                     text = username;
                     if (user.state == 'logging')
-                        text += ' (logging in...)';
+                        text += I ` (logging in...)`;
                     if (user.state == 'error')
-                        text += ' (error!)';
+                        text += I ` (error!)`;
                     if (user.state == 'none')
-                        text += ' (not logged in)';
+                        text += I ` (not logged in)`;
                 }
                 else {
                     if (user.state == 'logging')
-                        text = '(logging...)';
+                        text = I `(logging...)`;
                     else
-                        text = 'Guest (click to login)';
+                        text = I `Guest (click to login)`;
                 }
                 this.loginState.textContent = text;
             }
@@ -1403,6 +1541,14 @@ var ui = new class {
     init() {
         this.bottomBar.init();
         this.sidebarLogin.init();
+        this.siLang.render((lang) => {
+            i18n.curLang = lang;
+        });
+        i18n.renderElements(document.querySelectorAll('.i18ne'));
+    }
+    setLang(lang) {
+        this.siLang.set(lang);
+        window.location.reload();
     }
 }; // ui
 /** 播放器核心：控制播放逻辑 */
@@ -1479,7 +1625,7 @@ var api = new class {
         var headers = {};
         var basicAuth = (_a = arg.basicAuth, (_a !== null && _a !== void 0 ? _a : this.defaultBasicAuth));
         if (basicAuth)
-            headers['Authorization'] = 'Basic ' + btoa(basicAuth);
+            headers['Authorization'] = 'Basic ' + utils.base64EncodeUtf8(basicAuth);
         return headers;
     }
     getJson(path, options) {

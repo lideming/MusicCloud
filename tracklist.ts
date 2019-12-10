@@ -153,7 +153,7 @@ class TrackList {
             return;
         }
         if (this.tracks.length === 0) {
-            listView.dom.appendChild(new LoadingIndicator({ status: 'normal', content: '(Empty)' }).dom);
+            listView.dom.appendChild(new LoadingIndicator({ status: 'normal', content: I`(Empty)` }).dom);
             return;
         }
         // Well... currently, we just rebuild the DOM.
@@ -171,9 +171,10 @@ class TrackList {
         return utils.buildDOM({
             tag: 'div.content-header',
             child: [
-                { tag: 'span.catalog', textContent: 'Tracklist' },
+                { tag: 'span.catalog', textContent: I`Playlist` },
                 {
-                    tag: 'span.title', textContent: this.name, onclick: (ev) => {
+                    tag: 'span.title', textContent: this.name, title: I`Click to rename`,
+                    onclick: (ev) => {
                         var span = ev.target as HTMLSpanElement;
                         var beforeEdit = span.textContent;
                         if (span.isContentEditable) return;

@@ -35,7 +35,7 @@ class ListIndex {
             this.showTracklist(item.listInfo.id);
         };
         this.section = new Section({
-            title: 'Playlists',
+            title: I`Playlists`,
             content: this.listView,
             actions: [{
                 text: '➕',
@@ -109,7 +109,7 @@ class ListIndex {
         var list: Api.TrackListInfo = {
             id,
             name: utils.createName(
-                (x) => x ? `New Playlist (${x + 1})` : 'New Playlist',
+                (x) => x ? I`New Playlist (${x + 1})` : I`New Playlist`,
                 (x) => !!this.listView.find((l) => l.listInfo.name == x))
         };
         this.addListInfo(list);

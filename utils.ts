@@ -32,6 +32,18 @@ var utils = new class Utils {
         }
     }
 
+    /** 
+     * btoa, but supports Unicode and uses UTF-8 encoding.
+     * @see https://stackoverflow.com/questions/30106476
+     */
+    base64EncodeUtf8(str) {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function toSolidBytes(match, p1) {
+                return String.fromCharCode(('0x' + p1) as any);
+            }));
+    }
+
+
     Timer = class {
         callback: () => void;
         cancelFunc: () => void;
@@ -321,3 +333,137 @@ class Callbacks<T extends CallableFunction> {
         utils.arrayRemove(this.list, callback);
     }
 }
+
+interface I18nData {
+    [lang: string]: {
+        [key: string]: string;
+    };
+}
+
+/** I18n helper class */
+class I18n {
+    data: I18nData = {};
+    curLang = 'en';
+    missing = new Map<string, 1>();
+    /** Get i18n string for `key`, return `key` when not found. */
+    get(key, arg?: any[]): string {
+        return this.get2(key, arg) || key;
+    }
+    /** Get i18n string for `key`, return `null` when not found. */
+    get2(key, arg?: any[], lang?: string): string {
+        lang = lang || this.curLang;
+        var langObj = this.data[lang];
+        if (!langObj) {
+            console.log('i18n missing lang: ' + lang);
+            return null;
+        }
+        var r = langObj[key];
+        if (!r) {
+            if (!this.missing.has(key)) {
+                this.missing.set(key, 1);
+                console.log('i18n missing key: ' + key);
+            }
+            return null;
+        }
+        if (arg) {
+            for (const key in arg) {
+                if (arg.hasOwnProperty(key)) {
+                    const val = arg[key];
+                    r = r.replace('{' + key + '}', val);
+                    // Note that it only replaces the first occurrence.
+                }
+            }
+        }
+        return r;
+    }
+    /** Fills data with an 2darray */
+    add2dArray(array: [...string[][]]) {
+        const langObjs = [];
+        const langs = array[0];
+        for (const lang of langs) {
+            langObjs.push(this.data[lang] = this.data[lang] || {});
+        }
+        for (let i = 1; i < array.length; i++) {
+            const line = array[i];
+            const key = line[0];
+            for (let j = 0; j < line.length; j++) {
+                const val = line[j];
+                langObjs[j][key] = val;
+            }
+        }
+    }
+    renderElements(elements) {
+        console.log('i18n rendering');
+        elements.forEach(x => {
+            for (const node of x.childNodes) {
+                if (node.nodeType == Node.TEXT_NODE) {
+                    // console.log('node', node);
+                    var r = this.get2(node.beforeI18n || node.textContent);
+                    if (r) {
+                        node.beforeI18n = node.beforeI18n || node.textContent;
+                        node.textContent = r;
+                    } else {
+                        if (node.beforeI18n) {
+                            node.textContent = node.beforeI18n;
+                        }
+                        console.log('missing key for node', node);
+                    }
+                }
+            }
+        });
+    }
+}
+
+var i18n = new I18n();
+
+function I(literals: TemplateStringsArray, ...placeholders: any[]) {
+    if (placeholders.length == 0) {
+        return i18n.get(literals[0]);
+    }
+    // Generate format string from template string:
+    var formatString = '';
+    for (var i = 0; i < literals.length; i++) {
+        var lit = literals[i];
+        formatString += lit;
+        if (i < placeholders.length) {
+            formatString += '{' + i + '}';
+        }
+    }
+    var r = i18n.get(formatString);
+    for (var i = 0; i < placeholders.length; i++) {
+        r = r.replace('{' + i + '}', placeholders[i]);
+    }
+    return r;
+}
+
+// Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
+i18n.add2dArray(JSON.parse(`[
+    ["en", "zh"],
+    ["Pin", "钉住"],
+    ["Unpin", "取消钉住"],
+    ["Pause", "暂停"],
+    ["Play", "播放"],
+    [" (logging in...)", " （登录中...）"],
+    ["Login", "登录"],
+    ["Create account", "创建账户"],
+    ["Close", "关闭"],
+    ["Username:", "用户名："],
+    ["Password:", "密码："],
+    ["Confirm password:", "确认密码："],
+    ["Requesting...", "请求中……"],
+    [" (error!)", "（错误！）"],
+    ["username or password is not correct.", "用户名或密码不正确。"],
+    ["Logged in with previous working account.", "已登录为之前的用户。"],
+    ["Please input the username!", "请输入用户名！"],
+    ["Please input the password!", "请输入密码！"],
+    ["Password confirmation does not match!", "确认密码不相同！"],
+    ["Playlist", "播放列表"],
+    ["Playlists", "播放列表"],
+    ["New Playlist", "新播放列表"],
+    ["New Playlist ({0})", "新播放列表（{0}）"],
+    ["Click to rename", "点击重命名"],
+    ["(Empty)", "（空）"],
+    ["Loading", "加载中"],
+    ["Oh no! Something just goes wrong:", "发生错误："],
+    ["Music Cloud", "Music Cloud"]
+]`));

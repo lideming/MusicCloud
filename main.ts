@@ -21,9 +21,18 @@ var settings = {
 
 /** 常驻 UI 元素操作 */
 var ui = new class {
+    siLang = new SettingItem('mcloud-lang', 'str', 'en');
     init() {
         this.bottomBar.init();
         this.sidebarLogin.init();
+        this.siLang.render((lang) => {
+            i18n.curLang = lang;
+        })
+        i18n.renderElements(document.querySelectorAll('.i18ne'));
+    }
+    setLang(lang: string) {
+        this.siLang.set(lang);
+        window.location.reload();
     }
     bottomBar = new class {
         container: HTMLElement = document.getElementById("bottombar");
@@ -34,7 +43,7 @@ var ui = new class {
             val = val ?? !this.pinned;
             this.pinned = val;
             utils.toggleClass(document.body, 'bottompinned', val);
-            this.btnPin.textContent = val ? 'Unpin' : 'Pin';
+            this.btnPin.textContent = val ? I`Unpin` : I`Pin`;
             if (val) this.toggle(true);
         }
         toggle(state?: boolean) {
@@ -115,12 +124,12 @@ var ui = new class {
             var username = user.pendingInfo?.username ?? user.info.username;
             if (username) {
                 text = username;
-                if (user.state == 'logging') text += ' (logging in...)';
-                if (user.state == 'error') text += ' (error!)';
-                if (user.state == 'none') text += ' (not logged in)';
+                if (user.state == 'logging') text += I` (logging in...)`;
+                if (user.state == 'error') text += I` (error!)`;
+                if (user.state == 'none') text += I` (not logged in)`;
             } else {
-                if (user.state == 'logging') text = '(logging...)';
-                else text = 'Guest (click to login)';
+                if (user.state == 'logging') text = I`(logging...)`;
+                else text = I`Guest (click to login)`;
             }
             this.loginState.textContent = text;
         }
@@ -226,7 +235,7 @@ var api = new class {
         arg = arg || {};
         var headers = {};
         var basicAuth = arg.basicAuth ?? this.defaultBasicAuth;
-        if (basicAuth) headers['Authorization'] = 'Basic ' + btoa(basicAuth);
+        if (basicAuth) headers['Authorization'] = 'Basic ' + utils.base64EncodeUtf8(basicAuth);
         return headers;
     }
     async getJson(path: string, options?: { status?: false | number, basicAuth?: string; }): Promise<any> {
