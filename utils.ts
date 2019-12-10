@@ -86,6 +86,21 @@ var utils = new class Utils {
         else element.classList.remove(clsName);
     }
 
+    /** Fade out the element and remove it */
+    fadeout(element: HTMLElement) {
+        element.style.transition = 'opacity .3s';
+        element.style.opacity = '0';
+        var end = () => {
+            if (!end) return; // use a random variable as flag ;)
+            end = null;
+            element.style.transition = null;
+            element.style.opacity = null;
+            element.remove();
+        };
+        element.addEventListener('transitionend', end);
+        setTimeout(end, 500); // failsafe
+    }
+
     addEvent<K extends keyof HTMLElementEventMap>(element: HTMLElement, event: K, handler: (ev: HTMLElementEventMap[K]) => any) {
         element.addEventListener(event, handler);
         return {

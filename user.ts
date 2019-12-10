@@ -23,12 +23,14 @@ var user = new class User {
         var overlay = this.uioverlay = new Overlay().setCenterChild(true);
         var domctx = this.uictx = new BuildDOMCtx();
         var registering = false;
-        var toggle = () => {
+        var toggle = (ev: Event) => {
+            if ((ev.target as HTMLElement)?.classList?.contains('active')) return;
             registering = !registering;
             domctx.passwd2_label.hidden = domctx.passwd2.hidden = !registering;
-            var tmp = domctx.title.textContent;
-            domctx.title.textContent = domctx.btn.textContent = domctx.title2.textContent;
-            domctx.title2.textContent = tmp;
+            var activingTitle = registering ? domctx.title2 : domctx.title;
+            domctx.btn.textContent = activingTitle.textContent;
+            utils.toggleClass(domctx.title, 'active', !registering);
+            utils.toggleClass(domctx.title2, 'active', registering);
         };
         var dialog = utils.buildDOM({
             _ctx: domctx,
@@ -38,7 +40,10 @@ var user = new class User {
             child: [{
                 tag: 'div.dialog-title',
                 child: [
-                    { tag: 'span.clickable.no-selection.tab.active', textContent: 'Login', _key: 'title' },
+                    {
+                        tag: 'span.clickable.no-selection.tab.active', textContent: 'Login', _key: 'title',
+                        onclick: toggle
+                    },
                     {
                         tag: 'span.clickable.no-selection.tab', textContent: 'Create account', _key: 'title2',
                         onclick: toggle
@@ -74,7 +79,19 @@ var user = new class User {
             dompasswd2 = domctx.passwd2 as HTMLInputElement,
             domstatus = domctx.status as HTMLElement,
             dombtn = domctx.btn as HTMLElement;
+        overlay.dom.addEventListener('keydown', (ev) => {
+            if (ev.keyCode == 27) { // ESC
+                this.closeUI();
+                ev.preventDefault();
+            } else if (ev.keyCode == 13) { // Enter
+                btnClick();
+                ev.preventDefault();
+            }
+        });
         dombtn.addEventListener('click', (ev) => {
+            btnClick();
+        });
+        var btnClick = () => {
             if (dombtn.classList.contains('disabled')) return;
             var precheckErr = [];
             if (!domuser.value) precheckErr.push('Please input the username!');
@@ -107,28 +124,19 @@ var user = new class User {
                     utils.toggleClass(dombtn, 'disabled', false);
                 }
             })();
-        });
+        };
     }
     loginUI() {
         if (this.uishown) return;
         this.uishown = true;
         if (!this.uioverlay) this.initUI();
         ui.mainContainer.dom.appendChild(this.uioverlay.dom);
+        this.uictx.user.focus();
     }
     closeUI() {
         if (!this.uishown) return;
         this.uishown = false;
-        this.uioverlay.dom.style.transition = 'opacity .3s';
-        this.uioverlay.dom.style.opacity = '0';
-        var end = () => {
-            if (!end) return; // use a random variable as flag ;)
-            end = null;
-            this.uioverlay.dom.style.transition = null;
-            this.uioverlay.dom.style.opacity = null;
-            this.uioverlay?.dom.remove();
-        };
-        this.uioverlay.dom.addEventListener('transitionend', end);
-        setTimeout(end, 500); // failsafe
+        utils.fadeout(this.uioverlay.dom);
     }
     getBasicAuth(info: Api.UserInfo) {
         return info.username + ':' + info.passwd;
@@ -175,7 +183,7 @@ var user = new class User {
         this.closeUI();
     }
     async setListids(listids: number[]) {
-        var obj: Api.UserInfo  = {
+        var obj: Api.UserInfo = {
             id: this.info.id,
             username: this.info.username,
             listids: listids

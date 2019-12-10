@@ -86,6 +86,21 @@ var utils = new /** @class */ (function () {
         else
             element.classList.remove(clsName);
     };
+    /** Fade out the element and remove it */
+    Utils.prototype.fadeout = function (element) {
+        element.style.transition = 'opacity .3s';
+        element.style.opacity = '0';
+        var end = function () {
+            if (!end)
+                return; // use a random variable as flag ;)
+            end = null;
+            element.style.transition = null;
+            element.style.opacity = null;
+            element.remove();
+        };
+        element.addEventListener('transitionend', end);
+        setTimeout(end, 500); // failsafe
+    };
     Utils.prototype.addEvent = function (element, event, handler) {
         element.addEventListener(event, handler);
         return {
@@ -792,12 +807,16 @@ var user = new /** @class */ (function () {
         var overlay = this.uioverlay = new Overlay().setCenterChild(true);
         var domctx = this.uictx = new BuildDOMCtx();
         var registering = false;
-        var toggle = function () {
+        var toggle = function (ev) {
+            var _a, _b;
+            if ((_b = (_a = ev.target) === null || _a === void 0 ? void 0 : _a.classList) === null || _b === void 0 ? void 0 : _b.contains('active'))
+                return;
             registering = !registering;
             domctx.passwd2_label.hidden = domctx.passwd2.hidden = !registering;
-            var tmp = domctx.title.textContent;
-            domctx.title.textContent = domctx.btn.textContent = domctx.title2.textContent;
-            domctx.title2.textContent = tmp;
+            var activingTitle = registering ? domctx.title2 : domctx.title;
+            domctx.btn.textContent = activingTitle.textContent;
+            utils.toggleClass(domctx.title, 'active', !registering);
+            utils.toggleClass(domctx.title2, 'active', registering);
         };
         var dialog = utils.buildDOM({
             _ctx: domctx,
@@ -807,7 +826,10 @@ var user = new /** @class */ (function () {
             child: [{
                     tag: 'div.dialog-title',
                     child: [
-                        { tag: 'span.clickable.no-selection.tab.active', textContent: 'Login', _key: 'title' },
+                        {
+                            tag: 'span.clickable.no-selection.tab.active', textContent: 'Login', _key: 'title',
+                            onclick: toggle
+                        },
                         {
                             tag: 'span.clickable.no-selection.tab', textContent: 'Create account', _key: 'title2',
                             onclick: toggle
@@ -840,7 +862,20 @@ var user = new /** @class */ (function () {
         });
         overlay.dom.appendChild(dialog);
         var domuser = domctx.user, dompasswd = domctx.passwd, dompasswd2 = domctx.passwd2, domstatus = domctx.status, dombtn = domctx.btn;
+        overlay.dom.addEventListener('keydown', function (ev) {
+            if (ev.keyCode == 27) { // ESC
+                _this.closeUI();
+                ev.preventDefault();
+            }
+            else if (ev.keyCode == 13) { // Enter
+                btnClick();
+                ev.preventDefault();
+            }
+        });
         dombtn.addEventListener('click', function (ev) {
+            btnClick();
+        });
+        var btnClick = function () {
             if (dombtn.classList.contains('disabled'))
                 return;
             var precheckErr = [];
@@ -893,7 +928,7 @@ var user = new /** @class */ (function () {
                     }
                 });
             }); })();
-        });
+        };
     };
     User.prototype.loginUI = function () {
         if (this.uishown)
@@ -902,25 +937,13 @@ var user = new /** @class */ (function () {
         if (!this.uioverlay)
             this.initUI();
         ui.mainContainer.dom.appendChild(this.uioverlay.dom);
+        this.uictx.user.focus();
     };
     User.prototype.closeUI = function () {
-        var _this = this;
         if (!this.uishown)
             return;
         this.uishown = false;
-        this.uioverlay.dom.style.transition = 'opacity .3s';
-        this.uioverlay.dom.style.opacity = '0';
-        var end = function () {
-            var _a;
-            if (!end)
-                return; // use a random variable as flag ;)
-            end = null;
-            _this.uioverlay.dom.style.transition = null;
-            _this.uioverlay.dom.style.opacity = null;
-            (_a = _this.uioverlay) === null || _a === void 0 ? void 0 : _a.dom.remove();
-        };
-        this.uioverlay.dom.addEventListener('transitionend', end);
-        setTimeout(end, 500); // failsafe
+        utils.fadeout(this.uioverlay.dom);
     };
     User.prototype.getBasicAuth = function (info) {
         return info.username + ':' + info.passwd;
