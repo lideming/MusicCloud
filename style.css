@@ -85,7 +85,21 @@ html, body {
     vertical-align: baseline;
     display: inline-block;
     font-size: 120%;
+    min-height: 1em;
+    min-width: 300px;
     padding: 5px;
+}
+.content-header .title.editing {
+    padding: 0;
+}
+
+.content-header .title input {
+    padding: 5px;
+    width: 300px;
+    font: inherit;
+    border: none;
+    outline: none;
+    background: #eeeeee;
 }
 
 .content-header .title[contentEditable=true] {

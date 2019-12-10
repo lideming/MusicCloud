@@ -177,32 +177,32 @@ class TrackList {
                     onclick: (ev) => {
                         var span = ev.target as HTMLSpanElement;
                         var beforeEdit = span.textContent;
-                        if (span.isContentEditable) return;
-                        span.contentEditable = 'true';
-                        span.focus();
+                        if (span.classList.contains('editing')) return;
+                        utils.toggleClass(span, 'editing', true);
+                        var input = utils.buildDOM({
+                            tag: 'input', type: 'text', value: beforeEdit
+                        }) as HTMLInputElement;
+                        while (span.firstChild) span.removeChild(span.firstChild);
+                        span.appendChild(input);
+                        input.select();
+                        input.focus();
                         var stopEdit = () => {
-                            span.contentEditable = 'false';
+                            utils.toggleClass(span, 'editing', false);
                             events.forEach(x => x.remove());
-                            if (span.textContent !== beforeEdit) {
-                                this.rename(span.textContent);
+                            input.remove();
+                            if (input.value !== beforeEdit && input.value != '') {
+                                this.rename(input.value);
                             }
+                            span.textContent = this.name;
                         };
                         var events = [
-                            utils.addEvent(span, 'keydown', (evv) => {
+                            utils.addEvent(input, 'keydown', (evv) => {
                                 if (evv.keyCode == 13) {
                                     stopEdit();
                                     evv.preventDefault();
                                 }
                             }),
-                            utils.addEvent(span, 'focusout', (evv) => { stopEdit(); }),
-                            utils.addEvent(span, 'input', (evv) => {
-                                // in case user paste an image
-                                for (var next, node = span.firstChild; node; node = next) {
-                                    next = node.nextSibling;
-                                    if (node.nodeType !== Node.TEXT_NODE)
-                                        node.remove();
-                                }
-                            })
+                            utils.addEvent(input, 'focusout', (evv) => { stopEdit(); }),
                         ];
                     }
                 },

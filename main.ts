@@ -27,6 +27,7 @@ var ui = new class {
         this.sidebarLogin.init();
         this.siLang.render((lang) => {
             i18n.curLang = lang;
+            document.body.lang = lang;
         })
         i18n.renderElements(document.querySelectorAll('.i18ne'));
     }

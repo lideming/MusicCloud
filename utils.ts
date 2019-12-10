@@ -444,6 +444,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Pause", "暂停"],
     ["Play", "播放"],
     [" (logging in...)", " （登录中...）"],
+    ["Guest (click to login)", "游客（点击登录）"],
     ["Login", "登录"],
     ["Create account", "创建账户"],
     ["Close", "关闭"],
