@@ -282,6 +282,12 @@ html, body {
     width: calc(100% - 20px);
 }
 
+#bottombar-btns .btn {
+    height: 23px;
+    font-size: 15px;
+    margin: 0 3px;
+}
+
 #bottombar-trackinfo {
     display: block;
     margin: 0 1em;
@@ -449,7 +455,7 @@ html, body {
 .btn {
     display: block;
     text-align: center;
-    transition: all .3s;
+    transition: all .2s;
     padding: 0 .4em;
     min-width: 3em;
     line-height: 1.5em;

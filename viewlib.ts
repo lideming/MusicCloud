@@ -330,4 +330,45 @@ class Overlay extends View {
     }
 }
 
+class EditableHelper {
+    editing = false;
+    beforeEdit: string;
+    element: HTMLElement;
+    onComplete: (newName: string) => void;
+    constructor(element: HTMLElement) {
+        this.element = element;
+    }
+    startEdit(onComplete?: this['onComplete']) {
+        if (this.editing) return;
+        this.editing = true;
+        var ele = this.element;
+        var beforeEdit = this.beforeEdit = ele.textContent;
+        utils.toggleClass(ele, 'editing', true);
+        var input = utils.buildDOM({
+            tag: 'input', type: 'text', value: beforeEdit
+        }) as HTMLInputElement;
+        while (ele.firstChild) ele.removeChild(ele.firstChild);
+        ele.appendChild(input);
+        input.select();
+        input.focus();
+        var stopEdit = () => {
+            this.editing = false;
+            utils.toggleClass(ele, 'editing', false);
+            events.forEach(x => x.remove());
+            input.remove();
+            this.onComplete?.(input.value);
+            onComplete?.(input.value);
+        };
+        var events = [
+            utils.addEvent(input, 'keydown', (evv) => {
+                if (evv.keyCode == 13) {
+                    stopEdit();
+                    evv.preventDefault();
+                }
+            }),
+            utils.addEvent(input, 'focusout', (evv) => { stopEdit(); }),
+        ];
+    }
+}
+
 // TODO: class ContextMenu

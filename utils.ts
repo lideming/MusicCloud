@@ -51,15 +51,20 @@ var utils = new class Utils {
             this.callback = callback;
         }
         timeout(time) {
+            this.tryCancel();
             var handle = setTimeout(this.callback, time);
             this.cancelFunc = () => window.clearTimeout(handle);
         }
         interval(time) {
+            this.tryCancel();
             var handle = setInterval(this.callback, time);
             this.cancelFunc = () => window.clearInterval(handle);
         }
         tryCancel() {
-            if (this.cancelFunc) this.cancelFunc();
+            if (this.cancelFunc) {
+                this.cancelFunc();
+                this.cancelFunc = undefined;
+            }
         }
     };
 
@@ -268,6 +273,9 @@ class SettingItem<T> {
         btn.addEventListener('click', function () { thiz.toggle(); });
         return this;
     };
+    remove() {
+        localStorage.removeItem(this.key);
+    }
     save() {
         localStorage.setItem(this.key, this.type.serialize(this.data));
     }
@@ -412,6 +420,31 @@ class I18n {
             }
         });
     }
+    /**
+     * Detect the best available language using
+     * the user language preferences provided by the browser.
+     * @param langs Available languages
+     */
+    static detectLanguage(langs: string[]) {
+        var cur: string;
+        var curIdx = -1;
+        var languages = [];
+        
+        // ['en-US'] -> ['en-US', 'en']
+        (navigator.languages || [navigator.language]).forEach(lang => {
+            languages.push(lang);
+            if (lang.indexOf('-') > 0) languages.push(lang.substr(0, lang.indexOf('-')));
+        });
+
+        langs.forEach((l) => {
+            var idx = languages.indexOf(l);
+            if (!cur || (idx !== -1 && idx < curIdx)) {
+                cur = l;
+                curIdx = idx;
+            }
+        });
+        return cur;
+    }
 }
 
 var i18n = new I18n();
@@ -439,8 +472,8 @@ function I(literals: TemplateStringsArray, ...placeholders: any[]) {
 // Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
 i18n.add2dArray(JSON.parse(`[
     ["en", "zh"],
-    ["Pin", "钉住"],
-    ["Unpin", "取消钉住"],
+    ["Pin", "固定"],
+    ["Unpin", "浮动"],
     ["Pause", "暂停"],
     ["Play", "播放"],
     [" (logging in...)", " （登录中...）"],
@@ -466,5 +499,6 @@ i18n.add2dArray(JSON.parse(`[
     ["(Empty)", "（空）"],
     ["Loading", "加载中"],
     ["Oh no! Something just goes wrong:", "发生错误："],
+    ["[Click here to retry]","[点击重试]"],
     ["Music Cloud", "Music Cloud"]
 ]`));

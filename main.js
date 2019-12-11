@@ -8,16 +8,20 @@ var utils = new class Utils {
                 this.callback = callback;
             }
             timeout(time) {
+                this.tryCancel();
                 var handle = setTimeout(this.callback, time);
                 this.cancelFunc = () => window.clearTimeout(handle);
             }
             interval(time) {
+                this.tryCancel();
                 var handle = setInterval(this.callback, time);
                 this.cancelFunc = () => window.clearInterval(handle);
             }
             tryCancel() {
-                if (this.cancelFunc)
+                if (this.cancelFunc) {
                     this.cancelFunc();
+                    this.cancelFunc = undefined;
+                }
             }
         };
     }
@@ -234,6 +238,9 @@ class SettingItem {
         return this;
     }
     ;
+    remove() {
+        localStorage.removeItem(this.key);
+    }
     save() {
         localStorage.setItem(this.key, this.type.serialize(this.data));
     }
@@ -377,6 +384,24 @@ class I18n {
             }
         });
     }
+    static detectLanguage(langs) {
+        var cur;
+        var curIdx = -1;
+        var languages = [];
+        (navigator.languages || [navigator.language]).forEach(lang => {
+            languages.push(lang);
+            if (lang.indexOf('-') > 0)
+                languages.push(lang.substr(0, lang.indexOf('-')));
+        });
+        langs.forEach((l) => {
+            var idx = languages.indexOf(l);
+            if (!cur || (idx !== -1 && idx < curIdx)) {
+                cur = l;
+                curIdx = idx;
+            }
+        });
+        return cur;
+    }
 }
 var i18n = new I18n();
 function I(literals, ...placeholders) {
@@ -401,8 +426,8 @@ function I(literals, ...placeholders) {
 // Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
 i18n.add2dArray(JSON.parse(`[
     ["en", "zh"],
-    ["Pin", "钉住"],
-    ["Unpin", "取消钉住"],
+    ["Pin", "固定"],
+    ["Unpin", "浮动"],
     ["Pause", "暂停"],
     ["Play", "播放"],
     [" (logging in...)", " （登录中...）"],
@@ -428,6 +453,7 @@ i18n.add2dArray(JSON.parse(`[
     ["(Empty)", "（空）"],
     ["Loading", "加载中"],
     ["Oh no! Something just goes wrong:", "发生错误："],
+    ["[Click here to retry]","[点击重试]"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 // file: viewlib.ts
@@ -758,6 +784,46 @@ class Overlay extends View {
         return this;
     }
 }
+class EditableHelper {
+    constructor(element) {
+        this.editing = false;
+        this.element = element;
+    }
+    startEdit(onComplete) {
+        if (this.editing)
+            return;
+        this.editing = true;
+        var ele = this.element;
+        var beforeEdit = this.beforeEdit = ele.textContent;
+        utils.toggleClass(ele, 'editing', true);
+        var input = utils.buildDOM({
+            tag: 'input', type: 'text', value: beforeEdit
+        });
+        while (ele.firstChild)
+            ele.removeChild(ele.firstChild);
+        ele.appendChild(input);
+        input.select();
+        input.focus();
+        var stopEdit = () => {
+            var _a, _b, _c;
+            this.editing = false;
+            utils.toggleClass(ele, 'editing', false);
+            events.forEach(x => x.remove());
+            input.remove();
+            (_b = (_a = this).onComplete) === null || _b === void 0 ? void 0 : _b.call(_a, input.value);
+            (_c = onComplete) === null || _c === void 0 ? void 0 : _c(input.value);
+        };
+        var events = [
+            utils.addEvent(input, 'keydown', (evv) => {
+                if (evv.keyCode == 13) {
+                    stopEdit();
+                    evv.preventDefault();
+                }
+            }),
+            utils.addEvent(input, 'focusout', (evv) => { stopEdit(); }),
+        ];
+    }
+}
 // TODO: class ContextMenu
 // file: user.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -840,7 +906,7 @@ var user = new class User {
                         { tag: 'div.input-label', textContent: I `Confirm password:`, _key: 'passwd2_label' },
                         { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
                         { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
-                        { tag: 'div.btn#login-btn', textContent: I `Login`, _key: 'btn' }
+                        { tag: 'div.btn#login-btn', textContent: I `Login`, tabIndex: 0, _key: 'btn' }
                     ]
                 }]
         });
@@ -1004,10 +1070,11 @@ class TrackList {
     constructor() {
         this.tracks = [];
         this.curActive = new ItemActiveHelper();
+        this.canMove = true;
     }
     loadInfo(info) {
         this.id = info.id;
-        this.apiid = this.id > 0 ? this.id : 0;
+        this.apiid = this.id > 0 ? this.id : undefined;
         this.name = info.name;
     }
     loadFromGetResult(obj) {
@@ -1039,7 +1106,12 @@ class TrackList {
         return this.fetching = (_a = this.fetching, (_a !== null && _a !== void 0 ? _a : this.fetchForce(arg)));
     }
     postToUser() {
+        return this.posting = this.posting || this._post();
+    }
+    _post() {
         return __awaiter(this, void 0, void 0, function* () {
+            if (this.apiid !== undefined)
+                throw new Error('cannot post: apiid exists');
             var obj = {
                 id: 0,
                 name: this.name,
@@ -1055,6 +1127,12 @@ class TrackList {
     }
     put() {
         return __awaiter(this, void 0, void 0, function* () {
+            if (this.fetching)
+                yield this.fetching;
+            if (this.posting)
+                yield this.posting;
+            if (this.apiid === undefined)
+                throw new Error('cannot put: no apiid');
             var obj = {
                 id: this.apiid,
                 name: this.name,
@@ -1105,7 +1183,8 @@ class TrackList {
                 onShow: () => {
                     var lv = this.listView = this.listView || new ListView(this.contentView.dom);
                     lv.dragging = true;
-                    lv.moveByDragging = true;
+                    if (this.canMove)
+                        lv.moveByDragging = true;
                     lv.onItemMoved = (item, from) => {
                         this.tracks = this.listView.map(lvi => {
                             lvi.track._bind.position = lvi.position;
@@ -1144,7 +1223,8 @@ class TrackList {
         if (!listView)
             return;
         listView.clear();
-        listView.dom.appendChild(this.buildHeader());
+        if (this.buildHeader)
+            listView.dom.appendChild(this.buildHeader());
         if (this.loadIndicator) {
             listView.dom.appendChild(this.loadIndicator.dom);
             return;
@@ -1165,44 +1245,25 @@ class TrackList {
         }
     }
     buildHeader() {
+        var editHelper;
+        var domctx = {};
         return utils.buildDOM({
+            _ctx: domctx,
             tag: 'div.content-header',
             child: [
                 { tag: 'span.catalog', textContent: I `Playlist` },
                 {
-                    tag: 'span.title', textContent: this.name, title: I `Click to rename`,
+                    tag: 'span.title', textContent: this.name, title: I `Click to rename`, _key: 'title',
                     onclick: (ev) => {
-                        var span = ev.target;
-                        var beforeEdit = span.textContent;
-                        if (span.classList.contains('editing'))
+                        editHelper = editHelper || new EditableHelper(domctx.title);
+                        if (editHelper.editing)
                             return;
-                        utils.toggleClass(span, 'editing', true);
-                        var input = utils.buildDOM({
-                            tag: 'input', type: 'text', value: beforeEdit
-                        });
-                        while (span.firstChild)
-                            span.removeChild(span.firstChild);
-                        span.appendChild(input);
-                        input.select();
-                        input.focus();
-                        var stopEdit = () => {
-                            utils.toggleClass(span, 'editing', false);
-                            events.forEach(x => x.remove());
-                            input.remove();
-                            if (input.value !== beforeEdit && input.value != '') {
-                                this.rename(input.value);
+                        editHelper.startEdit((newName) => {
+                            if (newName !== editHelper.beforeEdit && newName != '') {
+                                this.rename(newName);
                             }
-                            span.textContent = this.name;
-                        };
-                        var events = [
-                            utils.addEvent(input, 'keydown', (evv) => {
-                                if (evv.keyCode == 13) {
-                                    stopEdit();
-                                    evv.preventDefault();
-                                }
-                            }),
-                            utils.addEvent(input, 'focusout', (evv) => { stopEdit(); }),
-                        ];
+                            domctx.title.textContent = this.name;
+                        });
                     }
                 },
             ]
@@ -1369,6 +1430,7 @@ class ListIndexViewItem extends ListViewItem {
         this.dom.textContent = this.listInfo.name;
     }
 }
+// file: uploads.ts
 // file: main.ts
 // TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
@@ -1378,22 +1440,24 @@ class ListIndexViewItem extends ListViewItem {
 /// <reference path="user.ts" />
 /// <reference path="tracklist.ts" />
 /// <reference path="listindex.ts" />
+/// <reference path="uploads.ts" />
 var settings = {
-    // apiBaseUrl: 'api/',
-    apiBaseUrl: 'http://localhost:50074/api/',
-    // apiBaseUrl: 'http://localhost:5000/api/',
+    apiBaseUrl: 'api/',
+    // apiBaseUrl: 'http://127.0.0.1:50074/api/',
+    // apiBaseUrl: 'http://127.0.0.1:5000/api/',
     debug: true,
     apiDebugDelay: 0,
 };
 /** 常驻 UI 元素操作 */
 var ui = new class {
     constructor() {
-        this.siLang = new SettingItem('mcloud-lang', 'str', 'en');
+        this.siLang = new SettingItem('mcloud-lang', 'str', I18n.detectLanguage(['en', 'zh']));
         this.bottomBar = new class {
             constructor() {
                 this.container = document.getElementById("bottombar");
                 this.btnPin = document.getElementById('btnPin');
                 this.pinned = true;
+                this.hideTimer = new utils.Timer(() => { this.toggle(false); });
             }
             setPinned(val) {
                 val = (val !== null && val !== void 0 ? val : !this.pinned);
@@ -1403,22 +1467,21 @@ var ui = new class {
                 if (val)
                     this.toggle(true);
             }
-            toggle(state) {
+            toggle(state, hideTimeout) {
                 utils.toggleClass(this.container, 'show', state);
+                if (!this.pinned && hideTimeout)
+                    this.hideTimer.timeout(hideTimeout);
             }
             init() {
                 var bar = this.container;
-                var hideTimer = new utils.Timer(() => {
-                    this.toggle(false);
-                });
                 bar.addEventListener('mouseenter', () => {
-                    hideTimer.tryCancel();
+                    this.hideTimer.tryCancel();
                     this.toggle(true);
                 });
                 bar.addEventListener('mouseleave', () => {
-                    hideTimer.tryCancel();
+                    this.hideTimer.tryCancel();
                     if (!this.pinned)
-                        hideTimer.timeout(200);
+                        this.hideTimer.timeout(200);
                 });
                 this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
                     .render(x => this.setPinned(x))
@@ -1466,6 +1529,7 @@ var ui = new class {
                             { tag: 'span.artist', textContent: track.artist },
                         ]
                     }));
+                    ui.bottomBar.toggle(true, 2000);
                 }
                 else {
                     this.element.textContent = "";

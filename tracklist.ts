@@ -18,15 +18,17 @@ class TrackList {
     tracks: Track[] = [];
     contentView: ContentView;
     fetching: Promise<void>;
+    posting: Promise<void>;
     curActive = new ItemActiveHelper<TrackViewItem>();
     /** Available when loading */
     loadIndicator: LoadingIndicator;
     /** Available when the view is created */
     listView: ListView<TrackViewItem>;
+    canMove = true;
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
-        this.apiid = this.id > 0 ? this.id : 0;
+        this.apiid = this.id > 0 ? this.id : undefined;
         this.name = info.name;
     }
     loadFromGetResult(obj: Api.TrackListGet) {
@@ -56,7 +58,11 @@ class TrackList {
     loadFromApi(arg?: number | (AsyncFunc<Api.TrackListGet>)) {
         return this.fetching = this.fetching ?? this.fetchForce(arg);
     }
-    async postToUser() {
+    postToUser() {
+        return this.posting = this.posting || this._post();
+    }
+    async _post() {
+        if (this.apiid !== undefined) throw new Error('cannot post: apiid exists');
         var obj: Api.TrackListPut = {
             id: 0,
             name: this.name,
@@ -70,6 +76,9 @@ class TrackList {
         this.apiid = resp.id;
     }
     async put() {
+        if (this.fetching) await this.fetching;
+        if (this.posting) await this.posting;
+        if (this.apiid === undefined) throw new Error('cannot put: no apiid');
         var obj: Api.TrackListPut = {
             id: this.apiid,
             name: this.name,
@@ -111,7 +120,7 @@ class TrackList {
                 onShow: () => {
                     var lv = this.listView = this.listView || new ListView(this.contentView.dom);
                     lv.dragging = true;
-                    lv.moveByDragging = true;
+                    if (this.canMove) lv.moveByDragging = true;
                     lv.onItemMoved = (item, from) => {
                         this.tracks = this.listView.map(lvi => {
                             lvi.track._bind.position = lvi.position;
@@ -147,7 +156,8 @@ class TrackList {
         var listView = this.listView;
         if (!listView) return;
         listView.clear();
-        listView.dom.appendChild(this.buildHeader());
+        if (this.buildHeader)
+            listView.dom.appendChild(this.buildHeader());
         if (this.loadIndicator) {
             listView.dom.appendChild(this.loadIndicator.dom);
             return;
@@ -168,42 +178,24 @@ class TrackList {
         }
     }
     private buildHeader() {
+        var editHelper: EditableHelper;
+        var domctx: { title?: HTMLSpanElement; } = {};
         return utils.buildDOM({
+            _ctx: domctx,
             tag: 'div.content-header',
             child: [
                 { tag: 'span.catalog', textContent: I`Playlist` },
                 {
-                    tag: 'span.title', textContent: this.name, title: I`Click to rename`,
+                    tag: 'span.title', textContent: this.name, title: I`Click to rename`, _key: 'title',
                     onclick: (ev) => {
-                        var span = ev.target as HTMLSpanElement;
-                        var beforeEdit = span.textContent;
-                        if (span.classList.contains('editing')) return;
-                        utils.toggleClass(span, 'editing', true);
-                        var input = utils.buildDOM({
-                            tag: 'input', type: 'text', value: beforeEdit
-                        }) as HTMLInputElement;
-                        while (span.firstChild) span.removeChild(span.firstChild);
-                        span.appendChild(input);
-                        input.select();
-                        input.focus();
-                        var stopEdit = () => {
-                            utils.toggleClass(span, 'editing', false);
-                            events.forEach(x => x.remove());
-                            input.remove();
-                            if (input.value !== beforeEdit && input.value != '') {
-                                this.rename(input.value);
+                        editHelper = editHelper || new EditableHelper(domctx.title);
+                        if (editHelper.editing) return;
+                        editHelper.startEdit((newName) => {
+                            if (newName !== editHelper.beforeEdit && newName != '') {
+                                this.rename(newName);
                             }
-                            span.textContent = this.name;
-                        };
-                        var events = [
-                            utils.addEvent(input, 'keydown', (evv) => {
-                                if (evv.keyCode == 13) {
-                                    stopEdit();
-                                    evv.preventDefault();
-                                }
-                            }),
-                            utils.addEvent(input, 'focusout', (evv) => { stopEdit(); }),
-                        ];
+                            domctx.title.textContent = this.name;
+                        });
                     }
                 },
             ]

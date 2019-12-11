@@ -72,7 +72,7 @@ var user = new class User {
                     { tag: 'div.input-label', textContent: I`Confirm password:`, _key: 'passwd2_label' },
                     { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
                     { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
-                    { tag: 'div.btn#login-btn', textContent: I`Login`, _key: 'btn' }
+                    { tag: 'div.btn#login-btn', textContent: I`Login`, tabIndex: 0, _key: 'btn' }
                 ]
             }]
         }) as HTMLElement;

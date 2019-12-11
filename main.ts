@@ -12,34 +12,41 @@
 
 
 var settings = {
-    // apiBaseUrl: 'api/',
-    apiBaseUrl: 'http://localhost:50074/api/',
-    // apiBaseUrl: 'http://localhost:5000/api/',
+    apiBaseUrl: 'api/',
+    // apiBaseUrl: 'http://127.0.0.1:50074/api/',
+    // apiBaseUrl: 'http://127.0.0.1:5000/api/',
     debug: true,
     apiDebugDelay: 0,
 };
 
 /** 常驻 UI 元素操作 */
 var ui = new class {
-    siLang = new SettingItem('mcloud-lang', 'str', 'en');
     init() {
+        this.lang.init();
         this.bottomBar.init();
         this.sidebarLogin.init();
-        this.siLang.render((lang) => {
-            i18n.curLang = lang;
-            document.body.lang = lang;
-        })
-        i18n.renderElements(document.querySelectorAll('.i18ne'));
     }
-    setLang(lang: string) {
-        this.siLang.set(lang);
-        window.location.reload();
-    }
+    lang = new class {
+        availableLangs = ['en', 'zh'];
+        siLang = new SettingItem('mcloud-lang', 'str', I18n.detectLanguage(this.availableLangs));
+        init() {
+            this.siLang.render((lang) => {
+                i18n.curLang = lang;
+                document.body.lang = lang;
+            });
+            i18n.renderElements(document.querySelectorAll('.i18ne'));
+        }
+        setLang(lang: string) {
+            this.siLang.set(lang);
+            window.location.reload();
+        }
+    };
     bottomBar = new class {
         container: HTMLElement = document.getElementById("bottombar");
         btnPin: HTMLElement = document.getElementById('btnPin');
         siPin: SettingItem<boolean>;
         private pinned = true;
+        hideTimer = new utils.Timer(() => { this.toggle(false); });
         setPinned(val?: boolean) {
             val = val ?? !this.pinned;
             this.pinned = val;
@@ -47,21 +54,19 @@ var ui = new class {
             this.btnPin.textContent = val ? I`Unpin` : I`Pin`;
             if (val) this.toggle(true);
         }
-        toggle(state?: boolean) {
+        toggle(state?: boolean, hideTimeout?: number) {
             utils.toggleClass(this.container, 'show', state);
+            if (!this.pinned && hideTimeout) this.hideTimer.timeout(hideTimeout);
         }
         init() {
             var bar = this.container;
-            var hideTimer = new utils.Timer(() => {
-                this.toggle(false);
-            });
             bar.addEventListener('mouseenter', () => {
-                hideTimer.tryCancel();
+                this.hideTimer.tryCancel();
                 this.toggle(true);
             });
             bar.addEventListener('mouseleave', () => {
-                hideTimer.tryCancel();
-                if (!this.pinned) hideTimer.timeout(200);
+                this.hideTimer.tryCancel();
+                if (!this.pinned) this.hideTimer.timeout(200);
             });
             this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
                 .render(x => this.setPinned(x))
@@ -104,6 +109,7 @@ var ui = new class {
                         { tag: 'span.artist', textContent: track.artist },
                     ]
                 }));
+                ui.bottomBar.toggle(true, 2000);
             } else {
                 this.element.textContent = "";
             }
