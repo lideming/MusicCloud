@@ -384,10 +384,16 @@ class I18n {
             }
         });
     }
+    /**
+     * Detect the best available language using
+     * the user language preferences provided by the browser.
+     * @param langs Available languages
+     */
     static detectLanguage(langs) {
         var cur;
         var curIdx = -1;
         var languages = [];
+        // ['en-US'] -> ['en-US', 'en']
         (navigator.languages || [navigator.language]).forEach(lang => {
             languages.push(lang);
             if (lang.indexOf('-') > 0)
@@ -453,7 +459,8 @@ i18n.add2dArray(JSON.parse(`[
     ["(Empty)", "（空）"],
     ["Loading", "加载中"],
     ["Oh no! Something just goes wrong:", "发生错误："],
-    ["[Click here to retry]","[点击重试]"],
+    ["[Click here to retry]", "[点击重试]"],
+    ["My Uploads", "我的上传"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 // file: viewlib.ts
@@ -549,7 +556,7 @@ class ListViewItem extends View {
         });
     }
     dragHanlder(ev, type) {
-        var _a;
+        var _a, _b, _c;
         var item = dragManager.currentItem;
         var drop = type === 'drop';
         if (item instanceof ListViewItem) {
@@ -572,8 +579,9 @@ class ListViewItem extends View {
                     }
                 }
             }
-            if (!arg.accept && this.listview.onDragover) {
-                this.listview.onDragover(arg);
+            var onDragover = (_b = this.onDragover, (_b !== null && _b !== void 0 ? _b : (_c = this.listview) === null || _c === void 0 ? void 0 : _c.onDragover));
+            if (!arg.accept && onDragover) {
+                onDragover(arg);
                 if (drop || arg.accept)
                     ev.preventDefault();
             }
@@ -1188,7 +1196,7 @@ class TrackList {
                     lv.onItemMoved = (item, from) => {
                         this.tracks = this.listView.map(lvi => {
                             lvi.track._bind.position = lvi.position;
-                            lvi.updatePos();
+                            lvi.update();
                             return lvi.track;
                         });
                     };
@@ -1281,7 +1289,7 @@ class TrackViewItem extends ListViewItem {
         return {
             tag: 'div.item.trackitem.no-selection',
             child: [
-                { tag: 'span.pos', textContent: (track._bind.position + 1).toString() },
+                { tag: 'span.pos', textContent: '', _key: 'dompos' },
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },
             ],
@@ -1290,8 +1298,8 @@ class TrackViewItem extends ListViewItem {
             _item: this
         };
     }
-    updatePos() {
-        this.dom.querySelector('.pos').textContent = (this.track._bind.position + 1).toString();
+    update() {
+        this.dompos.textContent = (this.track._bind.position + 1).toString();
     }
 }
 // file: listindex.ts
@@ -1431,6 +1439,24 @@ class ListIndexViewItem extends ListViewItem {
     }
 }
 // file: uploads.ts
+var uploads = new class {
+    constructor() {
+        this.sidebarItem = new class extends ListViewItem {
+            createDom() {
+                return {
+                    tag: 'div.item.no-selection',
+                    textContent: I `My Uploads`,
+                    onclick: (ev) => {
+                        ui.sidebarList.setActive(uploads.sidebarItem);
+                    }
+                };
+            }
+        };
+    }
+    init() {
+        ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
+    }
+};
 // file: main.ts
 // TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
@@ -1451,7 +1477,23 @@ var settings = {
 /** 常驻 UI 元素操作 */
 var ui = new class {
     constructor() {
-        this.siLang = new SettingItem('mcloud-lang', 'str', I18n.detectLanguage(['en', 'zh']));
+        this.lang = new class {
+            constructor() {
+                this.availableLangs = ['en', 'zh'];
+                this.siLang = new SettingItem('mcloud-lang', 'str', I18n.detectLanguage(this.availableLangs));
+            }
+            init() {
+                this.siLang.render((lang) => {
+                    i18n.curLang = lang;
+                    document.body.lang = lang;
+                });
+                i18n.renderElements(document.querySelectorAll('.i18ne'));
+            }
+            setLang(lang) {
+                this.siLang.set(lang);
+                window.location.reload();
+            }
+        };
         this.bottomBar = new class {
             constructor() {
                 this.container = document.getElementById("bottombar");
@@ -1605,17 +1647,9 @@ var ui = new class {
         };
     }
     init() {
+        this.lang.init();
         this.bottomBar.init();
         this.sidebarLogin.init();
-        this.siLang.render((lang) => {
-            i18n.curLang = lang;
-            document.body.lang = lang;
-        });
-        i18n.renderElements(document.querySelectorAll('.i18ne'));
-    }
-    setLang(lang) {
-        this.siLang.set(lang);
-        window.location.reload();
     }
 }; // ui
 /** 播放器核心：控制播放逻辑 */
@@ -1756,3 +1790,4 @@ ui.init();
 var listIndex = new ListIndex();
 listIndex.init();
 user.init();
+uploads.init();

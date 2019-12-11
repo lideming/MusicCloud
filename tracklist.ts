@@ -124,7 +124,7 @@ class TrackList {
                     lv.onItemMoved = (item, from) => {
                         this.tracks = this.listView.map(lvi => {
                             lvi.track._bind.position = lvi.position;
-                            lvi.updatePos();
+                            lvi.update();
                             return lvi.track;
                         });
                     };
@@ -206,6 +206,7 @@ class TrackList {
 class TrackViewItem extends ListViewItem {
     track: Track;
     dom: HTMLDivElement;
+    private dompos: HTMLElement;
     constructor(item: Track) {
         super();
         this.track = item;
@@ -216,7 +217,7 @@ class TrackViewItem extends ListViewItem {
         return {
             tag: 'div.item.trackitem.no-selection',
             child: [
-                { tag: 'span.pos', textContent: (track._bind.position + 1).toString() },
+                { tag: 'span.pos', textContent: '', _key: 'dompos' },
                 { tag: 'span.name', textContent: track.name },
                 { tag: 'span.artist', textContent: track.artist },
             ],
@@ -225,7 +226,7 @@ class TrackViewItem extends ListViewItem {
             _item: this
         };
     }
-    updatePos() {
-        this.dom.querySelector('.pos').textContent = (this.track._bind.position + 1).toString();
+    update() {
+        this.dompos.textContent = (this.track._bind.position + 1).toString();
     }
 }

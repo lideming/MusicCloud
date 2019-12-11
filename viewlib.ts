@@ -60,6 +60,8 @@ abstract class ListViewItem extends View {
 
     get dragData() { return this.dom.textContent; }
 
+    onDragover: ListView['onDragover'];
+
     protected postCreateDom(element: HTMLElement) {
         super.postCreateDom(element);
         this.dom.addEventListener('click', () => {
@@ -113,8 +115,9 @@ abstract class ListViewItem extends View {
                     }
                 }
             }
-            if (!arg.accept && this.listview.onDragover) {
-                this.listview.onDragover(arg);
+            var onDragover = this.onDragover ?? this.listview?.onDragover;
+            if (!arg.accept && onDragover) {
+                onDragover(arg);
                 if (drop || arg.accept) ev.preventDefault();
             }
         }

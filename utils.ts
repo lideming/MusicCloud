@@ -499,6 +499,7 @@ i18n.add2dArray(JSON.parse(`[
     ["(Empty)", "（空）"],
     ["Loading", "加载中"],
     ["Oh no! Something just goes wrong:", "发生错误："],
-    ["[Click here to retry]","[点击重试]"],
+    ["[Click here to retry]", "[点击重试]"],
+    ["My Uploads", "我的上传"],
     ["Music Cloud", "Music Cloud"]
 ]`));

@@ -9,6 +9,7 @@
 /// <reference path="user.ts" />
 /// <reference path="tracklist.ts" />
 /// <reference path="listindex.ts" />
+/// <reference path="uploads.ts" />
 
 
 var settings = {
@@ -298,3 +299,4 @@ ui.init();
 var listIndex = new ListIndex();
 listIndex.init();
 user.init();
+uploads.init();
