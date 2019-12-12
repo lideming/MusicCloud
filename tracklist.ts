@@ -172,9 +172,9 @@ class TrackList {
         var playing = playerCore.track;
         for (const t of this.tracks) {
             let item = new TrackViewItem(t);
-            if (playing?._bind
-                && ((playing._bind.list !== this && t.id === playing.id)
-                    || playing._bind.list === this && playing._bind.position === t._bind.position))
+            if (playing
+                && ((playing._bind?.list !== this && t.id === playing.id)
+                    || (playing._bind?.list === this && playing._bind.position === t._bind.position)))
                 this.curActive.set(item);
             listView.add(item);
         }

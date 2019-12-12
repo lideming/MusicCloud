@@ -318,7 +318,7 @@ class Callbacks {
         utils.arrayRemove(this.list, callback);
     }
 }
-/** I18n helper class */
+/** Internationalization (aka i18n) helper class */
 class I18n {
     constructor() {
         this.data = {};
@@ -474,6 +474,13 @@ i18n.add2dArray(JSON.parse(`[
     ["Drag files to this zone...", "拖放文件到此处..."],
     ["Music Cloud", "Music Cloud"]
 ]`));
+i18n.add2dArray([
+    ["_key_", "en", "zh"],
+    ["uploads_pending", "Pending", "队列中"],
+    ["uploads_uploading", "Uploading", "上传中"],
+    ["uploads_error", "Error", "错误"],
+    ["uploads_done", "Done", "完成"],
+]);
 // file: viewlib.ts
 class View {
     constructor(dom) {
@@ -487,7 +494,7 @@ class View {
     ensureDom() {
         if (!this._dom) {
             this._dom = utils.buildDOM(this.createDom());
-            this.postCreateDom(this._dom);
+            this.postCreateDom();
             this.updateDom();
         }
     }
@@ -495,7 +502,7 @@ class View {
         return document.createElement('div');
     }
     /** Will be called when the dom is created */
-    postCreateDom(element) {
+    postCreateDom() {
     }
     /** Will be called when the dom is created, after postCreateDom() */
     updateDom() {
@@ -529,9 +536,11 @@ var dragManager = new class DragManager {
     ;
     start(item) {
         this._currentItem = item;
+        console.log('drag start', item);
     }
     end(item) {
         this._currentItem = null;
+        console.log('drag end');
     }
 };
 class ListViewItem extends View {
@@ -543,8 +552,13 @@ class ListViewItem extends View {
     get listview() { return this._listView; }
     get position() { return this._position; }
     get dragData() { return this.dom.textContent; }
-    postCreateDom(element) {
-        super.postCreateDom(element);
+    remove() {
+        if (!this._listView)
+            return;
+        this._listView.remove(this);
+    }
+    postCreateDom() {
+        super.postCreateDom();
         this.dom.addEventListener('click', () => {
             var _a, _b, _c;
             (_c = (_a = this._listView) === null || _a === void 0 ? void 0 : (_b = _a).onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
@@ -1018,43 +1032,51 @@ var user = new class User {
         return __awaiter(this, void 0, void 0, function* () {
             this.setState('logging');
             // try GET `api/users/me` using the new info
-            try {
-                // thanks to the keyword `var` of JavaScript.
-                var resp = yield api.getJson('users/me', {
-                    basicAuth: this.getBasicAuth(info)
-                });
-            }
-            catch (err) {
-                this.setState('error');
-                if (err.message == 'user_not_found')
-                    throw new Error(I `Username or password is not correct.`);
-                throw err;
-            }
-            finally {
-                this.pendingInfo = null;
-            }
-            // fill the passwd because the server won't return it
-            resp.passwd = info.passwd;
-            yield this.handleLoginResult(resp);
+            var promise = (() => __awaiter(this, void 0, void 0, function* () {
+                try {
+                    // thanks to the keyword `var` of JavaScript.
+                    var resp = yield api.getJson('users/me', {
+                        basicAuth: this.getBasicAuth(info)
+                    });
+                }
+                catch (err) {
+                    this.setState('error');
+                    if (err.message == 'user_not_found')
+                        throw new Error(I `Username or password is not correct.`);
+                    throw err;
+                }
+                finally {
+                    this.pendingInfo = null;
+                }
+                // fill the passwd because the server won't return it
+                resp.passwd = info.passwd;
+                yield this.handleLoginResult(resp);
+            }))();
+            this.loggingin = promise;
+            yield promise;
         });
     }
     register(info) {
         return __awaiter(this, void 0, void 0, function* () {
             this.setState('logging');
-            var resp = yield api.postJson({
-                method: 'POST',
-                path: 'users/new',
-                obj: info
-            });
-            if (resp.error) {
-                this.setState('error');
-                if (resp.error == 'dup_user')
-                    throw new Error(I `A user with the same username exists`);
-                throw new Error(resp.error);
-            }
-            // fill the passwd because the server won't return it
-            resp.passwd = info.passwd;
-            yield this.handleLoginResult(resp);
+            var promise = (() => __awaiter(this, void 0, void 0, function* () {
+                var resp = yield api.postJson({
+                    method: 'POST',
+                    path: 'users/new',
+                    obj: info
+                });
+                if (resp.error) {
+                    this.setState('error');
+                    if (resp.error == 'dup_user')
+                        throw new Error(I `A user with the same username exists`);
+                    throw new Error(resp.error);
+                }
+                // fill the passwd because the server won't return it
+                resp.passwd = info.passwd;
+                yield this.handleLoginResult(resp);
+            }))();
+            this.loggingin = promise;
+            yield promise;
         });
     }
     handleLoginResult(info) {
@@ -1074,6 +1096,7 @@ var user = new class User {
             ui.sidebarLogin.update();
             listIndex.setIndex(info);
             this.setState('logged');
+            this.loggingin = null;
         });
     }
     setListids(listids) {
@@ -1088,6 +1111,29 @@ var user = new class User {
                 method: 'PUT',
                 obj
             });
+        });
+    }
+    /**
+     * Wait until finished logging in. Returns true if sucessfully logged in.
+     */
+    waitLogin(throwOnFail) {
+        return __awaiter(this, void 0, void 0, function* () {
+            do {
+                if (this.state == 'logged')
+                    return true;
+                if (this.state == 'logging') {
+                    try {
+                        yield this.loggingin;
+                        return true;
+                    }
+                    catch (_a) {
+                        break;
+                    }
+                }
+            } while (0);
+            if (throwOnFail)
+                throw new Error('No login');
+            return false;
         });
     }
 };
@@ -1245,7 +1291,7 @@ class TrackList {
         this.curActive.set(item);
     }
     updateView() {
-        var _a;
+        var _a, _b;
         var listView = this.listView;
         if (!listView)
             return;
@@ -1264,8 +1310,9 @@ class TrackList {
         var playing = playerCore.track;
         for (const t of this.tracks) {
             let item = new TrackViewItem(t);
-            if (((_a = playing) === null || _a === void 0 ? void 0 : _a._bind) && ((playing._bind.list !== this && t.id === playing.id)
-                || playing._bind.list === this && playing._bind.position === t._bind.position))
+            if (playing
+                && ((((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) !== this && t.id === playing.id)
+                    || (((_b = playing._bind) === null || _b === void 0 ? void 0 : _b.list) === this && playing._bind.position === t._bind.position)))
                 this.curActive.set(item);
             listView.add(item);
         }
@@ -1566,16 +1613,34 @@ var uploads = new class {
             this.state = 'fetching';
             var li = new LoadingIndicator();
             this.view.useLoadingIndicator(li);
-            this.tracks = (yield api.getJson('my/uploads'))['tracks'];
-            this.tracks.reverse();
-            this.tracks.forEach(t => {
-                t._upload = { state: 'done' };
+            try {
+                yield user.waitLogin(true);
+                var fetched = (yield api.getJson('my/uploads'))['tracks'];
+                fetched.reverse();
+                fetched.forEach(t => {
+                    t._upload = { state: 'done' };
+                });
+                this.state = 'fetched';
+            }
+            catch (error) {
+                li.error(error, () => this.fetch());
+                return;
+            }
+            this.tracks = this.tracks.filter(t => {
+                var _a;
+                if (t._upload.state == 'done') {
+                    (_a = t._upload.view) === null || _a === void 0 ? void 0 : _a.remove();
+                    return false;
+                }
+                return true;
             });
-            this.state = 'fetched';
             this.view.useLoadingIndicator(null);
+            fetched.forEach(t => {
+                this.tracks.push(t);
+                if (this.view.rendered)
+                    this.view.addTrack(t);
+            });
             this.view.updateView();
-            if (this.view.rendered)
-                this.tracks.forEach(t => this.view.addTrack(t));
         });
     }
     uploadFile(file) {
@@ -1600,6 +1665,8 @@ var uploads = new class {
                 mode: 'raw',
                 obj: finalBlob
             });
+            track.id = resp.id;
+            track.url = resp.url;
             track._upload.state = 'done';
             (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
         });
@@ -1611,12 +1678,20 @@ class UploadViewItem extends TrackViewItem {
         track._upload.view = this;
     }
     postCreateDom() {
+        super.postCreateDom();
         this.dom.classList.add('uploads-item');
         this.dom.appendChild(this.domstate = utils.buildDOM({ tag: 'span.uploads-state' }));
     }
     updateDom() {
         super.updateDom();
-        this.domstate.textContent = this.track._upload.state;
+        var newState = this.track._upload.state;
+        if (this._lastUploadState != newState) {
+            if (this._lastUploadState)
+                this.dom.classList.remove('state-' + this._lastUploadState);
+            if (newState)
+                this.dom.classList.add('state-' + newState);
+            this.domstate.textContent = i18n.get('uploads_' + newState);
+        }
     }
 }
 class UploadArea extends View {

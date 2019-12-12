@@ -549,4 +549,5 @@ html, body {
     justify-content: center;
     min-height: 100px;
     background: #eeeeee;
+    animation: showing-top .3s;
 }

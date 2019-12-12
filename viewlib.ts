@@ -14,7 +14,7 @@ class View {
     public ensureDom() {
         if (!this._dom) {
             this._dom = utils.buildDOM(this.createDom()) as HTMLElement;
-            this.postCreateDom(this._dom);
+            this.postCreateDom();
             this.updateDom();
         }
     }
@@ -22,7 +22,7 @@ class View {
         return document.createElement('div');
     }
     /** Will be called when the dom is created */
-    protected postCreateDom(element: HTMLElement) {
+    protected postCreateDom() {
     }
     /** Will be called when the dom is created, after postCreateDom() */
     public updateDom() {
@@ -60,9 +60,11 @@ var dragManager = new class DragManager {
     get currentItem() { return this._currentItem; };
     start(item: any) {
         this._currentItem = item;
+        console.log('drag start', item);
     }
     end(item: any) {
         this._currentItem = null;
+        console.log('drag end');
     }
 };
 
@@ -75,11 +77,16 @@ abstract class ListViewItem extends View {
     get dragData() { return this.dom.textContent; }
 
     onDragover: ListView['onDragover'];
-    
+
     dragging?: boolean;
 
-    protected postCreateDom(element: HTMLElement) {
-        super.postCreateDom(element);
+    remove() {
+        if (!this._listView) return;
+        this._listView.remove(this);
+    }
+
+    protected postCreateDom() {
+        super.postCreateDom();
         this.dom.addEventListener('click', () => {
             this._listView?.onItemClicked?.(this);
         });

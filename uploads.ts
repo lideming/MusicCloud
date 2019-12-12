@@ -4,6 +4,7 @@ interface UploadTrack extends Track {
     _upload: {
         view?: UploadViewItem;
         state: 'pending' | 'uploading' | 'error' | 'done';
+        // With prefix "uploads_", these are i18n keys 
     };
 }
 
@@ -86,15 +87,31 @@ var uploads = new class {
         this.state = 'fetching';
         var li = new LoadingIndicator();
         this.view.useLoadingIndicator(li);
-        this.tracks = (await api.getJson('my/uploads'))['tracks'];
-        this.tracks.reverse();
-        this.tracks.forEach(t => {
-            t._upload = { state: 'done' };
+        try {
+            await user.waitLogin(true);
+            var fetched = (await api.getJson('my/uploads'))['tracks'];
+            fetched.reverse();
+            fetched.forEach(t => {
+                t._upload = { state: 'done' };
+            });
+            this.state = 'fetched';
+        } catch (error) {
+            li.error(error, () => this.fetch());
+            return;
+        }
+        this.tracks = this.tracks.filter(t => {
+            if (t._upload.state == 'done') {
+                t._upload.view?.remove();
+                return false;
+            }
+            return true;
         });
-        this.state = 'fetched';
         this.view.useLoadingIndicator(null);
+        fetched.forEach(t => {
+            this.tracks.push(t);
+            if (this.view.rendered) this.view.addTrack(t);
+        });
         this.view.updateView();
-        if (this.view.rendered) this.tracks.forEach(t => this.view.addTrack(t));
     }
     async uploadFile(file: File) {
         var apitrack: Api.Track = {
@@ -118,7 +135,9 @@ var uploads = new class {
             method: 'POST',
             mode: 'raw',
             obj: finalBlob
-        });
+        }) as Api.Track;
+        track.id = resp.id;
+        track.url = resp.url;
         track._upload.state = 'done';
         track._upload.view?.updateDom();
     }
@@ -128,17 +147,24 @@ var uploads = new class {
 class UploadViewItem extends TrackViewItem {
     track: UploadTrack;
     domstate: HTMLElement;
+    _lastUploadState: string;
     constructor(track: UploadTrack) {
         super(track);
         track._upload.view = this;
     }
     postCreateDom() {
+        super.postCreateDom();
         this.dom.classList.add('uploads-item');
         this.dom.appendChild(this.domstate = utils.buildDOM<HTMLElement>({ tag: 'span.uploads-state' }));
     }
     updateDom() {
         super.updateDom();
-        this.domstate.textContent = this.track._upload.state;
+        var newState = this.track._upload.state;
+        if (this._lastUploadState != newState) {
+            if (this._lastUploadState) this.dom.classList.remove('state-' + this._lastUploadState);
+            if (newState) this.dom.classList.add('state-' + newState);
+            this.domstate.textContent = i18n.get('uploads_' + newState);
+        }
     }
 }
 

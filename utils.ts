@@ -358,7 +358,7 @@ interface I18nData {
     };
 }
 
-/** I18n helper class */
+/** Internationalization (aka i18n) helper class */
 class I18n {
     data: I18nData = {};
     curLang = 'en';
@@ -515,3 +515,11 @@ i18n.add2dArray(JSON.parse(`[
     ["Drag files to this zone...", "拖放文件到此处..."],
     ["Music Cloud", "Music Cloud"]
 ]`));
+
+i18n.add2dArray([
+    ["_key_", "en", "zh"],
+    ["uploads_pending", "Pending", "队列中"],
+    ["uploads_uploading", "Uploading", "上传中"],
+    ["uploads_error", "Error", "错误"],
+    ["uploads_done", "Done", "完成"],
+]);

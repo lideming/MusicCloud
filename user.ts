@@ -14,6 +14,7 @@ var user = new class User {
     uishown = false;
     get info() { return this.siLogin.data; }
     state: 'none' | 'logging' | 'error' | 'logged';
+    loggingin: Promise<void>;
     pendingInfo: User['info'];
     setState(state: User['state']) {
         this.state = state;
@@ -154,38 +155,46 @@ var user = new class User {
     async login(info: Api.UserInfo) {
         this.setState('logging');
         // try GET `api/users/me` using the new info
-        try {
-            // thanks to the keyword `var` of JavaScript.
-            var resp = await api.getJson('users/me', {
-                basicAuth: this.getBasicAuth(info)
-            });
-        } catch (err) {
-            this.setState('error');
-            if (err.message == 'user_not_found')
-                throw new Error(I`Username or password is not correct.`);
-            throw err;
-        } finally {
-            this.pendingInfo = null;
-        }
-        // fill the passwd because the server won't return it
-        resp.passwd = info.passwd;
-        await this.handleLoginResult(resp);
+        var promise = (async () => {
+            try {
+                // thanks to the keyword `var` of JavaScript.
+                var resp = await api.getJson('users/me', {
+                    basicAuth: this.getBasicAuth(info)
+                });
+            } catch (err) {
+                this.setState('error');
+                if (err.message == 'user_not_found')
+                    throw new Error(I`Username or password is not correct.`);
+                throw err;
+            } finally {
+                this.pendingInfo = null;
+            }
+            // fill the passwd because the server won't return it
+            resp.passwd = info.passwd;
+            await this.handleLoginResult(resp);
+        })();
+        this.loggingin = promise;
+        await promise;
     }
     async register(info: Api.UserInfo) {
         this.setState('logging');
-        var resp = await api.postJson({
-            method: 'POST',
-            path: 'users/new',
-            obj: info
-        });
-        if (resp.error) {
-            this.setState('error');
-            if (resp.error == 'dup_user') throw new Error(I`A user with the same username exists`);
-            throw new Error(resp.error);
-        }
-        // fill the passwd because the server won't return it
-        resp.passwd = info.passwd;
-        await this.handleLoginResult(resp);
+        var promise = (async () => {
+            var resp = await api.postJson({
+                method: 'POST',
+                path: 'users/new',
+                obj: info
+            });
+            if (resp.error) {
+                this.setState('error');
+                if (resp.error == 'dup_user') throw new Error(I`A user with the same username exists`);
+                throw new Error(resp.error);
+            }
+            // fill the passwd because the server won't return it
+            resp.passwd = info.passwd;
+            await this.handleLoginResult(resp);
+        })();
+        this.loggingin = promise;
+        await promise;
     }
     async handleLoginResult(info: Api.UserInfo) {
         if (!info.username) throw new Error(I`iNTernEL eRRoR`);
@@ -202,6 +211,7 @@ var user = new class User {
         ui.sidebarLogin.update();
         listIndex.setIndex(info as any);
         this.setState('logged');
+        this.loggingin = null;
     }
     async setListids(listids: number[]) {
         var obj: Api.UserInfo = {
@@ -214,5 +224,23 @@ var user = new class User {
             method: 'PUT',
             obj
         });
+    }
+    /**
+     * Wait until finished logging in. Returns true if sucessfully logged in.
+     */
+    async waitLogin(throwOnFail?: boolean): Promise<boolean> {
+        do {
+            if (this.state == 'logged') return true;
+            if (this.state == 'logging') {
+                try {
+                    await this.loggingin;
+                    return true;
+                } catch {
+                    break;
+                }
+            }
+        } while (0);
+        if (throwOnFail) throw new Error('No login');
+        return false;
     }
 };
