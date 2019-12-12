@@ -141,6 +141,15 @@ var utils = new class Utils {
                 return item;
         }
     }
+    objectApply(obj, kv) {
+        for (const key in kv) {
+            if (kv.hasOwnProperty(key)) {
+                const val = kv[key];
+                obj[key] = val;
+            }
+        }
+        return obj;
+    }
 };
 class BuildDOMCtx {
 }
@@ -364,7 +373,7 @@ class I18n {
         }
     }
     renderElements(elements) {
-        console.log('i18n rendering');
+        console.log('i18n elements rendering');
         elements.forEach(x => {
             for (const node of x.childNodes) {
                 if (node.nodeType == Node.TEXT_NODE) {
@@ -432,6 +441,7 @@ function I(literals, ...placeholders) {
 // Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
 i18n.add2dArray(JSON.parse(`[
     ["en", "zh"],
+    ["English", "中文"],
     ["Pin", "固定"],
     ["Unpin", "浮动"],
     ["Pause", "暂停"],
@@ -455,7 +465,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Playlists", "播放列表"],
     ["New Playlist", "新播放列表"],
     ["New Playlist ({0})", "新播放列表（{0}）"],
-    ["Click to rename", "点击重命名"],
+    ["Click to edit", "点击编辑"],
     ["(Empty)", "（空）"],
     ["Loading", "加载中"],
     ["Oh no! Something just goes wrong:", "发生错误："],
@@ -736,17 +746,11 @@ class Section extends View {
     }
 }
 class LoadingIndicator extends View {
-    constructor(arg) {
+    constructor(init) {
         super();
         this._status = 'running';
-        if (arg) {
-            if (arg.status)
-                this.state = arg.status;
-            if (arg.content)
-                this.content = arg.content;
-            if (arg.onclick)
-                this.onclick = arg.onclick;
-        }
+        if (init)
+            utils.objectApply(this, init);
     }
     get state() { return this._status; }
     set state(val) {
@@ -1238,7 +1242,7 @@ class TrackList {
             return;
         }
         if (this.tracks.length === 0) {
-            listView.dom.appendChild(new LoadingIndicator({ status: 'normal', content: I `(Empty)` }).dom);
+            listView.dom.appendChild(new LoadingIndicator({ state: 'normal', content: I `(Empty)` }).dom);
             return;
         }
         // Well... currently, we just rebuild the DOM.
@@ -1253,29 +1257,12 @@ class TrackList {
         }
     }
     buildHeader() {
-        var editHelper;
-        var domctx = {};
-        return utils.buildDOM({
-            _ctx: domctx,
-            tag: 'div.content-header',
-            child: [
-                { tag: 'span.catalog', textContent: I `Playlist` },
-                {
-                    tag: 'span.title', textContent: this.name, title: I `Click to rename`, _key: 'title',
-                    onclick: (ev) => {
-                        editHelper = editHelper || new EditableHelper(domctx.title);
-                        if (editHelper.editing)
-                            return;
-                        editHelper.startEdit((newName) => {
-                            if (newName !== editHelper.beforeEdit && newName != '') {
-                                this.rename(newName);
-                            }
-                            domctx.title.textContent = this.name;
-                        });
-                    }
-                },
-            ]
-        });
+        return new ContentHeader({
+            catalog: I `Playlist`,
+            title: this.name,
+            titleEditable: !!this.rename,
+            onTitleEdit: (newName) => this.rename(newName)
+        }).dom;
     }
 }
 class TrackViewItem extends ListViewItem {
@@ -1299,7 +1286,51 @@ class TrackViewItem extends ListViewItem {
         };
     }
     update() {
-        this.dompos.textContent = (this.track._bind.position + 1).toString();
+        this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+    }
+}
+class ContentHeader extends View {
+    constructor(init) {
+        super();
+        this.titleEditable = false;
+        this.domctx = {};
+        if (init)
+            utils.objectApply(this, init);
+    }
+    createDom() {
+        var editHelper;
+        return utils.buildDOM({
+            _ctx: this.domctx,
+            tag: 'div.content-header',
+            child: [
+                { tag: 'span.catalog', textContent: this.catalog, _key: 'catalog' },
+                {
+                    tag: 'span.title', textContent: this.title, _key: 'title',
+                    onclick: (ev) => {
+                        if (!this.titleEditable)
+                            return;
+                        editHelper = editHelper || new EditableHelper(this.domctx.title);
+                        if (editHelper.editing)
+                            return;
+                        editHelper.startEdit((newName) => {
+                            if (newName !== editHelper.beforeEdit && newName != '') {
+                                this.onTitleEdit(newName);
+                            }
+                            this.updateDom();
+                        });
+                    }
+                },
+            ]
+        });
+    }
+    updateDom() {
+        this.domctx.catalog.textContent = this.catalog;
+        this.domctx.catalog.style.display = this.catalog ? '' : 'none';
+        this.domctx.title.textContent = this.title;
+        if (this.titleEditable)
+            this.domctx.title.title = I `Click to edit`;
+        else
+            this.domctx.title.removeAttribute('title');
     }
 }
 // file: listindex.ts
@@ -1448,15 +1479,75 @@ var uploads = new class {
                     textContent: I `My Uploads`,
                     onclick: (ev) => {
                         ui.sidebarList.setActive(uploads.sidebarItem);
+                        ui.content.setCurrent(uploads.view);
                     }
                 };
             }
         };
+        this.view = new class {
+            get rendered() { return !!this.listView; }
+            onShow() {
+                if (!this.dom) {
+                    this.listView = new ListView({ tag: 'div.tracklist' });
+                    this.dom = this.listView.dom;
+                    this.header = new ContentHeader({ title: I `My Uploads` });
+                    this.dom.appendChild(this.header.dom);
+                    if (!uploads.fetched)
+                        uploads.fetch();
+                }
+            }
+            onRemove() {
+            }
+            useLoadingIndicator(li) {
+                if (this.loadingIndicator && this.rendered)
+                    this.loadingIndicator.dom.remove();
+                if (li && this.rendered) {
+                    this.dom.insertBefore(li.dom, this.header.dom.nextSibling);
+                }
+                this.loadingIndicator = li;
+                if (this.rendered)
+                    this.updateView();
+            }
+            addTrack(t) {
+                this.listView.add(new UploadViewItem(t));
+                this.updateView();
+            }
+            updateView() {
+                if (this.listView.length == 0) {
+                    if (!this.loadingIndicator) {
+                        this.emptyIndicator = this.emptyIndicator || new LoadingIndicator({ state: 'normal', content: I `(Empty)` });
+                        this.useLoadingIndicator(this.emptyIndicator);
+                    }
+                }
+                else {
+                    if (this.emptyIndicator && this.loadingIndicator == this.emptyIndicator) {
+                        this.useLoadingIndicator(null);
+                    }
+                }
+            }
+        };
     }
+    get fetched() { return !!this.tracks; }
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
     }
+    fetch() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var li = new LoadingIndicator();
+            this.view.useLoadingIndicator(li);
+            this.tracks = (yield api.getJson('my/uploads'))['tracks'];
+            this.view.useLoadingIndicator(null);
+            this.view.updateView();
+            if (this.view.rendered)
+                this.tracks.forEach(t => this.view.addTrack(t));
+        });
+    }
 };
+class UploadViewItem extends TrackViewItem {
+    constructor(track) {
+        super(track);
+    }
+}
 // file: main.ts
 // TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
@@ -1487,6 +1578,7 @@ var ui = new class {
                     i18n.curLang = lang;
                     document.body.lang = lang;
                 });
+                console.log(`Current language: '${i18n.curLang}' - '${I `English`}'`);
                 i18n.renderElements(document.querySelectorAll('.i18ne'));
             }
             setLang(lang) {
@@ -1641,7 +1733,8 @@ var ui = new class {
                 this.removeCurrent();
                 if (arg.onShow)
                     arg.onShow();
-                this.container.appendChild(arg.dom);
+                if (arg.dom)
+                    this.container.appendChild(arg.dom);
                 this.current = arg;
             }
         };

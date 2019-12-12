@@ -78,7 +78,8 @@ html, body {
 .content-header .catalog {
     font-size: 120%;
     color: gray;
-    margin-right: .5em;
+    padding: 5px;
+    margin-left: 5px;
 }
 
 .content-header .title {
@@ -88,6 +89,7 @@ html, body {
     min-height: 1em;
     min-width: 300px;
     padding: 5px;
+    margin-left: 5px;
 }
 .content-header .title.editing {
     padding: 0;
@@ -99,10 +101,6 @@ html, body {
     font: inherit;
     border: none;
     outline: none;
-    background: #eeeeee;
-}
-
-.content-header .title[contentEditable=true] {
     background: #eeeeee;
 }
 

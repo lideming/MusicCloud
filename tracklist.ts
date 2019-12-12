@@ -90,7 +90,7 @@ class TrackList {
             obj: obj
         });
     }
-    async fetchForce(arg: number | (AsyncFunc<Api.TrackListGet>)) {
+    async fetchForce(arg: number | AsyncFunc<Api.TrackListGet>) {
         var func: AsyncFunc<Api.TrackListGet>;
         if (arg === undefined) arg = this.apiid;
         if (typeof arg == 'number') func = () => api.getListAsync(arg as number);
@@ -163,7 +163,7 @@ class TrackList {
             return;
         }
         if (this.tracks.length === 0) {
-            listView.dom.appendChild(new LoadingIndicator({ status: 'normal', content: I`(Empty)` }).dom);
+            listView.dom.appendChild(new LoadingIndicator({ state: 'normal', content: I`(Empty)` }).dom);
             return;
         }
         // Well... currently, we just rebuild the DOM.
@@ -178,28 +178,12 @@ class TrackList {
         }
     }
     private buildHeader() {
-        var editHelper: EditableHelper;
-        var domctx: { title?: HTMLSpanElement; } = {};
-        return utils.buildDOM({
-            _ctx: domctx,
-            tag: 'div.content-header',
-            child: [
-                { tag: 'span.catalog', textContent: I`Playlist` },
-                {
-                    tag: 'span.title', textContent: this.name, title: I`Click to rename`, _key: 'title',
-                    onclick: (ev) => {
-                        editHelper = editHelper || new EditableHelper(domctx.title);
-                        if (editHelper.editing) return;
-                        editHelper.startEdit((newName) => {
-                            if (newName !== editHelper.beforeEdit && newName != '') {
-                                this.rename(newName);
-                            }
-                            domctx.title.textContent = this.name;
-                        });
-                    }
-                },
-            ]
-        });
+        return new ContentHeader({
+            catalog: I`Playlist`,
+            title: this.name,
+            titleEditable: !!this.rename,
+            onTitleEdit: (newName) => this.rename(newName)
+        }).dom;
     }
 }
 
@@ -227,6 +211,49 @@ class TrackViewItem extends ListViewItem {
         };
     }
     update() {
-        this.dompos.textContent = (this.track._bind.position + 1).toString();
+        this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+    }
+}
+
+class ContentHeader extends View {
+    catalog: string;
+    title: string;
+    titleEditable = false;
+    domctx: { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } = {};
+    onTitleEdit: (title: string) => void;
+    constructor(init?: Partial<ContentHeader>) {
+        super();
+        if (init) utils.objectApply(this, init);
+    }
+    createDom() {
+        var editHelper: EditableHelper;
+        return utils.buildDOM({
+            _ctx: this.domctx,
+            tag: 'div.content-header',
+            child: [
+                { tag: 'span.catalog', textContent: this.catalog, _key: 'catalog' },
+                {
+                    tag: 'span.title', textContent: this.title, _key: 'title',
+                    onclick: (ev) => {
+                        if (!this.titleEditable) return;
+                        editHelper = editHelper || new EditableHelper(this.domctx.title);
+                        if (editHelper.editing) return;
+                        editHelper.startEdit((newName) => {
+                            if (newName !== editHelper.beforeEdit && newName != '') {
+                                this.onTitleEdit(newName);
+                            }
+                            this.updateDom();
+                        });
+                    }
+                },
+            ]
+        });
+    }
+    updateDom() {
+        this.domctx.catalog.textContent = this.catalog;
+        this.domctx.catalog.style.display = this.catalog ? '' : 'none';
+        this.domctx.title.textContent = this.title;
+        if (this.titleEditable) this.domctx.title.title = I`Click to edit`;
+        else this.domctx.title.removeAttribute('title');
     }
 }

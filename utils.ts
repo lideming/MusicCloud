@@ -159,6 +159,16 @@ var utils = new class Utils {
             if (func(item, idx++)) return item;
         }
     }
+
+    objectApply<T>(obj: T, kv: Partial<T>) {
+        for (const key in kv as any) {
+            if (kv.hasOwnProperty(key)) {
+                const val = kv[key];
+                obj[key] = val;
+            }
+        }
+        return obj;
+    }
 };
 
 
@@ -401,7 +411,7 @@ class I18n {
         }
     }
     renderElements(elements) {
-        console.log('i18n rendering');
+        console.log('i18n elements rendering');
         elements.forEach(x => {
             for (const node of x.childNodes) {
                 if (node.nodeType == Node.TEXT_NODE) {
@@ -429,7 +439,7 @@ class I18n {
         var cur: string;
         var curIdx = -1;
         var languages = [];
-        
+
         // ['en-US'] -> ['en-US', 'en']
         (navigator.languages || [navigator.language]).forEach(lang => {
             languages.push(lang);
@@ -472,6 +482,7 @@ function I(literals: TemplateStringsArray, ...placeholders: any[]) {
 // Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
 i18n.add2dArray(JSON.parse(`[
     ["en", "zh"],
+    ["English", "中文"],
     ["Pin", "固定"],
     ["Unpin", "浮动"],
     ["Pause", "暂停"],
@@ -495,7 +506,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Playlists", "播放列表"],
     ["New Playlist", "新播放列表"],
     ["New Playlist ({0})", "新播放列表（{0}）"],
-    ["Click to rename", "点击重命名"],
+    ["Click to edit", "点击编辑"],
     ["(Empty)", "（空）"],
     ["Loading", "加载中"],
     ["Oh no! Something just goes wrong:", "发生错误："],

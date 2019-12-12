@@ -275,13 +275,9 @@ class Section extends View {
 type LoadingIndicatorState = 'normal' | 'running' | 'error';
 
 class LoadingIndicator extends View {
-    constructor(arg?: { status?: LoadingIndicatorState, content?: string, onclick?: Action<MouseEvent>; }) {
+    constructor(init?: Partial<LoadingIndicator>) {
         super();
-        if (arg) {
-            if (arg.status) this.state = arg.status;
-            if (arg.content) this.content = arg.content;
-            if (arg.onclick) this.onclick = arg.onclick;
-        }
+        if (init) utils.objectApply(this, init);
     }
     private _status: LoadingIndicatorState = 'running';
     get state() { return this._status; }
