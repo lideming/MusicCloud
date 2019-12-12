@@ -456,14 +456,14 @@ i18n.add2dArray(JSON.parse(`[
     ["Confirm password:", "确认密码："],
     ["Requesting...", "请求中……"],
     [" (error!)", "（错误！）"],
-    ["username or password is not correct.", "用户名或密码不正确。"],
+    ["Username or password is not correct.", "用户名或密码不正确。"],
     ["Logged in with previous working account.", "已登录为之前的用户。"],
     ["Please input the username!", "请输入用户名！"],
     ["Please input the password!", "请输入密码！"],
     ["Password confirmation does not match!", "确认密码不相同！"],
     ["Playlist", "播放列表"],
     ["Playlists", "播放列表"],
-    ["New Playlist", "新播放列表"],
+    ["New Playlist", "新建播放列表"],
     ["New Playlist ({0})", "新播放列表（{0}）"],
     ["Click to edit", "点击编辑"],
     ["(Empty)", "（空）"],
@@ -498,6 +498,11 @@ class View {
     }
     /** Will be called when the dom is created, after postCreateDom() */
     updateDom() {
+    }
+    /** Assign key-values and call `updateDom()` */
+    updateWith(kv) {
+        utils.objectApply(this, kv);
+        this.updateDom();
     }
     toggleClass(clsName, force) {
         utils.toggleClass(this.dom, clsName, force);
@@ -1017,7 +1022,7 @@ var user = new class User {
             catch (err) {
                 this.setState('error');
                 if (err.message == 'user_not_found')
-                    throw new Error(I `username or password is not correct.`);
+                    throw new Error(I `Username or password is not correct.`);
                 throw err;
             }
             finally {
@@ -1183,6 +1188,8 @@ class TrackList {
     rename(newName) {
         return __awaiter(this, void 0, void 0, function* () {
             this.name = newName;
+            if (this.header)
+                this.header.updateWith({ title: this.name });
             listIndex.onrename(this.id, newName);
             yield this.put();
         });
@@ -1236,7 +1243,7 @@ class TrackList {
             return;
         listView.clear();
         if (this.buildHeader)
-            listView.dom.appendChild(this.buildHeader());
+            listView.dom.appendChild((this.header || (this.header = this.buildHeader())).dom);
         if (this.loadIndicator) {
             listView.dom.appendChild(this.loadIndicator.dom);
             return;
@@ -1262,7 +1269,7 @@ class TrackList {
             title: this.name,
             titleEditable: !!this.rename,
             onTitleEdit: (newName) => this.rename(newName)
-        }).dom;
+        });
     }
 }
 class TrackViewItem extends ListViewItem {
@@ -1327,6 +1334,7 @@ class ContentHeader extends View {
         this.domctx.catalog.textContent = this.catalog;
         this.domctx.catalog.style.display = this.catalog ? '' : 'none';
         this.domctx.title.textContent = this.title;
+        utils.toggleClass(this.domctx.title, 'editable', !!this.titleEditable);
         if (this.titleEditable)
             this.domctx.title.title = I `Click to edit`;
         else

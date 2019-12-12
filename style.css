@@ -87,10 +87,15 @@ html, body {
     display: inline-block;
     font-size: 120%;
     min-height: 1em;
-    min-width: 300px;
+    min-width: 50px;
     padding: 5px;
     margin-left: 5px;
 }
+
+.content-header .title.editable:hover {
+    background: #eeeeee
+}
+
 .content-header .title.editing {
     padding: 0;
 }
@@ -101,7 +106,7 @@ html, body {
     font: inherit;
     border: none;
     outline: none;
-    background: #eeeeee;
+    background: #dddddd;
 }
 
 .tracklist {
@@ -381,8 +386,6 @@ html, body {
     padding: 10px;
     padding-top: 0;
 }
-
-#sidebar-login>* {}
 
 #login-actions {
     color: gray;

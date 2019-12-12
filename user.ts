@@ -162,7 +162,7 @@ var user = new class User {
         } catch (err) {
             this.setState('error');
             if (err.message == 'user_not_found')
-                throw new Error(I`username or password is not correct.`);
+                throw new Error(I`Username or password is not correct.`);
             throw err;
         } finally {
             this.pendingInfo = null;

@@ -24,6 +24,7 @@ class TrackList {
     loadIndicator: LoadingIndicator;
     /** Available when the view is created */
     listView: ListView<TrackViewItem>;
+    header: ContentHeader;
     canMove = true;
 
     loadInfo(info: Api.TrackListInfo) {
@@ -109,6 +110,7 @@ class TrackList {
     }
     async rename(newName: string) {
         this.name = newName;
+        if (this.header) this.header.updateWith({ title: this.name });
         listIndex.onrename(this.id, newName);
         await this.put();
     }
@@ -157,7 +159,7 @@ class TrackList {
         if (!listView) return;
         listView.clear();
         if (this.buildHeader)
-            listView.dom.appendChild(this.buildHeader());
+            listView.dom.appendChild((this.header || (this.header = this.buildHeader())).dom);
         if (this.loadIndicator) {
             listView.dom.appendChild(this.loadIndicator.dom);
             return;
@@ -183,7 +185,7 @@ class TrackList {
             title: this.name,
             titleEditable: !!this.rename,
             onTitleEdit: (newName) => this.rename(newName)
-        }).dom;
+        });
     }
 }
 
@@ -253,6 +255,7 @@ class ContentHeader extends View {
         this.domctx.catalog.textContent = this.catalog;
         this.domctx.catalog.style.display = this.catalog ? '' : 'none';
         this.domctx.title.textContent = this.title;
+        utils.toggleClass(this.domctx.title, 'editable', !!this.titleEditable);
         if (this.titleEditable) this.domctx.title.title = I`Click to edit`;
         else this.domctx.title.removeAttribute('title');
     }

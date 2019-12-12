@@ -27,6 +27,11 @@ class View {
     /** Will be called when the dom is created, after postCreateDom() */
     public updateDom() {
     }
+    /** Assign key-values and call `updateDom()` */
+    updateWith(kv: Partial<this>) {
+        utils.objectApply(this, kv);
+        this.updateDom();
+    }
     toggleClass(clsName: string, force?: boolean) {
         utils.toggleClass(this.dom, clsName, force);
     }
