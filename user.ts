@@ -189,10 +189,15 @@ var user = new class User {
     }
     async handleLoginResult(info: Api.UserInfo) {
         if (!info.username) throw new Error(I`iNTernEL eRRoR`);
+        var switchingUser = this.info?.username && this.info.username != info.username;
         this.info.id = info.id;
         this.info.username = info.username;
         this.info.passwd = info.passwd;
         this.siLogin.save();
+
+        // something is dirty
+        if (switchingUser) window.location.reload();
+
         api.defaultBasicAuth = this.getBasicAuth(this.info);
         ui.sidebarLogin.update();
         listIndex.setIndex(info as any);

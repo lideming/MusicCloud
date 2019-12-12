@@ -35,6 +35,7 @@ class View {
     toggleClass(clsName: string, force?: boolean) {
         utils.toggleClass(this.dom, clsName, force);
     }
+    appendView(view: View) { return this.dom.appendView(view); }
     static getDOM(view: HTMLElement | View): HTMLElement {
         if (!view) throw new Error('view is undefined or null');
         if (view instanceof View) return view.dom;
@@ -43,6 +44,14 @@ class View {
         throw new Error('Cannot get DOM: unknown type');
     }
 }
+
+interface Node {
+    appendView(view: View);
+}
+
+Node.prototype.appendView = function (this: Node, view: View) {
+    this.appendChild(view.dom);
+};
 
 /** DragManager is used to help exchange infomation between views */
 var dragManager = new class DragManager {
@@ -66,6 +75,8 @@ abstract class ListViewItem extends View {
     get dragData() { return this.dom.textContent; }
 
     onDragover: ListView['onDragover'];
+    
+    dragging?: boolean;
 
     protected postCreateDom(element: HTMLElement) {
         super.postCreateDom(element);
@@ -73,7 +84,7 @@ abstract class ListViewItem extends View {
             this._listView?.onItemClicked?.(this);
         });
         this.dom.addEventListener('dragstart', (ev) => {
-            if (!this._listView?.dragging) return;
+            if (!(this.dragging ?? this._listView?.dragging)) return;
             dragManager.start(this);
             ev.dataTransfer.setData('text/plain', this.dragData);
             this.dom.style.opacity = '.5';
@@ -108,7 +119,7 @@ abstract class ListViewItem extends View {
                 event: ev, drop: drop,
                 accept: false
             };
-            if (item.listview === this.listview && this._listView?.moveByDragging) {
+            if (this._listView?.moveByDragging && item.listview === this.listview) {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
@@ -136,7 +147,7 @@ abstract class ListViewItem extends View {
             }
             let hover = this.enterctr > 0;
             this.toggleClass('dragover', hover);
-            let placeholder = hover && (arg.accept === 'move' || arg.accept === 'move-after');
+            let placeholder = hover && !!arg && (arg.accept === 'move' || arg.accept === 'move-after');
             if (placeholder != !!this.dragoverPlaceholder) {
                 if (placeholder) {
                     this.dragoverPlaceholder = utils.buildDOM({ tag: 'div.dragover-placeholder' }) as HTMLElement;

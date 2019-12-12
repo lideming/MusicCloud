@@ -179,7 +179,7 @@ type AsyncFunc<T> = Func<Promise<T>>;
 
 
 // BuildDOM types & implementation:
-type BuildDomExpr = BuildDomTag | BuildDomNode | HTMLElement | Node;
+type BuildDomExpr = string | BuildDomNode | HTMLElement | Node;
 
 type BuildDomTag = string;
 
@@ -512,5 +512,6 @@ i18n.add2dArray(JSON.parse(`[
     ["Oh no! Something just goes wrong:", "发生错误："],
     ["[Click here to retry]", "[点击重试]"],
     ["My Uploads", "我的上传"],
+    ["Drag files to this zone...", "拖放文件到此处..."],
     ["Music Cloud", "Music Cloud"]
 ]`));

@@ -471,6 +471,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Oh no! Something just goes wrong:", "发生错误："],
     ["[Click here to retry]", "[点击重试]"],
     ["My Uploads", "我的上传"],
+    ["Drag files to this zone...", "拖放文件到此处..."],
     ["Music Cloud", "Music Cloud"]
 ]`));
 // file: viewlib.ts
@@ -507,6 +508,7 @@ class View {
     toggleClass(clsName, force) {
         utils.toggleClass(this.dom, clsName, force);
     }
+    appendView(view) { return this.dom.appendView(view); }
     static getDOM(view) {
         if (!view)
             throw new Error('view is undefined or null');
@@ -518,6 +520,9 @@ class View {
         throw new Error('Cannot get DOM: unknown type');
     }
 }
+Node.prototype.appendView = function (view) {
+    this.appendChild(view.dom);
+};
 /** DragManager is used to help exchange infomation between views */
 var dragManager = new class DragManager {
     get currentItem() { return this._currentItem; }
@@ -545,8 +550,8 @@ class ListViewItem extends View {
             (_c = (_a = this._listView) === null || _a === void 0 ? void 0 : (_b = _a).onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
         });
         this.dom.addEventListener('dragstart', (ev) => {
-            var _a;
-            if (!((_a = this._listView) === null || _a === void 0 ? void 0 : _a.dragging))
+            var _a, _b;
+            if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this._listView) === null || _b === void 0 ? void 0 : _b.dragging)))
                 return;
             dragManager.start(this);
             ev.dataTransfer.setData('text/plain', this.dragData);
@@ -580,7 +585,7 @@ class ListViewItem extends View {
                 event: ev, drop: drop,
                 accept: false
             };
-            if (item.listview === this.listview && ((_a = this._listView) === null || _a === void 0 ? void 0 : _a.moveByDragging)) {
+            if (((_a = this._listView) === null || _a === void 0 ? void 0 : _a.moveByDragging) && item.listview === this.listview) {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
@@ -613,7 +618,7 @@ class ListViewItem extends View {
             }
             let hover = this.enterctr > 0;
             this.toggleClass('dragover', hover);
-            let placeholder = hover && (arg.accept === 'move' || arg.accept === 'move-after');
+            let placeholder = hover && !!arg && (arg.accept === 'move' || arg.accept === 'move-after');
             if (placeholder != !!this.dragoverPlaceholder) {
                 if (placeholder) {
                     this.dragoverPlaceholder = utils.buildDOM({ tag: 'div.dragover-placeholder' });
@@ -1053,13 +1058,18 @@ var user = new class User {
         });
     }
     handleLoginResult(info) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             if (!info.username)
                 throw new Error(I `iNTernEL eRRoR`);
+            var switchingUser = ((_a = this.info) === null || _a === void 0 ? void 0 : _a.username) && this.info.username != info.username;
             this.info.id = info.id;
             this.info.username = info.username;
             this.info.passwd = info.passwd;
             this.siLogin.save();
+            // something is dirty
+            if (switchingUser)
+                window.location.reload();
             api.defaultBasicAuth = this.getBasicAuth(this.info);
             ui.sidebarLogin.update();
             listIndex.setIndex(info);
@@ -1207,7 +1217,7 @@ class TrackList {
                     lv.onItemMoved = (item, from) => {
                         this.tracks = this.listView.map(lvi => {
                             lvi.track._bind.position = lvi.position;
-                            lvi.update();
+                            lvi.updateDom();
                             return lvi.track;
                         });
                     };
@@ -1281,6 +1291,7 @@ class TrackViewItem extends ListViewItem {
     createDom() {
         var track = this.track;
         return {
+            _ctx: this,
             tag: 'div.item.trackitem.no-selection',
             child: [
                 { tag: 'span.pos', textContent: '', _key: 'dompos' },
@@ -1292,7 +1303,7 @@ class TrackViewItem extends ListViewItem {
             _item: this
         };
     }
-    update() {
+    updateDom() {
         this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
     }
 }
@@ -1365,6 +1376,7 @@ class ListIndex {
                     if (list.fetching)
                         list.fetching.then(r => {
                             list.addTrack(src.track);
+                            return list.put();
                         }).catch(err => {
                             console.error('error adding track:', err);
                         });
@@ -1480,6 +1492,8 @@ class ListIndexViewItem extends ListViewItem {
 // file: uploads.ts
 var uploads = new class {
     constructor() {
+        this.tracks = [];
+        this.state = false;
         this.sidebarItem = new class extends ListViewItem {
             createDom() {
                 return {
@@ -1494,15 +1508,20 @@ var uploads = new class {
         };
         this.view = new class {
             get rendered() { return !!this.listView; }
-            onShow() {
+            ensureDom() {
                 if (!this.dom) {
                     this.listView = new ListView({ tag: 'div.tracklist' });
                     this.dom = this.listView.dom;
                     this.header = new ContentHeader({ title: I `My Uploads` });
-                    this.dom.appendChild(this.header.dom);
-                    if (!uploads.fetched)
+                    this.dom.appendView(this.header);
+                    this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
+                    this.dom.appendView(this.uploadArea);
+                    if (!uploads.state)
                         uploads.fetch();
                 }
+            }
+            onShow() {
+                this.ensureDom();
             }
             onRemove() {
             }
@@ -1510,14 +1529,15 @@ var uploads = new class {
                 if (this.loadingIndicator && this.rendered)
                     this.loadingIndicator.dom.remove();
                 if (li && this.rendered) {
-                    this.dom.insertBefore(li.dom, this.header.dom.nextSibling);
+                    this.dom.insertBefore(li.dom, this.uploadArea.dom.nextSibling);
                 }
                 this.loadingIndicator = li;
-                if (this.rendered)
-                    this.updateView();
+                // if (this.rendered) this.updateView();
             }
             addTrack(t) {
-                this.listView.add(new UploadViewItem(t));
+                var lvi = new UploadViewItem(t);
+                lvi.dragging = true;
+                this.listView.add(lvi);
                 this.updateView();
             }
             updateView() {
@@ -1535,19 +1555,41 @@ var uploads = new class {
             }
         };
     }
-    get fetched() { return !!this.tracks; }
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
     }
     fetch() {
         return __awaiter(this, void 0, void 0, function* () {
+            this.state = 'fetching';
             var li = new LoadingIndicator();
             this.view.useLoadingIndicator(li);
             this.tracks = (yield api.getJson('my/uploads'))['tracks'];
+            this.tracks.reverse();
+            this.state = 'fetched';
             this.view.useLoadingIndicator(null);
             this.view.updateView();
             if (this.view.rendered)
                 this.tracks.forEach(t => this.view.addTrack(t));
+        });
+    }
+    uploadFile(file) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var track = {
+                id: undefined, url: undefined,
+                artist: 'Unknown', name: file.name
+            };
+            this.tracks.push(track);
+            var jsonBlob = new Blob([JSON.stringify(track)]);
+            var finalBlob = new Blob([
+                BlockFormat.encodeBlock(jsonBlob),
+                BlockFormat.encodeBlock(file)
+            ]);
+            var resp = yield api.postJson({
+                path: 'tracks/newfile',
+                method: 'POST',
+                mode: 'raw',
+                obj: finalBlob
+            });
         });
     }
 };
@@ -1556,6 +1598,53 @@ class UploadViewItem extends TrackViewItem {
         super(track);
     }
 }
+class UploadArea extends View {
+    constructor(init) {
+        super();
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.upload-area',
+            child: [
+                { tag: 'div.text.no-selection', textContent: I `Drag files to this zone...` }
+            ]
+        };
+    }
+    postCreateDom() {
+        this.dom.addEventListener('dragover', (ev) => {
+            if (ev.dataTransfer.types.indexOf('Files') >= 0) {
+                ev.preventDefault();
+                ev.dataTransfer.dropEffect = 'copy';
+            }
+        });
+        this.dom.addEventListener('drop', (ev) => {
+            var _a, _b;
+            ev.preventDefault();
+            if (ev.dataTransfer.types.indexOf('Files') >= 0) {
+                var files = ev.dataTransfer.files;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    console.log('drop file', { name: file.name, size: file.size });
+                    (_b = (_a = this).onfile) === null || _b === void 0 ? void 0 : _b.call(_a, file);
+                }
+            }
+        });
+    }
+}
+var BlockFormat = {
+    encodeBlock(blob) {
+        return new Blob([BlockFormat.encodeLen(blob.size), blob]);
+    },
+    encodeLen(len) {
+        var str = '';
+        for (var i = 0; i < 8; i++) {
+            str = '0123456789aBcDeF'[(len >> (i * 4)) & 0x0f] + str;
+        }
+        str += '\r\n';
+        return str;
+    }
+};
 // file: main.ts
 // TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
@@ -1671,7 +1760,7 @@ var ui = new class {
                             { tag: 'span.artist', textContent: track.artist },
                         ]
                     }));
-                    ui.bottomBar.toggle(true, 2000);
+                    ui.bottomBar.toggle(true, 5000);
                 }
                 else {
                     this.element.textContent = "";
@@ -1793,7 +1882,7 @@ var playerCore = new class PlayerCore {
         this.track = track;
         ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        this.loadUrl(track ? track.url : "");
+        this.loadUrl(track ? api.processUrl(track.url) : "");
     }
     playTrack(track) {
         if (track === this.track)
@@ -1854,10 +1943,22 @@ var api = new class {
     postJson(arg) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var body = arg.obj;
+            if (arg.mode === undefined)
+                arg.mode = 'json';
+            if (arg.mode === 'json')
+                body = JSON.stringify(body);
+            else if (arg.mode === 'raw')
+                void 0; // noop
+            else
+                throw new Error('Unknown arg.mode');
+            var headers = this.getHeaders(arg);
+            if (arg.mode === 'json')
+                headers['Content-Type'] = 'application/json';
             var resp = yield this._fetch(this.baseUrl + arg.path, {
-                body: JSON.stringify(arg.obj),
+                body: body,
                 method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
-                headers: Object.assign({ 'Content-Type': 'application/json' }, this.getHeaders(arg))
+                headers: headers
             });
             return yield resp.json();
         });
@@ -1881,9 +1982,17 @@ var api = new class {
             });
         });
     }
+    processUrl(url) {
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'))
+            return url;
+        return this.baseUrl + url;
+    }
 };
 var trackStore = new class TrackStore {
 };
+document.addEventListener('dragover', (ev) => {
+    ev.preventDefault();
+});
 document.addEventListener('drop', (ev) => {
     ev.preventDefault();
 });

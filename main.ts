@@ -35,7 +35,7 @@ var ui = new class {
                 i18n.curLang = lang;
                 document.body.lang = lang;
             });
-            console.log(`Current language: '${i18n.curLang}' - '${I`English`}'`)
+            console.log(`Current language: '${i18n.curLang}' - '${I`English`}'`);
             i18n.renderElements(document.querySelectorAll('.i18ne'));
         }
         setLang(lang: string) {
@@ -111,7 +111,7 @@ var ui = new class {
                         { tag: 'span.artist', textContent: track.artist },
                     ]
                 }));
-                ui.bottomBar.toggle(true, 2000);
+                ui.bottomBar.toggle(true, 5000);
             } else {
                 this.element.textContent = "";
             }
@@ -216,7 +216,7 @@ var playerCore = new class PlayerCore {
         this.track = track;
         ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        this.loadUrl(track ? track.url : "");
+        this.loadUrl(track ? api.processUrl(track.url) : "");
     }
     playTrack(track: Track) {
         if (track === this.track) return;
@@ -263,11 +263,20 @@ var api = new class {
         }
         return await resp.json();
     }
-    async postJson(arg: { path: string, obj: any, method?: 'POST' | 'PUT', basicAuth?: string; }) {
+    async postJson(arg: { path: string, obj: any, mode?: 'json' | 'raw', method?: 'POST' | 'PUT', basicAuth?: string; }) {
+        var body = arg.obj;
+        if (arg.mode === undefined) arg.mode = 'json';
+        if (arg.mode === 'json') body = JSON.stringify(body);
+        else if (arg.mode === 'raw') void 0; // noop
+        else throw new Error('Unknown arg.mode');
+
+        var headers = this.getHeaders(arg);
+        if (arg.mode === 'json') headers['Content-Type'] = 'application/json';
+
         var resp = await this._fetch(this.baseUrl + arg.path, {
-            body: JSON.stringify(arg.obj),
+            body: body,
             method: arg.method ?? 'POST',
-            headers: { 'Content-Type': 'application/json', ...this.getHeaders(arg) }
+            headers: headers
         });
         return await resp.json();
     }
@@ -284,6 +293,11 @@ var api = new class {
             obj: list,
         });
     }
+    processUrl(url: string) {
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'))
+            return url;
+        return this.baseUrl + url;
+    }
 };
 
 var trackStore = new class TrackStore {
@@ -291,6 +305,9 @@ var trackStore = new class TrackStore {
 };
 
 
+document.addEventListener('dragover', (ev) => {
+    ev.preventDefault();
+});
 document.addEventListener('drop', (ev) => {
     ev.preventDefault();
 });

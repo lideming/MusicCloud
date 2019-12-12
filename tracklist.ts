@@ -126,7 +126,7 @@ class TrackList {
                     lv.onItemMoved = (item, from) => {
                         this.tracks = this.listView.map(lvi => {
                             lvi.track._bind.position = lvi.position;
-                            lvi.update();
+                            lvi.updateDom();
                             return lvi.track;
                         });
                     };
@@ -201,6 +201,7 @@ class TrackViewItem extends ListViewItem {
     createDom() {
         var track = this.track;
         return {
+            _ctx: this,
             tag: 'div.item.trackitem.no-selection',
             child: [
                 { tag: 'span.pos', textContent: '', _key: 'dompos' },
@@ -212,7 +213,7 @@ class TrackViewItem extends ListViewItem {
             _item: this
         };
     }
-    update() {
+    updateDom() {
         this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
     }
 }
