@@ -71,6 +71,7 @@ html, body {
 }
 
 .content-header {
+    animation: showing-top .3s;
     position: relative;
     margin: 10px;
 }
@@ -189,6 +190,14 @@ html, body {
 
 .trackitem .artist, #bottombar-trackinfo .artist {
     color: #888;
+}
+
+.trackitem.uploads-item .name {
+    width: calc((100% - 3.5em - 20px) * .5);
+}
+
+.trackitem.uploads-item .uploads-state {
+    color: #ff6659;
 }
 
 /* .trackitem .artist::before,  */
@@ -377,6 +386,17 @@ html, body {
     0% {
         opacity: .3;
         transform: translate(-20px, 0)
+    }
+    100% {
+        opacity: 1;
+        transform: translate(0, 0)
+    }
+}
+
+@keyframes showing-top {
+    0% {
+        opacity: .3;
+        transform: translate(0, -20px)
     }
     100% {
         opacity: 1;

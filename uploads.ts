@@ -1,7 +1,14 @@
 // file: uploads.ts
 
+interface UploadTrack extends Track {
+    _upload: {
+        view?: UploadViewItem;
+        state: 'pending' | 'uploading' | 'error' | 'done';
+    };
+}
+
 var uploads = new class {
-    tracks: Track[] = [];
+    tracks: UploadTrack[] = [];
     state: false | 'fetching' | 'fetched' = false;
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
@@ -50,10 +57,10 @@ var uploads = new class {
             this.loadingIndicator = li;
             // if (this.rendered) this.updateView();
         }
-        addTrack(t: Track) {
+        addTrack(t: UploadTrack, pos?: number) {
             var lvi = new UploadViewItem(t);
             lvi.dragging = true;
-            this.listView.add(lvi);
+            this.listView.add(lvi, pos);
             this.updateView();
         }
         updateView() {
@@ -69,24 +76,39 @@ var uploads = new class {
             }
         }
     };
+    private prependTrack(track: UploadTrack) {
+        this.tracks.unshift(track);
+        if (this.view.rendered) {
+            this.view.addTrack(track, 0);
+        }
+    }
     async fetch() {
         this.state = 'fetching';
         var li = new LoadingIndicator();
         this.view.useLoadingIndicator(li);
         this.tracks = (await api.getJson('my/uploads'))['tracks'];
         this.tracks.reverse();
+        this.tracks.forEach(t => {
+            t._upload = { state: 'done' };
+        });
         this.state = 'fetched';
         this.view.useLoadingIndicator(null);
         this.view.updateView();
         if (this.view.rendered) this.tracks.forEach(t => this.view.addTrack(t));
     }
     async uploadFile(file: File) {
-        var track: Api.Track = {
+        var apitrack: Api.Track = {
             id: undefined, url: undefined,
             artist: 'Unknown', name: file.name
         };
-        this.tracks.push(track);
-        var jsonBlob = new Blob([JSON.stringify(track)]);
+        var track: UploadTrack = {
+            ...apitrack,
+            _upload: {
+                state: 'uploading'
+            }
+        };
+        this.prependTrack(track);
+        var jsonBlob = new Blob([JSON.stringify(apitrack)]);
         var finalBlob = new Blob([
             BlockFormat.encodeBlock(jsonBlob),
             BlockFormat.encodeBlock(file)
@@ -97,13 +119,26 @@ var uploads = new class {
             mode: 'raw',
             obj: finalBlob
         });
+        track._upload.state = 'done';
+        track._upload.view?.updateDom();
     }
 };
 
 
 class UploadViewItem extends TrackViewItem {
-    constructor(track: Track) {
+    track: UploadTrack;
+    domstate: HTMLElement;
+    constructor(track: UploadTrack) {
         super(track);
+        track._upload.view = this;
+    }
+    postCreateDom() {
+        this.dom.classList.add('uploads-item');
+        this.dom.appendChild(this.domstate = utils.buildDOM<HTMLElement>({ tag: 'span.uploads-state' }));
+    }
+    updateDom() {
+        super.updateDom();
+        this.domstate.textContent = this.track._upload.state;
     }
 }
 

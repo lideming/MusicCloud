@@ -81,7 +81,7 @@ var utils = new class Utils {
             child: ['Name: ', { tag: 'span.name', textContent: name } ],
         })
      */
-    buildDOM: (tree: BuildDomExpr, ctx?: BuildDOMCtx) => BuildDomReturn;
+    buildDOM: <T extends BuildDomReturn = BuildDomReturn>(tree: BuildDomExpr, ctx?: BuildDOMCtx) => T;
 
     /** Remove all childs from the node */
     clearChilds(node: Node) {
@@ -245,7 +245,7 @@ utils.buildDOM = (() => {
         return node;
     };
 
-    return function (obj: BuildDomExpr, ctx: BuildDOMCtx): BuildDomReturn {
+    return function (obj: BuildDomExpr, ctx: BuildDOMCtx): any {
         return buildDomCore(obj, 32, ctx);
     };
 })();

@@ -41,7 +41,7 @@ class TrackList {
     }
     addTrack(t: Api.Track) {
         var track: Track = {
-            artist: t.artist, id: t.id, name: t.name, url: t.url,
+            ...t,
             _bind: {
                 list: this,
                 position: this.tracks.length
@@ -172,7 +172,7 @@ class TrackList {
         var playing = playerCore.track;
         for (const t of this.tracks) {
             let item = new TrackViewItem(t);
-            if (playing
+            if (playing?._bind
                 && ((playing._bind.list !== this && t.id === playing.id)
                     || playing._bind.list === this && playing._bind.position === t._bind.position))
                 this.curActive.set(item);

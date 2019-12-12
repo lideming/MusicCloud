@@ -155,11 +155,13 @@ var ui = new class {
         current: ContentView;
         removeCurrent() {
             const cur = this.current;
+            this.current = null;
             if (!cur) return;
             if (cur.onRemove) cur.onRemove();
             if (cur.dom) this.container.removeChild(cur.dom);
         }
         setCurrent(arg: ContentView) {
+            if (arg === this.current) return;
             this.removeCurrent();
             if (arg.onShow) arg.onShow();
             if (arg.dom) this.container.appendChild(arg.dom);

@@ -1112,13 +1112,10 @@ class TrackList {
         return this;
     }
     addTrack(t) {
-        var track = {
-            artist: t.artist, id: t.id, name: t.name, url: t.url,
-            _bind: {
+        var track = Object.assign(Object.assign({}, t), { _bind: {
                 list: this,
                 position: this.tracks.length
-            }
-        };
+            } });
         this.tracks.push(track);
         if (this.listView) {
             this.listView.add(new TrackViewItem(track));
@@ -1248,6 +1245,7 @@ class TrackList {
         this.curActive.set(item);
     }
     updateView() {
+        var _a;
         var listView = this.listView;
         if (!listView)
             return;
@@ -1266,9 +1264,8 @@ class TrackList {
         var playing = playerCore.track;
         for (const t of this.tracks) {
             let item = new TrackViewItem(t);
-            if (playing
-                && ((playing._bind.list !== this && t.id === playing.id)
-                    || playing._bind.list === this && playing._bind.position === t._bind.position))
+            if (((_a = playing) === null || _a === void 0 ? void 0 : _a._bind) && ((playing._bind.list !== this && t.id === playing.id)
+                || playing._bind.list === this && playing._bind.position === t._bind.position))
                 this.curActive.set(item);
             listView.add(item);
         }
@@ -1534,10 +1531,10 @@ var uploads = new class {
                 this.loadingIndicator = li;
                 // if (this.rendered) this.updateView();
             }
-            addTrack(t) {
+            addTrack(t, pos) {
                 var lvi = new UploadViewItem(t);
                 lvi.dragging = true;
-                this.listView.add(lvi);
+                this.listView.add(lvi, pos);
                 this.updateView();
             }
             updateView() {
@@ -1558,6 +1555,12 @@ var uploads = new class {
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
     }
+    prependTrack(track) {
+        this.tracks.unshift(track);
+        if (this.view.rendered) {
+            this.view.addTrack(track, 0);
+        }
+    }
     fetch() {
         return __awaiter(this, void 0, void 0, function* () {
             this.state = 'fetching';
@@ -1565,6 +1568,9 @@ var uploads = new class {
             this.view.useLoadingIndicator(li);
             this.tracks = (yield api.getJson('my/uploads'))['tracks'];
             this.tracks.reverse();
+            this.tracks.forEach(t => {
+                t._upload = { state: 'done' };
+            });
             this.state = 'fetched';
             this.view.useLoadingIndicator(null);
             this.view.updateView();
@@ -1573,13 +1579,17 @@ var uploads = new class {
         });
     }
     uploadFile(file) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            var track = {
+            var apitrack = {
                 id: undefined, url: undefined,
                 artist: 'Unknown', name: file.name
             };
-            this.tracks.push(track);
-            var jsonBlob = new Blob([JSON.stringify(track)]);
+            var track = Object.assign(Object.assign({}, apitrack), { _upload: {
+                    state: 'uploading'
+                } });
+            this.prependTrack(track);
+            var jsonBlob = new Blob([JSON.stringify(apitrack)]);
             var finalBlob = new Blob([
                 BlockFormat.encodeBlock(jsonBlob),
                 BlockFormat.encodeBlock(file)
@@ -1590,12 +1600,23 @@ var uploads = new class {
                 mode: 'raw',
                 obj: finalBlob
             });
+            track._upload.state = 'done';
+            (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
         });
     }
 };
 class UploadViewItem extends TrackViewItem {
     constructor(track) {
         super(track);
+        track._upload.view = this;
+    }
+    postCreateDom() {
+        this.dom.classList.add('uploads-item');
+        this.dom.appendChild(this.domstate = utils.buildDOM({ tag: 'span.uploads-state' }));
+    }
+    updateDom() {
+        super.updateDom();
+        this.domstate.textContent = this.track._upload.state;
     }
 }
 class UploadArea extends View {
@@ -1819,6 +1840,7 @@ var ui = new class {
             }
             removeCurrent() {
                 const cur = this.current;
+                this.current = null;
                 if (!cur)
                     return;
                 if (cur.onRemove)
@@ -1827,6 +1849,8 @@ var ui = new class {
                     this.container.removeChild(cur.dom);
             }
             setCurrent(arg) {
+                if (arg === this.current)
+                    return;
                 this.removeCurrent();
                 if (arg.onShow)
                     arg.onShow();
