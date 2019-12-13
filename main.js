@@ -88,18 +88,16 @@ var utils = new class Utils {
     }
     /** Fade out the element and remove it */
     fadeout(element) {
-        element.style.transition = 'opacity .3s';
-        element.style.opacity = '0';
+        element.classList.add('fading-out');
         var end = () => {
             if (!end)
                 return; // use a random variable as flag ;)
             end = null;
-            element.style.transition = null;
-            element.style.opacity = null;
+            element.classList.remove('fading-out');
             element.remove();
         };
         element.addEventListener('transitionend', end);
-        setTimeout(end, 500); // failsafe
+        setTimeout(end, 350); // failsafe
     }
     addEvent(element, event, handler) {
         element.addEventListener(event, handler);
@@ -860,7 +858,64 @@ class EditableHelper {
         ];
     }
 }
-// TODO: class ContextMenu
+class MenuItem extends ListViewItem {
+    constructor(init) {
+        super();
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.item',
+            onclick: (ev) => {
+                var _a, _b;
+                if (this._listView instanceof ContextMenu) {
+                    if (!this._listView.keepOpen)
+                        this._listView.close();
+                }
+                (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev);
+            }
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+    }
+}
+class ContextMenu extends ListView {
+    constructor(items) {
+        super({ tag: 'div.context-menu', tabIndex: '0' });
+        this.keepOpen = false;
+        this.useOverlay = true;
+        this._visible = false;
+        items.forEach(x => this.add(x));
+    }
+    get visible() { return this._visible; }
+    ;
+    show(pos) {
+        this.close();
+        this._visible = true;
+        if (this.useOverlay) {
+            if (!this.overlay) {
+                this.overlay = new Overlay();
+                this.overlay.dom.style.background = 'rgba(0, 0, 0, .1)';
+                this.overlay.dom.addEventListener('mousedown', () => this.close());
+            }
+            document.body.appendChild(this.overlay.dom);
+        }
+        document.body.appendChild(this.dom);
+        this.dom.focus();
+        this.dom.addEventListener('focusout', () => this.close());
+        this.dom.style.left = pos.x + 'px';
+        this.dom.style.top = pos.y + 'px';
+    }
+    close() {
+        if (this._visible) {
+            this._visible = false;
+            if (this.overlay)
+                utils.fadeout(this.overlay.dom);
+            utils.fadeout(this.dom);
+        }
+    }
+}
 // file: user.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -1343,6 +1398,15 @@ class TrackViewItem extends ListViewItem {
                 { tag: 'span.artist', textContent: track.artist },
             ],
             onclick: () => { playerCore.playTrack(track); },
+            oncontextmenu: (ev) => {
+                ev.preventDefault();
+                var m = new ContextMenu([
+                    new MenuItem({ text: 'Item One' }),
+                    new MenuItem({ text: 'Item Two' }),
+                    new MenuItem({ text: 'Item Threeeee' }),
+                ]);
+                m.show({ x: ev.pageX, y: ev.pageY });
+            },
             draggable: true,
             _item: this
         };
@@ -1663,7 +1727,8 @@ var uploads = new class {
                 path: 'tracks/newfile',
                 method: 'POST',
                 mode: 'raw',
-                obj: finalBlob
+                obj: finalBlob,
+                headers: { 'Content-Type': 'application/x-mcloud-upload' }
             });
             track.id = resp.id;
             track.url = resp.url;
@@ -2054,6 +2119,7 @@ var api = new class {
             var headers = this.getHeaders(arg);
             if (arg.mode === 'json')
                 headers['Content-Type'] = 'application/json';
+            headers = Object.assign(Object.assign({}, headers), arg.headers);
             var resp = yield this._fetch(this.baseUrl + arg.path, {
                 body: body,
                 method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),

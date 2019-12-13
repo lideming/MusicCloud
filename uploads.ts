@@ -134,7 +134,8 @@ var uploads = new class {
             path: 'tracks/newfile',
             method: 'POST',
             mode: 'raw',
-            obj: finalBlob
+            obj: finalBlob,
+            headers: { 'Content-Type': 'application/x-mcloud-upload' }
         }) as Api.Track;
         track.id = resp.id;
         track.url = resp.url;

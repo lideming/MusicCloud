@@ -393,4 +393,61 @@ class EditableHelper {
     }
 }
 
-// TODO: class ContextMenu
+class MenuItem extends ListViewItem {
+    text: string;
+    onclick: (ev: Event) => void;
+    constructor(init: Partial<MenuItem>) {
+        super();
+        utils.objectApply(this, init);
+    }
+    createDom(): BuildDomExpr {
+        return {
+            tag: 'div.item',
+            onclick: (ev) => {
+                if (this._listView instanceof ContextMenu) {
+                    if (!this._listView.keepOpen) this._listView.close();
+                }
+                this.onclick?.(ev);
+            }
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+    }
+}
+
+class ContextMenu extends ListView {
+    keepOpen = false;
+    useOverlay = true;
+    private _visible = false;
+    get visible() { return this._visible; };
+    overlay: Overlay;
+    constructor(items: MenuItem[]) {
+        super({ tag: 'div.context-menu', tabIndex: '0' });
+        items.forEach(x => this.add(x));
+    }
+    show(pos: { x: number, y: number; }) {
+        this.close();
+        this._visible = true;
+        if (this.useOverlay) {
+            if (!this.overlay) {
+                this.overlay = new Overlay();
+                this.overlay.dom.style.background = 'rgba(0, 0, 0, .1)';
+                this.overlay.dom.addEventListener('mousedown', () => this.close());
+            }
+            document.body.appendChild(this.overlay.dom);
+        }
+        document.body.appendChild(this.dom);
+        this.dom.focus();
+        this.dom.addEventListener('focusout', () => this.close());
+        this.dom.style.left = pos.x + 'px';
+        this.dom.style.top = pos.y + 'px';
+    }
+    close() {
+        if (this._visible) {
+            this._visible = false;
+            if (this.overlay) utils.fadeout(this.overlay.dom);
+            utils.fadeout(this.dom);
+        }
+    }
+}

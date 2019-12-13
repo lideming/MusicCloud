@@ -551,3 +551,17 @@ html, body {
     background: #eeeeee;
     animation: showing-top .3s;
 }
+
+.context-menu {
+    position: absolute;
+    overflow: hidden;
+    background: white;
+    border: solid 1px #777;
+    box-shadow: 0 0px 5px rgb(180, 180, 180);
+}
+
+.fading-out {
+    transition: opacity .3s;
+    opacity: 0;
+    pointer-events: none;
+}

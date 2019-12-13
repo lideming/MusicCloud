@@ -105,17 +105,15 @@ var utils = new class Utils {
 
     /** Fade out the element and remove it */
     fadeout(element: HTMLElement) {
-        element.style.transition = 'opacity .3s';
-        element.style.opacity = '0';
+        element.classList.add('fading-out');
         var end = () => {
             if (!end) return; // use a random variable as flag ;)
             end = null;
-            element.style.transition = null;
-            element.style.opacity = null;
+            element.classList.remove('fading-out');
             element.remove();
         };
         element.addEventListener('transitionend', end);
-        setTimeout(end, 500); // failsafe
+        setTimeout(end, 350); // failsafe
     }
 
     addEvent<K extends keyof HTMLElementEventMap>(element: HTMLElement, event: K, handler: (ev: HTMLElementEventMap[K]) => any) {

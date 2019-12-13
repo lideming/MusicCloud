@@ -265,7 +265,13 @@ var api = new class {
         }
         return await resp.json();
     }
-    async postJson(arg: { path: string, obj: any, mode?: 'json' | 'raw', method?: 'POST' | 'PUT', basicAuth?: string; }) {
+    async postJson(arg: {
+        path: string, obj: any,
+        mode?: 'json' | 'raw',
+        method?: 'POST' | 'PUT',
+        basicAuth?: string,
+        headers?: Record<string, string>;
+    }) {
         var body = arg.obj;
         if (arg.mode === undefined) arg.mode = 'json';
         if (arg.mode === 'json') body = JSON.stringify(body);
@@ -274,6 +280,8 @@ var api = new class {
 
         var headers = this.getHeaders(arg);
         if (arg.mode === 'json') headers['Content-Type'] = 'application/json';
+
+        headers = { ...headers, ...arg.headers };
 
         var resp = await this._fetch(this.baseUrl + arg.path, {
             body: body,

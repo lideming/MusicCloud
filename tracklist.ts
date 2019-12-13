@@ -198,7 +198,7 @@ class TrackViewItem extends ListViewItem {
         this.track = item;
     }
     get dragData() { return `${this.track.name} - ${this.track.artist}`; }
-    createDom() {
+    createDom(): BuildDomExpr {
         var track = this.track;
         return {
             _ctx: this,
@@ -209,6 +209,15 @@ class TrackViewItem extends ListViewItem {
                 { tag: 'span.artist', textContent: track.artist },
             ],
             onclick: () => { playerCore.playTrack(track); },
+            oncontextmenu: (ev) => {
+                ev.preventDefault();
+                var m = new ContextMenu([
+                    new MenuItem({ text: 'Item One' }),
+                    new MenuItem({ text: 'Item Two' }),
+                    new MenuItem({ text: 'Item Threeeee' }),
+                ]);
+                m.show({ x: ev.pageX, y: ev.pageY });
+            },
             draggable: true,
             _item: this
         };
