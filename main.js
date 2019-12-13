@@ -2225,6 +2225,26 @@ document.addEventListener('dragover', (ev) => {
 document.addEventListener('drop', (ev) => {
     ev.preventDefault();
 });
+// Media Session API
+if (navigator['mediaSession']) {
+    let mediaSession = navigator['mediaSession'];
+    playerCore.onTrackChanged.add(() => {
+        var _a, _b;
+        try {
+            var track = playerCore.track;
+            if (!track)
+                return;
+            mediaSession.metadata = new MediaMetadata({
+                title: (_a = track) === null || _a === void 0 ? void 0 : _a.name,
+                artist: (_b = track) === null || _b === void 0 ? void 0 : _b.artist
+            });
+        }
+        catch (_c) { }
+    });
+    mediaSession.setActionHandler('play', () => playerCore.play());
+    mediaSession.setActionHandler('pause', () => playerCore.pause());
+    mediaSession.setActionHandler('nexttrack', () => playerCore.next());
+}
 ui.init();
 var listIndex = new ListIndex();
 listIndex.init();

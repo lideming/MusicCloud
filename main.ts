@@ -322,6 +322,24 @@ document.addEventListener('drop', (ev) => {
     ev.preventDefault();
 });
 
+// Media Session API
+if (navigator['mediaSession']) {
+    let mediaSession = navigator['mediaSession'];
+    playerCore.onTrackChanged.add(() => {
+        try {
+            var track = playerCore.track;
+            if (!track) return;
+            mediaSession.metadata = new MediaMetadata({
+                title: track?.name,
+                artist: track?.artist
+            });
+        } catch { }
+    });
+    mediaSession.setActionHandler('play', () => playerCore.play());
+    mediaSession.setActionHandler('pause', () => playerCore.pause());
+    mediaSession.setActionHandler('nexttrack', () => playerCore.next());
+}
+
 ui.init();
 
 var listIndex = new ListIndex();
