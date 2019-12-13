@@ -152,9 +152,16 @@ class TrackList {
         }
         return this.contentView;
     }
-    getNextTrack(track: Track): Track {
-        if (track._bind?.list === this) {
-            return this.tracks[track._bind.position + 1] ?? null;
+    getNextTrack(track: Track, loopMode: PlayingLoopMode): Track {
+        var bind = track._bind;
+        if (bind?.list === this) {
+            if (loopMode == 'list-seq') {
+                return this.tracks[bind.position + 1] ?? null;
+            } else if (loopMode == 'list-loop') {
+                return this.tracks[(bind.position + 1) % this.tracks.length] ?? null;
+            } else if (loopMode == 'track-loop') {
+                return track;
+            }
         }
         return null;
     }

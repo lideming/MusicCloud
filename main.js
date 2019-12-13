@@ -1352,10 +1352,19 @@ class TrackList {
         }
         return this.contentView;
     }
-    getNextTrack(track) {
-        var _a, _b;
-        if (((_a = track._bind) === null || _a === void 0 ? void 0 : _a.list) === this) {
-            return _b = this.tracks[track._bind.position + 1], (_b !== null && _b !== void 0 ? _b : null);
+    getNextTrack(track, loopMode) {
+        var _a, _b, _c;
+        var bind = track._bind;
+        if (((_a = bind) === null || _a === void 0 ? void 0 : _a.list) === this) {
+            if (loopMode == 'list-seq') {
+                return _b = this.tracks[bind.position + 1], (_b !== null && _b !== void 0 ? _b : null);
+            }
+            else if (loopMode == 'list-loop') {
+                return _c = this.tracks[(bind.position + 1) % this.tracks.length], (_c !== null && _c !== void 0 ? _c : null);
+            }
+            else if (loopMode == 'track-loop') {
+                return track;
+            }
         }
         return null;
     }
@@ -2073,6 +2082,7 @@ var ui = new class {
 /** 播放器核心：控制播放逻辑 */
 var playerCore = new class PlayerCore {
     constructor() {
+        this.loopMode = 'list-loop';
         this.onTrackChanged = new Callbacks();
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.updateProgress());
@@ -2094,7 +2104,7 @@ var playerCore = new class PlayerCore {
     get canPlay() { return this.audio.readyState >= 2; }
     next() {
         var _a, _b, _c;
-        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track);
+        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track, this.loopMode);
         if (nextTrack)
             this.playTrack(nextTrack);
         else

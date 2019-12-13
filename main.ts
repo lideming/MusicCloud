@@ -181,6 +181,7 @@ interface ContentView {
 var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track;
+    loopMode: PlayingLoopMode = 'list-loop';
     onTrackChanged = new Callbacks<Action>();
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
@@ -202,7 +203,7 @@ var playerCore = new class PlayerCore {
         var analyzer = ctx.createAnalyser();
     }
     next() {
-        var nextTrack = this.track?._bind?.list?.getNextTrack(this.track);
+        var nextTrack = this.track?._bind?.list?.getNextTrack(this.track, this.loopMode);
         if (nextTrack)
             this.playTrack(nextTrack);
         else
@@ -232,6 +233,8 @@ var playerCore = new class PlayerCore {
         this.audio.pause();
     }
 };
+
+type PlayingLoopMode = 'list-seq' | 'list-loop' | 'track-loop';
 
 /** API 操作 */
 var api = new class {
