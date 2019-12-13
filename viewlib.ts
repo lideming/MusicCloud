@@ -226,6 +226,11 @@ class ListView<T extends ListViewItem = ListViewItem> extends View implements It
         this.add(item, newpos);
         this.onItemMoved(item, item.position);
     }
+    /** Remove all items */
+    removeAll() {
+        while (this.length) this.remove(this.length - 1);
+    }
+    /** Remove all items and all DOM childs */
     clear() {
         utils.clearChilds(this.dom);
         this.items = [];
@@ -402,7 +407,7 @@ class MenuItem extends ListViewItem {
     }
     createDom(): BuildDomExpr {
         return {
-            tag: 'div.item',
+            tag: 'div.item.no-selection',
             onclick: (ev) => {
                 if (this._listView instanceof ContextMenu) {
                     if (!this._listView.keepOpen) this._listView.close();
@@ -422,9 +427,9 @@ class ContextMenu extends ListView {
     private _visible = false;
     get visible() { return this._visible; };
     overlay: Overlay;
-    constructor(items: MenuItem[]) {
+    constructor(items?: MenuItem[]) {
         super({ tag: 'div.context-menu', tabIndex: '0' });
-        items.forEach(x => this.add(x));
+        items?.forEach(x => this.add(x));
     }
     show(pos: { x: number, y: number; }) {
         this.close();

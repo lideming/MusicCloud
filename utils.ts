@@ -158,9 +158,9 @@ var utils = new class Utils {
         }
     }
 
-    objectApply<T>(obj: T, kv: Partial<T>) {
+    objectApply<T>(obj: Partial<T>, kv: Partial<T>, keys?: Array<keyof T>) {
         for (const key in kv as any) {
-            if (kv.hasOwnProperty(key)) {
+            if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key as any) >= 0)) {
                 const val = kv[key];
                 obj[key] = val;
             }
@@ -511,6 +511,11 @@ i18n.add2dArray(JSON.parse(`[
     ["[Click here to retry]", "[点击重试]"],
     ["My Uploads", "我的上传"],
     ["Drag files to this zone...", "拖放文件到此处..."],
+    ["Comments", "评论"],
+    ["Remove", "移除"],
+    ["Track ID", "歌曲 ID"],
+    ["Name", "名称"],
+    ["Artist", "艺术家"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

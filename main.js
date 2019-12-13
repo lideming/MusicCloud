@@ -139,9 +139,9 @@ var utils = new class Utils {
                 return item;
         }
     }
-    objectApply(obj, kv) {
+    objectApply(obj, kv, keys) {
         for (const key in kv) {
-            if (kv.hasOwnProperty(key)) {
+            if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key) >= 0)) {
                 const val = kv[key];
                 obj[key] = val;
             }
@@ -470,6 +470,11 @@ i18n.add2dArray(JSON.parse(`[
     ["[Click here to retry]", "[点击重试]"],
     ["My Uploads", "我的上传"],
     ["Drag files to this zone...", "拖放文件到此处..."],
+    ["Comments", "评论"],
+    ["Remove", "移除"],
+    ["Track ID", "歌曲 ID"],
+    ["Name", "名称"],
+    ["Artist", "艺术家"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 i18n.add2dArray([
@@ -696,6 +701,12 @@ class ListView extends View {
         this.add(item, newpos);
         this.onItemMoved(item, item.position);
     }
+    /** Remove all items */
+    removeAll() {
+        while (this.length)
+            this.remove(this.length - 1);
+    }
+    /** Remove all items and all DOM childs */
     clear() {
         utils.clearChilds(this.dom);
         this.items = [];
@@ -865,7 +876,7 @@ class MenuItem extends ListViewItem {
     }
     createDom() {
         return {
-            tag: 'div.item',
+            tag: 'div.item.no-selection',
             onclick: (ev) => {
                 var _a, _b;
                 if (this._listView instanceof ContextMenu) {
@@ -882,11 +893,12 @@ class MenuItem extends ListViewItem {
 }
 class ContextMenu extends ListView {
     constructor(items) {
+        var _a;
         super({ tag: 'div.context-menu', tabIndex: '0' });
         this.keepOpen = false;
         this.useOverlay = true;
         this._visible = false;
-        items.forEach(x => this.add(x));
+        (_a = items) === null || _a === void 0 ? void 0 : _a.forEach(x => this.add(x));
     }
     get visible() { return this._visible; }
     ;
@@ -935,6 +947,7 @@ var user = new class User {
             passwd: null
         });
         this.uishown = false;
+        this.onSwitchedUser = new Callbacks();
     }
     get info() { return this.siLogin.data; }
     setState(state) {
@@ -1135,23 +1148,22 @@ var user = new class User {
         });
     }
     handleLoginResult(info) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             if (!info.username)
                 throw new Error(I `iNTernEL eRRoR`);
-            var switchingUser = ((_a = this.info) === null || _a === void 0 ? void 0 : _a.username) && this.info.username != info.username;
+            var switchingUser = this.info.username != info.username;
             this.info.id = info.id;
             this.info.username = info.username;
             this.info.passwd = info.passwd;
             this.siLogin.save();
-            // something is dirty
-            if (switchingUser)
-                window.location.reload();
+            // // something is dirty
+            // if (switchingUser) window.location.reload();
             api.defaultBasicAuth = this.getBasicAuth(this.info);
             ui.sidebarLogin.update();
             listIndex.setIndex(info);
             this.setState('logged');
             this.loggingin = null;
+            this.onSwitchedUser.invoke();
         });
     }
     setListids(listids) {
@@ -1194,11 +1206,23 @@ var user = new class User {
 };
 // file: tracklist.ts
 /// <reference path="main.ts" />
+/** A track binding with list */
+class Track {
+    constructor(init) {
+        utils.objectApply(this, init);
+    }
+    toString() {
+        return `${I `Track ID`}: ${this.id}\r\n${I `Name`}: ${this.name}\r\n${I `Artist`}: ${this.artist}`;
+    }
+    toApiTrack() {
+        return utils.objectApply({}, this, ['id', 'artist', 'name', 'url']);
+    }
+}
 class TrackList {
     constructor() {
         this.tracks = [];
         this.curActive = new ItemActiveHelper();
-        this.canMove = true;
+        this.canEdit = true;
     }
     loadInfo(info) {
         this.id = info.id;
@@ -1213,13 +1237,13 @@ class TrackList {
         return this;
     }
     addTrack(t) {
-        var track = Object.assign(Object.assign({}, t), { _bind: {
+        var track = new Track(Object.assign(Object.assign({}, t), { _bind: {
                 list: this,
                 position: this.tracks.length
-            } });
+            } }));
         this.tracks.push(track);
         if (this.listView) {
-            this.listView.add(new TrackViewItem(track));
+            this.listView.add(this.createViewItem(track));
         }
         return track;
     }
@@ -1235,6 +1259,7 @@ class TrackList {
     }
     _post() {
         return __awaiter(this, void 0, void 0, function* () {
+            yield user.waitLogin();
             if (this.apiid !== undefined)
                 throw new Error('cannot post: apiid exists');
             var obj = {
@@ -1252,6 +1277,7 @@ class TrackList {
     }
     put() {
         return __awaiter(this, void 0, void 0, function* () {
+            yield user.waitLogin();
             if (this.fetching)
                 yield this.fetching;
             if (this.posting)
@@ -1310,15 +1336,9 @@ class TrackList {
                 onShow: () => {
                     var lv = this.listView = this.listView || new ListView(this.contentView.dom);
                     lv.dragging = true;
-                    if (this.canMove)
+                    if (this.canEdit)
                         lv.moveByDragging = true;
-                    lv.onItemMoved = (item, from) => {
-                        this.tracks = this.listView.map(lvi => {
-                            lvi.track._bind.position = lvi.position;
-                            lvi.updateDom();
-                            return lvi.track;
-                        });
-                    };
+                    lv.onItemMoved = () => this.updateTracksFromListView();
                     this.contentView.dom = lv.dom;
                     playerCore.onTrackChanged.add(cb);
                     this.updateView();
@@ -1364,13 +1384,32 @@ class TrackList {
         // Well... currently, we just rebuild the DOM.
         var playing = playerCore.track;
         for (const t of this.tracks) {
-            let item = new TrackViewItem(t);
+            let item = this.createViewItem(t);
             if (playing
                 && ((((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) !== this && t.id === playing.id)
                     || (((_b = playing._bind) === null || _b === void 0 ? void 0 : _b.list) === this && playing._bind.position === t._bind.position)))
                 this.curActive.set(item);
             listView.add(item);
         }
+    }
+    updateTracksFromListView() {
+        this.tracks = this.listView.map(lvi => {
+            lvi.track._bind.position = lvi.position;
+            lvi.updateDom();
+            return lvi.track;
+        });
+    }
+    onRemoveItem(lvi) {
+        this.listView.remove(lvi);
+        this.updateTracksFromListView();
+        this.put();
+    }
+    createViewItem(t) {
+        var view = new TrackViewItem(t);
+        if (this.canEdit) {
+            view.onRemove = (item) => this.onRemoveItem(item);
+        }
+        return view;
     }
     buildHeader() {
         return new ContentHeader({
@@ -1400,11 +1439,17 @@ class TrackViewItem extends ListViewItem {
             onclick: () => { playerCore.playTrack(track); },
             oncontextmenu: (ev) => {
                 ev.preventDefault();
-                var m = new ContextMenu([
-                    new MenuItem({ text: 'Item One' }),
-                    new MenuItem({ text: 'Item Two' }),
-                    new MenuItem({ text: 'Item Threeeee' }),
-                ]);
+                var m = new ContextMenu();
+                m.add(new MenuItem({ text: I `Comments` }));
+                if (this.onRemove)
+                    m.add(new MenuItem({
+                        text: I `Remove`,
+                        onclick: () => { var _a, _b; return (_b = (_a = this).onRemove) === null || _b === void 0 ? void 0 : _b.call(_a, this); }
+                    }));
+                m.dom.appendChild(utils.buildDOM({
+                    tag: 'div.menu-info',
+                    textContent: track.toString()
+                }));
                 m.show({ x: ev.pageX, y: ev.pageY });
             },
             draggable: true,
@@ -1483,7 +1528,7 @@ class ListIndex {
                     var list = this.getList(listinfo.id);
                     if (list.fetching)
                         list.fetching.then(r => {
-                            list.addTrack(src.track);
+                            list.addTrack(src.track.toApiTrack());
                             return list.put();
                         }).catch(err => {
                             console.error('error adding track:', err);
@@ -1598,6 +1643,11 @@ class ListIndexViewItem extends ListViewItem {
     }
 }
 // file: uploads.ts
+class UploadTrack extends Track {
+    constructor(init) {
+        super(init);
+    }
+}
 var uploads = new class {
     constructor() {
         this.tracks = [];
@@ -1624,6 +1674,7 @@ var uploads = new class {
                     this.dom.appendView(this.header);
                     this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
                     this.dom.appendView(this.uploadArea);
+                    uploads.tracks.forEach(t => this.addTrack(t));
                     if (!uploads.state)
                         uploads.fetch();
                 }
@@ -1649,6 +1700,8 @@ var uploads = new class {
                 this.updateView();
             }
             updateView() {
+                if (!this.rendered)
+                    return;
                 if (this.listView.length == 0) {
                     if (!this.loadingIndicator) {
                         this.emptyIndicator = this.emptyIndicator || new LoadingIndicator({ state: 'normal', content: I `(Empty)` });
@@ -1665,12 +1718,26 @@ var uploads = new class {
     }
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
+        user.onSwitchedUser.add(() => {
+            this.tracks = [];
+            this.state = false;
+            if (this.view.rendered) {
+                this.view.listView.removeAll();
+                this.view.updateView();
+            }
+            setTimeout(() => this.fetch(), 1);
+        });
     }
-    prependTrack(track) {
-        this.tracks.unshift(track);
+    prependTrack(t) {
+        this.tracks.unshift(t);
         if (this.view.rendered) {
-            this.view.addTrack(track, 0);
+            this.view.addTrack(t, 0);
         }
+    }
+    appendTrack(t) {
+        this.tracks.push(t);
+        if (this.view.rendered)
+            this.view.addTrack(t);
     }
     fetch() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -1679,10 +1746,11 @@ var uploads = new class {
             this.view.useLoadingIndicator(li);
             try {
                 yield user.waitLogin(true);
-                var fetched = (yield api.getJson('my/uploads'))['tracks'];
-                fetched.reverse();
-                fetched.forEach(t => {
+                var fetched = (yield api.getJson('my/uploads'))['tracks']
+                    .reverse()
+                    .map(t => {
                     t._upload = { state: 'done' };
+                    return new UploadTrack(t);
                 });
                 this.state = 'fetched';
             }
@@ -1699,11 +1767,7 @@ var uploads = new class {
                 return true;
             });
             this.view.useLoadingIndicator(null);
-            fetched.forEach(t => {
-                this.tracks.push(t);
-                if (this.view.rendered)
-                    this.view.addTrack(t);
-            });
+            fetched.forEach(t => this.appendTrack(t));
             this.view.updateView();
         });
     }
@@ -1714,9 +1778,9 @@ var uploads = new class {
                 id: undefined, url: undefined,
                 artist: 'Unknown', name: file.name
             };
-            var track = Object.assign(Object.assign({}, apitrack), { _upload: {
+            var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { _upload: {
                     state: 'uploading'
-                } });
+                } }));
             this.prependTrack(track);
             var jsonBlob = new Blob([JSON.stringify(apitrack)]);
             var finalBlob = new Blob([

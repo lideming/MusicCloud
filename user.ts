@@ -14,6 +14,7 @@ var user = new class User {
     uishown = false;
     get info() { return this.siLogin.data; }
     state: 'none' | 'logging' | 'error' | 'logged';
+    onSwitchedUser = new Callbacks<Action>();
     loggingin: Promise<void>;
     pendingInfo: User['info'];
     setState(state: User['state']) {
@@ -198,20 +199,21 @@ var user = new class User {
     }
     async handleLoginResult(info: Api.UserInfo) {
         if (!info.username) throw new Error(I`iNTernEL eRRoR`);
-        var switchingUser = this.info?.username && this.info.username != info.username;
+        var switchingUser = this.info.username != info.username;
         this.info.id = info.id;
         this.info.username = info.username;
         this.info.passwd = info.passwd;
         this.siLogin.save();
 
-        // something is dirty
-        if (switchingUser) window.location.reload();
+        // // something is dirty
+        // if (switchingUser) window.location.reload();
 
         api.defaultBasicAuth = this.getBasicAuth(this.info);
         ui.sidebarLogin.update();
         listIndex.setIndex(info as any);
         this.setState('logged');
         this.loggingin = null;
+        this.onSwitchedUser.invoke();
     }
     async setListids(listids: number[]) {
         var obj: Api.UserInfo = {

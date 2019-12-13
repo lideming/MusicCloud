@@ -3,11 +3,24 @@
 
 
 /** A track binding with list */
-interface Track extends Api.Track {
+class Track implements Api.Track {
+    id: number;
+    name: string;
+    artist: string;
+    url: string;
     _bind?: {
         position?: number;
         list?: TrackList;
     };
+    constructor(init: Partial<Track>) {
+        utils.objectApply(this, init);
+    }
+    toString() {
+        return `${I`Track ID`}: ${this.id}\r\n${I`Name`}: ${this.name}\r\n${I`Artist`}: ${this.artist}`;
+    }
+    toApiTrack(): Api.Track {
+        return utils.objectApply<Api.Track>({} as any, this, ['id', 'artist', 'name', 'url']) as any;
+    }
 }
 
 class TrackList {
@@ -25,7 +38,7 @@ class TrackList {
     /** Available when the view is created */
     listView: ListView<TrackViewItem>;
     header: ContentHeader;
-    canMove = true;
+    canEdit = true;
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
@@ -40,16 +53,16 @@ class TrackList {
         return this;
     }
     addTrack(t: Api.Track) {
-        var track: Track = {
+        var track: Track = new Track({
             ...t,
             _bind: {
                 list: this,
                 position: this.tracks.length
             }
-        };
+        });
         this.tracks.push(track);
         if (this.listView) {
-            this.listView.add(new TrackViewItem(track));
+            this.listView.add(this.createViewItem(track));
         }
         return track;
     }
@@ -63,6 +76,7 @@ class TrackList {
         return this.posting = this.posting || this._post();
     }
     async _post() {
+        await user.waitLogin();
         if (this.apiid !== undefined) throw new Error('cannot post: apiid exists');
         var obj: Api.TrackListPut = {
             id: 0,
@@ -77,6 +91,7 @@ class TrackList {
         this.apiid = resp.id;
     }
     async put() {
+        await user.waitLogin();
         if (this.fetching) await this.fetching;
         if (this.posting) await this.posting;
         if (this.apiid === undefined) throw new Error('cannot put: no apiid');
@@ -122,14 +137,8 @@ class TrackList {
                 onShow: () => {
                     var lv = this.listView = this.listView || new ListView(this.contentView.dom);
                     lv.dragging = true;
-                    if (this.canMove) lv.moveByDragging = true;
-                    lv.onItemMoved = (item, from) => {
-                        this.tracks = this.listView.map(lvi => {
-                            lvi.track._bind.position = lvi.position;
-                            lvi.updateDom();
-                            return lvi.track;
-                        });
-                    };
+                    if (this.canEdit) lv.moveByDragging = true;
+                    lv.onItemMoved = () => this.updateTracksFromListView();
                     this.contentView.dom = lv.dom;
                     playerCore.onTrackChanged.add(cb);
                     this.updateView();
@@ -171,7 +180,7 @@ class TrackList {
         // Well... currently, we just rebuild the DOM.
         var playing = playerCore.track;
         for (const t of this.tracks) {
-            let item = new TrackViewItem(t);
+            let item = this.createViewItem(t);
             if (playing
                 && ((playing._bind?.list !== this && t.id === playing.id)
                     || (playing._bind?.list === this && playing._bind.position === t._bind.position)))
@@ -179,7 +188,26 @@ class TrackList {
             listView.add(item);
         }
     }
-    private buildHeader() {
+    private updateTracksFromListView() {
+        this.tracks = this.listView.map(lvi => {
+            lvi.track._bind.position = lvi.position;
+            lvi.updateDom();
+            return lvi.track;
+        });
+    }
+    protected onRemoveItem(lvi: TrackViewItem) {
+        this.listView.remove(lvi);
+        this.updateTracksFromListView();
+        this.put();
+    }
+    protected createViewItem(t: Track) {
+        var view = new TrackViewItem(t);
+        if (this.canEdit) {
+            view.onRemove = (item) => this.onRemoveItem(item);
+        }
+        return view;
+    }
+    protected buildHeader() {
         return new ContentHeader({
             catalog: I`Playlist`,
             title: this.name,
@@ -192,6 +220,8 @@ class TrackList {
 class TrackViewItem extends ListViewItem {
     track: Track;
     dom: HTMLDivElement;
+    /** When undefined, the item is not removable */
+    onRemove?: Action<TrackViewItem>;
     private dompos: HTMLElement;
     constructor(item: Track) {
         super();
@@ -211,11 +241,16 @@ class TrackViewItem extends ListViewItem {
             onclick: () => { playerCore.playTrack(track); },
             oncontextmenu: (ev) => {
                 ev.preventDefault();
-                var m = new ContextMenu([
-                    new MenuItem({ text: 'Item One' }),
-                    new MenuItem({ text: 'Item Two' }),
-                    new MenuItem({ text: 'Item Threeeee' }),
-                ]);
+                var m = new ContextMenu();
+                m.add(new MenuItem({ text: I`Comments` }));
+                if (this.onRemove) m.add(new MenuItem({
+                    text: I`Remove`,
+                    onclick: () => this.onRemove?.(this)
+                }));
+                m.dom.appendChild(utils.buildDOM({
+                    tag: 'div.menu-info',
+                    textContent: track.toString()
+                }));
                 m.show({ x: ev.pageX, y: ev.pageY });
             },
             draggable: true,

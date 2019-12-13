@@ -1,6 +1,9 @@
 // file: uploads.ts
 
-interface UploadTrack extends Track {
+class UploadTrack extends Track {
+    constructor(init: Partial<UploadTrack>) {
+        super(init);
+    }
     _upload: {
         view?: UploadViewItem;
         state: 'pending' | 'uploading' | 'error' | 'done';
@@ -13,6 +16,15 @@ var uploads = new class {
     state: false | 'fetching' | 'fetched' = false;
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
+        user.onSwitchedUser.add(() => {
+            this.tracks = [];
+            this.state = false;
+            if (this.view.rendered) {
+                this.view.listView.removeAll();
+                this.view.updateView();
+            }
+            setTimeout(() => this.fetch(), 1);
+        });
     }
     sidebarItem = new class extends ListViewItem {
         protected createDom(): BuildDomExpr {
@@ -42,6 +54,7 @@ var uploads = new class {
                 this.dom.appendView(this.header);
                 this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
                 this.dom.appendView(this.uploadArea);
+                uploads.tracks.forEach(t => this.addTrack(t));
                 if (!uploads.state) uploads.fetch();
             }
         }
@@ -65,6 +78,7 @@ var uploads = new class {
             this.updateView();
         }
         updateView() {
+            if (!this.rendered) return;
             if (this.listView.length == 0) {
                 if (!this.loadingIndicator) {
                     this.emptyIndicator = this.emptyIndicator || new LoadingIndicator({ state: 'normal', content: I`(Empty)` });
@@ -77,11 +91,15 @@ var uploads = new class {
             }
         }
     };
-    private prependTrack(track: UploadTrack) {
-        this.tracks.unshift(track);
+    private prependTrack(t: UploadTrack) {
+        this.tracks.unshift(t);
         if (this.view.rendered) {
-            this.view.addTrack(track, 0);
+            this.view.addTrack(t, 0);
         }
+    }
+    private appendTrack(t: UploadTrack) {
+        this.tracks.push(t);
+        if (this.view.rendered) this.view.addTrack(t);
     }
     async fetch() {
         this.state = 'fetching';
@@ -89,11 +107,12 @@ var uploads = new class {
         this.view.useLoadingIndicator(li);
         try {
             await user.waitLogin(true);
-            var fetched = (await api.getJson('my/uploads'))['tracks'];
-            fetched.reverse();
-            fetched.forEach(t => {
-                t._upload = { state: 'done' };
-            });
+            var fetched = ((await api.getJson('my/uploads'))['tracks'] as any[])
+                .reverse()
+                .map(t => {
+                    t._upload = { state: 'done' };
+                    return new UploadTrack(t);
+                });
             this.state = 'fetched';
         } catch (error) {
             li.error(error, () => this.fetch());
@@ -107,10 +126,7 @@ var uploads = new class {
             return true;
         });
         this.view.useLoadingIndicator(null);
-        fetched.forEach(t => {
-            this.tracks.push(t);
-            if (this.view.rendered) this.view.addTrack(t);
-        });
+        fetched.forEach(t => this.appendTrack(t));
         this.view.updateView();
     }
     async uploadFile(file: File) {
@@ -118,12 +134,12 @@ var uploads = new class {
             id: undefined, url: undefined,
             artist: 'Unknown', name: file.name
         };
-        var track: UploadTrack = {
+        var track = new UploadTrack({
             ...apitrack,
             _upload: {
                 state: 'uploading'
             }
-        };
+        });
         this.prependTrack(track);
         var jsonBlob = new Blob([JSON.stringify(apitrack)]);
         var finalBlob = new Blob([

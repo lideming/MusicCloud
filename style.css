@@ -9,6 +9,7 @@ body {
 
 html, body {
     height: 100%;
+    height: 100vh;
     overflow: hidden;
 }
 
@@ -558,6 +559,14 @@ html, body {
     background: white;
     border: solid 1px #777;
     box-shadow: 0 0px 5px rgb(180, 180, 180);
+}
+
+.menu-info {
+    white-space: pre-wrap;
+    color: gray;
+    padding: 5px 10px;
+    animation: showing .3s;
+    cursor: default;
 }
 
 .fading-out {

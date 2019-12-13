@@ -22,7 +22,7 @@ class ListIndex {
                     var listinfo = arg.target.listInfo;
                     var list = this.getList(listinfo.id);
                     if (list.fetching) list.fetching.then(r => {
-                        list.addTrack((src as TrackViewItem).track);
+                        list.addTrack((src as TrackViewItem).track.toApiTrack());
                         return list.put();
                     }).catch(err => {
                         console.error('error adding track:', err);
