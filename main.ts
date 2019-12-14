@@ -49,6 +49,8 @@ var ui = new class {
         siPin: SettingItem<boolean>;
         private pinned = true;
         hideTimer = new utils.Timer(() => { this.toggle(false); });
+        shown = false;
+        inTransition = false;
         setPinned(val?: boolean) {
             val = val ?? !this.pinned;
             this.pinned = val;
@@ -57,11 +59,20 @@ var ui = new class {
             if (val) this.toggle(true);
         }
         toggle(state?: boolean, hideTimeout?: number) {
-            utils.toggleClass(this.container, 'show', state);
+            this.shown = utils.toggleClass(this.container, 'show', state);
             if (!this.pinned && hideTimeout) this.hideTimer.timeout(hideTimeout);
         }
         init() {
             var bar = this.container;
+            bar.addEventListener('transitionstart', (e) => {
+                if (e.target === bar && e.propertyName == 'transform') this.inTransition = true;
+            });
+            bar.addEventListener('transitionend', (e) => {
+                if (e.target === bar && e.propertyName == 'transform') this.inTransition = false;
+            });
+            bar.addEventListener('transitioncancel', (e) => {
+                if (e.target === bar && e.propertyName == 'transform') this.inTransition = false;
+            });
             bar.addEventListener('mouseenter', () => {
                 this.hideTimer.tryCancel();
                 this.toggle(true);
@@ -92,10 +103,12 @@ var ui = new class {
         setProgressChangedCallback(cb: (percent: number) => void) {
             var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
             this.progbar.addEventListener('mousedown', (e) => {
-                if (e.buttons == 1) call(e);
+                if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
+                    if (e.buttons == 1) call(e);
             });
             this.progbar.addEventListener('mousemove', (e) => {
-                if (e.buttons == 1) call(e);
+                if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
+                    if (e.buttons == 1) call(e);
             });
         }
     };
@@ -202,8 +215,9 @@ var playerCore = new class PlayerCore {
         var ctx = new AudioContext();
         var analyzer = ctx.createAnalyser();
     }
-    next() {
-        var nextTrack = this.track?._bind?.list?.getNextTrack(this.track, this.loopMode);
+    prev() { return this.next(-1); }
+    next(offset?: number) {
+        var nextTrack = this.track?._bind?.list?.getNextTrack(this.track, this.loopMode, offset);
         if (nextTrack)
             this.playTrack(nextTrack);
         else
@@ -213,13 +227,19 @@ var playerCore = new class PlayerCore {
         ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
     }
     loadUrl(src: string) {
-        this.audio.src = src;
+        if (src) {
+            this.audio.src = src;
+        } else {
+            this.audio.pause();
+            this.audio.removeAttribute('src');
+        }
+        this.audio.load();
     }
     setTrack(track: Track) {
         this.track = track;
         ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        this.loadUrl(track ? api.processUrl(track.url) : "");
+        this.loadUrl(track ? api.processUrl(track.url) : null);
     }
     playTrack(track: Track) {
         if (track === this.track) return;
@@ -243,7 +263,10 @@ var api = new class {
     defaultBasicAuth: string;
     async _fetch(input: RequestInfo, init?: RequestInit) {
         if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
-        return await fetch(input, init);
+        return await fetch(input, {
+            credentials: 'same-origin',
+            ...init
+        });
     }
     getHeaders(arg: { basicAuth?: string; }) {
         arg = arg || {};
@@ -326,6 +349,8 @@ document.addEventListener('drop', (ev) => {
 });
 
 // Media Session API
+// https://developers.google.com/web/updates/2017/02/media-session
+declare var MediaMetadata: any;
 if (navigator['mediaSession']) {
     let mediaSession = navigator['mediaSession'];
     playerCore.onTrackChanged.add(() => {
@@ -340,6 +365,7 @@ if (navigator['mediaSession']) {
     });
     mediaSession.setActionHandler('play', () => playerCore.play());
     mediaSession.setActionHandler('pause', () => playerCore.pause());
+    mediaSession.setActionHandler('previoustrack', () => playerCore.prev());
     mediaSession.setActionHandler('nexttrack', () => playerCore.next());
 }
 

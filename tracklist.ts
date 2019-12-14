@@ -152,16 +152,18 @@ class TrackList {
         }
         return this.contentView;
     }
-    getNextTrack(track: Track, loopMode: PlayingLoopMode): Track {
+    getNextTrack(track: Track, loopMode: PlayingLoopMode, offset?: number): Track {
+        offset = offset ?? 1;
         var bind = track._bind;
-        if (bind?.list === this) {
-            if (loopMode == 'list-seq') {
-                return this.tracks[bind.position + 1] ?? null;
-            } else if (loopMode == 'list-loop') {
-                return this.tracks[(bind.position + 1) % this.tracks.length] ?? null;
-            } else if (loopMode == 'track-loop') {
-                return track;
-            }
+        if (bind?.list !== this) return null;
+        if (loopMode == 'list-seq') {
+            return this.tracks[bind.position + offset] ?? null;
+        } else if (loopMode == 'list-loop') {
+            return this.tracks[utils.mod(bind.position + offset, this.tracks.length)] ?? null;
+        } else if (loopMode == 'track-loop') {
+            return track;
+        } else {
+            console.warn('unknown loopMode', loopMode);
         }
         return null;
     }
@@ -204,6 +206,7 @@ class TrackList {
     }
     protected onRemoveItem(lvi: TrackViewItem) {
         this.listView.remove(lvi);
+        lvi.track._bind = null;
         this.updateTracksFromListView();
         this.put();
     }

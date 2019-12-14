@@ -101,6 +101,7 @@ var utils = new class Utils {
         if (force === undefined) force = !element.classList.contains(clsName);
         if (force) element.classList.add(clsName);
         else element.classList.remove(clsName);
+        return force;
     }
 
     /** Fade out the element and remove it */
@@ -166,6 +167,11 @@ var utils = new class Utils {
             }
         }
         return obj;
+    }
+
+    mod(a: number, b: number): number {
+        if (a < 0) a = b + a;
+        return a % b;
     }
 };
 
@@ -525,4 +531,6 @@ i18n.add2dArray([
     ["uploads_uploading", "Uploading", "上传中"],
     ["uploads_error", "Error", "错误"],
     ["uploads_done", "Done", "完成"],
+    ["prev_track", "Prev", "上一首"],
+    ["next_track", "Next", "下一首"],
 ]);

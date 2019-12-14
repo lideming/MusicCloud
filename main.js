@@ -85,6 +85,7 @@ var utils = new class Utils {
             element.classList.add(clsName);
         else
             element.classList.remove(clsName);
+        return force;
     }
     /** Fade out the element and remove it */
     fadeout(element) {
@@ -147,6 +148,11 @@ var utils = new class Utils {
             }
         }
         return obj;
+    }
+    mod(a, b) {
+        if (a < 0)
+            a = b + a;
+        return a % b;
     }
 };
 class BuildDOMCtx {
@@ -483,6 +489,8 @@ i18n.add2dArray([
     ["uploads_uploading", "Uploading", "上传中"],
     ["uploads_error", "Error", "错误"],
     ["uploads_done", "Done", "完成"],
+    ["prev_track", "Prev", "上一首"],
+    ["next_track", "Next", "下一首"],
 ]);
 // file: viewlib.ts
 class View {
@@ -960,6 +968,7 @@ var user = new class User {
         }
         else {
             this.setState('none');
+            this.loginUI();
         }
     }
     initUI() {
@@ -1352,19 +1361,23 @@ class TrackList {
         }
         return this.contentView;
     }
-    getNextTrack(track, loopMode) {
+    getNextTrack(track, loopMode, offset) {
         var _a, _b, _c;
+        offset = (offset !== null && offset !== void 0 ? offset : 1);
         var bind = track._bind;
-        if (((_a = bind) === null || _a === void 0 ? void 0 : _a.list) === this) {
-            if (loopMode == 'list-seq') {
-                return _b = this.tracks[bind.position + 1], (_b !== null && _b !== void 0 ? _b : null);
-            }
-            else if (loopMode == 'list-loop') {
-                return _c = this.tracks[(bind.position + 1) % this.tracks.length], (_c !== null && _c !== void 0 ? _c : null);
-            }
-            else if (loopMode == 'track-loop') {
-                return track;
-            }
+        if (((_a = bind) === null || _a === void 0 ? void 0 : _a.list) !== this)
+            return null;
+        if (loopMode == 'list-seq') {
+            return _b = this.tracks[bind.position + offset], (_b !== null && _b !== void 0 ? _b : null);
+        }
+        else if (loopMode == 'list-loop') {
+            return _c = this.tracks[utils.mod(bind.position + offset, this.tracks.length)], (_c !== null && _c !== void 0 ? _c : null);
+        }
+        else if (loopMode == 'track-loop') {
+            return track;
+        }
+        else {
+            console.warn('unknown loopMode', loopMode);
         }
         return null;
     }
@@ -1410,6 +1423,7 @@ class TrackList {
     }
     onRemoveItem(lvi) {
         this.listView.remove(lvi);
+        lvi.track._bind = null;
         this.updateTracksFromListView();
         this.put();
     }
@@ -1923,6 +1937,8 @@ var ui = new class {
                 this.btnPin = document.getElementById('btnPin');
                 this.pinned = true;
                 this.hideTimer = new utils.Timer(() => { this.toggle(false); });
+                this.shown = false;
+                this.inTransition = false;
             }
             setPinned(val) {
                 val = (val !== null && val !== void 0 ? val : !this.pinned);
@@ -1933,12 +1949,24 @@ var ui = new class {
                     this.toggle(true);
             }
             toggle(state, hideTimeout) {
-                utils.toggleClass(this.container, 'show', state);
+                this.shown = utils.toggleClass(this.container, 'show', state);
                 if (!this.pinned && hideTimeout)
                     this.hideTimer.timeout(hideTimeout);
             }
             init() {
                 var bar = this.container;
+                bar.addEventListener('transitionstart', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = true;
+                });
+                bar.addEventListener('transitionend', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = false;
+                });
+                bar.addEventListener('transitioncancel', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = false;
+                });
                 bar.addEventListener('mouseenter', () => {
                     this.hideTimer.tryCancel();
                     this.toggle(true);
@@ -1971,12 +1999,14 @@ var ui = new class {
             setProgressChangedCallback(cb) {
                 var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
                 this.progbar.addEventListener('mousedown', (e) => {
-                    if (e.buttons == 1)
-                        call(e);
+                    if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
+                        if (e.buttons == 1)
+                            call(e);
                 });
                 this.progbar.addEventListener('mousemove', (e) => {
-                    if (e.buttons == 1)
-                        call(e);
+                    if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
+                        if (e.buttons == 1)
+                            call(e);
                 });
             }
         };
@@ -2102,9 +2132,10 @@ var playerCore = new class PlayerCore {
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
-    next() {
+    prev() { return this.next(-1); }
+    next(offset) {
         var _a, _b, _c;
-        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track, this.loopMode);
+        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track, this.loopMode, offset);
         if (nextTrack)
             this.playTrack(nextTrack);
         else
@@ -2114,13 +2145,20 @@ var playerCore = new class PlayerCore {
         ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
     }
     loadUrl(src) {
-        this.audio.src = src;
+        if (src) {
+            this.audio.src = src;
+        }
+        else {
+            this.audio.pause();
+            this.audio.removeAttribute('src');
+        }
+        this.audio.load();
     }
     setTrack(track) {
         this.track = track;
         ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        this.loadUrl(track ? api.processUrl(track.url) : "");
+        this.loadUrl(track ? api.processUrl(track.url) : null);
     }
     playTrack(track) {
         if (track === this.track)
@@ -2145,7 +2183,7 @@ var api = new class {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.debugSleep)
                 yield utils.sleepAsync(this.debugSleep * (Math.random() + 1));
-            return yield fetch(input, init);
+            return yield fetch(input, Object.assign({ credentials: 'same-origin' }, init));
         });
     }
     getHeaders(arg) {
@@ -2235,7 +2273,6 @@ document.addEventListener('dragover', (ev) => {
 document.addEventListener('drop', (ev) => {
     ev.preventDefault();
 });
-// Media Session API
 if (navigator['mediaSession']) {
     let mediaSession = navigator['mediaSession'];
     playerCore.onTrackChanged.add(() => {
@@ -2253,6 +2290,7 @@ if (navigator['mediaSession']) {
     });
     mediaSession.setActionHandler('play', () => playerCore.play());
     mediaSession.setActionHandler('pause', () => playerCore.pause());
+    mediaSession.setActionHandler('previoustrack', () => playerCore.prev());
     mediaSession.setActionHandler('nexttrack', () => playerCore.next());
 }
 ui.init();

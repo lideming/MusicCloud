@@ -26,6 +26,7 @@ var user = new class User {
             this.login(this.info);
         } else {
             this.setState('none');
+            this.loginUI();
         }
     }
     initUI() {
