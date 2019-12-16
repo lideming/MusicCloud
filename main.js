@@ -1341,12 +1341,15 @@ class TrackList {
         this.name = info.name;
     }
     loadFromGetResult(obj) {
-        var _a;
+        var _a, _b;
         this.loadInfo(obj);
+        this.tracks.forEach(t => t._bind = null);
+        this.tracks = [];
+        (_a = this.listView) === null || _a === void 0 ? void 0 : _a.removeAll();
         for (const t of obj.tracks) {
             this.addTrack(t);
         }
-        (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
+        (_b = this.contentView) === null || _b === void 0 ? void 0 : _b.updateView();
         return this;
     }
     addTrack(t) {
@@ -1517,15 +1520,18 @@ class TrackList {
         });
         this.put();
     }
-    onRemoveItem(lvi) {
-        this.listView.remove(lvi);
-        lvi.track._bind = null;
-        this.updateTracksFromListView();
+    remove(track) {
+        var pos = track._bind.position;
+        track._bind = null;
+        this.tracks.splice(pos, 1);
+        if (this.listView)
+            this.listView.remove(pos);
+        this.put();
     }
     createViewItem(t) {
         var view = new TrackViewItem(t);
         if (this.canEdit) {
-            view.onRemove = (item) => this.onRemoveItem(item);
+            view.onRemove = (item) => this.remove(item.track);
         }
         return view;
     }
@@ -1803,13 +1809,15 @@ var uploads = new class {
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
         user.onSwitchedUser.add(() => {
-            this.tracks = [];
-            this.state = false;
-            if (this.view.rendered) {
-                this.view.listView.removeAll();
-                this.view.updateView();
+            if (this.state != false) {
+                this.tracks = [];
+                this.state = false;
+                if (this.view.rendered) {
+                    this.view.listView.removeAll();
+                    this.view.updateView();
+                }
+                setTimeout(() => this.fetch(), 1);
             }
-            setTimeout(() => this.fetch(), 1);
         });
     }
     prependTrack(t) {
@@ -2322,7 +2330,7 @@ var api = new class {
         });
     }
     processUrl(url) {
-        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'))
+        if (url.match('^(https?:/)?/'))
             return url;
         return this.baseUrl + url;
     }

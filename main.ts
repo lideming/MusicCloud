@@ -331,8 +331,7 @@ var api = new class {
         });
     }
     processUrl(url: string) {
-        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'))
-            return url;
+        if (url.match('^(https?:/)?/')) return url;
         return this.baseUrl + url;
     }
 };

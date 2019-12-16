@@ -54,6 +54,9 @@ class TrackList {
     }
     loadFromGetResult(obj: Api.TrackListGet) {
         this.loadInfo(obj);
+        this.tracks.forEach(t => t._bind = null);
+        this.tracks = [];
+        this.listView?.removeAll();
         for (const t of obj.tracks) {
             this.addTrack(t);
         }
@@ -211,15 +214,17 @@ class TrackList {
         });
         this.put();
     }
-    protected onRemoveItem(lvi: TrackViewItem) {
-        this.listView.remove(lvi);
-        lvi.track._bind = null;
-        this.updateTracksFromListView();
+    protected remove(track: Track) {
+        var pos = track._bind.position;
+        track._bind = null;
+        this.tracks.splice(pos, 1);
+        if (this.listView) this.listView.remove(pos);
+        this.put();
     }
     protected createViewItem(t: Track) {
         var view = new TrackViewItem(t);
         if (this.canEdit) {
-            view.onRemove = (item) => this.onRemoveItem(item);
+            view.onRemove = (item) => this.remove(item.track);
         }
         return view;
     }

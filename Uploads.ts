@@ -17,13 +17,15 @@ var uploads = new class {
     init() {
         ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
         user.onSwitchedUser.add(() => {
-            this.tracks = [];
-            this.state = false;
-            if (this.view.rendered) {
-                this.view.listView.removeAll();
-                this.view.updateView();
+            if (this.state != false) {
+                this.tracks = [];
+                this.state = false;
+                if (this.view.rendered) {
+                    this.view.listView.removeAll();
+                    this.view.updateView();
+                }
+                setTimeout(() => this.fetch(), 1);
             }
-            setTimeout(() => this.fetch(), 1);
         });
     }
     sidebarItem = new class extends ListViewItem {
@@ -42,7 +44,7 @@ var uploads = new class {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;
         title = I`My Uploads`;
-        
+
         protected appendHeader() {
             super.appendHeader();
             this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });

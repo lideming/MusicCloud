@@ -314,6 +314,7 @@ html, body {
     position: relative;
     margin: .3em;
     margin-top: 3em;
+    margin-bottom: 1em;
     text-align: center;
     white-space: pre-wrap;
     cursor: default;
