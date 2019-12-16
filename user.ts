@@ -1,4 +1,4 @@
-// file: user.ts
+// file: User.ts
 
 /// <reference path="main.ts" />
 

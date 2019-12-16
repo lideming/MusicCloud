@@ -1,4 +1,4 @@
-// file: listindex.ts
+// file: ListIndex.ts
 /// <reference path="main.ts" />
 
 class ListIndex {

@@ -1,4 +1,4 @@
-// file: uploads.ts
+// file: Uploads.ts
 
 class UploadTrack extends Track {
     constructor(init: Partial<UploadTrack>) {
@@ -38,57 +38,28 @@ var uploads = new class {
             };
         }
     };
-    view = new class implements ContentView {
-        dom: HTMLElement;
-        header: ContentHeader;
+    view = new class extends ListContentView {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;
-        loadingIndicator: LoadingIndicator;
-        emptyIndicator: LoadingIndicator;
-        get rendered() { return !!this.listView; }
-        ensureDom() {
-            if (!this.dom) {
-                this.listView = new ListView({ tag: 'div.tracklist' });
-                this.dom = this.listView.dom;
-                this.header = new ContentHeader({ title: I`My Uploads` });
-                this.dom.appendView(this.header);
-                this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
-                this.dom.appendView(this.uploadArea);
-                uploads.tracks.forEach(t => this.addTrack(t));
-                if (!uploads.state) uploads.fetch();
-            }
+        title = I`My Uploads`;
+        
+        protected appendHeader() {
+            super.appendHeader();
+            this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
+            this.dom.appendView(this.uploadArea);
         }
-        onShow() {
-            this.ensureDom();
+        protected insertLoadingIndicator(li) {
+            this.dom.insertBefore(li.dom, this.uploadArea.dom.nextSibling);
         }
-        onRemove() {
-        }
-        useLoadingIndicator(li: LoadingIndicator) {
-            if (this.loadingIndicator && this.rendered) this.loadingIndicator.dom.remove();
-            if (li && this.rendered) {
-                this.dom.insertBefore(li.dom, this.uploadArea.dom.nextSibling);
-            }
-            this.loadingIndicator = li;
-            // if (this.rendered) this.updateView();
+        protected listviewCreated() {
+            uploads.tracks.forEach(t => this.addTrack(t));
+            if (!uploads.state) uploads.fetch();
         }
         addTrack(t: UploadTrack, pos?: number) {
             var lvi = new UploadViewItem(t);
             lvi.dragging = true;
             this.listView.add(lvi, pos);
             this.updateView();
-        }
-        updateView() {
-            if (!this.rendered) return;
-            if (this.listView.length == 0) {
-                if (!this.loadingIndicator) {
-                    this.emptyIndicator = this.emptyIndicator || new LoadingIndicator({ state: 'normal', content: I`(Empty)` });
-                    this.useLoadingIndicator(this.emptyIndicator);
-                }
-            } else {
-                if (this.emptyIndicator && this.loadingIndicator == this.emptyIndicator) {
-                    this.useLoadingIndicator(null);
-                }
-            }
         }
     };
     private prependTrack(t: UploadTrack) {

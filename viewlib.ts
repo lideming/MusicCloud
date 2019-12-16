@@ -53,9 +53,9 @@ Node.prototype.appendView = function (this: Node, view: View) {
     this.appendChild(view.dom);
 };
 
-/** DragManager is used to help exchange infomation between views */
+/** DragManager is used to help exchange information between views */
 var dragManager = new class DragManager {
-    /** The item being draging */
+    /** The item being dragged */
     _currentItem: any;
     get currentItem() { return this._currentItem; };
     start(item: any) {

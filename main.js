@@ -541,7 +541,7 @@ class View {
 Node.prototype.appendView = function (view) {
     this.appendChild(view.dom);
 };
-/** DragManager is used to help exchange infomation between views */
+/** DragManager is used to help exchange information between views */
 var dragManager = new class DragManager {
     get currentItem() { return this._currentItem; }
     ;
@@ -936,7 +936,98 @@ class ContextMenu extends ListView {
         }
     }
 }
-// file: user.ts
+// file: ListContentView.ts
+/// <reference path="main.ts" />
+class DataBackedListViewItem extends ListViewItem {
+    constructor(data) {
+        super();
+        this.data = data;
+    }
+}
+class DataBackedListView extends ListView {
+    constructor() {
+        super(...arguments);
+        /** Do NOT modify this array directly, use {add,remove}Data methods instead. */
+        this.dataList = [];
+    }
+    addData(data) {
+        this.dataList.push(data);
+        if (this._dom)
+            this.add(this.createListViewItem(data));
+    }
+    removeData(pos) {
+        var [d] = this.dataList.splice(pos, 1);
+        if (this._dom)
+            this.remove(pos);
+        return d;
+    }
+    createListViewItem(data) {
+        return new DataBackedListViewItem(data);
+    }
+    postCreateDom() {
+        this.dataList.forEach(data => this.add(this.createListViewItem(data)));
+    }
+}
+class ListContentView {
+    get rendered() { return !!this.listView; }
+    ensureRendered() {
+        if (!this.listView) {
+            this.dom = this.dom || utils.buildDOM({ tag: 'div' });
+            this.appendHeader();
+            this.listView = new ListView({ tag: 'div' });
+            this.dom.appendView(this.listView);
+            this.listviewCreated();
+        }
+    }
+    createHeader() {
+        return new ContentHeader({ title: this.title });
+    }
+    appendHeader() {
+        this.header = this.createHeader();
+        this.dom.appendView(this.header);
+    }
+    listviewCreated() {
+    }
+    onShow() {
+        this.ensureRendered();
+    }
+    onRemove() {
+    }
+    useLoadingIndicator(li) {
+        if (this.loadingIndicator && this.rendered)
+            this.loadingIndicator.dom.remove();
+        if (li && this.rendered)
+            this.insertLoadingIndicator(li);
+        this.loadingIndicator = li;
+        this.updateView();
+    }
+    insertLoadingIndicator(li) {
+        this.dom.insertBefore(li.dom, this.header.dom.nextSibling);
+    }
+    addTrack(t, pos) {
+        var lvi = new UploadViewItem(t);
+        lvi.dragging = true;
+        this.listView.add(lvi, pos);
+        this.updateView();
+    }
+    updateView() {
+        if (!this.rendered)
+            return;
+        if (this.listView.length == 0) {
+            if (!this.loadingIndicator) {
+                this.emptyIndicator = this.emptyIndicator || new LoadingIndicator({ state: 'normal', content: I `(Empty)` });
+                this.useLoadingIndicator(this.emptyIndicator);
+            }
+        }
+        else {
+            if (this.emptyIndicator && this.loadingIndicator == this.emptyIndicator) {
+                this.useLoadingIndicator(null);
+            }
+        }
+    }
+}
+;
+// file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -1213,7 +1304,7 @@ var user = new class User {
         });
     }
 };
-// file: tracklist.ts
+// file: TrackList.ts
 /// <reference path="main.ts" />
 /** A track binding with list */
 class Track {
@@ -1232,6 +1323,17 @@ class TrackList {
         this.tracks = [];
         this.curActive = new ItemActiveHelper();
         this.canEdit = true;
+        this.trackChanged = () => {
+            var _a;
+            var track = playerCore.track;
+            var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this) ? this.listView.get(track._bind.position) : null;
+            this.curActive.set(item);
+        };
+    }
+    setLoadIndicator(li) {
+        this.loadIndicator = li;
+        if (this.contentView)
+            this.contentView.useLoadingIndicator(li);
     }
     loadInfo(info) {
         this.id = info.id;
@@ -1239,10 +1341,12 @@ class TrackList {
         this.name = info.name;
     }
     loadFromGetResult(obj) {
+        var _a;
         this.loadInfo(obj);
         for (const t of obj.tracks) {
             this.addTrack(t);
         }
+        (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
         return this;
     }
     addTrack(t) {
@@ -1257,6 +1361,8 @@ class TrackList {
         return track;
     }
     loadEmpty() {
+        var _a;
+        (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
         return this.fetching = Promise.resolve();
     }
     loadFromApi(arg) {
@@ -1314,18 +1420,16 @@ class TrackList {
                 func = () => api.getListAsync(arg);
             else
                 func = arg;
-            this.loadIndicator = new LoadingIndicator();
-            this.updateView();
+            this.setLoadIndicator(new LoadingIndicator());
             try {
                 var obj = yield func();
                 this.loadFromGetResult(obj);
-                this.loadIndicator = null;
+                this.setLoadIndicator(null);
             }
             catch (err) {
                 this.loadIndicator.error(err, () => this.fetchForce(arg));
                 throw err;
             }
-            this.updateView();
         });
     }
     rename(newName) {
@@ -1338,28 +1442,52 @@ class TrackList {
         });
     }
     createView() {
-        if (!this.contentView) {
-            let cb = () => this.trackChanged();
-            this.contentView = {
-                dom: utils.buildDOM({ tag: 'div.tracklist' }),
-                onShow: () => {
-                    var lv = this.listView = this.listView || new ListView(this.contentView.dom);
-                    lv.dragging = true;
-                    if (this.canEdit)
-                        lv.moveByDragging = true;
-                    lv.onItemMoved = () => this.updateTracksFromListView();
-                    this.contentView.dom = lv.dom;
-                    playerCore.onTrackChanged.add(cb);
-                    this.updateView();
-                },
-                onRemove: () => {
-                    playerCore.onTrackChanged.remove(cb);
-                    this.listView = null;
+        var list = this;
+        return this.contentView = this.contentView || new class extends ListContentView {
+            createHeader() {
+                return new ContentHeader({
+                    catalog: I `Playlist`,
+                    title: list.name,
+                    titleEditable: !!list.rename,
+                    onTitleEdit: (newName) => list.rename(newName)
+                });
+            }
+            onShow() {
+                super.onShow();
+                playerCore.onTrackChanged.add(list.trackChanged);
+                this.updateItems();
+            }
+            onRemove() {
+                super.onRemove();
+                playerCore.onTrackChanged.remove(list.trackChanged);
+            }
+            listviewCreated() {
+                var lv = this.listView;
+                list.listView = lv;
+                lv.dragging = true;
+                if (list.canEdit)
+                    lv.moveByDragging = true;
+                lv.onItemMoved = () => list.updateTracksFromListView();
+                var playing = playerCore.track;
+                list.tracks.forEach(t => this.listView.add(list.createViewItem(t)));
+                this.updateItems();
+                this.useLoadingIndicator(list.loadIndicator);
+                this.updateView();
+            }
+            updateItems() {
+                var _a, _b;
+                // update active state of items
+                list.curActive.set(null);
+                var playing = playerCore.track;
+                for (const lvi of this.listView) {
+                    const t = lvi.track;
+                    if (playing
+                        && ((((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) !== list && t.id === playing.id)
+                            || (((_b = playing._bind) === null || _b === void 0 ? void 0 : _b.list) === list && playing._bind.position === t._bind.position)))
+                        list.curActive.set(lvi);
                 }
-            };
-            // this.updateView();
-        }
-        return this.contentView;
+            }
+        };
     }
     getNextTrack(track, loopMode, offset) {
         var _a, _b, _c;
@@ -1381,51 +1509,18 @@ class TrackList {
         }
         return null;
     }
-    trackChanged() {
-        var _a;
-        var track = playerCore.track;
-        var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this) ? this.listView.get(track._bind.position) : null;
-        this.curActive.set(item);
-    }
-    updateView() {
-        var _a, _b;
-        var listView = this.listView;
-        if (!listView)
-            return;
-        listView.clear();
-        if (this.buildHeader)
-            listView.dom.appendChild((this.header || (this.header = this.buildHeader())).dom);
-        if (this.loadIndicator) {
-            listView.dom.appendChild(this.loadIndicator.dom);
-            return;
-        }
-        if (this.tracks.length === 0) {
-            listView.dom.appendChild(new LoadingIndicator({ state: 'normal', content: I `(Empty)` }).dom);
-            return;
-        }
-        // Well... currently, we just rebuild the DOM.
-        var playing = playerCore.track;
-        for (const t of this.tracks) {
-            let item = this.createViewItem(t);
-            if (playing
-                && ((((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) !== this && t.id === playing.id)
-                    || (((_b = playing._bind) === null || _b === void 0 ? void 0 : _b.list) === this && playing._bind.position === t._bind.position)))
-                this.curActive.set(item);
-            listView.add(item);
-        }
-    }
     updateTracksFromListView() {
         this.tracks = this.listView.map(lvi => {
             lvi.track._bind.position = lvi.position;
             lvi.updateDom();
             return lvi.track;
         });
+        this.put();
     }
     onRemoveItem(lvi) {
         this.listView.remove(lvi);
         lvi.track._bind = null;
         this.updateTracksFromListView();
-        this.put();
     }
     createViewItem(t) {
         var view = new TrackViewItem(t);
@@ -1433,14 +1528,6 @@ class TrackList {
             view.onRemove = (item) => this.onRemoveItem(item);
         }
         return view;
-    }
-    buildHeader() {
-        return new ContentHeader({
-            catalog: I `Playlist`,
-            title: this.name,
-            titleEditable: !!this.rename,
-            onTitleEdit: (newName) => this.rename(newName)
-        });
     }
 }
 class TrackViewItem extends ListViewItem {
@@ -1528,7 +1615,7 @@ class ContentHeader extends View {
             this.domctx.title.removeAttribute('title');
     }
 }
-// file: listindex.ts
+// file: ListIndex.ts
 /// <reference path="main.ts" />
 class ListIndex {
     constructor() {
@@ -1665,7 +1752,7 @@ class ListIndexViewItem extends ListViewItem {
         this.dom.textContent = this.listInfo.name;
     }
 }
-// file: uploads.ts
+// file: Uploads.ts
 class UploadTrack extends Track {
     constructor(init) {
         super(init);
@@ -1687,55 +1774,29 @@ var uploads = new class {
                 };
             }
         };
-        this.view = new class {
-            get rendered() { return !!this.listView; }
-            ensureDom() {
-                if (!this.dom) {
-                    this.listView = new ListView({ tag: 'div.tracklist' });
-                    this.dom = this.listView.dom;
-                    this.header = new ContentHeader({ title: I `My Uploads` });
-                    this.dom.appendView(this.header);
-                    this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
-                    this.dom.appendView(this.uploadArea);
-                    uploads.tracks.forEach(t => this.addTrack(t));
-                    if (!uploads.state)
-                        uploads.fetch();
-                }
+        this.view = new class extends ListContentView {
+            constructor() {
+                super(...arguments);
+                this.title = I `My Uploads`;
             }
-            onShow() {
-                this.ensureDom();
+            appendHeader() {
+                super.appendHeader();
+                this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
+                this.dom.appendView(this.uploadArea);
             }
-            onRemove() {
+            insertLoadingIndicator(li) {
+                this.dom.insertBefore(li.dom, this.uploadArea.dom.nextSibling);
             }
-            useLoadingIndicator(li) {
-                if (this.loadingIndicator && this.rendered)
-                    this.loadingIndicator.dom.remove();
-                if (li && this.rendered) {
-                    this.dom.insertBefore(li.dom, this.uploadArea.dom.nextSibling);
-                }
-                this.loadingIndicator = li;
-                // if (this.rendered) this.updateView();
+            listviewCreated() {
+                uploads.tracks.forEach(t => this.addTrack(t));
+                if (!uploads.state)
+                    uploads.fetch();
             }
             addTrack(t, pos) {
                 var lvi = new UploadViewItem(t);
                 lvi.dragging = true;
                 this.listView.add(lvi, pos);
                 this.updateView();
-            }
-            updateView() {
-                if (!this.rendered)
-                    return;
-                if (this.listView.length == 0) {
-                    if (!this.loadingIndicator) {
-                        this.emptyIndicator = this.emptyIndicator || new LoadingIndicator({ state: 'normal', content: I `(Empty)` });
-                        this.useLoadingIndicator(this.emptyIndicator);
-                    }
-                }
-                else {
-                    if (this.emptyIndicator && this.loadingIndicator == this.emptyIndicator) {
-                        this.useLoadingIndicator(null);
-                    }
-                }
             }
         };
     }
@@ -1897,8 +1958,9 @@ var BlockFormat = {
 // TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
 /// <reference path="utils.ts" />
-/// <reference path="apidef.d.ts" />
 /// <reference path="viewlib.ts" />
+/// <reference path="ListContentView.ts" />
+/// <reference path="apidef.d.ts" />
 /// <reference path="user.ts" />
 /// <reference path="tracklist.ts" />
 /// <reference path="listindex.ts" />

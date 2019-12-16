@@ -4,8 +4,9 @@
 // Why do we need to use React and Vue.js? ;)
 
 /// <reference path="utils.ts" />
-/// <reference path="apidef.d.ts" />
 /// <reference path="viewlib.ts" />
+/// <reference path="ListContentView.ts" />
+/// <reference path="apidef.d.ts" />
 /// <reference path="user.ts" />
 /// <reference path="tracklist.ts" />
 /// <reference path="listindex.ts" />
