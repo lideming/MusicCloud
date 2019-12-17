@@ -936,6 +936,31 @@ class ContextMenu extends ListView {
         }
     }
 }
+class SidebarItem extends ListViewItem {
+    constructor(init) {
+        super();
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.item.no-selection',
+            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+    }
+    bindContentView(viewFunc) {
+        var view;
+        this.onclick = () => {
+            if (!view)
+                view = viewFunc();
+            ui.content.setCurrent(view);
+            ui.sidebarList.setActive(this);
+        };
+        return this;
+    }
+}
 // file: ListContentView.ts
 /// <reference path="main.ts" />
 class DataBackedListViewItem extends ListViewItem {
@@ -1670,7 +1695,7 @@ class ListIndex {
         });
     }
     init() {
-        ui.sidebarList.container.appendChild(this.section.dom);
+        ui.sidebarList.container.appendView(this.section);
         // listIndex.fetch();
     }
     /** Fetch lists from API and update the view */
@@ -1768,18 +1793,7 @@ var uploads = new class {
     constructor() {
         this.tracks = [];
         this.state = false;
-        this.sidebarItem = new class extends ListViewItem {
-            createDom() {
-                return {
-                    tag: 'div.item.no-selection',
-                    textContent: I `My Uploads`,
-                    onclick: (ev) => {
-                        ui.sidebarList.setActive(uploads.sidebarItem);
-                        ui.content.setCurrent(uploads.view);
-                    }
-                };
-            }
-        };
+        this.sidebarItem = new SidebarItem({ text: I `My Uploads` }).bindContentView(() => this.view);
         this.view = new class extends ListContentView {
             constructor() {
                 super(...arguments);
@@ -1807,7 +1821,7 @@ var uploads = new class {
         };
     }
     init() {
-        ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
+        ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state != false) {
                 this.tracks = [];
@@ -2141,10 +2155,16 @@ var ui = new class {
         this.sidebarList = new class {
             constructor() {
                 this.container = document.getElementById('sidebar-list');
+                this.listview = new ListView(this.container);
                 this.currentActive = new ItemActiveHelper();
             }
             setActive(item) {
                 this.currentActive.set(item);
+            }
+            addItem(item) {
+                if (typeof item == 'string')
+                    item = new SidebarItem({ text: item });
+                this.listview.add(item);
             }
         };
         this.content = new class {
@@ -2365,6 +2385,6 @@ if (navigator['mediaSession']) {
 }
 ui.init();
 var listIndex = new ListIndex();
-listIndex.init();
 user.init();
 uploads.init();
+listIndex.init();

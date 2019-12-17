@@ -15,7 +15,7 @@ var uploads = new class {
     tracks: UploadTrack[] = [];
     state: false | 'fetching' | 'fetched' = false;
     init() {
-        ui.sidebarList.container.insertBefore(this.sidebarItem.dom, ui.sidebarList.container.firstChild);
+        ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state != false) {
                 this.tracks = [];
@@ -28,18 +28,7 @@ var uploads = new class {
             }
         });
     }
-    sidebarItem = new class extends ListViewItem {
-        protected createDom(): BuildDomExpr {
-            return {
-                tag: 'div.item.no-selection',
-                textContent: I`My Uploads`,
-                onclick: (ev) => {
-                    ui.sidebarList.setActive(uploads.sidebarItem);
-                    ui.content.setCurrent(uploads.view);
-                }
-            };
-        }
-    };
+    sidebarItem = new SidebarItem({ text: I`My Uploads` }).bindContentView(() => this.view);
     view = new class extends ListContentView {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;

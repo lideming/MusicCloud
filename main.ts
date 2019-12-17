@@ -159,9 +159,14 @@ var ui = new class {
     };
     sidebarList = new class {
         container = document.getElementById('sidebar-list');
+        listview = new ListView(this.container);
         currentActive = new ItemActiveHelper<ListViewItem>();
         setActive(item: ListViewItem) {
             this.currentActive.set(item);
+        }
+        addItem(item: ListViewItem | string) {
+            if (typeof item == 'string') item = new SidebarItem({ text: item });
+            this.listview.add(item);
         }
     };
     content = new class {
@@ -372,6 +377,7 @@ if (navigator['mediaSession']) {
 ui.init();
 
 var listIndex = new ListIndex();
-listIndex.init();
+
 user.init();
 uploads.init();
+listIndex.init();

@@ -47,7 +47,7 @@ class ListIndex {
         });
     }
     init() {
-        ui.sidebarList.container.appendChild(this.section.dom);
+        ui.sidebarList.container.appendView(this.section);
         // listIndex.fetch();
     }
     /** Fetch lists from API and update the view */
