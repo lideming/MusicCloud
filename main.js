@@ -2224,10 +2224,10 @@ class CommentViewItem extends ListViewItem {
                 new MenuInfoItem({ text: I `Comment ID` + ': ' + this.comment.id })
             ]);
             if (this.onremove) {
-                m.add(new MenuItem({ text: I `Remove`, onclick: () => { this.onremove(this); } }));
+                m.add(new MenuItem({ text: I `Remove`, onclick: () => { this.onremove(this); } }), 0);
             }
             if (this.onedit) {
-                m.add(new MenuItem({ text: I `Edit`, onclick: () => { this.onedit(this); } }));
+                m.add(new MenuItem({ text: I `Edit`, onclick: () => { this.onedit(this); } }), 0);
             }
             m.show({ ev: ev });
         });

@@ -63,7 +63,6 @@ html, body {
     width: 200px;
     background: #f8f8f8;
     border-right: 1px solid #ccc;
-    padding: 10px 0;
 }
 
 @media only screen and (min-width: 800px) {
@@ -76,9 +75,13 @@ html, body {
 }
 
 .content-header {
+    /* position: relative; */
+    position: sticky;
+    top: 0;
+    padding: 10px;
+    background: white;
     animation: showing-top .3s;
-    position: relative;
-    margin: 10px;
+    z-index: 1;
 }
 
 .content-header .catalog {
@@ -167,6 +170,12 @@ html, body {
     color: gray;
     padding: 10px;
     font-size: 85%;
+    position: sticky;
+    top: 0;
+}
+
+#sidebar .section-header {
+    background: #f8f8f8;
 }
 
 .section-title {
@@ -429,7 +438,6 @@ html, body {
 #sidebar-login {
     border-bottom: 1px solid #ccc;
     padding: 10px;
-    padding-top: 0;
 }
 
 #login-actions {
@@ -448,6 +456,7 @@ html, body {
     right: 0;
     bottom: 0;
     animation: fadein .3s;
+    z-index: 10000;
 }
 
 .overlay.centerchild {
@@ -468,6 +477,7 @@ html, body {
     border-radius: 5px;
     box-shadow: 0 0 6px #666;
     animation: dialogin .3s;
+    z-index: 10001;
 }
 
 .dialog-title, .dialog-content, .dialog-bottom {
@@ -582,6 +592,7 @@ html, body {
     box-shadow: 0 0px 5px rgb(180, 180, 180);
     max-width: 450px;
     outline: none;
+    z-index: 10001;
 }
 
 .menu-info {
