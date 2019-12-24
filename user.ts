@@ -237,6 +237,7 @@ var user = new class User {
             if (this.state == 'logging') {
                 try {
                     await this.loggingin;
+                    if (this.state as any != 'logged') break;
                     return true;
                 } catch {
                     break;

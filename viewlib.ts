@@ -7,6 +7,7 @@ class View {
         if (dom) this._dom = utils.buildDOM(dom) as HTMLElement;
     }
     protected _dom: HTMLElement;
+    public get domCreated() { return !!this._dom; }
     public get dom() {
         this.ensureDom();
         return this._dom;
@@ -331,6 +332,13 @@ class LoadingIndicator extends View {
         }
         this.onclick = retry as any;
     }
+    async action(func: () => Promise<void>) {
+        try {
+            await func();
+        } catch (error) {
+            this.error(error, () => this.action(func));
+        }
+    }
     createDom() {
         return {
             _ctx: this,
@@ -421,6 +429,42 @@ class MenuItem extends ListViewItem {
     }
 }
 
+class MenuLinkItem extends MenuItem {
+    link: string;
+    constructor(init: Partial<MenuLinkItem>) {
+        super(init);
+        utils.objectApply(this, init);
+    }
+    createDom(): BuildDomExpr {
+        var dom = super.createDom() as BuildDomNode;
+        dom.tag = 'a.item.no-selection';
+        dom.target = "_blank";
+        return dom;
+    }
+    updateDom() {
+        super.updateDom();
+        (this.dom as HTMLAnchorElement).href = this.link;
+    }
+}
+
+class MenuInfoItem extends MenuItem {
+    text: string;
+    constructor(init: Partial<MenuInfoItem>) {
+        super(init);
+        utils.objectApply(this, init);
+    }
+    createDom(): BuildDomExpr {
+        return {
+            tag: 'div.menu-info'
+        };
+    }
+    updateDom() {
+        super.updateDom();
+        this.dom.textContent = this.text;
+    }
+}
+
+
 class ContextMenu extends ListView {
     keepOpen = false;
     useOverlay = true;
@@ -431,7 +475,8 @@ class ContextMenu extends ListView {
         super({ tag: 'div.context-menu', tabIndex: '0' });
         items?.forEach(x => this.add(x));
     }
-    show(pos: { x: number, y: number; }) {
+    show(arg: { x?: number, y?: number, ev?: MouseEvent; }) {
+        if (arg.ev) { arg.x = arg.ev.pageX; arg.y = arg.ev.pageY; }
         this.close();
         this._visible = true;
         if (this.useOverlay) {
@@ -444,9 +489,10 @@ class ContextMenu extends ListView {
         }
         document.body.appendChild(this.dom);
         this.dom.focus();
-        this.dom.addEventListener('focusout', () => this.close());
-        this.dom.style.left = pos.x + 'px';
-        this.dom.style.top = pos.y + 'px';
+        this.dom.addEventListener('focusout',
+            (e) => !this.dom.contains(e.relatedTarget as HTMLElement) && this.close());
+        this.dom.style.left = arg.x + 'px';
+        this.dom.style.top = arg.y + 'px';
     }
     close() {
         if (this._visible) {

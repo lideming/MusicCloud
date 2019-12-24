@@ -461,6 +461,24 @@ class I18n {
     }
 }
 
+class Lazy<T> {
+    private _func: Func<T>;
+    private _value: T;
+    get computed() { return !this._func; }
+    get rawValue() { return this._value; }
+    get value() {
+        if (this._func) {
+            this._value = this._func();
+            delete this._func;
+        }
+        return this._value;
+    }
+    constructor(func: Func<T>) {
+        if (typeof func != 'function') throw new Error('func is not a function');
+        this._func = func;
+    }
+}
+
 var i18n = new I18n();
 
 function I(literals: TemplateStringsArray, ...placeholders: any[]) {
@@ -516,12 +534,19 @@ i18n.add2dArray(JSON.parse(`[
     ["Oh no! Something just goes wrong:", "发生错误："],
     ["[Click here to retry]", "[点击重试]"],
     ["My Uploads", "我的上传"],
-    ["Drag files to this zone...", "拖放文件到此处..."],
+    ["Click here to select files to upload", "点此选择文件并上传"],
+    ["or drag files to this zone...", "或拖放文件到此处..."],
     ["Comments", "评论"],
     ["Remove", "移除"],
+    ["List ID", "列表 ID"],
     ["Track ID", "歌曲 ID"],
     ["Name", "名称"],
     ["Artist", "艺术家"],
+    ["Discussion", "讨论区"],
+    ["Notes", "便签"],
+    ["Submit", "提交"],
+    ["Submitting", "提交中"],
+    ["Edit", "编辑"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

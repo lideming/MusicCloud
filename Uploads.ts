@@ -15,6 +15,7 @@ var uploads = new class {
     tracks: UploadTrack[] = [];
     state: false | 'fetching' | 'fetched' = false;
     init() {
+        this.sidebarItem = new SidebarItem({ text: I`My Uploads` }).bindContentView(() => this.view);
         ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state != false) {
@@ -28,36 +29,31 @@ var uploads = new class {
             }
         });
     }
-    sidebarItem = new SidebarItem({ text: I`My Uploads` }).bindContentView(() => this.view);
+    sidebarItem: SidebarItem;
     view = new class extends ListContentView {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;
-        title = I`My Uploads`;
 
         protected appendHeader() {
+            this.title = I`My Uploads`;
             super.appendHeader();
             this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
             this.dom.appendView(this.uploadArea);
         }
-        protected insertLoadingIndicator(li) {
-            this.dom.insertBefore(li.dom, this.uploadArea.dom.nextSibling);
-        }
-        protected listviewCreated() {
+        protected appendListView() {
+            super.appendListView();
             uploads.tracks.forEach(t => this.addTrack(t));
             if (!uploads.state) uploads.fetch();
         }
         addTrack(t: UploadTrack, pos?: number) {
             var lvi = new UploadViewItem(t);
-            lvi.dragging = true;
             this.listView.add(lvi, pos);
             this.updateView();
         }
     };
     private prependTrack(t: UploadTrack) {
         this.tracks.unshift(t);
-        if (this.view.rendered) {
-            this.view.addTrack(t, 0);
-        }
+        if (this.view.rendered) this.view.addTrack(t, 0);
     }
     private appendTrack(t: UploadTrack) {
         this.tracks.push(t);
@@ -125,6 +121,7 @@ var uploads = new class {
 
 class UploadViewItem extends TrackViewItem {
     track: UploadTrack;
+    noPos = true;
     domstate: HTMLElement;
     _lastUploadState: string;
     constructor(track: UploadTrack) {
@@ -143,25 +140,40 @@ class UploadViewItem extends TrackViewItem {
             if (this._lastUploadState) this.dom.classList.remove('state-' + this._lastUploadState);
             if (newState) this.dom.classList.add('state-' + newState);
             this.domstate.textContent = i18n.get('uploads_' + newState);
+            this.dragging = newState == 'done';
         }
     }
 }
 
 class UploadArea extends View {
     onfile: (file: File) => void;
+    private domfile: HTMLInputElement;
     constructor(init: Partial<UploadArea>) {
         super();
         utils.objectApply(this, init);
     }
     createDom() {
         return {
+            _ctx: this,
             tag: 'div.upload-area',
             child: [
-                { tag: 'div.text.no-selection', textContent: I`Drag files to this zone...` }
+                { tag: 'div.text.no-selection', textContent: I`Click here to select files to upload` },
+                { tag: 'div.text.no-selection', textContent: I`or drag files to this zone...` },
+                {
+                    tag: 'input', type: 'file', _key: 'domfile',
+                    style: 'visibility: collapse; height: 0;',
+                    accept: 'audio/*', multiple: true
+                },
             ]
         };
     }
     postCreateDom() {
+        this.domfile.addEventListener('change', (ev) => {
+            this.handleFiles(this.domfile.files);
+        });
+        this.dom.addEventListener('click', (ev) => {
+            this.domfile.click();
+        });
         this.dom.addEventListener('dragover', (ev) => {
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
                 ev.preventDefault();
@@ -171,14 +183,16 @@ class UploadArea extends View {
         this.dom.addEventListener('drop', (ev) => {
             ev.preventDefault();
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
-                var files = ev.dataTransfer.files;
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    console.log('drop file', { name: file.name, size: file.size });
-                    this.onfile?.(file);
-                }
+                this.handleFiles(ev.dataTransfer.files);
             }
         });
+    }
+    private handleFiles(files: FileList) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            console.log('drop file', { name: file.name, size: file.size });
+            this.onfile?.(file);
+        }
     }
 }
 

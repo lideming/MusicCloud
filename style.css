@@ -7,6 +7,10 @@ body {
     font-family: sans-serif;
 }
 
+::selection {
+    background: hsl(5, 100%, 85%);
+}
+
 html, body {
     height: 100%;
     height: 100vh;
@@ -118,9 +122,12 @@ html, body {
 /* listview item */
 
 .item {
+    display: block;
+    color: black;
     padding: 10px;
     /* background: #ddd; */
     animation: showing .3s;
+    text-decoration: none;
 }
 
 .clickable, .item {
@@ -145,6 +152,10 @@ html, body {
 .clickable:active, .item:active {
     transition: transform .07s;
     transform: scale(.97);
+}
+
+.item.no-transform:active {
+    transform: none;
 }
 
 .item.active {
@@ -173,7 +184,6 @@ html, body {
 .trackitem .pos {
     display: inline-block;
     text-align: center;
-    margin-right: .5em;
     min-width: 2em;
     color: gray;
     vertical-align: middle;
@@ -182,6 +192,7 @@ html, body {
 .trackitem .name, .trackitem .artist {
     display: inline-block;
     vertical-align: middle;
+    margin-left: .5em;
     width: calc((100% - 2.5em - 20px) * .6);
 }
 
@@ -199,6 +210,14 @@ html, body {
 
 .trackitem.uploads-item .uploads-state {
     color: #ff6659;
+}
+
+.trackitem.uploads-item.state-error .uploads-state {
+    color: #f44336;
+}
+
+.trackitem.uploads-item.state-done .uploads-state {
+    color: #66bb6a;
 }
 
 /* .trackitem .artist::before,  */
@@ -318,6 +337,7 @@ html, body {
     text-align: center;
     white-space: pre-wrap;
     cursor: default;
+    animation: fadein .3s;
 }
 
 .loading-indicator-text {
@@ -531,7 +551,7 @@ html, body {
 }
 
 *[hidden] {
-    display: none;
+    display: none !important;
 }
 
 @keyframes dialogin {
@@ -560,6 +580,8 @@ html, body {
     background: white;
     border: solid 1px #777;
     box-shadow: 0 0px 5px rgb(180, 180, 180);
+    max-width: 450px;
+    outline: none;
 }
 
 .menu-info {
@@ -574,4 +596,37 @@ html, body {
     transition: opacity .3s;
     opacity: 0;
     pointer-events: none;
+}
+
+.comment-editor {
+    margin: 10px;
+}
+
+.comment-editor-new {
+    animation: showing-top .3s;
+}
+
+.comment-editor .content {
+    width: 100%;
+    height: 5em;
+    padding: .5em;
+    font-family: inherit;
+    font-size: 16px;
+    resize: vertical;
+}
+
+.comment-editor .submit {
+    line-height: 2;
+}
+
+.comment {
+    margin: 10px;
+}
+
+.comment .username {
+    color: #777777;
+}
+
+.comment .content {
+    white-space: pre-wrap;
 }

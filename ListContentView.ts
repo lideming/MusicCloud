@@ -47,9 +47,7 @@ class ListContentView implements ContentView {
         if (!this.listView) {
             this.dom = this.dom || utils.buildDOM({ tag: 'div' });
             this.appendHeader();
-            this.listView = new ListView({ tag: 'div' });
-            this.dom.appendView(this.listView);
-            this.listviewCreated();
+            this.appendListView();
         }
     }
 
@@ -63,7 +61,9 @@ class ListContentView implements ContentView {
         this.dom.appendView(this.header);
     }
 
-    protected listviewCreated() {
+    protected appendListView() {
+        this.listView = new ListView({ tag: 'div' });
+        this.dom.appendView(this.listView);
     }
 
     onShow() {
@@ -73,21 +73,16 @@ class ListContentView implements ContentView {
     }
 
     useLoadingIndicator(li: LoadingIndicator) {
-        if (this.loadingIndicator && this.rendered) this.loadingIndicator.dom.remove();
-        if (li && this.rendered) this.insertLoadingIndicator(li);
-        this.loadingIndicator = li;
+        if (li !== this.loadingIndicator) {
+            if (this.loadingIndicator && this.rendered) this.loadingIndicator.dom.remove();
+            if (li && this.rendered) this.insertLoadingIndicator(li);
+            this.loadingIndicator = li;
+        }
         this.updateView();
     }
 
     protected insertLoadingIndicator(li: LoadingIndicator) {
-        this.dom.insertBefore(li.dom, this.header.dom.nextSibling);
-    }
-
-    addTrack(t: UploadTrack, pos?: number) {
-        var lvi = new UploadViewItem(t);
-        lvi.dragging = true;
-        this.listView.add(lvi, pos);
-        this.updateView();
+        this.dom.insertBefore(li.dom, this.listView.dom);
     }
 
     updateView() {
@@ -102,5 +97,17 @@ class ListContentView implements ContentView {
                 this.useLoadingIndicator(null);
             }
         }
+    }
+
+    async loadingAction(func: () => Promise<void>) {
+        var li = this.loadingIndicator || new LoadingIndicator();
+        this.useLoadingIndicator(li);
+        try {
+            await func();
+        } catch (error) {
+            li.error(error, () => this.loadingAction(func));
+            throw error;
+        }
+        this.useLoadingIndicator(null);
     }
 };

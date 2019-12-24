@@ -67,6 +67,7 @@ class ListIndex {
         for (const item of index.lists) {
             this.addListInfo(item);
         }
+        if (this.listView.length > 0 && !ui.content.current) this.listView.onItemClicked(this.listView.get(0));
     }
     addListInfo(listinfo: Api.TrackListInfo) {
         this.listView.add(new ListIndexViewItem(this, listinfo));
@@ -129,8 +130,17 @@ class ListIndexViewItem extends ListViewItem {
         this.index = index;
         this.listInfo = listInfo;
     }
-    createDom() {
-        return { tag: 'div.item.no-selection' };
+    protected createDom(): BuildDomExpr {
+        return {
+            tag: 'div.item.no-selection',
+            oncontextmenu: (e) => {
+                e.preventDefault();
+                var m = new ContextMenu([
+                    new MenuInfoItem({ text: I`List ID` + ': ' + this.listInfo.id })
+                ]);
+                m.show({ ev: e });
+            }
+        };
     }
     updateDom() {
         this.dom.textContent = this.listInfo.name;

@@ -422,6 +422,22 @@ class I18n {
         return cur;
     }
 }
+class Lazy {
+    constructor(func) {
+        if (typeof func != 'function')
+            throw new Error('func is not a function');
+        this._func = func;
+    }
+    get computed() { return !this._func; }
+    get rawValue() { return this._value; }
+    get value() {
+        if (this._func) {
+            this._value = this._func();
+            delete this._func;
+        }
+        return this._value;
+    }
+}
 var i18n = new I18n();
 function I(literals, ...placeholders) {
     if (placeholders.length == 0) {
@@ -475,12 +491,19 @@ i18n.add2dArray(JSON.parse(`[
     ["Oh no! Something just goes wrong:", "发生错误："],
     ["[Click here to retry]", "[点击重试]"],
     ["My Uploads", "我的上传"],
-    ["Drag files to this zone...", "拖放文件到此处..."],
+    ["Click here to select files to upload", "点此选择文件并上传"],
+    ["or drag files to this zone...", "或拖放文件到此处..."],
     ["Comments", "评论"],
     ["Remove", "移除"],
+    ["List ID", "列表 ID"],
     ["Track ID", "歌曲 ID"],
     ["Name", "名称"],
     ["Artist", "艺术家"],
+    ["Discussion", "讨论区"],
+    ["Notes", "便签"],
+    ["Submit", "提交"],
+    ["Submitting", "提交中"],
+    ["Edit", "编辑"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 i18n.add2dArray([
@@ -493,11 +516,21 @@ i18n.add2dArray([
     ["next_track", "Next", "下一首"],
 ]);
 // file: viewlib.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 class View {
     constructor(dom) {
         if (dom)
             this._dom = utils.buildDOM(dom);
     }
+    get domCreated() { return !!this._dom; }
     get dom() {
         this.ensureDom();
         return this._dom;
@@ -813,6 +846,16 @@ class LoadingIndicator extends View {
         }
         this.onclick = retry;
     }
+    action(func) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield func();
+            }
+            catch (error) {
+                this.error(error, () => this.action(func));
+            }
+        });
+    }
     createDom() {
         return {
             _ctx: this,
@@ -899,6 +942,37 @@ class MenuItem extends ListViewItem {
         this.dom.textContent = this.text;
     }
 }
+class MenuLinkItem extends MenuItem {
+    constructor(init) {
+        super(init);
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        var dom = super.createDom();
+        dom.tag = 'a.item.no-selection';
+        dom.target = "_blank";
+        return dom;
+    }
+    updateDom() {
+        super.updateDom();
+        this.dom.href = this.link;
+    }
+}
+class MenuInfoItem extends MenuItem {
+    constructor(init) {
+        super(init);
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.menu-info'
+        };
+    }
+    updateDom() {
+        super.updateDom();
+        this.dom.textContent = this.text;
+    }
+}
 class ContextMenu extends ListView {
     constructor(items) {
         var _a;
@@ -910,7 +984,11 @@ class ContextMenu extends ListView {
     }
     get visible() { return this._visible; }
     ;
-    show(pos) {
+    show(arg) {
+        if (arg.ev) {
+            arg.x = arg.ev.pageX;
+            arg.y = arg.ev.pageY;
+        }
         this.close();
         this._visible = true;
         if (this.useOverlay) {
@@ -923,9 +1001,9 @@ class ContextMenu extends ListView {
         }
         document.body.appendChild(this.dom);
         this.dom.focus();
-        this.dom.addEventListener('focusout', () => this.close());
-        this.dom.style.left = pos.x + 'px';
-        this.dom.style.top = pos.y + 'px';
+        this.dom.addEventListener('focusout', (e) => !this.dom.contains(e.relatedTarget) && this.close());
+        this.dom.style.left = arg.x + 'px';
+        this.dom.style.top = arg.y + 'px';
     }
     close() {
         if (this._visible) {
@@ -999,9 +1077,7 @@ class ListContentView {
         if (!this.listView) {
             this.dom = this.dom || utils.buildDOM({ tag: 'div' });
             this.appendHeader();
-            this.listView = new ListView({ tag: 'div' });
-            this.dom.appendView(this.listView);
-            this.listviewCreated();
+            this.appendListView();
         }
     }
     createHeader() {
@@ -1011,7 +1087,9 @@ class ListContentView {
         this.header = this.createHeader();
         this.dom.appendView(this.header);
     }
-    listviewCreated() {
+    appendListView() {
+        this.listView = new ListView({ tag: 'div' });
+        this.dom.appendView(this.listView);
     }
     onShow() {
         this.ensureRendered();
@@ -1019,21 +1097,17 @@ class ListContentView {
     onRemove() {
     }
     useLoadingIndicator(li) {
-        if (this.loadingIndicator && this.rendered)
-            this.loadingIndicator.dom.remove();
-        if (li && this.rendered)
-            this.insertLoadingIndicator(li);
-        this.loadingIndicator = li;
+        if (li !== this.loadingIndicator) {
+            if (this.loadingIndicator && this.rendered)
+                this.loadingIndicator.dom.remove();
+            if (li && this.rendered)
+                this.insertLoadingIndicator(li);
+            this.loadingIndicator = li;
+        }
         this.updateView();
     }
     insertLoadingIndicator(li) {
-        this.dom.insertBefore(li.dom, this.header.dom.nextSibling);
-    }
-    addTrack(t, pos) {
-        var lvi = new UploadViewItem(t);
-        lvi.dragging = true;
-        this.listView.add(lvi, pos);
-        this.updateView();
+        this.dom.insertBefore(li.dom, this.listView.dom);
     }
     updateView() {
         if (!this.rendered)
@@ -1050,18 +1124,23 @@ class ListContentView {
             }
         }
     }
+    loadingAction(func) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var li = this.loadingIndicator || new LoadingIndicator();
+            this.useLoadingIndicator(li);
+            try {
+                yield func();
+            }
+            catch (error) {
+                li.error(error, () => this.loadingAction(func));
+                throw error;
+            }
+            this.useLoadingIndicator(null);
+        });
+    }
 }
 ;
 // file: User.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 /// <reference path="main.ts" />
 var user = new class User {
     constructor() {
@@ -1316,6 +1395,8 @@ var user = new class User {
                 if (this.state == 'logging') {
                     try {
                         yield this.loggingin;
+                        if (this.state != 'logged')
+                            break;
                         return true;
                     }
                     catch (_a) {
@@ -1366,7 +1447,7 @@ class TrackList {
         this.name = info.name;
     }
     loadFromGetResult(obj) {
-        var _a, _b;
+        var _a;
         this.loadInfo(obj);
         this.tracks.forEach(t => t._bind = null);
         this.tracks = [];
@@ -1374,7 +1455,6 @@ class TrackList {
         for (const t of obj.tracks) {
             this.addTrack(t);
         }
-        (_b = this.contentView) === null || _b === void 0 ? void 0 : _b.updateView();
         return this;
     }
     addTrack(t) {
@@ -1385,6 +1465,7 @@ class TrackList {
         this.tracks.push(track);
         if (this.listView) {
             this.listView.add(this.createViewItem(track));
+            this.contentView.updateView();
         }
         return track;
     }
@@ -1489,14 +1570,14 @@ class TrackList {
                 super.onRemove();
                 playerCore.onTrackChanged.remove(list.trackChanged);
             }
-            listviewCreated() {
+            appendListView() {
+                super.appendListView();
                 var lv = this.listView;
                 list.listView = lv;
                 lv.dragging = true;
                 if (list.canEdit)
                     lv.moveByDragging = true;
                 lv.onItemMoved = () => list.updateTracksFromListView();
-                var playing = playerCore.track;
                 list.tracks.forEach(t => this.listView.add(list.createViewItem(t)));
                 this.updateItems();
                 this.useLoadingIndicator(list.loadIndicator);
@@ -1546,11 +1627,13 @@ class TrackList {
         this.put();
     }
     remove(track) {
+        var _a;
         var pos = track._bind.position;
         track._bind = null;
         this.tracks.splice(pos, 1);
         if (this.listView)
             this.listView.remove(pos);
+        (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
         this.put();
     }
     createViewItem(t) {
@@ -1582,23 +1665,30 @@ class TrackViewItem extends ListViewItem {
                 ev.preventDefault();
                 var m = new ContextMenu();
                 m.add(new MenuItem({ text: I `Comments` }));
+                if (this.track.url)
+                    m.add(new MenuLinkItem({
+                        text: I `Download`,
+                        link: api.processUrl(this.track.url)
+                    }));
                 if (this.onRemove)
                     m.add(new MenuItem({
                         text: I `Remove`,
                         onclick: () => { var _a, _b; return (_b = (_a = this).onRemove) === null || _b === void 0 ? void 0 : _b.call(_a, this); }
                     }));
-                m.dom.appendChild(utils.buildDOM({
-                    tag: 'div.menu-info',
-                    textContent: track.toString()
-                }));
-                m.show({ x: ev.pageX, y: ev.pageY });
+                m.add(new MenuInfoItem({ text: I `Track ID` + ': ' + track.id }));
+                m.show({ ev: ev });
             },
             draggable: true,
             _item: this
         };
     }
     updateDom() {
-        this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+        if (!this.noPos) {
+            this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+        }
+        else {
+            this.dompos.hidden = true;
+        }
     }
 }
 class ContentHeader extends View {
@@ -1719,6 +1809,8 @@ class ListIndex {
         for (const item of index.lists) {
             this.addListInfo(item);
         }
+        if (this.listView.length > 0 && !ui.content.current)
+            this.listView.onItemClicked(this.listView.get(0));
     }
     addListInfo(listinfo) {
         this.listView.add(new ListIndexViewItem(this, listinfo));
@@ -1777,7 +1869,16 @@ class ListIndexViewItem extends ListViewItem {
         this.listInfo = listInfo;
     }
     createDom() {
-        return { tag: 'div.item.no-selection' };
+        return {
+            tag: 'div.item.no-selection',
+            oncontextmenu: (e) => {
+                e.preventDefault();
+                var m = new ContextMenu([
+                    new MenuInfoItem({ text: I `List ID` + ': ' + this.listInfo.id })
+                ]);
+                m.show({ ev: e });
+            }
+        };
     }
     updateDom() {
         this.dom.textContent = this.listInfo.name;
@@ -1793,34 +1894,28 @@ var uploads = new class {
     constructor() {
         this.tracks = [];
         this.state = false;
-        this.sidebarItem = new SidebarItem({ text: I `My Uploads` }).bindContentView(() => this.view);
         this.view = new class extends ListContentView {
-            constructor() {
-                super(...arguments);
-                this.title = I `My Uploads`;
-            }
             appendHeader() {
+                this.title = I `My Uploads`;
                 super.appendHeader();
                 this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
                 this.dom.appendView(this.uploadArea);
             }
-            insertLoadingIndicator(li) {
-                this.dom.insertBefore(li.dom, this.uploadArea.dom.nextSibling);
-            }
-            listviewCreated() {
+            appendListView() {
+                super.appendListView();
                 uploads.tracks.forEach(t => this.addTrack(t));
                 if (!uploads.state)
                     uploads.fetch();
             }
             addTrack(t, pos) {
                 var lvi = new UploadViewItem(t);
-                lvi.dragging = true;
                 this.listView.add(lvi, pos);
                 this.updateView();
             }
         };
     }
     init() {
+        this.sidebarItem = new SidebarItem({ text: I `My Uploads` }).bindContentView(() => this.view);
         ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state != false) {
@@ -1836,9 +1931,8 @@ var uploads = new class {
     }
     prependTrack(t) {
         this.tracks.unshift(t);
-        if (this.view.rendered) {
+        if (this.view.rendered)
             this.view.addTrack(t, 0);
-        }
     }
     appendTrack(t) {
         this.tracks.push(t);
@@ -1910,6 +2004,7 @@ var uploads = new class {
 class UploadViewItem extends TrackViewItem {
     constructor(track) {
         super(track);
+        this.noPos = true;
         track._upload.view = this;
     }
     postCreateDom() {
@@ -1926,6 +2021,7 @@ class UploadViewItem extends TrackViewItem {
             if (newState)
                 this.dom.classList.add('state-' + newState);
             this.domstate.textContent = i18n.get('uploads_' + newState);
+            this.dragging = newState == 'done';
         }
     }
 }
@@ -1936,13 +2032,26 @@ class UploadArea extends View {
     }
     createDom() {
         return {
+            _ctx: this,
             tag: 'div.upload-area',
             child: [
-                { tag: 'div.text.no-selection', textContent: I `Drag files to this zone...` }
+                { tag: 'div.text.no-selection', textContent: I `Click here to select files to upload` },
+                { tag: 'div.text.no-selection', textContent: I `or drag files to this zone...` },
+                {
+                    tag: 'input', type: 'file', _key: 'domfile',
+                    style: 'visibility: collapse; height: 0;',
+                    accept: 'audio/*', multiple: true
+                },
             ]
         };
     }
     postCreateDom() {
+        this.domfile.addEventListener('change', (ev) => {
+            this.handleFiles(this.domfile.files);
+        });
+        this.dom.addEventListener('click', (ev) => {
+            this.domfile.click();
+        });
         this.dom.addEventListener('dragover', (ev) => {
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
                 ev.preventDefault();
@@ -1950,17 +2059,19 @@ class UploadArea extends View {
             }
         });
         this.dom.addEventListener('drop', (ev) => {
-            var _a, _b;
             ev.preventDefault();
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
-                var files = ev.dataTransfer.files;
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    console.log('drop file', { name: file.name, size: file.size });
-                    (_b = (_a = this).onfile) === null || _b === void 0 ? void 0 : _b.call(_a, file);
-                }
+                this.handleFiles(ev.dataTransfer.files);
             }
         });
+    }
+    handleFiles(files) {
+        var _a, _b;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            console.log('drop file', { name: file.name, size: file.size });
+            (_b = (_a = this).onfile) === null || _b === void 0 ? void 0 : _b.call(_a, file);
+        }
     }
 }
 var BlockFormat = {
@@ -1976,6 +2087,180 @@ var BlockFormat = {
         return str;
     }
 };
+// file: discussion.ts
+/// <reference path="main.ts" />
+var discussion = new class {
+    constructor() {
+        this.view = new Lazy(() => new class extends ListContentView {
+            createHeader() {
+                return new ContentHeader({
+                    title: I `Discussion`
+                });
+            }
+            appendListView() {
+                super.appendListView();
+                this.useLoadingIndicator(new LoadingIndicator({
+                    state: 'normal',
+                    content: '(This feature is a work in progress)'
+                }));
+            }
+        });
+    }
+    init() {
+        this.sidebarItem = new SidebarItem({ text: I `Discussion` }).bindContentView(() => this.view.value);
+        ui.sidebarList.addItem(this.sidebarItem);
+    }
+};
+var notes = new class {
+    constructor() {
+        this.lazyView = new Lazy(() => new class extends ListContentView {
+            createHeader() {
+                return new ContentHeader({
+                    title: I `Notes`
+                });
+            }
+            appendHeader() {
+                super.appendHeader();
+                this.dom.appendView(this.editorNew = new CommentEditor());
+                this.editorNew.dom.classList.add('comment-editor-new');
+                this.editorNew.onsubmit = (editor) => {
+                    var content = editor.content;
+                    editor.content = '';
+                    if (content == '')
+                        return;
+                    notes.post(content);
+                };
+            }
+            appendListView() {
+                super.appendListView();
+                if (!notes.state)
+                    notes.fetch();
+            }
+        });
+        this.state = false;
+    }
+    init() {
+        this.sidebarItem = new SidebarItem({ text: I `Notes` }).bindContentView(() => this.view);
+        ui.sidebarList.addItem(this.sidebarItem);
+        user.onSwitchedUser.add(() => {
+            if (this.state)
+                this.fetch();
+        });
+    }
+    get view() { return this.lazyView.value; }
+    fetch() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.state = 'fetching';
+            var li = new LoadingIndicator();
+            this.view.useLoadingIndicator(li);
+            try {
+                yield user.waitLogin(true);
+                var resp = yield api.getJson('my/notes?reverse=1');
+                this.view.useLoadingIndicator(null);
+            }
+            catch (error) {
+                this.state = 'error';
+                li.error(error, () => this.fetch());
+                throw error;
+            }
+            this.view.listView.clear();
+            resp.comments.forEach(c => this.addItem(c));
+            this.view.updateView();
+            this.state = 'fetched';
+        });
+    }
+    addItem(c) {
+        const comm = new CommentViewItem(c);
+        comm.onremove = () => {
+            this.ioAction(() => api.postJson({
+                method: 'DELETE',
+                path: 'my/notes/' + comm.comment.id,
+                obj: undefined
+            }));
+        };
+        return this.view.listView.add(comm);
+    }
+    ioAction(func) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var li = new LoadingIndicator({ content: I `Submitting` });
+            this.view.useLoadingIndicator(li);
+            yield li.action(() => __awaiter(this, void 0, void 0, function* () {
+                yield func();
+                yield this.fetch();
+            }));
+        });
+    }
+    post(content) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.ioAction(() => api.postJson({
+                method: 'POST',
+                path: 'my/notes/new',
+                obj: {
+                    content: content
+                }
+            }));
+        });
+    }
+};
+class CommentViewItem extends ListViewItem {
+    constructor(comment) {
+        super();
+        this.comment = comment;
+    }
+    createDom() {
+        return {
+            _ctx: this,
+            tag: 'div.item.comment.no-transform',
+            child: [
+                { tag: 'div.username', _key: 'domusername' },
+                { tag: 'div.content', _key: 'domcontent' }
+            ]
+        };
+    }
+    postCreateDom() {
+        this.dom.addEventListener('contextmenu', (ev) => {
+            ev.preventDefault();
+            var m = new ContextMenu([
+                new MenuInfoItem({ text: I `Comment ID` + ': ' + this.comment.id })
+            ]);
+            if (this.onremove) {
+                m.add(new MenuItem({ text: I `Remove`, onclick: () => { this.onremove(this); } }));
+            }
+            if (this.onedit) {
+                m.add(new MenuItem({ text: I `Edit`, onclick: () => { this.onedit(this); } }));
+            }
+            m.show({ ev: ev });
+        });
+    }
+    updateDom() {
+        this.domusername.textContent = this.comment.username;
+        this.domcontent.textContent = this.comment.content;
+    }
+}
+class CommentEditor extends View {
+    get content() { this.ensureDom(); return this.domcontent.value; }
+    set content(val) { this.ensureDom(); this.domcontent.value = val; }
+    createDom() {
+        return {
+            _ctx: this,
+            tag: 'div.comment-editor',
+            child: [
+                { tag: 'textarea.content', _key: 'domcontent' },
+                { tag: 'div.btn.submit', textContent: I `Submit`, _key: 'domsubmit' }
+            ]
+        };
+    }
+    postCreateDom() {
+        this.domcontent.addEventListener('keydown', (ev) => {
+            if (ev.ctrlKey && ev.keyCode == 13) {
+                this.onsubmit(this);
+            }
+        });
+        this.domsubmit.addEventListener('click', () => {
+            this.onsubmit(this);
+        });
+    }
+}
 // file: main.ts
 // TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
@@ -1987,6 +2272,7 @@ var BlockFormat = {
 /// <reference path="tracklist.ts" />
 /// <reference path="listindex.ts" />
 /// <reference path="uploads.ts" />
+/// <reference path="discussion.ts" />
 var settings = {
     apiBaseUrl: 'api/',
     // apiBaseUrl: 'http://127.0.0.1:50074/api/',
@@ -2170,12 +2456,14 @@ var ui = new class {
         this.content = new class {
             constructor() {
                 this.container = document.getElementById('content-outer');
+                this.current = null;
             }
             removeCurrent() {
                 const cur = this.current;
                 this.current = null;
                 if (!cur)
                     return;
+                cur.contentViewState.scrollTop = this.container.scrollTop;
                 if (cur.onRemove)
                     cur.onRemove();
                 if (cur.dom)
@@ -2189,6 +2477,9 @@ var ui = new class {
                     arg.onShow();
                 if (arg.dom)
                     this.container.appendChild(arg.dom);
+                if (!arg.contentViewState)
+                    arg.contentViewState = { scrollTop: 0 };
+                this.container.scrollTop = arg.contentViewState.scrollTop;
                 this.current = arg;
             }
         };
@@ -2216,8 +2507,6 @@ var playerCore = new class PlayerCore {
         ui.playerControl.setProgressChangedCallback((x) => {
             this.audio.currentTime = x * this.audio.duration;
         });
-        var ctx = new AudioContext();
-        var analyzer = ctx.createAnalyser();
     }
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
@@ -2313,7 +2602,7 @@ var api = new class {
             if (arg.mode === undefined)
                 arg.mode = 'json';
             if (arg.mode === 'json')
-                body = JSON.stringify(body);
+                body = body !== undefined ? JSON.stringify(body) : undefined;
             else if (arg.mode === 'raw')
                 void 0; // noop
             else
@@ -2327,7 +2616,10 @@ var api = new class {
                 method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
                 headers: headers
             });
-            return yield resp.json();
+            var contentType = resp.headers.get('Content-Type');
+            if (contentType == 'application/json' || contentType.startsWith('application/json;'))
+                return yield resp.json();
+            return null;
         });
     }
     getListAsync(id) {
@@ -2387,4 +2679,6 @@ ui.init();
 var listIndex = new ListIndex();
 user.init();
 uploads.init();
+discussion.init();
+notes.init();
 listIndex.init();

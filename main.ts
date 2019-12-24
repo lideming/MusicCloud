@@ -11,6 +11,8 @@
 /// <reference path="tracklist.ts" />
 /// <reference path="listindex.ts" />
 /// <reference path="uploads.ts" />
+/// <reference path="discussion.ts" />
+
 
 
 var settings = {
@@ -171,11 +173,12 @@ var ui = new class {
     };
     content = new class {
         container = document.getElementById('content-outer');
-        current: ContentView;
+        current: ContentView = null;
         removeCurrent() {
             const cur = this.current;
             this.current = null;
             if (!cur) return;
+            cur.contentViewState.scrollTop = this.container.scrollTop;
             if (cur.onRemove) cur.onRemove();
             if (cur.dom) this.container.removeChild(cur.dom);
         }
@@ -184,15 +187,22 @@ var ui = new class {
             this.removeCurrent();
             if (arg.onShow) arg.onShow();
             if (arg.dom) this.container.appendChild(arg.dom);
+            if (!arg.contentViewState) arg.contentViewState = { scrollTop: 0 };
+            this.container.scrollTop = arg.contentViewState.scrollTop;
             this.current = arg;
         }
     };
 }; // ui
 
 interface ContentView {
-    dom: HTMLElement,
-    onShow?: Action,
+    dom: HTMLElement;
+    onShow?: Action;
     onRemove?: Action;
+    contentViewState?: ContentViewState;
+}
+
+interface ContentViewState {
+    scrollTop: number;
 }
 
 
@@ -218,8 +228,6 @@ var playerCore = new class PlayerCore {
         ui.playerControl.setProgressChangedCallback((x) => {
             this.audio.currentTime = x * this.audio.duration;
         });
-        var ctx = new AudioContext();
-        var analyzer = ctx.createAnalyser();
     }
     prev() { return this.next(-1); }
     next(offset?: number) {
@@ -300,13 +308,13 @@ var api = new class {
     async postJson(arg: {
         path: string, obj: any,
         mode?: 'json' | 'raw',
-        method?: 'POST' | 'PUT',
+        method?: 'POST' | 'PUT' | 'DELETE',
         basicAuth?: string,
         headers?: Record<string, string>;
     }) {
         var body = arg.obj;
         if (arg.mode === undefined) arg.mode = 'json';
-        if (arg.mode === 'json') body = JSON.stringify(body);
+        if (arg.mode === 'json') body = body !== undefined ? JSON.stringify(body) : undefined;
         else if (arg.mode === 'raw') void 0; // noop
         else throw new Error('Unknown arg.mode');
 
@@ -320,7 +328,10 @@ var api = new class {
             method: arg.method ?? 'POST',
             headers: headers
         });
-        return await resp.json();
+        var contentType: string = resp.headers.get('Content-Type');
+        if (contentType == 'application/json' || contentType.startsWith('application/json;'))
+            return await resp.json();
+        return null;
     }
     async getListAsync(id: number): Promise<Api.TrackListGet> {
         return await this.getJson('lists/' + id);
@@ -380,4 +391,6 @@ var listIndex = new ListIndex();
 
 user.init();
 uploads.init();
+discussion.init();
+notes.init();
 listIndex.init();

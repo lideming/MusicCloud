@@ -60,7 +60,6 @@ class TrackList {
         for (const t of obj.tracks) {
             this.addTrack(t);
         }
-        this.contentView?.updateView();
         return this;
     }
     addTrack(t: Api.Track) {
@@ -74,6 +73,7 @@ class TrackList {
         this.tracks.push(track);
         if (this.listView) {
             this.listView.add(this.createViewItem(track));
+            this.contentView.updateView();
         }
         return track;
     }
@@ -160,13 +160,13 @@ class TrackList {
                 super.onRemove();
                 playerCore.onTrackChanged.remove(list.trackChanged);
             }
-            listviewCreated() {
+            protected appendListView() {
+                super.appendListView();
                 var lv = this.listView;
                 list.listView = lv;
                 lv.dragging = true;
                 if (list.canEdit) lv.moveByDragging = true;
                 lv.onItemMoved = () => list.updateTracksFromListView();
-                var playing = playerCore.track;
                 list.tracks.forEach(t => this.listView.add(list.createViewItem(t)));
                 this.updateItems();
                 this.useLoadingIndicator(list.loadIndicator);
@@ -219,6 +219,7 @@ class TrackList {
         track._bind = null;
         this.tracks.splice(pos, 1);
         if (this.listView) this.listView.remove(pos);
+        this.contentView?.updateView();
         this.put();
     }
     protected createViewItem(t: Track) {
@@ -235,6 +236,7 @@ class TrackViewItem extends ListViewItem {
     dom: HTMLDivElement;
     /** When undefined, the item is not removable */
     onRemove?: Action<TrackViewItem>;
+    noPos: boolean;
     private dompos: HTMLElement;
     constructor(item: Track) {
         super();
@@ -256,22 +258,27 @@ class TrackViewItem extends ListViewItem {
                 ev.preventDefault();
                 var m = new ContextMenu();
                 m.add(new MenuItem({ text: I`Comments` }));
+                if (this.track.url) m.add(new MenuLinkItem({
+                    text: I`Download`,
+                    link: api.processUrl(this.track.url)
+                }));
                 if (this.onRemove) m.add(new MenuItem({
                     text: I`Remove`,
                     onclick: () => this.onRemove?.(this)
                 }));
-                m.dom.appendChild(utils.buildDOM({
-                    tag: 'div.menu-info',
-                    textContent: track.toString()
-                }));
-                m.show({ x: ev.pageX, y: ev.pageY });
+                m.add(new MenuInfoItem({ text: I`Track ID` + ': ' + track.id }));
+                m.show({ ev: ev });
             },
             draggable: true,
             _item: this
         };
     }
     updateDom() {
-        this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+        if (!this.noPos) {
+            this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+        } else {
+            this.dompos.hidden = true;
+        }
     }
 }
 

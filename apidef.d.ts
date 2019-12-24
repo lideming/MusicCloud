@@ -77,26 +77,18 @@ declare namespace Api {
         error: string;
     }
 
+    // GET {api}/comments/{key}?[begin={id}][end={id}][limit={}]
+    interface CommentList {
+        comments: Comment[];
+        /** Zero or undefined means no more comments */
+        next: number;
+    }
 
-    //// Another plan for password:
-    //
-    // /**
-    //  * User password is encrypted by HMAC-SHA256 on client-side when
-    //  * sending request and storing locally/remotely.
-    //  * Neither the server nor crackers can see the plaintext of password.
-    //  * 
-    //  * When register:
-    //  *  1) passwd <- [user input], salt <- random()
-    //  *  2) hash <- HMAC(passwd, salt)
-    //  *  3) POST hash and salt to register
-    //  * 
-    //  * When login:
-    //  *  1) passwd <- [user input], salt <- [GET from server]
-    //  *  2) hash <- HMAC(passwd, salt)
-    //  *  3) Use hash to login
-    //  */
-    // interface PasswordInfo {
-    //     passwd_hash?: string;
-    //     passwd_salt?: string;
-    // }
+    interface Comment {
+        id: number;
+        uid: number;
+        username: string;
+        date: number;
+        content: string;
+    }
 }
