@@ -1802,6 +1802,17 @@ class ListIndex {
         });
     }
     init() {
+        playerCore.onTrackChanged.add(() => {
+            var _a, _b, _c, _d;
+            var curPlaying = (_b = (_a = playerCore.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list;
+            if (curPlaying != this.playing) {
+                if (curPlaying)
+                    (_c = this.getViewItem(curPlaying.id)) === null || _c === void 0 ? void 0 : _c.updateWith({ playing: true });
+                if (this.playing)
+                    (_d = this.getViewItem(this.playing.id)) === null || _d === void 0 ? void 0 : _d.updateWith({ playing: false });
+                this.playing = curPlaying;
+            }
+        });
         ui.sidebarList.container.appendView(this.section);
         // listIndex.fetch();
     }
@@ -1833,10 +1844,8 @@ class ListIndex {
         this.listView.add(new ListIndexViewItem(this, listinfo));
     }
     getListInfo(id) {
-        for (const l of this.listView) {
-            if (l.listInfo.id === id)
-                return l.listInfo;
-        }
+        var _a;
+        return (_a = this.getViewItem(id)) === null || _a === void 0 ? void 0 : _a.listInfo;
     }
     getList(id) {
         var list = this.loadedList[id];
@@ -1853,12 +1862,15 @@ class ListIndex {
         }
         return list;
     }
+    getViewItem(id) {
+        return this.listView.find(lvi => lvi.listInfo.id == id);
+    }
     showTracklist(id) {
         var list = this.getList(id);
         ui.content.setCurrent(list.createView());
     }
     onrename(id, newName) {
-        var lvi = this.listView.find(lvi => lvi.listInfo.id == id);
+        var lvi = this.getViewItem(id);
         lvi.listInfo.name = newName;
         lvi.updateDom();
     }
@@ -1873,7 +1885,7 @@ class ListIndex {
                 path: 'my/lists/' + id,
                 obj: null
             });
-            (_a = this.listView.find(lvi => lvi.listInfo.id == id)) === null || _a === void 0 ? void 0 : _a.remove();
+            (_a = this.getViewItem(id)) === null || _a === void 0 ? void 0 : _a.remove();
         });
     }
     /**
@@ -1896,6 +1908,7 @@ class ListIndex {
 class ListIndexViewItem extends ListViewItem {
     constructor(index, listInfo) {
         super();
+        this.playing = false;
         this.index = index;
         this.listInfo = listInfo;
     }
@@ -1918,7 +1931,7 @@ class ListIndexViewItem extends ListViewItem {
         };
     }
     updateDom() {
-        this.dom.textContent = this.listInfo.name;
+        this.dom.textContent = (this.playing ? "🎵" : "") + this.listInfo.name;
     }
 }
 // file: Uploads.ts

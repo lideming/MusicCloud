@@ -6,6 +6,7 @@ class ListIndex {
     listView: ListView<ListIndexViewItem>;
     section: Section;
     loadIndicator = new LoadingIndicator();
+    playing: TrackList;
     constructor() {
         this.listView = new ListView();
         this.listView.dragging = true;
@@ -47,6 +48,14 @@ class ListIndex {
         });
     }
     init() {
+        playerCore.onTrackChanged.add(() => {
+            var curPlaying = playerCore.track?._bind?.list;
+            if (curPlaying != this.playing) {
+                if (curPlaying) this.getViewItem(curPlaying.id)?.updateWith({ playing: true });
+                if (this.playing) this.getViewItem(this.playing.id)?.updateWith({ playing: false });
+                this.playing = curPlaying;
+            }
+        });
         ui.sidebarList.container.appendView(this.section);
         // listIndex.fetch();
     }
@@ -73,9 +82,7 @@ class ListIndex {
         this.listView.add(new ListIndexViewItem(this, listinfo));
     }
     getListInfo(id: number) {
-        for (const l of this.listView) {
-            if (l.listInfo.id === id) return l.listInfo;
-        }
+        return this.getViewItem(id)?.listInfo;
     }
     getList(id: number) {
         var list = this.loadedList[id];
@@ -91,12 +98,15 @@ class ListIndex {
         }
         return list;
     }
+    getViewItem(id: number) {
+        return this.listView.find(lvi => lvi.listInfo.id == id);
+    }
     showTracklist(id: number) {
         var list = this.getList(id);
         ui.content.setCurrent(list.createView());
     }
     onrename(id: number, newName: string) {
-        var lvi = this.listView.find(lvi => lvi.listInfo.id == id);
+        var lvi = this.getViewItem(id);
         lvi.listInfo.name = newName;
         lvi.updateDom();
     }
@@ -110,7 +120,7 @@ class ListIndex {
             path: 'my/lists/' + id,
             obj: null
         });
-        this.listView.find(lvi => lvi.listInfo.id == id)?.remove();
+        this.getViewItem(id)?.remove();
     }
 
     private nextId = -100;
@@ -137,6 +147,7 @@ class ListIndex {
 class ListIndexViewItem extends ListViewItem {
     index: ListIndex;
     listInfo: Api.TrackListInfo;
+    playing = false;
     constructor(index: ListIndex, listInfo: Api.TrackListInfo) {
         super();
         this.index = index;
@@ -161,6 +172,6 @@ class ListIndexViewItem extends ListViewItem {
         };
     }
     updateDom() {
-        this.dom.textContent = this.listInfo.name;
+        this.dom.textContent = (this.playing ? "🎵" : "") + this.listInfo.name;
     }
 }
