@@ -408,6 +408,7 @@ class EditableHelper {
 
 class MenuItem extends ListViewItem {
     text: string;
+    cls: 'normal' | 'dangerous' = 'normal';
     onclick: (ev: Event) => void;
     constructor(init: Partial<MenuItem>) {
         super();
@@ -424,8 +425,13 @@ class MenuItem extends ListViewItem {
             }
         };
     }
+    private _lastcls;
     updateDom() {
         this.dom.textContent = this.text;
+        if (this.cls !== this._lastcls) {
+            if (this._lastcls) this.dom.classList.remove(this._lastcls);
+            if (this.cls) this.dom.classList.add(this.cls);
+        }
     }
 }
 

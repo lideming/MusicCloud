@@ -101,6 +101,18 @@ class ListIndex {
         lvi.updateDom();
     }
 
+    async removeList(id: number) {
+        if (id < 0) {
+            id = await this.getList(id).getRealId();
+        }
+        await api.postJson({
+            method: 'DELETE',
+            path: 'my/lists/' + id,
+            obj: null
+        });
+        this.listView.find(lvi => lvi.listInfo.id == id)?.remove();
+    }
+
     private nextId = -100;
     /** 
      * Create a Tracklist with an temporary local ID (negative number).
@@ -136,6 +148,12 @@ class ListIndexViewItem extends ListViewItem {
             oncontextmenu: (e) => {
                 e.preventDefault();
                 var m = new ContextMenu([
+                    new MenuItem({
+                        text: I`Remove`, cls: 'dangerous',
+                        onclick: () => {
+                            this.index.removeList(this.listInfo.id);
+                        }
+                    }),
                     new MenuInfoItem({ text: I`List ID` + ': ' + this.listInfo.id })
                 ]);
                 m.show({ ev: e });

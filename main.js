@@ -923,6 +923,7 @@ class EditableHelper {
 class MenuItem extends ListViewItem {
     constructor(init) {
         super();
+        this.cls = 'normal';
         utils.objectApply(this, init);
     }
     createDom() {
@@ -940,6 +941,12 @@ class MenuItem extends ListViewItem {
     }
     updateDom() {
         this.dom.textContent = this.text;
+        if (this.cls !== this._lastcls) {
+            if (this._lastcls)
+                this.dom.classList.remove(this._lastcls);
+            if (this.cls)
+                this.dom.classList.add(this.cls);
+        }
     }
 }
 class MenuLinkItem extends MenuItem {
@@ -1499,6 +1506,14 @@ class TrackList {
             this.apiid = resp.id;
         });
     }
+    getRealId() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.apiid)
+                return this.apiid;
+            yield this.postToUser();
+            return this.apiid;
+        });
+    }
     put() {
         return __awaiter(this, void 0, void 0, function* () {
             yield user.waitLogin();
@@ -1542,10 +1557,12 @@ class TrackList {
         });
     }
     rename(newName) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             this.name = newName;
-            if (this.header)
-                this.header.updateWith({ title: this.name });
+            var header = (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.header;
+            if (header)
+                header.updateWith({ title: this.name });
             listIndex.onrename(this.id, newName);
             yield this.put();
         });
@@ -1672,7 +1689,7 @@ class TrackViewItem extends ListViewItem {
                     }));
                 if (this.onRemove)
                     m.add(new MenuItem({
-                        text: I `Remove`,
+                        text: I `Remove`, cls: 'dangerous',
                         onclick: () => { var _a, _b; return (_b = (_a = this).onRemove) === null || _b === void 0 ? void 0 : _b.call(_a, this); }
                     }));
                 m.add(new MenuInfoItem({ text: I `Track ID` + ': ' + track.id }));
@@ -1845,6 +1862,20 @@ class ListIndex {
         lvi.listInfo.name = newName;
         lvi.updateDom();
     }
+    removeList(id) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            if (id < 0) {
+                id = yield this.getList(id).getRealId();
+            }
+            yield api.postJson({
+                method: 'DELETE',
+                path: 'my/lists/' + id,
+                obj: null
+            });
+            (_a = this.listView.find(lvi => lvi.listInfo.id == id)) === null || _a === void 0 ? void 0 : _a.remove();
+        });
+    }
     /**
      * Create a Tracklist with an temporary local ID (negative number).
      * It should be sync to server and get a real ID later.
@@ -1874,6 +1905,12 @@ class ListIndexViewItem extends ListViewItem {
             oncontextmenu: (e) => {
                 e.preventDefault();
                 var m = new ContextMenu([
+                    new MenuItem({
+                        text: I `Remove`, cls: 'dangerous',
+                        onclick: () => {
+                            this.index.removeList(this.listInfo.id);
+                        }
+                    }),
                     new MenuInfoItem({ text: I `List ID` + ': ' + this.listInfo.id })
                 ]);
                 m.show({ ev: e });
@@ -2224,7 +2261,7 @@ class CommentViewItem extends ListViewItem {
                 new MenuInfoItem({ text: I `Comment ID` + ': ' + this.comment.id })
             ]);
             if (this.onremove) {
-                m.add(new MenuItem({ text: I `Remove`, onclick: () => { this.onremove(this); } }), 0);
+                m.add(new MenuItem({ text: I `Remove`, cls: 'dangerous', onclick: () => { this.onremove(this); } }), 0);
             }
             if (this.onedit) {
                 m.add(new MenuItem({ text: I `Edit`, onclick: () => { this.onedit(this); } }), 0);
@@ -2617,7 +2654,7 @@ var api = new class {
                 headers: headers
             });
             var contentType = resp.headers.get('Content-Type');
-            if (contentType == 'application/json' || contentType.startsWith('application/json;'))
+            if (contentType && /^application\/json;?/.test(contentType))
                 return yield resp.json();
             return null;
         });

@@ -82,6 +82,7 @@ html, body {
     background: white;
     animation: showing-top .3s;
     z-index: 1;
+    cursor: default;
 }
 
 .content-header .catalog {
@@ -101,6 +102,10 @@ html, body {
     margin-left: 5px;
 }
 
+.content-header .title.editable {
+    cursor: text;
+}
+
 .content-header .title.editable:hover {
     background: #eeeeee
 }
@@ -110,8 +115,9 @@ html, body {
 }
 
 .content-header .title input {
+    display: inline-block;
     padding: 5px;
-    width: 300px;
+    width: 200px;
     font: inherit;
     border: none;
     outline: none;
@@ -250,6 +256,7 @@ html, body {
     transition: transform .3s;
     background: #ddd;
     box-shadow: 0 0px 3px #999;
+    z-index: 10001;
 }
 
 .bottompinned #bottombar {
@@ -595,6 +602,17 @@ html, body {
     z-index: 10001;
 }
 
+.context-menu .item.dangerous {
+    transition: color .3s, background .3s;
+    color: red;
+}
+
+.context-menu .item.dangerous:hover {
+    transition: color .1s, background .1s;
+    background: red;
+    color: white;
+}
+
 .menu-info {
     white-space: pre-wrap;
     color: gray;
@@ -610,7 +628,7 @@ html, body {
 }
 
 .comment-editor {
-    margin: 10px;
+    margin: 10px 20px;
 }
 
 .comment-editor-new {

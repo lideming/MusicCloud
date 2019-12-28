@@ -45,7 +45,6 @@ class TrackList {
     /** Available when the view is created */
     contentView: ListContentView;
     listView: ListView<TrackViewItem>;
-    header: ContentHeader;
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
@@ -102,6 +101,11 @@ class TrackList {
         });
         this.apiid = resp.id;
     }
+    async getRealId() {
+        if (this.apiid) return this.apiid;
+        await this.postToUser();
+        return this.apiid;
+    }
     async put() {
         await user.waitLogin();
         if (this.fetching) await this.fetching;
@@ -135,7 +139,8 @@ class TrackList {
     }
     async rename(newName: string) {
         this.name = newName;
-        if (this.header) this.header.updateWith({ title: this.name });
+        var header = this.contentView?.header;
+        if (header) header.updateWith({ title: this.name });
         listIndex.onrename(this.id, newName);
         await this.put();
     }
@@ -263,7 +268,7 @@ class TrackViewItem extends ListViewItem {
                     link: api.processUrl(this.track.url)
                 }));
                 if (this.onRemove) m.add(new MenuItem({
-                    text: I`Remove`,
+                    text: I`Remove`, cls: 'dangerous',
                     onclick: () => this.onRemove?.(this)
                 }));
                 m.add(new MenuInfoItem({ text: I`Track ID` + ': ' + track.id }));

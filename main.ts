@@ -328,8 +328,8 @@ var api = new class {
             method: arg.method ?? 'POST',
             headers: headers
         });
-        var contentType: string = resp.headers.get('Content-Type');
-        if (contentType == 'application/json' || contentType.startsWith('application/json;'))
+        var contentType = resp.headers.get('Content-Type');
+        if (contentType && /^application\/json;?/.test(contentType))
             return await resp.json();
         return null;
     }

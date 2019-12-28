@@ -133,7 +133,7 @@ class CommentViewItem extends ListViewItem {
                 new MenuInfoItem({ text: I`Comment ID` + ': ' + this.comment.id })
             ]);
             if (this.onremove) {
-                m.add(new MenuItem({ text: I`Remove`, onclick: () => { this.onremove(this); } }), 0);
+                m.add(new MenuItem({ text: I`Remove`, cls: 'dangerous', onclick: () => { this.onremove(this); } }), 0);
             }
             if (this.onedit) {
                 m.add(new MenuItem({ text: I`Edit`, onclick: () => { this.onedit(this); } }), 0);
