@@ -1,4 +1,13 @@
 // file: utils.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 /** The name "utils" tells it all. */
 var utils = new class Utils {
     constructor() {
@@ -438,6 +447,48 @@ class Lazy {
         return this._value;
     }
 }
+class Semaphore {
+    constructor(init) {
+        this.queue = new Array();
+        this.maxCount = 1;
+        this.runningCount = 0;
+        utils.objectApply(this, init);
+    }
+    enter() {
+        if (this.runningCount == this.maxCount) {
+            var resolve;
+            var prom = new Promise((res) => { resolve = res; });
+            this.queue.push(resolve);
+            return prom;
+        }
+        else {
+            this.runningCount++;
+            return Promise.resolve();
+        }
+    }
+    exit() {
+        if (this.runningCount == this.maxCount && this.queue.length) {
+            try {
+                this.queue.shift()();
+            }
+            catch (_a) { }
+        }
+        else {
+            this.runningCount--;
+        }
+    }
+    run(func) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.enter();
+            try {
+                yield func();
+            }
+            finally {
+                this.exit();
+            }
+        });
+    }
+}
 var i18n = new I18n();
 function I(literals, ...placeholders) {
     if (placeholders.length == 0) {
@@ -516,15 +567,6 @@ i18n.add2dArray([
     ["next_track", "Next", "下一首"],
 ]);
 // file: viewlib.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 class View {
     constructor(dom) {
         if (dom)
@@ -1958,6 +2000,7 @@ var uploads = new class {
     constructor() {
         this.tracks = [];
         this.state = false;
+        this.uploadSemaphore = new Semaphore({ maxCount: 2 });
         this.view = new class extends ListContentView {
             constructor() {
                 super(...arguments);
@@ -2066,32 +2109,45 @@ var uploads = new class {
         });
     }
     uploadFile(file) {
-        var _a;
+        var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
             var apitrack = {
                 id: undefined, url: undefined,
                 artist: 'Unknown', name: file.name
             };
             var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { _upload: {
-                    state: 'uploading'
+                    state: 'pending'
                 } }));
             this.prependTrack(track);
-            var jsonBlob = new Blob([JSON.stringify(apitrack)]);
-            var finalBlob = new Blob([
-                BlockFormat.encodeBlock(jsonBlob),
-                BlockFormat.encodeBlock(file)
-            ]);
-            var resp = yield api.postJson({
-                path: 'tracks/newfile',
-                method: 'POST',
-                mode: 'raw',
-                obj: finalBlob,
-                headers: { 'Content-Type': 'application/x-mcloud-upload' }
-            });
-            track.id = resp.id;
-            track.url = resp.url;
+            yield this.uploadSemaphore.enter();
+            try {
+                track._upload.state = 'uploading';
+                (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+                var jsonBlob = new Blob([JSON.stringify(apitrack)]);
+                var finalBlob = new Blob([
+                    BlockFormat.encodeBlock(jsonBlob),
+                    BlockFormat.encodeBlock(file)
+                ]);
+                var resp = yield api.postJson({
+                    path: 'tracks/newfile',
+                    method: 'POST',
+                    mode: 'raw',
+                    obj: finalBlob,
+                    headers: { 'Content-Type': 'application/x-mcloud-upload' }
+                });
+                track.id = resp.id;
+                track.url = resp.url;
+            }
+            catch (err) {
+                track._upload.state = 'error';
+                (_b = track._upload.view) === null || _b === void 0 ? void 0 : _b.updateDom();
+                throw err;
+            }
+            finally {
+                this.uploadSemaphore.exit();
+            }
             track._upload.state = 'done';
-            (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+            (_c = track._upload.view) === null || _c === void 0 ? void 0 : _c.updateDom();
         });
     }
 };

@@ -14,6 +14,7 @@ class UploadTrack extends Track {
 var uploads = new class {
     tracks: UploadTrack[] = [];
     state: false | 'fetching' | 'fetched' = false;
+    private uploadSemaphore = new Semaphore({ maxCount: 2 });
     init() {
         this.sidebarItem = new ListIndexViewItem({ text: I`My Uploads` })
             .bindContentView(() => this.view);
@@ -121,24 +122,37 @@ var uploads = new class {
         var track = new UploadTrack({
             ...apitrack,
             _upload: {
-                state: 'uploading'
+                state: 'pending'
             }
         });
         this.prependTrack(track);
-        var jsonBlob = new Blob([JSON.stringify(apitrack)]);
-        var finalBlob = new Blob([
-            BlockFormat.encodeBlock(jsonBlob),
-            BlockFormat.encodeBlock(file)
-        ]);
-        var resp = await api.postJson({
-            path: 'tracks/newfile',
-            method: 'POST',
-            mode: 'raw',
-            obj: finalBlob,
-            headers: { 'Content-Type': 'application/x-mcloud-upload' }
-        }) as Api.Track;
-        track.id = resp.id;
-        track.url = resp.url;
+
+        await this.uploadSemaphore.enter();
+        try {
+            track._upload.state = 'uploading';
+            track._upload.view?.updateDom();
+
+            var jsonBlob = new Blob([JSON.stringify(apitrack)]);
+            var finalBlob = new Blob([
+                BlockFormat.encodeBlock(jsonBlob),
+                BlockFormat.encodeBlock(file)
+            ]);
+            var resp = await api.postJson({
+                path: 'tracks/newfile',
+                method: 'POST',
+                mode: 'raw',
+                obj: finalBlob,
+                headers: { 'Content-Type': 'application/x-mcloud-upload' }
+            }) as Api.Track;
+            track.id = resp.id;
+            track.url = resp.url;
+        } catch (err) {
+            track._upload.state = 'error';
+            track._upload.view?.updateDom();
+            throw err;
+        } finally {
+            this.uploadSemaphore.exit();
+        }
         track._upload.state = 'done';
         track._upload.view?.updateDom();
     }

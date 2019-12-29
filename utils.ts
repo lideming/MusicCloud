@@ -479,6 +479,41 @@ class Lazy<T> {
     }
 }
 
+class Semaphore {
+    queue = new Array<Action>();
+    maxCount = 1;
+    runningCount = 0;
+    constructor(init: Partial<Semaphore>) {
+        utils.objectApply(this, init);
+    }
+    enter(): Promise<any> {
+        if (this.runningCount == this.maxCount) {
+            var resolve: Action;
+            var prom = new Promise((res) => { resolve = res; });
+            this.queue.push(resolve);
+            return prom;
+        } else {
+            this.runningCount++;
+            return Promise.resolve();
+        }
+    }
+    exit() {
+        if (this.runningCount == this.maxCount && this.queue.length) {
+            try { this.queue.shift()(); } catch { }
+        } else {
+            this.runningCount--;
+        }
+    }
+    async run(func: () => Promise<any>) {
+        await this.enter();
+        try {
+            await func();
+        } finally {
+            this.exit();
+        }
+    }
+}
+
 var i18n = new I18n();
 
 function I(literals: TemplateStringsArray, ...placeholders: any[]) {
