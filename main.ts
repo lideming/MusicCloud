@@ -385,6 +385,12 @@ if (navigator['mediaSession']) {
     mediaSession.setActionHandler('nexttrack', () => playerCore.next());
 }
 
+window.addEventListener('beforeunload', (ev) => {
+    if (!playerCore.track || playerCore.audio.paused) return;
+    ev.preventDefault();
+    return ev.returnValue = 'The player is running. Are you sure to leave?';
+});
+
 ui.init();
 
 var listIndex = new ListIndex();
