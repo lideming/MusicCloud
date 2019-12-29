@@ -1914,7 +1914,13 @@ class ListIndexViewItem extends ListViewItem {
     }
     createDom() {
         return {
+            _ctx: this,
             tag: 'div.item.no-selection',
+            style: 'display: flex',
+            child: [
+                { tag: 'span.name.flex-1', _key: 'domname' },
+                { tag: 'span.state', style: 'margin-left: .5em; font-size: 90%;', _key: 'domstate' }
+            ],
             oncontextmenu: (e) => {
                 e.preventDefault();
                 var m = new ContextMenu([
@@ -1931,7 +1937,9 @@ class ListIndexViewItem extends ListViewItem {
         };
     }
     updateDom() {
-        this.dom.textContent = (this.playing ? "🎵" : "") + this.listInfo.name;
+        this.domname.textContent = this.listInfo.name;
+        this.domstate.textContent = this.playing ? "🎵" : "";
+        this.domstate.hidden = !this.domstate.textContent;
     }
 }
 // file: Uploads.ts

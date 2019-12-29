@@ -148,6 +148,8 @@ class ListIndexViewItem extends ListViewItem {
     index: ListIndex;
     listInfo: Api.TrackListInfo;
     playing = false;
+    domname: HTMLSpanElement;
+    domstate: HTMLSpanElement;
     constructor(index: ListIndex, listInfo: Api.TrackListInfo) {
         super();
         this.index = index;
@@ -155,7 +157,13 @@ class ListIndexViewItem extends ListViewItem {
     }
     protected createDom(): BuildDomExpr {
         return {
+            _ctx: this,
             tag: 'div.item.no-selection',
+            style: 'display: flex',
+            child: [
+                { tag: 'span.name.flex-1', _key: 'domname' },
+                { tag: 'span.state', style: 'margin-left: .5em; font-size: 90%;' , _key: 'domstate' }
+            ],
             oncontextmenu: (e) => {
                 e.preventDefault();
                 var m = new ContextMenu([
@@ -172,6 +180,8 @@ class ListIndexViewItem extends ListViewItem {
         };
     }
     updateDom() {
-        this.dom.textContent = (this.playing ? "🎵" : "") + this.listInfo.name;
+        this.domname.textContent = this.listInfo.name;
+        this.domstate.textContent = this.playing ? "🎵" : "";
+        this.domstate.hidden = !this.domstate.textContent;
     }
 }
