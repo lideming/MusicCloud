@@ -79,7 +79,7 @@ class ListIndex {
         if (this.listView.length > 0 && !ui.content.current) this.listView.onItemClicked(this.listView.get(0));
     }
     addListInfo(listinfo: Api.TrackListInfo) {
-        this.listView.add(new ListIndexViewItem(this, listinfo));
+        this.listView.add(new ListIndexViewItem({ index: this, listInfo: listinfo }));
     }
     getListInfo(id: number) {
         return this.getViewItem(id)?.listInfo;
@@ -144,16 +144,15 @@ class ListIndex {
     }
 }
 
-class ListIndexViewItem extends ListViewItem {
+class ListIndexViewItem extends SidebarItem {
     index: ListIndex;
     listInfo: Api.TrackListInfo;
     playing = false;
     domname: HTMLSpanElement;
     domstate: HTMLSpanElement;
-    constructor(index: ListIndex, listInfo: Api.TrackListInfo) {
-        super();
-        this.index = index;
-        this.listInfo = listInfo;
+    constructor(init: Partial<ListIndexViewItem>) {
+        super({});
+        utils.objectApply(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
@@ -162,25 +161,29 @@ class ListIndexViewItem extends ListViewItem {
             style: 'display: flex',
             child: [
                 { tag: 'span.name.flex-1', _key: 'domname' },
-                { tag: 'span.state', style: 'margin-left: .5em; font-size: 90%;' , _key: 'domstate' }
+                { tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;', _key: 'domstate' }
             ],
+            onclick: (ev) => this.onclick?.(ev),
             oncontextmenu: (e) => {
-                e.preventDefault();
-                var m = new ContextMenu([
-                    new MenuItem({
-                        text: I`Remove`, cls: 'dangerous',
-                        onclick: () => {
-                            this.index.removeList(this.listInfo.id);
-                        }
-                    }),
-                    new MenuInfoItem({ text: I`List ID` + ': ' + this.listInfo.id })
-                ]);
-                m.show({ ev: e });
+                var m = new ContextMenu();
+                if (this.index && this.listInfo) m.add(new MenuItem({
+                    text: I`Remove`, cls: 'dangerous',
+                    onclick: () => {
+                        this.index.removeList(this.listInfo.id);
+                    }
+                }));
+                if (this.listInfo) m.add(new MenuInfoItem({
+                    text: I`List ID` + ': ' + this.listInfo.id
+                }));
+                if (m.length) {
+                    e.preventDefault();
+                    m.show({ ev: e });
+                }
             }
         };
     }
     updateDom() {
-        this.domname.textContent = this.listInfo.name;
+        this.domname.textContent = this.listInfo?.name ?? this.text;
         this.domstate.textContent = this.playing ? "🎵" : "";
         this.domstate.hidden = !this.domstate.textContent;
     }

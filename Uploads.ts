@@ -15,7 +15,8 @@ var uploads = new class {
     tracks: UploadTrack[] = [];
     state: false | 'fetching' | 'fetched' = false;
     init() {
-        this.sidebarItem = new SidebarItem({ text: I`My Uploads` }).bindContentView(() => this.view);
+        this.sidebarItem = new ListIndexViewItem({ text: I`My Uploads` })
+            .bindContentView(() => this.view);
         ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state != false) {
@@ -28,11 +29,15 @@ var uploads = new class {
                 setTimeout(() => this.fetch(), 1);
             }
         });
+        playerCore.onTrackChanged.add(() => {
+            this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === playerCore.track) });
+        });
     }
-    sidebarItem: SidebarItem;
+    sidebarItem: ListIndexViewItem;
     view = new class extends ListContentView {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;
+        playing = new ItemActiveHelper<UploadViewItem>();
 
         protected appendHeader() {
             this.title = I`My Uploads`;
@@ -48,8 +53,29 @@ var uploads = new class {
         addTrack(t: UploadTrack, pos?: number) {
             var lvi = new UploadViewItem(t);
             this.listView.add(lvi, pos);
+            this.updatePlaying(lvi);
             this.updateView();
         }
+        onShow() {
+            super.onShow();
+            this.updatePlaying();
+            playerCore.onTrackChanged.add(this.updatePlaying as any);
+        }
+        onRemove() {
+            super.onRemove();
+            playerCore.onTrackChanged.remove(this.updatePlaying as any);
+        }
+        updatePlaying = (item?: UploadViewItem) => {
+            if (item === undefined) {
+                if (playerCore.track)
+                    this.playing.set(this.listView.find(lvi => lvi.track.id === playerCore.track.id));
+                else
+                    this.playing.set(null);
+            } else {
+                if (playerCore.track && item.track.id === playerCore.track.id)
+                    this.playing.set(item);
+            }
+        };
     };
     private prependTrack(t: UploadTrack) {
         this.tracks.unshift(t);

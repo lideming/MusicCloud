@@ -1841,7 +1841,7 @@ class ListIndex {
             this.listView.onItemClicked(this.listView.get(0));
     }
     addListInfo(listinfo) {
-        this.listView.add(new ListIndexViewItem(this, listinfo));
+        this.listView.add(new ListIndexViewItem({ index: this, listInfo: listinfo }));
     }
     getListInfo(id) {
         var _a;
@@ -1905,12 +1905,11 @@ class ListIndex {
         });
     }
 }
-class ListIndexViewItem extends ListViewItem {
-    constructor(index, listInfo) {
-        super();
+class ListIndexViewItem extends SidebarItem {
+    constructor(init) {
+        super({});
         this.playing = false;
-        this.index = index;
-        this.listInfo = listInfo;
+        utils.objectApply(this, init);
     }
     createDom() {
         return {
@@ -1919,25 +1918,32 @@ class ListIndexViewItem extends ListViewItem {
             style: 'display: flex',
             child: [
                 { tag: 'span.name.flex-1', _key: 'domname' },
-                { tag: 'span.state', style: 'margin-left: .5em; font-size: 90%;', _key: 'domstate' }
+                { tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;', _key: 'domstate' }
             ],
+            onclick: (ev) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev); },
             oncontextmenu: (e) => {
-                e.preventDefault();
-                var m = new ContextMenu([
-                    new MenuItem({
+                var m = new ContextMenu();
+                if (this.index && this.listInfo)
+                    m.add(new MenuItem({
                         text: I `Remove`, cls: 'dangerous',
                         onclick: () => {
                             this.index.removeList(this.listInfo.id);
                         }
-                    }),
-                    new MenuInfoItem({ text: I `List ID` + ': ' + this.listInfo.id })
-                ]);
-                m.show({ ev: e });
+                    }));
+                if (this.listInfo)
+                    m.add(new MenuInfoItem({
+                        text: I `List ID` + ': ' + this.listInfo.id
+                    }));
+                if (m.length) {
+                    e.preventDefault();
+                    m.show({ ev: e });
+                }
             }
         };
     }
     updateDom() {
-        this.domname.textContent = this.listInfo.name;
+        var _a, _b;
+        this.domname.textContent = (_b = (_a = this.listInfo) === null || _a === void 0 ? void 0 : _a.name, (_b !== null && _b !== void 0 ? _b : this.text));
         this.domstate.textContent = this.playing ? "🎵" : "";
         this.domstate.hidden = !this.domstate.textContent;
     }
@@ -1953,6 +1959,22 @@ var uploads = new class {
         this.tracks = [];
         this.state = false;
         this.view = new class extends ListContentView {
+            constructor() {
+                super(...arguments);
+                this.playing = new ItemActiveHelper();
+                this.updatePlaying = (item) => {
+                    if (item === undefined) {
+                        if (playerCore.track)
+                            this.playing.set(this.listView.find(lvi => lvi.track.id === playerCore.track.id));
+                        else
+                            this.playing.set(null);
+                    }
+                    else {
+                        if (playerCore.track && item.track.id === playerCore.track.id)
+                            this.playing.set(item);
+                    }
+                };
+            }
             appendHeader() {
                 this.title = I `My Uploads`;
                 super.appendHeader();
@@ -1968,12 +1990,23 @@ var uploads = new class {
             addTrack(t, pos) {
                 var lvi = new UploadViewItem(t);
                 this.listView.add(lvi, pos);
+                this.updatePlaying(lvi);
                 this.updateView();
+            }
+            onShow() {
+                super.onShow();
+                this.updatePlaying();
+                playerCore.onTrackChanged.add(this.updatePlaying);
+            }
+            onRemove() {
+                super.onRemove();
+                playerCore.onTrackChanged.remove(this.updatePlaying);
             }
         };
     }
     init() {
-        this.sidebarItem = new SidebarItem({ text: I `My Uploads` }).bindContentView(() => this.view);
+        this.sidebarItem = new ListIndexViewItem({ text: I `My Uploads` })
+            .bindContentView(() => this.view);
         ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state != false) {
@@ -1985,6 +2018,9 @@ var uploads = new class {
                 }
                 setTimeout(() => this.fetch(), 1);
             }
+        });
+        playerCore.onTrackChanged.add(() => {
+            this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === playerCore.track) });
         });
     }
     prependTrack(t) {
@@ -2592,10 +2628,13 @@ var playerCore = new class PlayerCore {
         this.audio.load();
     }
     setTrack(track) {
+        var _a;
+        var oldTrack = this.track;
         this.track = track;
         ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        this.loadUrl(track ? api.processUrl(track.url) : null);
+        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== this.track.url)
+            this.loadUrl(track ? api.processUrl(track.url) : null);
     }
     playTrack(track) {
         if (track === this.track)
