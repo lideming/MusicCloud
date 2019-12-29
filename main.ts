@@ -250,10 +250,12 @@ var playerCore = new class PlayerCore {
         this.audio.load();
     }
     setTrack(track: Track) {
+        var oldTrack = this.track;
         this.track = track;
         ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        this.loadUrl(track ? api.processUrl(track.url) : null);
+        if (oldTrack?.url !== this.track.url)
+            this.loadUrl(track ? api.processUrl(track.url) : null);
     }
     playTrack(track: Track) {
         if (track === this.track) return;
