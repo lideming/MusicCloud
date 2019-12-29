@@ -83,6 +83,7 @@ html, body {
     animation: showing-top .3s;
     z-index: 1;
     cursor: default;
+    line-height: 1.2;
 }
 
 .content-header .catalog {
@@ -116,6 +117,7 @@ html, body {
 
 .content-header .title input {
     display: inline-block;
+    line-height: 1.2;
     padding: 5px;
     width: 200px;
     font: inherit;
@@ -137,6 +139,7 @@ html, body {
     /* background: #ddd; */
     animation: showing .3s;
     text-decoration: none;
+    line-height: 1.2;
 }
 
 .clickable, .item {
