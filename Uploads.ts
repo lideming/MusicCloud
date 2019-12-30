@@ -33,6 +33,14 @@ var uploads = new class {
         playerCore.onTrackChanged.add(() => {
             this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === playerCore.track) });
         });
+        api.onTrackInfoChanged.add((newer: Api.Track) => {
+            this.tracks.forEach(t => {
+                if (t.id === newer.id) {
+                    t.updateFromApiTrack(newer)
+                    t._upload.view?.updateDom();
+                }
+            });
+        });
     }
     sidebarItem: ListIndexViewItem;
     view = new class extends ListContentView {
@@ -145,7 +153,7 @@ var uploads = new class {
                 headers: { 'Content-Type': 'application/x-mcloud-upload' }
             }) as Api.Track;
             track.id = resp.id;
-            track.url = resp.url;
+            track.updateFromApiTrack(resp);
         } catch (err) {
             track._upload.state = 'error';
             track._upload.view?.updateDom();

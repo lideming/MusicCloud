@@ -611,6 +611,7 @@ class Dialog extends View {
         this._cancelFadeout?.();
         this.ensureDom();
         ui.mainContainer.dom.appendView(this.overlay);
+        this.dom.focus();
         this.onShown.invoke();
     }
     private _cancelFadeout: Action;

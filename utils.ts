@@ -351,8 +351,8 @@ class ItemActiveHelper<T extends ListViewItem> {
 
 class Callbacks<T extends CallableFunction> {
     list = [] as T[];
-    invoke() {
-        this.list.forEach((x) => x());
+    invoke(...args) {
+        this.list.forEach((x) => x(...args));
     }
     add(callback: T) {
         this.list.push(callback);
@@ -587,7 +587,9 @@ i18n.add2dArray(JSON.parse(`[
     ["Notes", "便签"],
     ["Submit", "提交"],
     ["Submitting", "提交中"],
+    ["Download", "下载"],
     ["Edit", "编辑"],
+    ["Save", "保存"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

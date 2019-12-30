@@ -327,8 +327,8 @@ class Callbacks {
     constructor() {
         this.list = [];
     }
-    invoke() {
-        this.list.forEach((x) => x());
+    invoke(...args) {
+        this.list.forEach((x) => x(...args));
     }
     add(callback) {
         this.list.push(callback);
@@ -560,7 +560,9 @@ i18n.add2dArray(JSON.parse(`[
     ["Notes", "便签"],
     ["Submit", "提交"],
     ["Submitting", "提交中"],
+    ["Download", "下载"],
     ["Edit", "编辑"],
+    ["Save", "保存"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 i18n.add2dArray([
@@ -1167,6 +1169,7 @@ class Dialog extends View {
         (_b = (_a = this)._cancelFadeout) === null || _b === void 0 ? void 0 : _b.call(_a);
         this.ensureDom();
         ui.mainContainer.dom.appendView(this.overlay);
+        this.dom.focus();
         this.onShown.invoke();
     }
     close() {
@@ -1570,6 +1573,64 @@ class Track {
     toApiTrack() {
         return utils.objectApply({}, this, ['id', 'artist', 'name', 'url']);
     }
+    updateFromApiTrack(t) {
+        if (this.id !== t.id)
+            throw new Error('Bad track id');
+        utils.objectApply(this, t, ['id', 'name', 'artist', 'url']);
+    }
+    startEdit() {
+        var dialog = new class extends Dialog {
+            constructor() {
+                super();
+                this.width = '500px';
+                this.inputName = new LabeledInput({ label: I `Name` });
+                this.inputArtist = new LabeledInput({ label: I `Artist` });
+                this.btnSave = new TabBtn({ text: I `Save`, right: true });
+                [this.inputName, this.inputArtist].forEach(x => this.addContent(x));
+                this.addBtn(this.btnSave);
+                this.btnSave.onClick.add(() => this.save());
+                this.dom.addEventListener('keydown', (ev) => {
+                    if (ev.keyCode == 13) {
+                        ev.preventDefault();
+                        this.save();
+                    }
+                });
+            }
+            fillInfo(t) {
+                this.trackId = t.id;
+                this.title = I `Track ID` + ' ' + t.id;
+                this.inputName.updateWith({ value: t.name });
+                this.inputArtist.updateWith({ value: t.artist });
+                this.updateDom();
+            }
+            save() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    this.btnSave.updateWith({ clickable: false, text: I `Saving...` });
+                    try {
+                        var newinfo = yield api.postJson({
+                            method: 'PUT', path: 'tracks/' + this.trackId,
+                            obj: {
+                                id: this.trackId,
+                                name: this.inputName.value,
+                                artist: this.inputArtist.value
+                            }
+                        });
+                        if (newinfo.id != this.trackId)
+                            throw new Error('Bad ID in response');
+                        api.onTrackInfoChanged.invoke(newinfo);
+                        this.close();
+                    }
+                    catch (error) {
+                        this.btnSave.updateWith({ clickable: false, text: I `Error` });
+                        yield utils.sleepAsync(3000);
+                    }
+                    this.btnSave.updateWith({ clickable: true, text: I `Save` });
+                });
+            }
+        };
+        dialog.fillInfo(this);
+        dialog.show();
+    }
 }
 class TrackList {
     constructor() {
@@ -1814,8 +1875,8 @@ class TrackViewItem extends ListViewItem {
             tag: 'div.item.trackitem.no-selection',
             child: [
                 { tag: 'span.pos', textContent: '', _key: 'dompos' },
-                { tag: 'span.name', textContent: track.name },
-                { tag: 'span.artist', textContent: track.artist },
+                { tag: 'span.name', _key: 'domname' },
+                { tag: 'span.artist', _key: 'domartist' },
             ],
             onclick: () => { playerCore.playTrack(track); },
             oncontextmenu: (ev) => {
@@ -1827,6 +1888,10 @@ class TrackViewItem extends ListViewItem {
                         text: I `Download`,
                         link: api.processUrl(this.track.url)
                     }));
+                m.add(new MenuItem({
+                    text: I `Edit`,
+                    onclick: () => this.track.startEdit()
+                }));
                 if (this.onRemove)
                     m.add(new MenuItem({
                         text: I `Remove`, cls: 'dangerous',
@@ -1840,6 +1905,8 @@ class TrackViewItem extends ListViewItem {
         };
     }
     updateDom() {
+        this.domname.textContent = this.track.name;
+        this.domartist.textContent = this.track.artist;
         if (!this.noPos) {
             this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
         }
@@ -1951,6 +2018,19 @@ class ListIndex {
                 if (this.playing)
                     (_d = this.getViewItem(this.playing.id)) === null || _d === void 0 ? void 0 : _d.updateWith({ playing: false });
                 this.playing = curPlaying;
+            }
+        });
+        api.onTrackInfoChanged.add((newer) => {
+            for (const id in this.loadedList) {
+                if (this.loadedList.hasOwnProperty(id)) {
+                    const list = this.loadedList[id];
+                    list.tracks.forEach(t => {
+                        if (t.id === newer.id) {
+                            t.updateFromApiTrack(newer);
+                            list.listView.get(t._bind.position).updateDom();
+                        }
+                    });
+                }
             }
         });
         ui.sidebarList.container.appendView(this.section);
@@ -2163,6 +2243,15 @@ var uploads = new class {
         playerCore.onTrackChanged.add(() => {
             this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === playerCore.track) });
         });
+        api.onTrackInfoChanged.add((newer) => {
+            this.tracks.forEach(t => {
+                var _a;
+                if (t.id === newer.id) {
+                    t.updateFromApiTrack(newer);
+                    (_a = t._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+                }
+            });
+        });
     }
     prependTrack(t) {
         this.tracks.unshift(t);
@@ -2234,7 +2323,7 @@ var uploads = new class {
                     headers: { 'Content-Type': 'application/x-mcloud-upload' }
                 });
                 track.id = resp.id;
-                track.url = resp.url;
+                track.updateFromApiTrack(resp);
             }
             catch (err) {
                 track._upload.state = 'error';
@@ -2807,6 +2896,7 @@ var playerCore = new class PlayerCore {
 var api = new class {
     constructor() {
         this.debugSleep = settings.debug ? settings.apiDebugDelay : 0;
+        this.onTrackInfoChanged = new Callbacks();
     }
     get baseUrl() { return settings.apiBaseUrl; }
     _fetch(input, init) {

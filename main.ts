@@ -277,6 +277,9 @@ var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;
     defaultBasicAuth: string;
+
+    onTrackInfoChanged = new Callbacks<Action<Api.Track>>();
+
     async _fetch(input: RequestInfo, init?: RequestInit) {
         if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
         return await fetch(input, {

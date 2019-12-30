@@ -56,6 +56,19 @@ class ListIndex {
                 this.playing = curPlaying;
             }
         });
+        api.onTrackInfoChanged.add((newer: Api.Track) => {
+            for (const id in this.loadedList) {
+                if (this.loadedList.hasOwnProperty(id)) {
+                    const list = this.loadedList[id];
+                    list.tracks.forEach(t => {
+                        if (t.id === newer.id) {
+                            t.updateFromApiTrack(newer);
+                            list.listView.get(t._bind.position).updateDom();
+                        }
+                    });
+                }
+            }
+        });
         ui.sidebarList.container.appendView(this.section);
         // listIndex.fetch();
     }

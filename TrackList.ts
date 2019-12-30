@@ -21,6 +21,60 @@ class Track implements Api.Track {
     toApiTrack(): Api.Track {
         return utils.objectApply<Api.Track>({} as any, this, ['id', 'artist', 'name', 'url']) as any;
     }
+    updateFromApiTrack(t: Api.Track) {
+        if (this.id !== t.id) throw new Error('Bad track id');
+        utils.objectApply(this, t, ['id', 'name', 'artist', 'url']);
+    }
+    startEdit() {
+        var dialog = new class extends Dialog {
+            width = '500px';
+            trackId: number;
+            inputName = new LabeledInput({ label: I`Name` });
+            inputArtist = new LabeledInput({ label: I`Artist` });
+            btnSave = new TabBtn({ text: I`Save`, right: true });
+            constructor() {
+                super();
+                [this.inputName, this.inputArtist].forEach(x => this.addContent(x));
+                this.addBtn(this.btnSave);
+                this.btnSave.onClick.add(() => this.save());
+                this.dom.addEventListener('keydown', (ev) => {
+                    if (ev.keyCode == 13) {
+                        ev.preventDefault();
+                        this.save();
+                    }
+                })
+            }
+            fillInfo(t: Api.Track) {
+                this.trackId = t.id;
+                this.title = I`Track ID` + ' ' + t.id;
+                this.inputName.updateWith({ value: t.name });
+                this.inputArtist.updateWith({ value: t.artist });
+                this.updateDom();
+            }
+            async save() {
+                this.btnSave.updateWith({ clickable: false, text: I`Saving...` });
+                try {
+                    var newinfo = await api.postJson({
+                        method: 'PUT', path: 'tracks/' + this.trackId,
+                        obj: {
+                            id: this.trackId,
+                            name: this.inputName.value,
+                            artist: this.inputArtist.value
+                        }
+                    }) as Api.Track;
+                    if (newinfo.id != this.trackId) throw new Error('Bad ID in response');
+                    api.onTrackInfoChanged.invoke(newinfo);
+                    this.close();
+                } catch (error) {
+                    this.btnSave.updateWith({ clickable: false, text: I`Error` });
+                    await utils.sleepAsync(3000);
+                }
+                this.btnSave.updateWith({ clickable: true, text: I`Save` });
+            }
+        };
+        dialog.fillInfo(this);
+        dialog.show();
+    }
 }
 
 class TrackList {
@@ -243,6 +297,8 @@ class TrackViewItem extends ListViewItem {
     onRemove?: Action<TrackViewItem>;
     noPos: boolean;
     private dompos: HTMLElement;
+    private domname: HTMLElement;
+    private domartist: HTMLElement;
     constructor(item: Track) {
         super();
         this.track = item;
@@ -255,8 +311,8 @@ class TrackViewItem extends ListViewItem {
             tag: 'div.item.trackitem.no-selection',
             child: [
                 { tag: 'span.pos', textContent: '', _key: 'dompos' },
-                { tag: 'span.name', textContent: track.name },
-                { tag: 'span.artist', textContent: track.artist },
+                { tag: 'span.name', _key: 'domname' },
+                { tag: 'span.artist', _key: 'domartist' },
             ],
             onclick: () => { playerCore.playTrack(track); },
             oncontextmenu: (ev) => {
@@ -266,6 +322,10 @@ class TrackViewItem extends ListViewItem {
                 if (this.track.url) m.add(new MenuLinkItem({
                     text: I`Download`,
                     link: api.processUrl(this.track.url)
+                }));
+                m.add(new MenuItem({
+                    text: I`Edit`,
+                    onclick: () => this.track.startEdit()
                 }));
                 if (this.onRemove) m.add(new MenuItem({
                     text: I`Remove`, cls: 'dangerous',
@@ -279,6 +339,8 @@ class TrackViewItem extends ListViewItem {
         };
     }
     updateDom() {
+        this.domname.textContent = this.track.name;
+        this.domartist.textContent = this.track.artist;
         if (!this.noPos) {
             this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
         } else {
