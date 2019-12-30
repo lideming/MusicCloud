@@ -115,6 +115,10 @@ var utils = new class Utils {
         };
         element.addEventListener('transitionend', end);
         setTimeout(end, 350); // failsafe
+        return {
+            get finished() { return !end; },
+            cancel() { end?.(); }
+        };
     }
 
     addEvent<K extends keyof HTMLElementEventMap>(element: HTMLElement, event: K, handler: (ev: HTMLElementEventMap[K]) => any) {
@@ -159,11 +163,13 @@ var utils = new class Utils {
         }
     }
 
-    objectApply<T>(obj: Partial<T>, kv: Partial<T>, keys?: Array<keyof T>) {
-        for (const key in kv as any) {
-            if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key as any) >= 0)) {
-                const val = kv[key];
-                obj[key] = val;
+    objectApply<T>(obj: Partial<T>, kv?: Partial<T>, keys?: Array<keyof T>) {
+        if (kv) {
+            for (const key in kv as any) {
+                if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key as any) >= 0)) {
+                    const val = kv[key];
+                    obj[key] = val;
+                }
             }
         }
         return obj;

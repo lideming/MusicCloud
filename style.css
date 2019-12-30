@@ -576,7 +576,7 @@ html, body {
 
 @keyframes dialogin {
     0% {
-        transform: scale(.7);
+        transform: scale(.85);
     }
     100% {
         transform: scale(1);

@@ -108,6 +108,10 @@ var utils = new class Utils {
         };
         element.addEventListener('transitionend', end);
         setTimeout(end, 350); // failsafe
+        return {
+            get finished() { return !end; },
+            cancel() { var _a; (_a = end) === null || _a === void 0 ? void 0 : _a(); }
+        };
     }
     addEvent(element, event, handler) {
         element.addEventListener(event, handler);
@@ -150,10 +154,12 @@ var utils = new class Utils {
         }
     }
     objectApply(obj, kv, keys) {
-        for (const key in kv) {
-            if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key) >= 0)) {
-                const val = kv[key];
-                obj[key] = val;
+        if (kv) {
+            for (const key in kv) {
+                if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key) >= 0)) {
+                    const val = kv[key];
+                    obj[key] = val;
+                }
             }
         }
         return obj;
@@ -577,6 +583,8 @@ class View {
         this.ensureDom();
         return this._dom;
     }
+    get hidden() { return this.dom.hidden; }
+    set hidden(val) { this.dom.hidden = val; }
     ensureDom() {
         if (!this._dom) {
             this._dom = utils.buildDOM(this.createDom());
@@ -1088,6 +1096,134 @@ class SidebarItem extends ListViewItem {
         return this;
     }
 }
+class Dialog extends View {
+    constructor() {
+        super();
+        this.shown = false;
+        this.btnTitle = new TabBtn({ active: true, clickable: false });
+        this.btnClose = new TabBtn({ text: I `Close`, right: true });
+        this.title = 'Dialog';
+        this.width = '300px';
+        this.allowClose = true;
+        this.onShown = new Callbacks();
+        this.onClose = new Callbacks();
+        this.btnClose.onClick.add(() => this.allowClose && this.close());
+    }
+    createDom() {
+        return {
+            _ctx: this,
+            _key: 'dialog',
+            tag: 'div.dialog',
+            child: [
+                {
+                    _key: 'domheader',
+                    tag: 'div.dialog-title',
+                    child: [
+                        { tag: 'div', style: 'clear: both;' }
+                    ]
+                },
+                { tag: 'div.dialog-content', _key: 'domcontent' }
+            ]
+        };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.addBtn(this.btnTitle);
+        this.addBtn(this.btnClose);
+        this.overlay = new Overlay().setCenterChild(true);
+        this.overlay.dom.appendView(this);
+        this.overlay.dom.addEventListener('mousedown', (ev) => {
+            if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom)
+                this.close();
+        });
+        this.overlay.dom.addEventListener('keydown', (ev) => {
+            if (this.allowClose && ev.keyCode == 27) { // ESC
+                this.close();
+                ev.preventDefault();
+            }
+        });
+    }
+    updateDom() {
+        this.btnTitle.updateWith({ text: this.title });
+        this.btnTitle.hidden = !this.title;
+        this.dom.style.width = this.width;
+        this.btnClose.hidden = !this.allowClose;
+    }
+    addBtn(btn) {
+        this.ensureDom();
+        this.domheader.insertBefore(btn.dom, this.domheader.lastChild);
+    }
+    addContent(view, replace) {
+        this.ensureDom();
+        if (replace)
+            utils.clearChilds(this.domcontent);
+        this.domcontent.appendChild(View.getDOM(view));
+    }
+    show() {
+        var _a, _b;
+        if (this.shown)
+            return;
+        this.shown = true;
+        (_b = (_a = this)._cancelFadeout) === null || _b === void 0 ? void 0 : _b.call(_a);
+        this.ensureDom();
+        ui.mainContainer.dom.appendView(this.overlay);
+        this.onShown.invoke();
+    }
+    close() {
+        if (!this.shown)
+            return;
+        this.shown = false;
+        this.onClose.invoke();
+        this._cancelFadeout = utils.fadeout(this.overlay.dom).cancel;
+    }
+}
+class TabBtn extends View {
+    constructor(init) {
+        super();
+        this.clickable = true;
+        this.active = false;
+        this.right = false;
+        this.onClick = new Callbacks();
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'span.tab.no-selection',
+            onclick: () => this.onClick.invoke()
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+        this.toggleClass('clickable', this.clickable);
+        this.toggleClass('active', this.active);
+        this.dom.style.float = this.right ? 'right' : 'left';
+    }
+}
+class LabeledInput extends View {
+    constructor(init) {
+        super();
+        this.type = 'text';
+        this.ensureDom();
+        utils.objectApply(this, init);
+        this.updateDom();
+    }
+    get value() { return this.dominput.value; }
+    set value(val) { this.dominput.value = val; }
+    createDom() {
+        return {
+            _ctx: this,
+            tag: 'div',
+            child: [
+                { tag: 'div.input-label', _key: 'domlabel' },
+                { tag: 'input.input-text', _key: 'dominput' }
+            ]
+        };
+    }
+    updateDom() {
+        this.domlabel.textContent = this.label;
+        this.dominput.type = this.type;
+    }
+}
 // file: ListContentView.ts
 /// <reference path="main.ts" />
 class DataBackedListViewItem extends ListViewItem {
@@ -1216,86 +1352,44 @@ var user = new class User {
         }
     }
     initUI() {
-        var overlay = this.uioverlay = new Overlay().setCenterChild(true);
         var domctx = this.uictx = new BuildDOMCtx();
         var registering = false;
-        var toggle = (ev) => {
-            var _a, _b;
-            if ((_b = (_a = ev.target) === null || _a === void 0 ? void 0 : _a.classList) === null || _b === void 0 ? void 0 : _b.contains('active'))
-                return;
-            registering = !registering;
-            domctx.passwd2_label.hidden = domctx.passwd2.hidden = !registering;
-            var activingTitle = registering ? domctx.title2 : domctx.title;
-            domctx.btn.textContent = activingTitle.textContent;
-            utils.toggleClass(domctx.title, 'active', !registering);
-            utils.toggleClass(domctx.title2, 'active', registering);
-        };
-        var dialog = utils.buildDOM({
-            _ctx: domctx,
-            _key: 'dialog',
-            tag: 'div.dialog',
-            style: 'width: 300px',
-            child: [{
-                    tag: 'div.dialog-title',
-                    child: [
-                        {
-                            tag: 'span.clickable.no-selection.tab.active', textContent: I `Login`, _key: 'title',
-                            onclick: toggle
-                        },
-                        {
-                            tag: 'span.clickable.no-selection.tab', textContent: I `Create account`, _key: 'title2',
-                            onclick: toggle
-                        },
-                        {
-                            tag: 'div.clickable.no-selection', style: 'float: right; color: gray;',
-                            textContent: I `Close`, onclick: () => {
-                                this.closeUI();
-                            }
-                        }
-                    ]
-                }, {
-                    tag: 'div.dialog-content',
-                    child: [
-                        { tag: 'div.input-label', textContent: I `Username:` },
-                        { tag: 'input.input-text', type: 'text', _key: 'user' },
-                        { tag: 'div.input-label', textContent: I `Password:` },
-                        { tag: 'input.input-text', type: 'password', _key: 'passwd' },
-                        { tag: 'div.input-label', textContent: I `Confirm password:`, _key: 'passwd2_label' },
-                        { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
-                        { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
-                        { tag: 'div.btn#login-btn', textContent: I `Login`, tabIndex: 0, _key: 'btn' }
-                    ]
-                }]
+        var dig = this.uidialog = new Dialog();
+        dig.title = '';
+        var tabLogin = new TabBtn({ text: I `Login`, active: true });
+        var tabCreate = new TabBtn({ text: I `Create account` });
+        [tabLogin, tabCreate].forEach(x => {
+            dig.addBtn(x);
+            x.onClick.add(() => toggle(x));
         });
-        domctx.passwd2_label.hidden = domctx.passwd2.hidden = true;
-        overlay.dom.addEventListener('mousedown', (ev) => {
-            if (ev.button === 0 && ev.target === overlay.dom)
-                this.closeUI();
-        });
-        overlay.dom.appendChild(dialog);
-        var domuser = domctx.user, dompasswd = domctx.passwd, dompasswd2 = domctx.passwd2, domstatus = domctx.status, dombtn = domctx.btn;
-        overlay.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 27) { // ESC
-                this.closeUI();
-                ev.preventDefault();
-            }
-            else if (ev.keyCode == 13) { // Enter
+        var inputUser = new LabeledInput({ label: I `Username:` });
+        var inputPasswd = new LabeledInput({ label: I `Password:`, type: 'password' });
+        var inputPasswd2 = new LabeledInput({ label: I `Confirm password:`, type: 'password' });
+        [inputUser, inputPasswd, inputPasswd2].forEach(x => dig.addContent(x));
+        dig.addContent(utils.buildDOM({
+            tag: 'div', _ctx: domctx,
+            child: [
+                { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
+                { tag: 'div.btn#login-btn', textContent: I `Login`, tabIndex: 0, _key: 'btn' }
+            ]
+        }));
+        var domstatus = domctx.status, dombtn = domctx.btn;
+        dig.dom.addEventListener('keydown', (ev) => {
+            if (ev.keyCode == 13) { // Enter
                 btnClick();
                 ev.preventDefault();
             }
         });
-        dombtn.addEventListener('click', (ev) => {
-            btnClick();
-        });
+        dig.onShown.add(() => inputUser.dom.focus());
         var btnClick = () => {
             if (dombtn.classList.contains('disabled'))
                 return;
             var precheckErr = [];
-            if (!domuser.value)
+            if (!inputUser.value)
                 precheckErr.push(I `Please input the username!`);
-            if (!dompasswd.value)
+            if (!inputPasswd.value)
                 precheckErr.push(I `Please input the password!`);
-            else if (registering && dompasswd.value !== dompasswd2.value)
+            else if (registering && inputPasswd.value !== inputPasswd2.value)
                 precheckErr.push(I `Password confirmation does not match!`);
             domstatus.textContent = precheckErr.join('\r\n');
             if (precheckErr.length) {
@@ -1304,7 +1398,7 @@ var user = new class User {
             (() => __awaiter(this, void 0, void 0, function* () {
                 domstatus.textContent = I `Requesting...`;
                 utils.toggleClass(dombtn, 'disabled', true);
-                var info = { username: domuser.value, passwd: dompasswd.value };
+                var info = { username: inputUser.value, passwd: inputPasswd.value };
                 try {
                     this.pendingInfo = info;
                     if (registering) {
@@ -1330,21 +1424,25 @@ var user = new class User {
                 }
             }))();
         };
+        dombtn.addEventListener('click', btnClick);
+        var toggle = (btn) => {
+            if (btn.active)
+                return;
+            registering = !registering;
+            inputPasswd2.hidden = !registering;
+            domctx.btn.textContent = btn.text;
+            tabLogin.updateWith({ active: !registering });
+            tabCreate.updateWith({ active: registering });
+        };
+        inputPasswd2.hidden = true;
     }
     loginUI() {
-        if (this.uishown)
-            return;
-        this.uishown = true;
-        if (!this.uioverlay)
+        if (!this.uidialog)
             this.initUI();
-        ui.mainContainer.dom.appendChild(this.uioverlay.dom);
-        this.uictx.user.focus();
+        this.uidialog.show();
     }
     closeUI() {
-        if (!this.uishown)
-            return;
-        this.uishown = false;
-        utils.fadeout(this.uioverlay.dom);
+        this.uidialog.close();
     }
     getBasicAuth(info) {
         return info.username + ':' + info.passwd;

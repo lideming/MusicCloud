@@ -9,7 +9,7 @@ var user = new class User {
         username: null as string,
         passwd: null as string
     });
-    uioverlay: Overlay;
+    uidialog: Dialog;
     uictx: BuildDOMCtx;
     uishown = false;
     get info() { return this.siLogin.data; }
@@ -30,83 +30,45 @@ var user = new class User {
         }
     }
     initUI() {
-        var overlay = this.uioverlay = new Overlay().setCenterChild(true);
         var domctx = this.uictx = new BuildDOMCtx();
         var registering = false;
-        var toggle = (ev: Event) => {
-            if ((ev.target as HTMLElement)?.classList?.contains('active')) return;
-            registering = !registering;
-            domctx.passwd2_label.hidden = domctx.passwd2.hidden = !registering;
-            var activingTitle = registering ? domctx.title2 : domctx.title;
-            domctx.btn.textContent = activingTitle.textContent;
-            utils.toggleClass(domctx.title, 'active', !registering);
-            utils.toggleClass(domctx.title2, 'active', registering);
-        };
-        var dialog = utils.buildDOM({
-            _ctx: domctx,
-            _key: 'dialog',
-            tag: 'div.dialog',
-            style: 'width: 300px',
-            child: [{
-                tag: 'div.dialog-title',
-                child: [
-                    {
-                        tag: 'span.clickable.no-selection.tab.active', textContent: I`Login`, _key: 'title',
-                        onclick: toggle
-                    },
-                    {
-                        tag: 'span.clickable.no-selection.tab', textContent: I`Create account`, _key: 'title2',
-                        onclick: toggle
-                    },
-                    {
-                        tag: 'div.clickable.no-selection', style: 'float: right; color: gray;',
-                        textContent: I`Close`, onclick: () => {
-                            this.closeUI();
-                        }
-                    }
-                ]
-            }, {
-                tag: 'div.dialog-content',
-                child: [
-                    { tag: 'div.input-label', textContent: I`Username:` },
-                    { tag: 'input.input-text', type: 'text', _key: 'user' },
-                    { tag: 'div.input-label', textContent: I`Password:` },
-                    { tag: 'input.input-text', type: 'password', _key: 'passwd' },
-                    { tag: 'div.input-label', textContent: I`Confirm password:`, _key: 'passwd2_label' },
-                    { tag: 'input.input-text', type: 'password', _key: 'passwd2' },
-                    { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
-                    { tag: 'div.btn#login-btn', textContent: I`Login`, tabIndex: 0, _key: 'btn' }
-                ]
-            }]
-        }) as HTMLElement;
-        domctx.passwd2_label.hidden = domctx.passwd2.hidden = true;
-        overlay.dom.addEventListener('mousedown', (ev) => {
-            if (ev.button === 0 && ev.target === overlay.dom) this.closeUI();
+
+        var dig = this.uidialog = new Dialog();
+        dig.title = '';
+        var tabLogin = new TabBtn({ text: I`Login`, active: true });
+        var tabCreate = new TabBtn({ text: I`Create account` });
+        [tabLogin, tabCreate].forEach(x => {
+            dig.addBtn(x);
+            x.onClick.add(() => toggle(x));
         });
-        overlay.dom.appendChild(dialog);
-        var domuser = domctx.user as HTMLInputElement,
-            dompasswd = domctx.passwd as HTMLInputElement,
-            dompasswd2 = domctx.passwd2 as HTMLInputElement,
-            domstatus = domctx.status as HTMLElement,
+
+        var inputUser = new LabeledInput({ label: I`Username:` });
+        var inputPasswd = new LabeledInput({ label: I`Password:`, type: 'password' });
+        var inputPasswd2 = new LabeledInput({ label: I`Confirm password:`, type: 'password' });
+        [inputUser, inputPasswd, inputPasswd2].forEach(x => dig.addContent(x));
+        dig.addContent(utils.buildDOM({
+            tag: 'div', _ctx: domctx,
+            child: [
+                { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
+                { tag: 'div.btn#login-btn', textContent: I`Login`, tabIndex: 0, _key: 'btn' }
+            ]
+        }) as any);
+
+        var domstatus = domctx.status as HTMLElement,
             dombtn = domctx.btn as HTMLElement;
-        overlay.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 27) { // ESC
-                this.closeUI();
-                ev.preventDefault();
-            } else if (ev.keyCode == 13) { // Enter
+        dig.dom.addEventListener('keydown', (ev) => {
+            if (ev.keyCode == 13) { // Enter
                 btnClick();
                 ev.preventDefault();
             }
         });
-        dombtn.addEventListener('click', (ev) => {
-            btnClick();
-        });
+        dig.onShown.add(() => inputUser.dom.focus());
         var btnClick = () => {
             if (dombtn.classList.contains('disabled')) return;
             var precheckErr = [];
-            if (!domuser.value) precheckErr.push(I`Please input the username!`);
-            if (!dompasswd.value) precheckErr.push(I`Please input the password!`);
-            else if (registering && dompasswd.value !== dompasswd2.value)
+            if (!inputUser.value) precheckErr.push(I`Please input the username!`);
+            if (!inputPasswd.value) precheckErr.push(I`Please input the password!`);
+            else if (registering && inputPasswd.value !== inputPasswd2.value)
                 precheckErr.push(I`Password confirmation does not match!`);
             domstatus.textContent = precheckErr.join('\r\n');
             if (precheckErr.length) {
@@ -115,7 +77,7 @@ var user = new class User {
             (async () => {
                 domstatus.textContent = I`Requesting...`;
                 utils.toggleClass(dombtn, 'disabled', true);
-                var info = { username: domuser.value, passwd: dompasswd.value };
+                var info = { username: inputUser.value, passwd: inputPasswd.value };
                 try {
                     this.pendingInfo = info as any;
                     if (registering) {
@@ -138,18 +100,24 @@ var user = new class User {
                 }
             })();
         };
+        dombtn.addEventListener('click', btnClick);
+
+        var toggle = (btn: TabBtn) => {
+            if (btn.active) return;
+            registering = !registering;
+            inputPasswd2.hidden = !registering;
+            domctx.btn.textContent = btn.text;
+            tabLogin.updateWith({ active: !registering });
+            tabCreate.updateWith({ active: registering });
+        };
+        inputPasswd2.hidden = true;
     }
     loginUI() {
-        if (this.uishown) return;
-        this.uishown = true;
-        if (!this.uioverlay) this.initUI();
-        ui.mainContainer.dom.appendChild(this.uioverlay.dom);
-        this.uictx.user.focus();
+        if (!this.uidialog) this.initUI();
+        this.uidialog.show();
     }
     closeUI() {
-        if (!this.uishown) return;
-        this.uishown = false;
-        utils.fadeout(this.uioverlay.dom);
+        this.uidialog.close();
     }
     getBasicAuth(info: Api.UserInfo) {
         return info.username + ':' + info.passwd;

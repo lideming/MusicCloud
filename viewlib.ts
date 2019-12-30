@@ -12,6 +12,8 @@ class View {
         this.ensureDom();
         return this._dom;
     }
+    public get hidden() { return this.dom.hidden; }
+    public set hidden(val: boolean) { this.dom.hidden = val; }
     public ensureDom() {
         if (!this._dom) {
             this._dom = utils.buildDOM(this.createDom()) as HTMLElement;
@@ -533,5 +535,142 @@ class SidebarItem extends ListViewItem {
             ui.sidebarList.setActive(this);
         };
         return this;
+    }
+}
+
+class Dialog extends View {
+    overlay: Overlay;
+    domheader: HTMLElement;
+    domcontent: HTMLElement;
+    shown = false;
+
+    btnTitle = new TabBtn({ active: true, clickable: false });
+    btnClose = new TabBtn({ text: I`Close`, right: true });
+
+    title = 'Dialog';
+    width = '300px';
+    allowClose = true;
+    onShown = new Callbacks<Action>();
+    onClose = new Callbacks<Action>();
+
+    constructor() {
+        super();
+        this.btnClose.onClick.add(() => this.allowClose && this.close());
+    }
+    createDom(): BuildDomExpr {
+        return {
+            _ctx: this,
+            _key: 'dialog',
+            tag: 'div.dialog',
+            child: [
+                {
+                    _key: 'domheader',
+                    tag: 'div.dialog-title',
+                    child: [
+                        { tag: 'div', style: 'clear: both;' }
+                    ]
+                },
+                { tag: 'div.dialog-content', _key: 'domcontent' }
+            ]
+        };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.addBtn(this.btnTitle);
+        this.addBtn(this.btnClose);
+        this.overlay = new Overlay().setCenterChild(true);
+        this.overlay.dom.appendView(this);
+        this.overlay.dom.addEventListener('mousedown', (ev) => {
+            if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom) this.close();
+        });
+        this.overlay.dom.addEventListener('keydown', (ev) => {
+            if (this.allowClose && ev.keyCode == 27) { // ESC
+                this.close();
+                ev.preventDefault();
+            }
+        });
+    }
+    updateDom() {
+        this.btnTitle.updateWith({ text: this.title });
+        this.btnTitle.hidden = !this.title;
+        this.dom.style.width = this.width;
+        this.btnClose.hidden = !this.allowClose;
+    }
+    addBtn(btn: TabBtn) {
+        this.ensureDom();
+        this.domheader.insertBefore(btn.dom, this.domheader.lastChild);
+    }
+    addContent(view: ViewArg, replace?: boolean) {
+        this.ensureDom();
+        if (replace) utils.clearChilds(this.domcontent);
+        this.domcontent.appendChild(View.getDOM(view));
+    }
+    show() {
+        if (this.shown) return;
+        this.shown = true;
+        this._cancelFadeout?.();
+        this.ensureDom();
+        ui.mainContainer.dom.appendView(this.overlay);
+        this.onShown.invoke();
+    }
+    private _cancelFadeout: Action;
+    close() {
+        if (!this.shown) return;
+        this.shown = false;
+        this.onClose.invoke();
+        this._cancelFadeout = utils.fadeout(this.overlay.dom).cancel;
+    }
+}
+
+class TabBtn extends View {
+    text: string;
+    clickable = true;
+    active = false;
+    right = false;
+    onClick = new Callbacks<Action>();
+    constructor(init?: Partial<TabBtn>) {
+        super();
+        utils.objectApply(this, init);
+    }
+    createDom(): BuildDomExpr {
+        return {
+            tag: 'span.tab.no-selection',
+            onclick: () => this.onClick.invoke()
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+        this.toggleClass('clickable', this.clickable);
+        this.toggleClass('active', this.active);
+        this.dom.style.float = this.right ? 'right' : 'left';
+    }
+}
+
+class LabeledInput extends View {
+    label: string;
+    type = 'text';
+    domlabel: HTMLElement;
+    dominput: HTMLInputElement;
+    get value() { return this.dominput.value; }
+    set value(val) { this.dominput.value = val; }
+    constructor(init?: Partial<LabeledInput>) {
+        super();
+        this.ensureDom();
+        utils.objectApply(this, init);
+        this.updateDom();
+    }
+    createDom(): BuildDomExpr {
+        return {
+            _ctx: this,
+            tag: 'div',
+            child: [
+                { tag: 'div.input-label', _key: 'domlabel' },
+                { tag: 'input.input-text', _key: 'dominput' }
+            ]
+        };
+    }
+    updateDom() {
+        this.domlabel.textContent = this.label;
+        this.dominput.type = this.type;
     }
 }
