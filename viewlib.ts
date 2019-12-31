@@ -552,6 +552,7 @@ class Dialog extends View {
     allowClose = true;
     onShown = new Callbacks<Action>();
     onClose = new Callbacks<Action>();
+    autoFocus: View;
 
     constructor() {
         super();
@@ -612,6 +613,7 @@ class Dialog extends View {
         this.ensureDom();
         ui.mainContainer.dom.appendView(this.overlay);
         this.dom.focus();
+        this.autoFocus?.dom.focus();
         this.onShown.invoke();
     }
     private _cancelFadeout: Action;
@@ -636,6 +638,7 @@ class TabBtn extends View {
     createDom(): BuildDomExpr {
         return {
             tag: 'span.tab.no-selection',
+            tabIndex: 0,
             onclick: () => this.onClick.invoke()
         };
     }
@@ -647,11 +650,18 @@ class TabBtn extends View {
     }
 }
 
+class InputView extends View {
+    createDom() {
+        return { tag: 'input.input-text', _key: 'dominput' };
+    }
+}
+
 class LabeledInput extends View {
     label: string;
     type = 'text';
+    input = new InputView();
     domlabel: HTMLElement;
-    dominput: HTMLInputElement;
+    get dominput(): HTMLInputElement { return this.input.dom as any; }
     get value() { return this.dominput.value; }
     set value(val) { this.dominput.value = val; }
     constructor(init?: Partial<LabeledInput>) {
@@ -666,7 +676,7 @@ class LabeledInput extends View {
             tag: 'div',
             child: [
                 { tag: 'div.input-label', _key: 'domlabel' },
-                { tag: 'input.input-text', _key: 'dominput' }
+                this.input.dom
             ]
         };
     }

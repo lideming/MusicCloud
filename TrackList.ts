@@ -32,6 +32,7 @@ class Track implements Api.Track {
             inputName = new LabeledInput({ label: I`Name` });
             inputArtist = new LabeledInput({ label: I`Artist` });
             btnSave = new TabBtn({ text: I`Save`, right: true });
+            autoFocus = this.inputName.input;
             constructor() {
                 super();
                 [this.inputName, this.inputArtist].forEach(x => this.addContent(x));
@@ -42,7 +43,7 @@ class Track implements Api.Track {
                         ev.preventDefault();
                         this.save();
                     }
-                })
+                });
             }
             fillInfo(t: Api.Track) {
                 this.trackId = t.id;

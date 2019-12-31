@@ -1162,7 +1162,7 @@ class Dialog extends View {
         this.domcontent.appendChild(View.getDOM(view));
     }
     show() {
-        var _a, _b;
+        var _a, _b, _c;
         if (this.shown)
             return;
         this.shown = true;
@@ -1170,6 +1170,7 @@ class Dialog extends View {
         this.ensureDom();
         ui.mainContainer.dom.appendView(this.overlay);
         this.dom.focus();
+        (_c = this.autoFocus) === null || _c === void 0 ? void 0 : _c.dom.focus();
         this.onShown.invoke();
     }
     close() {
@@ -1192,6 +1193,7 @@ class TabBtn extends View {
     createDom() {
         return {
             tag: 'span.tab.no-selection',
+            tabIndex: 0,
             onclick: () => this.onClick.invoke()
         };
     }
@@ -1202,14 +1204,21 @@ class TabBtn extends View {
         this.dom.style.float = this.right ? 'right' : 'left';
     }
 }
+class InputView extends View {
+    createDom() {
+        return { tag: 'input.input-text', _key: 'dominput' };
+    }
+}
 class LabeledInput extends View {
     constructor(init) {
         super();
         this.type = 'text';
+        this.input = new InputView();
         this.ensureDom();
         utils.objectApply(this, init);
         this.updateDom();
     }
+    get dominput() { return this.input.dom; }
     get value() { return this.dominput.value; }
     set value(val) { this.dominput.value = val; }
     createDom() {
@@ -1218,7 +1227,7 @@ class LabeledInput extends View {
             tag: 'div',
             child: [
                 { tag: 'div.input-label', _key: 'domlabel' },
-                { tag: 'input.input-text', _key: 'dominput' }
+                this.input.dom
             ]
         };
     }
@@ -1383,7 +1392,7 @@ var user = new class User {
                 ev.preventDefault();
             }
         });
-        dig.onShown.add(() => inputUser.dom.focus());
+        dig.autoFocus = inputUser.input;
         var btnClick = () => {
             if (dombtn.classList.contains('disabled'))
                 return;
@@ -1586,6 +1595,7 @@ class Track {
                 this.inputName = new LabeledInput({ label: I `Name` });
                 this.inputArtist = new LabeledInput({ label: I `Artist` });
                 this.btnSave = new TabBtn({ text: I `Save`, right: true });
+                this.autoFocus = this.inputName.input;
                 [this.inputName, this.inputArtist].forEach(x => this.addContent(x));
                 this.addBtn(this.btnSave);
                 this.btnSave.onClick.add(() => this.save());

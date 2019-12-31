@@ -62,7 +62,7 @@ var user = new class User {
                 ev.preventDefault();
             }
         });
-        dig.onShown.add(() => inputUser.dom.focus());
+        dig.autoFocus = inputUser.input;
         var btnClick = () => {
             if (dombtn.classList.contains('disabled')) return;
             var precheckErr = [];
