@@ -277,7 +277,12 @@ class TrackList {
         var pos = track._bind.position;
         track._bind = null;
         this.tracks.splice(pos, 1);
-        if (this.listView) this.listView.remove(pos);
+        if (this.listView) {
+            this.listView.remove(pos);
+            this.updateTracksFromListView();
+        } else {
+            this.tracks.forEach((t, i) => t._bind.position = i);
+        }
         this.contentView?.updateView();
         this.put();
     }
