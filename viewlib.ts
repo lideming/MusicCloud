@@ -105,22 +105,22 @@ abstract class ListViewItem extends View {
             this.dom.style.opacity = null;
         });
         this.dom.addEventListener('dragover', (ev) => {
-            this.dragHanlder(ev, 'dragover');
+            this.dragHandler(ev, 'dragover');
         });
         this.dom.addEventListener('dragenter', (ev) => {
-            this.dragHanlder(ev, 'dragenter');
+            this.dragHandler(ev, 'dragenter');
         });
         this.dom.addEventListener('dragleave', (ev) => {
-            this.dragHanlder(ev, 'dragleave');
+            this.dragHandler(ev, 'dragleave');
         });
         this.dom.addEventListener('drop', (ev) => {
-            this.dragHanlder(ev, 'drop');
+            this.dragHandler(ev, 'drop');
         });
     }
     // https://stackoverflow.com/questions/7110353
     private enterctr = 0;
     private dragoverPlaceholder: HTMLElement;
-    dragHanlder(ev: DragEvent, type: string) {
+    dragHandler(ev: DragEvent, type: string) {
         var item = dragManager.currentItem;
         var drop = type === 'drop';
         if (item instanceof ListViewItem) {
@@ -233,9 +233,9 @@ class ListView<T extends ListViewItem = ListViewItem> extends View implements It
     removeAll() {
         while (this.length) this.remove(this.length - 1);
     }
-    /** Remove all items and all DOM childs */
+    /** Remove all items and all DOM children */
     clear() {
-        utils.clearChilds(this.dom);
+        utils.clearChildren(this.dom);
         this.items = [];
     }
     [Symbol.iterator]() { return this.items[Symbol.iterator](); }
@@ -608,7 +608,7 @@ class Dialog extends View {
     }
     addContent(view: ViewArg, replace?: boolean) {
         this.ensureDom();
-        if (replace) utils.clearChilds(this.domcontent);
+        if (replace) utils.clearChildren(this.domcontent);
         this.domcontent.appendChild(View.getDOM(view));
     }
     show() {

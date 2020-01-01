@@ -83,14 +83,14 @@ var utils = new class Utils {
      */
     buildDOM: <T extends BuildDomReturn = BuildDomReturn>(tree: BuildDomExpr, ctx?: BuildDOMCtx) => T;
 
-    /** Remove all childs from the node */
-    clearChilds(node: Node) {
+    /** Remove all children from the node */
+    clearChildren(node: Node) {
         while (node.lastChild) node.removeChild(node.lastChild);
     }
 
-    /** Remove all childs from the node (if needed) and append one (if present) */
+    /** Remove all children from the node (if needed) and append one (if present) */
     replaceChild(node: Node, newChild?: Node) {
-        this.clearChilds(node);
+        this.clearChildren(node);
         if (newChild) node.appendChild(newChild);
     }
 
@@ -270,7 +270,7 @@ class SettingItem<T> {
         this.key = key;
         this.type = typeof type == 'string' ? SettingItem.types[type] : type;
         var str = key ? localStorage.getItem(key) : null;
-        this.set(str ? this.type.deserilize(str) : initial, true);
+        this.set(str ? this.type.deserialize(str) : initial, true);
     }
     render(fn: (obj: T) => void, dontRaiseNow?: boolean) {
         if (!dontRaiseNow) fn(this.data);
@@ -321,22 +321,22 @@ class SettingItem<T> {
     static types = {
         bool: {
             serialize: function (data) { return data ? 'true' : 'false'; },
-            deserilize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
+            deserialize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
         },
         str: {
             serialize: function (x) { return x; },
-            deserilize: function (x) { return x; }
+            deserialize: function (x) { return x; }
         },
         json: {
             serialize: function (x) { return JSON.stringify(x); },
-            deserilize: function (x) { return JSON.parse(x); }
+            deserialize: function (x) { return JSON.parse(x); }
         }
     };
 }
 
 interface SiType<T> {
     serialize: (obj: T) => string;
-    deserilize: (str: string) => T;
+    deserialize: (str: string) => T;
 }
 
 class ItemActiveHelper<T extends ListViewItem> {

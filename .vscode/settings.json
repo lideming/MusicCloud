@@ -1,3 +1,7 @@
 {
-    "typescript.format.semicolons": "insert"
+    "typescript.format.semicolons": "insert",
+    "cSpell.words": [
+        "mcloud",
+        "thiz"
+    ]
 }

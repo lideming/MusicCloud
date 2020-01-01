@@ -73,14 +73,14 @@ var utils = new class Utils {
             setTimeout(resolve, time);
         });
     }
-    /** Remove all childs from the node */
-    clearChilds(node) {
+    /** Remove all children from the node */
+    clearChildren(node) {
         while (node.lastChild)
             node.removeChild(node.lastChild);
     }
-    /** Remove all childs from the node (if needed) and append one (if present) */
+    /** Remove all children from the node (if needed) and append one (if present) */
     replaceChild(node, newChild) {
-        this.clearChilds(node);
+        this.clearChildren(node);
         if (newChild)
             node.appendChild(newChild);
     }
@@ -238,7 +238,7 @@ class SettingItem {
         this.key = key;
         this.type = typeof type == 'string' ? SettingItem.types[type] : type;
         var str = key ? localStorage.getItem(key) : null;
-        this.set(str ? this.type.deserilize(str) : initial, true);
+        this.set(str ? this.type.deserialize(str) : initial, true);
     }
     render(fn, dontRaiseNow) {
         if (!dontRaiseNow)
@@ -300,15 +300,15 @@ class SettingItem {
 SettingItem.types = {
     bool: {
         serialize: function (data) { return data ? 'true' : 'false'; },
-        deserilize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
+        deserialize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
     },
     str: {
         serialize: function (x) { return x; },
-        deserilize: function (x) { return x; }
+        deserialize: function (x) { return x; }
     },
     json: {
         serialize: function (x) { return JSON.stringify(x); },
-        deserilize: function (x) { return JSON.parse(x); }
+        deserialize: function (x) { return JSON.parse(x); }
     }
 };
 class ItemActiveHelper {
@@ -673,19 +673,19 @@ class ListViewItem extends View {
             this.dom.style.opacity = null;
         });
         this.dom.addEventListener('dragover', (ev) => {
-            this.dragHanlder(ev, 'dragover');
+            this.dragHandler(ev, 'dragover');
         });
         this.dom.addEventListener('dragenter', (ev) => {
-            this.dragHanlder(ev, 'dragenter');
+            this.dragHandler(ev, 'dragenter');
         });
         this.dom.addEventListener('dragleave', (ev) => {
-            this.dragHanlder(ev, 'dragleave');
+            this.dragHandler(ev, 'dragleave');
         });
         this.dom.addEventListener('drop', (ev) => {
-            this.dragHanlder(ev, 'drop');
+            this.dragHandler(ev, 'drop');
         });
     }
-    dragHanlder(ev, type) {
+    dragHandler(ev, type) {
         var _a, _b, _c;
         var item = dragManager.currentItem;
         var drop = type === 'drop';
@@ -799,9 +799,9 @@ class ListView extends View {
         while (this.length)
             this.remove(this.length - 1);
     }
-    /** Remove all items and all DOM childs */
+    /** Remove all items and all DOM children */
     clear() {
-        utils.clearChilds(this.dom);
+        utils.clearChildren(this.dom);
         this.items = [];
     }
     [Symbol.iterator]() { return this.items[Symbol.iterator](); }
@@ -1167,7 +1167,7 @@ class Dialog extends View {
     addContent(view, replace) {
         this.ensureDom();
         if (replace)
-            utils.clearChilds(this.domcontent);
+            utils.clearChildren(this.domcontent);
         this.domcontent.appendChild(View.getDOM(view));
     }
     show() {
