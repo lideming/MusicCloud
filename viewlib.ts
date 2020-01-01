@@ -80,6 +80,7 @@ abstract class ListViewItem extends View {
     get dragData() { return this.dom.textContent; }
 
     onDragover: ListView['onDragover'];
+    onContextMenu: ListView['onContextMenu'];
 
     dragging?: boolean;
 
@@ -92,6 +93,9 @@ abstract class ListViewItem extends View {
         super.postCreateDom();
         this.dom.addEventListener('click', () => {
             this._listView?.onItemClicked?.(this);
+        });
+        this.dom.addEventListener('contextmenu', (ev) => {
+            (this.onContextMenu ?? this._listView?.onContextMenu)?.(this, ev);
         });
         this.dom.addEventListener('dragstart', (ev) => {
             if (!(this.dragging ?? this._listView?.dragging)) return;
@@ -146,6 +150,11 @@ abstract class ListViewItem extends View {
                 onDragover(arg);
                 if (drop || arg.accept) ev.preventDefault();
             }
+            var onContextMenu = this.onContextMenu ?? this.listview?.onContextMenu;
+            if (!arg.accept && item === this && onContextMenu) {
+                if (drop) onContextMenu(this, ev);
+                else ev.preventDefault();
+            }
         }
         if (type === 'dragenter' || type === 'dragleave' || drop) {
             if (type === 'dragenter') {
@@ -194,6 +203,7 @@ class ListView<T extends ListViewItem = ListViewItem> extends View implements It
      * When an item from another list is dragover or drop
      */
     onDragover: (arg: DragArg<T>) => void;
+    onContextMenu: (item: ListViewItem, ev: MouseEvent) => void;
     constructor(container?: BuildDomExpr) {
         super(container);
     }
@@ -491,7 +501,10 @@ class ContextMenu extends ListView {
             if (!this.overlay) {
                 this.overlay = new Overlay();
                 this.overlay.dom.style.background = 'rgba(0, 0, 0, .1)';
-                this.overlay.dom.addEventListener('mousedown', () => this.close());
+                this.overlay.dom.addEventListener('mousedown', (ev) => {
+                    ev.preventDefault();
+                    this.close();
+                });
             }
             document.body.appendChild(this.overlay.dom);
         }
@@ -587,7 +600,10 @@ class Dialog extends View {
         this.overlay = new Overlay().setCenterChild(true);
         this.overlay.dom.appendView(this);
         this.overlay.dom.addEventListener('mousedown', (ev) => {
-            if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom) this.close();
+            if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom) {
+                ev.preventDefault();
+                this.close();
+            }
         });
         this.overlay.dom.addEventListener('keydown', (ev) => {
             if (this.allowClose && ev.keyCode == 27) { // ESC

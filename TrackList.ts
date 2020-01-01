@@ -321,25 +321,6 @@ class TrackViewItem extends ListViewItem {
                 { tag: 'span.artist', _key: 'domartist' },
             ],
             onclick: () => { playerCore.playTrack(track); },
-            oncontextmenu: (ev) => {
-                ev.preventDefault();
-                var m = new ContextMenu();
-                m.add(new MenuItem({ text: I`Comments` }));
-                if (this.track.url) m.add(new MenuLinkItem({
-                    text: I`Download`,
-                    link: api.processUrl(this.track.url)
-                }));
-                m.add(new MenuItem({
-                    text: I`Edit`,
-                    onclick: () => this.track.startEdit()
-                }));
-                if (this.onRemove) m.add(new MenuItem({
-                    text: I`Remove`, cls: 'dangerous',
-                    onclick: () => this.onRemove?.(this)
-                }));
-                m.add(new MenuInfoItem({ text: I`Track ID` + ': ' + track.id }));
-                m.show({ ev: ev });
-            },
             draggable: true,
             _item: this
         };
@@ -353,6 +334,25 @@ class TrackViewItem extends ListViewItem {
             this.dompos.hidden = true;
         }
     }
+    onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
+        ev.preventDefault();
+        var m = new ContextMenu();
+        m.add(new MenuItem({ text: I`Comments` }));
+        if (this.track.url) m.add(new MenuLinkItem({
+            text: I`Download`,
+            link: api.processUrl(this.track.url)
+        }));
+        m.add(new MenuItem({
+            text: I`Edit`,
+            onclick: () => this.track.startEdit()
+        }));
+        if (this.onRemove) m.add(new MenuItem({
+            text: I`Remove`, cls: 'dangerous',
+            onclick: () => this.onRemove?.(this)
+        }));
+        m.add(new MenuInfoItem({ text: I`Track ID` + ': ' + this.track.id }));
+        m.show({ ev: ev });
+    };
 }
 
 class ContentHeader extends View {

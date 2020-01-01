@@ -176,23 +176,7 @@ class ListIndexViewItem extends SidebarItem {
                 { tag: 'span.name.flex-1', _key: 'domname' },
                 { tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;', _key: 'domstate' }
             ],
-            onclick: (ev) => this.onclick?.(ev),
-            oncontextmenu: (e) => {
-                var m = new ContextMenu();
-                if (this.index && this.listInfo) m.add(new MenuItem({
-                    text: I`Remove`, cls: 'dangerous',
-                    onclick: () => {
-                        this.index.removeList(this.listInfo.id);
-                    }
-                }));
-                if (this.listInfo) m.add(new MenuInfoItem({
-                    text: I`List ID` + ': ' + this.listInfo.id
-                }));
-                if (m.length) {
-                    e.preventDefault();
-                    m.show({ ev: e });
-                }
-            }
+            onclick: (ev) => this.onclick?.(ev)
         };
     }
     updateDom() {
@@ -200,4 +184,20 @@ class ListIndexViewItem extends SidebarItem {
         this.domstate.textContent = this.playing ? "🎵" : "";
         this.domstate.hidden = !this.domstate.textContent;
     }
+    onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
+        var m = new ContextMenu();
+        if (this.index && this.listInfo) m.add(new MenuItem({
+            text: I`Remove`, cls: 'dangerous',
+            onclick: () => {
+                this.index.removeList(this.listInfo.id);
+            }
+        }));
+        if (this.listInfo) m.add(new MenuInfoItem({
+            text: I`List ID` + ': ' + this.listInfo.id
+        }));
+        if (m.length) {
+            ev.preventDefault();
+            m.show({ ev: ev });
+        }
+    };
 }

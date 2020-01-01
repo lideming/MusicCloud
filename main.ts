@@ -106,6 +106,7 @@ var ui = new class {
         setProgressChangedCallback(cb: (percent: number) => void) {
             var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
             this.progbar.addEventListener('mousedown', (e) => {
+                e.preventDefault();
                 if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
                     if (e.buttons == 1) call(e);
             });

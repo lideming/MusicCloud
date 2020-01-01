@@ -126,25 +126,23 @@ class CommentViewItem extends ListViewItem {
             ]
         };
     }
-    postCreateDom() {
-        this.dom.addEventListener('contextmenu', (ev) => {
-            ev.preventDefault();
-            var m = new ContextMenu([
-                new MenuInfoItem({ text: I`Comment ID` + ': ' + this.comment.id })
-            ]);
-            if (this.onremove) {
-                m.add(new MenuItem({ text: I`Remove`, cls: 'dangerous', onclick: () => { this.onremove(this); } }), 0);
-            }
-            if (this.onedit) {
-                m.add(new MenuItem({ text: I`Edit`, onclick: () => { this.onedit(this); } }), 0);
-            }
-            m.show({ ev: ev });
-        });
-    }
     updateDom() {
         this.domusername.textContent = this.comment.username;
         this.domcontent.textContent = this.comment.content;
     }
+    onContextMenu = (item, ev) => {
+        ev.preventDefault();
+        var m = new ContextMenu([
+            new MenuInfoItem({ text: I`Comment ID` + ': ' + this.comment.id })
+        ]);
+        if (this.onremove) {
+            m.add(new MenuItem({ text: I`Remove`, cls: 'dangerous', onclick: () => { this.onremove(this); } }), 0);
+        }
+        if (this.onedit) {
+            m.add(new MenuItem({ text: I`Edit`, onclick: () => { this.onedit(this); } }), 0);
+        }
+        m.show({ ev: ev });
+    };
 }
 
 class CommentEditor extends View {

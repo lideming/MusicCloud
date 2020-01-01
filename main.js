@@ -659,6 +659,10 @@ class ListViewItem extends View {
             var _a, _b, _c;
             (_c = (_a = this._listView) === null || _a === void 0 ? void 0 : (_b = _a).onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
         });
+        this.dom.addEventListener('contextmenu', (ev) => {
+            var _a, _b, _c;
+            (_c = (_a = this.onContextMenu, (_a !== null && _a !== void 0 ? _a : (_b = this._listView) === null || _b === void 0 ? void 0 : _b.onContextMenu))) === null || _c === void 0 ? void 0 : _c(this, ev);
+        });
         this.dom.addEventListener('dragstart', (ev) => {
             var _a, _b;
             if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this._listView) === null || _b === void 0 ? void 0 : _b.dragging)))
@@ -686,7 +690,7 @@ class ListViewItem extends View {
         });
     }
     dragHandler(ev, type) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e;
         var item = dragManager.currentItem;
         var drop = type === 'drop';
         if (item instanceof ListViewItem) {
@@ -713,6 +717,13 @@ class ListViewItem extends View {
             if (!arg.accept && onDragover) {
                 onDragover(arg);
                 if (drop || arg.accept)
+                    ev.preventDefault();
+            }
+            var onContextMenu = (_d = this.onContextMenu, (_d !== null && _d !== void 0 ? _d : (_e = this.listview) === null || _e === void 0 ? void 0 : _e.onContextMenu));
+            if (!arg.accept && item === this && onContextMenu) {
+                if (drop)
+                    onContextMenu(this, ev);
+                else
                     ev.preventDefault();
             }
         }
@@ -1054,7 +1065,10 @@ class ContextMenu extends ListView {
             if (!this.overlay) {
                 this.overlay = new Overlay();
                 this.overlay.dom.style.background = 'rgba(0, 0, 0, .1)';
-                this.overlay.dom.addEventListener('mousedown', () => this.close());
+                this.overlay.dom.addEventListener('mousedown', (ev) => {
+                    ev.preventDefault();
+                    this.close();
+                });
             }
             document.body.appendChild(this.overlay.dom);
         }
@@ -1144,8 +1158,10 @@ class Dialog extends View {
         this.overlay = new Overlay().setCenterChild(true);
         this.overlay.dom.appendView(this);
         this.overlay.dom.addEventListener('mousedown', (ev) => {
-            if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom)
+            if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom) {
+                ev.preventDefault();
                 this.close();
+            }
         });
         this.overlay.dom.addEventListener('keydown', (ev) => {
             if (this.allowClose && ev.keyCode == 27) { // ESC
@@ -1889,6 +1905,27 @@ class TrackList {
 class TrackViewItem extends ListViewItem {
     constructor(item) {
         super();
+        this.onContextMenu = (item, ev) => {
+            ev.preventDefault();
+            var m = new ContextMenu();
+            m.add(new MenuItem({ text: I `Comments` }));
+            if (this.track.url)
+                m.add(new MenuLinkItem({
+                    text: I `Download`,
+                    link: api.processUrl(this.track.url)
+                }));
+            m.add(new MenuItem({
+                text: I `Edit`,
+                onclick: () => this.track.startEdit()
+            }));
+            if (this.onRemove)
+                m.add(new MenuItem({
+                    text: I `Remove`, cls: 'dangerous',
+                    onclick: () => { var _a, _b; return (_b = (_a = this).onRemove) === null || _b === void 0 ? void 0 : _b.call(_a, this); }
+                }));
+            m.add(new MenuInfoItem({ text: I `Track ID` + ': ' + this.track.id }));
+            m.show({ ev: ev });
+        };
         this.track = item;
     }
     get dragData() { return `${this.track.name} - ${this.track.artist}`; }
@@ -1903,27 +1940,6 @@ class TrackViewItem extends ListViewItem {
                 { tag: 'span.artist', _key: 'domartist' },
             ],
             onclick: () => { playerCore.playTrack(track); },
-            oncontextmenu: (ev) => {
-                ev.preventDefault();
-                var m = new ContextMenu();
-                m.add(new MenuItem({ text: I `Comments` }));
-                if (this.track.url)
-                    m.add(new MenuLinkItem({
-                        text: I `Download`,
-                        link: api.processUrl(this.track.url)
-                    }));
-                m.add(new MenuItem({
-                    text: I `Edit`,
-                    onclick: () => this.track.startEdit()
-                }));
-                if (this.onRemove)
-                    m.add(new MenuItem({
-                        text: I `Remove`, cls: 'dangerous',
-                        onclick: () => { var _a, _b; return (_b = (_a = this).onRemove) === null || _b === void 0 ? void 0 : _b.call(_a, this); }
-                    }));
-                m.add(new MenuInfoItem({ text: I `Track ID` + ': ' + track.id }));
-                m.show({ ev: ev });
-            },
             draggable: true,
             _item: this
         };
@@ -2153,6 +2169,24 @@ class ListIndexViewItem extends SidebarItem {
     constructor(init) {
         super({});
         this.playing = false;
+        this.onContextMenu = (item, ev) => {
+            var m = new ContextMenu();
+            if (this.index && this.listInfo)
+                m.add(new MenuItem({
+                    text: I `Remove`, cls: 'dangerous',
+                    onclick: () => {
+                        this.index.removeList(this.listInfo.id);
+                    }
+                }));
+            if (this.listInfo)
+                m.add(new MenuInfoItem({
+                    text: I `List ID` + ': ' + this.listInfo.id
+                }));
+            if (m.length) {
+                ev.preventDefault();
+                m.show({ ev: ev });
+            }
+        };
         utils.objectApply(this, init);
     }
     createDom() {
@@ -2164,25 +2198,7 @@ class ListIndexViewItem extends SidebarItem {
                 { tag: 'span.name.flex-1', _key: 'domname' },
                 { tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;', _key: 'domstate' }
             ],
-            onclick: (ev) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev); },
-            oncontextmenu: (e) => {
-                var m = new ContextMenu();
-                if (this.index && this.listInfo)
-                    m.add(new MenuItem({
-                        text: I `Remove`, cls: 'dangerous',
-                        onclick: () => {
-                            this.index.removeList(this.listInfo.id);
-                        }
-                    }));
-                if (this.listInfo)
-                    m.add(new MenuInfoItem({
-                        text: I `List ID` + ': ' + this.listInfo.id
-                    }));
-                if (m.length) {
-                    e.preventDefault();
-                    m.show({ ev: e });
-                }
-            }
+            onclick: (ev) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev); }
         };
     }
     updateDom() {
@@ -2566,20 +2582,7 @@ var notes = new class {
 class CommentViewItem extends ListViewItem {
     constructor(comment) {
         super();
-        this.comment = comment;
-    }
-    createDom() {
-        return {
-            _ctx: this,
-            tag: 'div.item.comment.no-transform',
-            child: [
-                { tag: 'div.username', _key: 'domusername' },
-                { tag: 'div.content', _key: 'domcontent' }
-            ]
-        };
-    }
-    postCreateDom() {
-        this.dom.addEventListener('contextmenu', (ev) => {
+        this.onContextMenu = (item, ev) => {
             ev.preventDefault();
             var m = new ContextMenu([
                 new MenuInfoItem({ text: I `Comment ID` + ': ' + this.comment.id })
@@ -2591,7 +2594,18 @@ class CommentViewItem extends ListViewItem {
                 m.add(new MenuItem({ text: I `Edit`, onclick: () => { this.onedit(this); } }), 0);
             }
             m.show({ ev: ev });
-        });
+        };
+        this.comment = comment;
+    }
+    createDom() {
+        return {
+            _ctx: this,
+            tag: 'div.item.comment.no-transform',
+            child: [
+                { tag: 'div.username', _key: 'domusername' },
+                { tag: 'div.content', _key: 'domcontent' }
+            ]
+        };
     }
     updateDom() {
         this.domusername.textContent = this.comment.username;
@@ -2730,6 +2744,7 @@ var ui = new class {
             setProgressChangedCallback(cb) {
                 var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
                 this.progbar.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
                     if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
                         if (e.buttons == 1)
                             call(e);
