@@ -1035,7 +1035,7 @@ class MenuInfoItem extends MenuItem {
 class ContextMenu extends ListView {
     constructor(items) {
         var _a;
-        super({ tag: 'div.context-menu', tabIndex: '0' });
+        super({ tag: 'div.context-menu', tabIndex: 0 });
         this.keepOpen = false;
         this.useOverlay = true;
         this._visible = false;
@@ -1061,6 +1061,15 @@ class ContextMenu extends ListView {
         document.body.appendChild(this.dom);
         this.dom.focus();
         this.dom.addEventListener('focusout', (e) => !this.dom.contains(e.relatedTarget) && this.close());
+        var width = this.dom.offsetWidth, height = this.dom.offsetHeight;
+        if (arg.x + width > document.body.offsetWidth)
+            arg.x -= width;
+        if (arg.y + height > document.body.offsetHeight)
+            arg.y -= height;
+        if (arg.x < 0)
+            arg.x = 0;
+        if (arg.y < 0)
+            arg.y = 0;
         this.dom.style.left = arg.x + 'px';
         this.dom.style.top = arg.y + 'px';
     }

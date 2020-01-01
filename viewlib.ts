@@ -480,7 +480,7 @@ class ContextMenu extends ListView {
     get visible() { return this._visible; };
     overlay: Overlay;
     constructor(items?: MenuItem[]) {
-        super({ tag: 'div.context-menu', tabIndex: '0' });
+        super({ tag: 'div.context-menu', tabIndex: 0 });
         items?.forEach(x => this.add(x));
     }
     show(arg: { x?: number, y?: number, ev?: MouseEvent; }) {
@@ -499,6 +499,11 @@ class ContextMenu extends ListView {
         this.dom.focus();
         this.dom.addEventListener('focusout',
             (e) => !this.dom.contains(e.relatedTarget as HTMLElement) && this.close());
+        var width = this.dom.offsetWidth, height = this.dom.offsetHeight;
+        if (arg.x + width > document.body.offsetWidth) arg.x -= width;
+        if (arg.y + height > document.body.offsetHeight) arg.y -= height;
+        if (arg.x < 0) arg.x = 0;
+        if (arg.y < 0) arg.y = 0;
         this.dom.style.left = arg.x + 'px';
         this.dom.style.top = arg.y + 'px';
     }
