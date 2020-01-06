@@ -1026,6 +1026,7 @@ class MenuLinkItem extends MenuItem {
     updateDom() {
         super.updateDom();
         this.dom.href = this.link;
+        this.dom.download = this.download;
     }
 }
 class MenuInfoItem extends MenuItem {
@@ -1912,7 +1913,8 @@ class TrackViewItem extends ListViewItem {
             if (this.track.url)
                 m.add(new MenuLinkItem({
                     text: I `Download`,
-                    link: api.processUrl(this.track.url)
+                    link: api.processUrl(this.track.url),
+                    download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
                 }));
             m.add(new MenuItem({
                 text: I `Edit`,

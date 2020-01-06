@@ -449,6 +449,7 @@ class MenuItem extends ListViewItem {
 
 class MenuLinkItem extends MenuItem {
     link: string;
+    download: string;
     constructor(init: Partial<MenuLinkItem>) {
         super(init);
         utils.objectApply(this, init);
@@ -462,6 +463,7 @@ class MenuLinkItem extends MenuItem {
     updateDom() {
         super.updateDom();
         (this.dom as HTMLAnchorElement).href = this.link;
+        (this.dom as HTMLAnchorElement).download = this.download;
     }
 }
 

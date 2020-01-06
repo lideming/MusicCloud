@@ -340,7 +340,8 @@ class TrackViewItem extends ListViewItem {
         m.add(new MenuItem({ text: I`Comments` }));
         if (this.track.url) m.add(new MenuLinkItem({
             text: I`Download`,
-            link: api.processUrl(this.track.url)
+            link: api.processUrl(this.track.url),
+            download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
         }));
         m.add(new MenuItem({
             text: I`Edit`,
