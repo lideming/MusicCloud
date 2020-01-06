@@ -86,7 +86,7 @@ class ListIndex {
     }
     setIndex(index: Api.TrackListIndex) {
         this.listView.clear();
-        for (const item of index.lists) {
+        for (const item of index?.lists ?? []) {
             this.addListInfo(item);
         }
         if (this.listView.length > 0 && !ui.content.current) this.listView.onItemClicked(this.listView.get(0));

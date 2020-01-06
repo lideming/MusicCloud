@@ -679,6 +679,34 @@ class InputView extends View {
     }
 }
 
+class TextView extends View {
+    get text() { return this.dom.textContent; }
+    set text(val) { this.dom.textContent = val; }
+}
+
+class ButtonView extends TextView {
+    disabled: boolean = false;
+    onclick: Action;
+    type: 'normal' | 'big';
+    constructor(init?: Partial<ButtonView>) {
+        super();
+        utils.objectApply(this, init);
+        this.updateDom();
+    }
+    createDom(): BuildDomExpr {
+        return { tag: 'div.btn', tabIndex: 0 };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.addEventListener('click', () => this.onclick?.());
+    }
+    updateDom() {
+        super.updateDom();
+        this.toggleClass('disabled', this.disabled);
+        this.toggleClass('btn-big', this.type === 'big');
+    }
+}
+
 class LabeledInput extends View {
     label: string;
     type = 'text';

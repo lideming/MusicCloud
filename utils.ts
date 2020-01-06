@@ -590,6 +590,10 @@ i18n.add2dArray(JSON.parse(`[
     ["Download", "下载"],
     ["Edit", "编辑"],
     ["Save", "保存"],
+    ["User {0}", "用户 {0}"],
+    ["You've logged in as \\"{0}\\".", "你已登录为 \\"{0}\\"。"],
+    ["Switch user", "切换用户"],
+    ["Logout", "注销"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

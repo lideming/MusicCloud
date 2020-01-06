@@ -142,7 +142,7 @@ var ui = new class {
         loginState = document.getElementById('login-state');
         init() {
             this.loginState.addEventListener('click', (ev) => {
-                user.loginUI();
+                user.openUI();
             });
         }
         update() {
@@ -186,10 +186,12 @@ var ui = new class {
         setCurrent(arg: ContentView) {
             if (arg === this.current) return;
             this.removeCurrent();
-            if (arg.onShow) arg.onShow();
-            if (arg.dom) this.container.appendChild(arg.dom);
-            if (!arg.contentViewState) arg.contentViewState = { scrollTop: 0 };
-            this.container.scrollTop = arg.contentViewState.scrollTop;
+            if (arg) {
+                if (arg.onShow) arg.onShow();
+                if (arg.dom) this.container.appendChild(arg.dom);
+                if (!arg.contentViewState) arg.contentViewState = { scrollTop: 0 };
+                this.container.scrollTop = arg.contentViewState.scrollTop;
+            }
             this.current = arg;
         }
     };

@@ -561,7 +561,7 @@ html, body {
     margin: 10px 0;
 }
 
-#login-btn {
+.btn-big {
     padding: 5px;
 }
 

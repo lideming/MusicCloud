@@ -9,9 +9,7 @@ var user = new class User {
         username: null as string,
         passwd: null as string
     });
-    uidialog: Dialog;
-    uictx: BuildDOMCtx;
-    uishown = false;
+    loginDialog: LoginDialog;
     get info() { return this.siLogin.data; }
     state: 'none' | 'logging' | 'error' | 'logged';
     onSwitchedUser = new Callbacks<Action>();
@@ -26,98 +24,23 @@ var user = new class User {
             this.login(this.info);
         } else {
             this.setState('none');
-            this.loginUI();
+            this.openUI();
         }
     }
-    initUI() {
-        var domctx = this.uictx = new BuildDOMCtx();
-        var registering = false;
-
-        var dig = this.uidialog = new Dialog();
-        dig.title = '';
-        var tabLogin = new TabBtn({ text: I`Login`, active: true });
-        var tabCreate = new TabBtn({ text: I`Create account` });
-        [tabLogin, tabCreate].forEach(x => {
-            dig.addBtn(x);
-            x.onClick.add(() => toggle(x));
-        });
-
-        var inputUser = new LabeledInput({ label: I`Username:` });
-        var inputPasswd = new LabeledInput({ label: I`Password:`, type: 'password' });
-        var inputPasswd2 = new LabeledInput({ label: I`Confirm password:`, type: 'password' });
-        [inputUser, inputPasswd, inputPasswd2].forEach(x => dig.addContent(x));
-        dig.addContent(utils.buildDOM({
-            tag: 'div', _ctx: domctx,
-            child: [
-                { tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;', _key: 'status' },
-                { tag: 'div.btn#login-btn', textContent: I`Login`, tabIndex: 0, _key: 'btn' }
-            ]
-        }) as any);
-
-        var domstatus = domctx.status as HTMLElement,
-            dombtn = domctx.btn as HTMLElement;
-        dig.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 13) { // Enter
-                btnClick();
-                ev.preventDefault();
-            }
-        });
-        dig.autoFocus = inputUser.input;
-        var btnClick = () => {
-            if (dombtn.classList.contains('disabled')) return;
-            var precheckErr = [];
-            if (!inputUser.value) precheckErr.push(I`Please input the username!`);
-            if (!inputPasswd.value) precheckErr.push(I`Please input the password!`);
-            else if (registering && inputPasswd.value !== inputPasswd2.value)
-                precheckErr.push(I`Password confirmation does not match!`);
-            domstatus.textContent = precheckErr.join('\r\n');
-            if (precheckErr.length) {
-                return;
-            }
-            (async () => {
-                domstatus.textContent = I`Requesting...`;
-                utils.toggleClass(dombtn, 'disabled', true);
-                var info = { username: inputUser.value, passwd: inputPasswd.value };
-                try {
-                    this.pendingInfo = info as any;
-                    if (registering) {
-                        await this.register(info);
-                    } else {
-                        await this.login(info);
-                    }
-                    domstatus.textContent = '';
-                    this.closeUI();
-                } catch (e) {
-                    domstatus.textContent = e;
-                    // fallback to previous login info
-                    if (this.info.username) {
-                        await this.login(this.info);
-                        domstatus.textContent += '\r\n' + I`Logged in with previous working account.`;
-                    }
-                } finally {
-                    this.pendingInfo = null;
-                    utils.toggleClass(dombtn, 'disabled', false);
-                }
-            })();
-        };
-        dombtn.addEventListener('click', btnClick);
-
-        var toggle = (btn: TabBtn) => {
-            if (btn.active) return;
-            registering = !registering;
-            inputPasswd2.hidden = !registering;
-            domctx.btn.textContent = btn.text;
-            tabLogin.updateWith({ active: !registering });
-            tabCreate.updateWith({ active: registering });
-        };
-        inputPasswd2.hidden = true;
+    initLoginUI() {
+        this.loginDialog = new LoginDialog();
     }
-    loginUI() {
-        if (!this.uidialog) this.initUI();
-        this.uidialog.show();
+    openUI(login?: boolean) {
+        login = login ?? this.state !== 'logged';
+        if (login) {
+            if (!this.loginDialog) this.loginDialog = new LoginDialog();
+            this.loginDialog.show();
+        } else {
+            new MeDialog().show();
+        }
     }
     closeUI() {
-        this.uidialog.close();
+        this.loginDialog?.close();
     }
     getBasicAuth(info: Api.UserInfo) {
         return info.username + ':' + info.passwd;
@@ -184,6 +107,16 @@ var user = new class User {
         this.loggingin = null;
         this.onSwitchedUser.invoke();
     }
+    logout() {
+        utils.objectApply(this.info, { id: -1, username: null, passwd: null });
+        this.siLogin.save();
+        api.defaultBasicAuth = undefined;
+        ui.content.setCurrent(null);
+        listIndex.setIndex(null);
+        this.setState('none');
+        this.loggingin = null;
+        this.onSwitchedUser.invoke();
+    }
     async setListids(listids: number[]) {
         var obj: Api.UserInfo = {
             id: this.info.id,
@@ -216,3 +149,107 @@ var user = new class User {
         return false;
     }
 };
+
+class LoginDialog extends Dialog {
+    tabLogin = new TabBtn({ text: I`Login`, active: true });
+    tabCreate = new TabBtn({ text: I`Create account` });
+    inputUser = new LabeledInput({ label: I`Username:` });
+    inputPasswd = new LabeledInput({ label: I`Password:`, type: 'password' });
+    inputPasswd2 = new LabeledInput({ label: I`Confirm password:`, type: 'password' });
+    viewStatus = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
+    btn = new ButtonView({ text: I`Login`, type: 'big' });
+    isRegistering = false;
+    constructor() {
+        super();
+        var dig = this;
+        dig.title = '';
+        [this.tabLogin, this.tabCreate].forEach(x => {
+            dig.addBtn(x);
+            x.onClick.add(() => toggle(x));
+        });
+
+        [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
+        dig.addContent(utils.buildDOM({
+            tag: 'div',
+            child: [this.viewStatus.dom, this.btn.dom]
+        }) as any);
+        dig.dom.addEventListener('keydown', (ev) => {
+            if (ev.keyCode == 13) { // Enter
+                this.btnClicked();
+                ev.preventDefault();
+            }
+        });
+        dig.autoFocus = this.inputUser.input;
+        this.btn.toggleClass('bigbtn', true);
+        this.btn.dom.addEventListener('click', () => this.btnClicked());
+
+        var toggle = (btn: TabBtn) => {
+            if (btn.active) return;
+            this.isRegistering = !this.isRegistering;
+            this.inputPasswd2.hidden = !this.isRegistering;
+            this.btn.text = btn.text;
+            this.tabLogin.updateWith({ active: !this.isRegistering });
+            this.tabCreate.updateWith({ active: this.isRegistering });
+        };
+        this.inputPasswd2.hidden = true;
+    }
+
+    btnClicked() {
+        if (this.btn.dom.classList.contains('disabled')) return;
+        var precheckErr = [];
+        if (!this.inputUser.value) precheckErr.push(I`Please input the username!`);
+        if (!this.inputPasswd.value) precheckErr.push(I`Please input the password!`);
+        else if (this.isRegistering && this.inputPasswd.value !== this.inputPasswd2.value)
+            precheckErr.push(I`Password confirmation does not match!`);
+        this.viewStatus.dom.textContent = precheckErr.join('\r\n');
+        if (precheckErr.length) {
+            return;
+        }
+        (async () => {
+            this.viewStatus.text = I`Requesting...`;
+            this.btn.updateWith({ disabled: true });
+            var info = { username: this.inputUser.value, passwd: this.inputPasswd.value };
+            try {
+                user.pendingInfo = info as any;
+                if (this.isRegistering) {
+                    await user.register(info);
+                } else {
+                    await user.login(info);
+                }
+                this.viewStatus.text = '';
+                user.closeUI();
+            } catch (e) {
+                this.viewStatus.text = e;
+                // fallback to previous login info
+                if (user.info.username) {
+                    await user.login(user.info);
+                    this.viewStatus.text += '\r\n' + I`Logged in with previous working account.`;
+                }
+            } finally {
+                user.pendingInfo = null;
+                this.btn.updateWith({ disabled: false });
+            }
+        })();
+    }
+}
+
+class MeDialog extends Dialog {
+    btnSwitch = new ButtonView({ text: I`Switch user`, type: 'big' });
+    btnLogout = new ButtonView({ text: I`Logout`, type: 'big' });
+    constructor() {
+        super();
+        var username = user.info.username;
+        this.title = I`User ${username}`;
+        this.addContent(new View({ tag: 'div', textContent: I`You've logged in as "${username}".` }));
+        this.addContent(this.btnSwitch);
+        this.addContent(this.btnLogout);
+        this.btnSwitch.onclick = () => {
+            user.openUI(true);
+            this.close();
+        }
+        this.btnLogout.onclick = () => {
+            user.logout();
+            this.close();
+        };
+    }
+}
