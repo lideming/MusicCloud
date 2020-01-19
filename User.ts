@@ -153,9 +153,9 @@ var user = new class User {
 class LoginDialog extends Dialog {
     tabLogin = new TabBtn({ text: I`Login`, active: true });
     tabCreate = new TabBtn({ text: I`Create account` });
-    inputUser = new LabeledInput({ label: I`Username:` });
-    inputPasswd = new LabeledInput({ label: I`Password:`, type: 'password' });
-    inputPasswd2 = new LabeledInput({ label: I`Confirm password:`, type: 'password' });
+    inputUser = new LabeledInput({ label: I`Username` });
+    inputPasswd = new LabeledInput({ label: I`Password`, type: 'password' });
+    inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
     viewStatus = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
     btn = new ButtonView({ text: I`Login`, type: 'big' });
     isRegistering = false;

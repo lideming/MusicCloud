@@ -528,9 +528,9 @@ i18n.add2dArray(JSON.parse(`[
     ["Login", "登录"],
     ["Create account", "创建账户"],
     ["Close", "关闭"],
-    ["Username:", "用户名："],
-    ["Password:", "密码："],
-    ["Confirm password:", "确认密码："],
+    ["Username", "用户名"],
+    ["Password", "密码"],
+    ["Confirm password", "确认密码"],
     ["Requesting...", "请求中……"],
     [" (error!)", "（错误！）"],
     ["Username or password is not correct.", "用户名或密码不正确。"],
@@ -1562,9 +1562,9 @@ class LoginDialog extends Dialog {
         super();
         this.tabLogin = new TabBtn({ text: I `Login`, active: true });
         this.tabCreate = new TabBtn({ text: I `Create account` });
-        this.inputUser = new LabeledInput({ label: I `Username:` });
-        this.inputPasswd = new LabeledInput({ label: I `Password:`, type: 'password' });
-        this.inputPasswd2 = new LabeledInput({ label: I `Confirm password:`, type: 'password' });
+        this.inputUser = new LabeledInput({ label: I `Username` });
+        this.inputPasswd = new LabeledInput({ label: I `Password`, type: 'password' });
+        this.inputPasswd2 = new LabeledInput({ label: I `Confirm password`, type: 'password' });
         this.viewStatus = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
         this.btn = new ButtonView({ text: I `Login`, type: 'big' });
         this.isRegistering = false;
@@ -2707,6 +2707,237 @@ class CommentEditor extends View {
         });
     }
 }
+// file: Lyrics.ts
+var Lyrics;
+(function (Lyrics) {
+    class LookaheadBuffer {
+        constructor() {
+            this.buf = [];
+        }
+        consume() {
+            var item = this.peek(0);
+            this.buf.shift();
+            return item;
+        }
+        peek(i) {
+            if (i === undefined)
+                i = 0;
+            while (this.buf.length <= i) {
+                this.buf.push(this.provider());
+            }
+            return this.buf[i];
+        }
+    }
+    var TAGBEGIN = '['.charCodeAt(0);
+    var TAGEND = ']'.charCodeAt(0);
+    var BRACKETBEGIN = '{'.charCodeAt(0);
+    var BRACKETEND = '}'.charCodeAt(0);
+    var NOTLINEFEED = '\r'.charCodeAt(0);
+    var LINEFEED = '\n'.charCodeAt(0);
+    class Lexer {
+        constructor(str) {
+            this.buf = new LookaheadBuffer();
+            this.cur = 0;
+            this.str = str;
+            this.buf.provider = () => {
+                return this.read();
+            };
+        }
+        get len() { return this.str.length; }
+        toArray() {
+            for (var i = 0; this.buf.peek(i).type !== 'eof'; i++) { }
+            return this.buf.buf.map(x => x);
+        }
+        read() {
+            var token = this.readCore();
+            this.lastToken = token;
+            return token;
+        }
+        readCore() {
+            var str = this.str;
+            var begin = this.cur;
+            var cur = this.cur;
+            try {
+                if (cur == str.length)
+                    return new Token('eof');
+                while (true) {
+                    var ch = str.charCodeAt(cur);
+                    cur++;
+                    if (ch === TAGBEGIN)
+                        return new Token('tagBegin', ch);
+                    if (ch === TAGEND)
+                        return new Token('tagEnd', ch);
+                    if (ch === BRACKETBEGIN)
+                        return new Token('bracketBegin', ch);
+                    if (ch === BRACKETEND)
+                        return new Token('bracketEnd', ch);
+                    if (ch === TAGBEGIN)
+                        return new Token('tagBegin', ch);
+                    if (ch === TAGEND)
+                        return new Token('tagEnd', ch);
+                    if (ch === NOTLINEFEED)
+                        continue;
+                    if (ch === LINEFEED)
+                        return new Token('lineFeed', ch);
+                    do {
+                        cur++;
+                        ch = str.charCodeAt(cur);
+                    } while (!(isNaN(ch) || ch === TAGBEGIN || ch === TAGEND
+                        || ch === LINEFEED || ch === NOTLINEFEED));
+                    return new Token('text', str.substring(begin, cur));
+                }
+            }
+            finally {
+                this.cur = cur;
+            }
+        }
+        peek(pos) { return this.buf.peek(pos); }
+        consume() { return this.buf.consume(); }
+        tryExpect(type, pos) {
+            var t = this.peek();
+            if (t.type === type)
+                return t;
+            return null;
+        }
+        tryExpectSeq(types) {
+            var i = 0;
+            for (const t of types) {
+                if (!this.tryExpect(t, i++))
+                    return false;
+            }
+            return true;
+        }
+        expect(type) {
+            var t = this.tryExpect(type);
+            if (!t)
+                this.error(`expected token type '${type}'`);
+            return t;
+        }
+        error(msg) {
+            throw new Error(((msg !== null && msg !== void 0 ? msg : 'error')) + ' at ' + this.peek());
+        }
+        expectAndConsume(type) {
+            this.expect(type);
+            return this.consume();
+        }
+    }
+    class Token {
+        constructor(type, val) {
+            this.type = type;
+            this.val = typeof val == 'number' ? String.fromCharCode(val) : val;
+        }
+        toString() {
+            return `{${this.type}|${this.val}}`;
+        }
+    }
+    class Parser {
+        constructor(str) {
+            this.lines = [];
+            this.lex = new Lexer(str);
+            this.tokens = this.lex.buf;
+        }
+        parse() {
+            var lex = this.lex;
+            this.skipLineFeeds();
+            while (lex.peek().type !== 'eof') {
+                let line = this.parseLine();
+                if (line)
+                    this.lines.push(line);
+                this.skipLineFeeds();
+            }
+        }
+        parseLine() {
+            var lex = this.lex;
+            var line = {
+                spans: []
+            };
+            var spans = line.spans;
+            var lastSpan = null;
+            var curTime = null;
+            while (true) {
+                if (lex.tryExpect('tagBegin')) {
+                    lex.consume();
+                    let text = lex.expectAndConsume('text').val;
+                    let ts = this.parseTimestamp(text);
+                    if (typeof ts == 'number') {
+                        curTime = ts;
+                        lex.expectAndConsume('tagEnd');
+                        if (!lastSpan)
+                            line.startTime = ts;
+                        else
+                            lastSpan.endTime = ts;
+                    }
+                    else if (lex.tryExpectSeq(['tagEnd', 'bracketBegin'])) {
+                        lex.consume();
+                        lex.consume();
+                        let ruby = lex.expectAndConsume('text').val;
+                        lex.expectAndConsume('bracketEnd');
+                        spans.push(lastSpan = { text, ruby, startTime: curTime, endTime: null });
+                    }
+                    else {
+                        if (!lastSpan) {
+                            // unknown tag at the beginning of the line, so skip this line.
+                            this.skipLine();
+                            return null;
+                        }
+                    }
+                }
+                else if (lex.tryExpect('text')) {
+                    let text = lex.consume().val;
+                    spans.push(lastSpan = { text, ruby: null, startTime: curTime, endTime: null });
+                }
+                else if (lex.tryExpect('lineFeed')) {
+                    lex.consume();
+                    break;
+                }
+                else if (lex.tryExpect('eof')) {
+                    break;
+                }
+                else {
+                    break;
+                }
+            }
+            if (line.startTime === null && line.spans.length === 0)
+                return null;
+            return line;
+        }
+        skipLine() {
+            while (!(this.lex.tryExpect('lineFeed') || this.lex.tryExpect('eof')))
+                this.lex.consume();
+            this.lex.consume();
+        }
+        skipLineFeeds() {
+            while (this.lex.tryExpect('lineFeed'))
+                this.lex.consume();
+        }
+        parseTimestamp(str) {
+            var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
+            if (!match)
+                return null;
+            var result = 0;
+            if (match[2])
+                result += parseInt(match[2]) * 60;
+            if (match[3])
+                result += parseInt(match[3]);
+            if (match[4])
+                result += parseFloat(match[4]);
+            return result;
+        }
+    }
+    Lyrics.Parser = Parser;
+})(Lyrics || (Lyrics = {}));
+var l = new Lyrics.Parser(`
+
+[00:00.00] the first line of lyrics
+
+`);
+var l2 = new Lyrics.Parser(`
+[mcloud: v1]
+
+[00:12.34 bpm 180] the [+1] first [+1] line [+1] of [+1] lyrics [+2]
+[+2] with [+1] ruby [+1] support [+2] like [+1] [世界]{せ[+1]かい[+1]}
+
+`);
 // file: main.ts
 // TypeScript 3.7 is required.
 // Why do we need to use React and Vue.js? ;)
@@ -2719,6 +2950,7 @@ class CommentEditor extends View {
 /// <reference path="listindex.ts" />
 /// <reference path="uploads.ts" />
 /// <reference path="discussion.ts" />
+/// <reference path="Lyrics.ts" />
 var settings = {
     apiBaseUrl: 'api/',
     // apiBaseUrl: 'http://127.0.0.1:50074/api/',
@@ -3141,3 +3373,4 @@ uploads.init();
 discussion.init();
 notes.init();
 listIndex.init();
+//# sourceMappingURL=main.js.map

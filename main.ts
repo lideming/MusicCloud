@@ -12,6 +12,8 @@
 /// <reference path="listindex.ts" />
 /// <reference path="uploads.ts" />
 /// <reference path="discussion.ts" />
+/// <reference path="Lyrics.ts" />
+
 
 
 
