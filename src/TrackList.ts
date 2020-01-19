@@ -1,9 +1,19 @@
+import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr } from "./utils";
+
+import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper } from "./viewlib";
+
+import { api, listIndex, ContentView, playerCore, PlayingLoopMode } from "./main";
+
+import { ListContentView } from "./ListContentView";
+
+import { user } from "./User";
+import { Api } from "./apidef";
+
 // file: TrackList.ts
-/// <reference path="main.ts" />
 
 
 /** A track binding with list */
-class Track implements Api.Track {
+export class Track implements Api.Track {
     id: number;
     name: string;
     artist: string;
@@ -78,7 +88,7 @@ class Track implements Api.Track {
     }
 }
 
-class TrackList {
+export class TrackList {
     info: Api.TrackListInfo;
     id: number;
     apiid: number;
@@ -296,7 +306,7 @@ class TrackList {
     }
 }
 
-class TrackViewItem extends ListViewItem {
+export class TrackViewItem extends ListViewItem {
     track: Track;
     dom: HTMLDivElement;
     /** When undefined, the item is not removable */
@@ -356,7 +366,7 @@ class TrackViewItem extends ListViewItem {
     };
 }
 
-class ContentHeader extends View {
+export class ContentHeader extends View {
     catalog: string;
     title: string;
     titleEditable = false;

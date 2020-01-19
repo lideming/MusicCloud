@@ -1,16 +1,14 @@
 {
-    "files": ["main.ts"],
+    "files": ["src/main.ts"],
     "compilerOptions": {
-        "module": "none",
+        "module": "CommonJS",
         "target": "ES2015",
         "jsx": "preserve",
         "lib": ["dom", "es2015"],
-        "outFile": "main.js",
-        "sourceMap": true,
+        "sourceMap": false,
         "downlevelIteration": true
     },
     "exclude": [
-        "main.js",
         "node_modules",
         "**/node_modules/*"
     ]

@@ -1,3 +1,8 @@
+import { ContentView } from "./main";
+import { ListViewItem, ListView, LoadingIndicator } from "./viewlib";
+import { ContentHeader } from "./tracklist";
+import { utils, I } from "./utils";
+
 // file: ListContentView.ts
 /// <reference path="main.ts" />
 
@@ -34,7 +39,7 @@ class DataBackedListView<T extends DataBackedListViewItem, TData> extends ListVi
 }
 
 
-class ListContentView implements ContentView {
+export class ListContentView implements ContentView {
     dom: HTMLElement;
     header: ContentHeader;
     listView: ListView<ListViewItem>;

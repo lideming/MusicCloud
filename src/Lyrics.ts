@@ -1,6 +1,6 @@
 // file: Lyrics.ts
 
-namespace Lyrics {
+export namespace Lyrics {
     class LookaheadBuffer<T> {
         buf: T[] = [];
         provider: () => T;

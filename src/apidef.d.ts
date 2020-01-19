@@ -1,6 +1,6 @@
 // file: apidef.d.ts
 
-declare namespace Api {
+export namespace Api {
     /** 
      * GET {api}/lists/index
      */

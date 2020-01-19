@@ -1,8 +1,16 @@
+import { ui, api } from "./main";
+import { LoadingIndicator, SidebarItem, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View } from "./viewlib";
+import { I, Lazy, Action, BuildDomExpr } from "./utils";
+import { ContentHeader } from "./tracklist";
+import { user } from "./User";
+import { ListContentView } from "./ListContentView";
+import { Api } from "./apidef";
+
 // file: discussion.ts
 /// <reference path="main.ts" />
 
 
-var discussion = new class {
+export var discussion = new class {
     init() {
         this.sidebarItem = new SidebarItem({ text: I`Discussion` }).bindContentView(() => this.view.value);
         ui.sidebarList.addItem(this.sidebarItem);
@@ -24,7 +32,7 @@ var discussion = new class {
     });
 };
 
-var notes = new class {
+export var notes = new class {
     init() {
         this.sidebarItem = new SidebarItem({ text: I`Notes` }).bindContentView(() => this.view);
         ui.sidebarList.addItem(this.sidebarItem);
@@ -95,7 +103,7 @@ var notes = new class {
             await this.fetch();
         });
     }
-    async post(content) {
+    async post(content: string) {
         await this.ioAction(() => api.postJson({
             method: 'POST',
             path: 'my/notes/new',

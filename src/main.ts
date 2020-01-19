@@ -3,21 +3,17 @@
 
 // Why do we need to use React and Vue.js? ;)
 
-/// <reference path="utils.ts" />
-/// <reference path="viewlib.ts" />
-/// <reference path="ListContentView.ts" />
-/// <reference path="apidef.d.ts" />
-/// <reference path="user.ts" />
-/// <reference path="tracklist.ts" />
-/// <reference path="listindex.ts" />
-/// <reference path="uploads.ts" />
-/// <reference path="discussion.ts" />
-/// <reference path="Lyrics.ts" />
+import { I, utils, SettingItem, I18n, i18n, ItemActiveHelper, Action, Callbacks } from "./utils";
+import { Lyrics } from "./Lyrics";
+import { user } from "./User";
+import { ListView, ListViewItem, SidebarItem } from "./viewlib";
+import { Api } from "./apidef";
+import { Track } from "./TrackList";
+import { ListIndex } from "./ListIndex";
+import { uploads } from "./Uploads";
+import { discussion, notes } from "./Discussion";
 
-
-
-
-var settings = {
+export var settings = {
     apiBaseUrl: 'api/',
     // apiBaseUrl: 'http://127.0.0.1:50074/api/',
     // apiBaseUrl: 'http://127.0.0.1:5000/api/',
@@ -26,7 +22,7 @@ var settings = {
 };
 
 /** 常驻 UI 元素操作 */
-var ui = new class {
+export var ui = new class {
     init() {
         this.lang.init();
         this.bottomBar.init();
@@ -199,7 +195,7 @@ var ui = new class {
     };
 }; // ui
 
-interface ContentView {
+export interface ContentView {
     dom: HTMLElement;
     onShow?: Action;
     onRemove?: Action;
@@ -212,7 +208,7 @@ interface ContentViewState {
 
 
 /** 播放器核心：控制播放逻辑 */
-var playerCore = new class PlayerCore {
+export var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track;
     loopMode: PlayingLoopMode = 'list-loop';
@@ -275,10 +271,10 @@ var playerCore = new class PlayerCore {
     }
 };
 
-type PlayingLoopMode = 'list-seq' | 'list-loop' | 'track-loop';
+export type PlayingLoopMode = 'list-seq' | 'list-loop' | 'track-loop';
 
 /** API 操作 */
-var api = new class {
+export var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;
     defaultBasicAuth: string;
@@ -403,7 +399,7 @@ window.addEventListener('beforeunload', (ev) => {
 
 ui.init();
 
-var listIndex = new ListIndex();
+export var listIndex = new ListIndex();
 
 user.init();
 uploads.init();

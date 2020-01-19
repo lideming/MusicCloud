@@ -1,7 +1,16 @@
+import { ListView, Section, LoadingIndicator, SidebarItem, ContextMenu, MenuItem, MenuInfoItem } from "./viewlib";
+
+import { ui, playerCore, api } from "./main";
+
+import { I, utils, BuildDomExpr } from "./utils";
+import { TrackList, TrackViewItem } from "./tracklist";
+import { user } from "./User";
+import { Api } from "./apidef";
+
 // file: ListIndex.ts
 /// <reference path="main.ts" />
 
-class ListIndex {
+export class ListIndex {
     loadedList: { [x: number]: TrackList; } = {};
     listView: ListView<ListIndexViewItem>;
     section: Section;
@@ -157,7 +166,7 @@ class ListIndex {
     }
 }
 
-class ListIndexViewItem extends SidebarItem {
+export class ListIndexViewItem extends SidebarItem {
     index: ListIndex;
     listInfo: Api.TrackListInfo;
     playing = false;

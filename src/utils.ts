@@ -1,7 +1,9 @@
 // file: utils.ts
 
+import { ListViewItem } from "./viewlib";
+
 /** The name "utils" tells it all. */
-var utils = new class Utils {
+export var utils = new class Utils {
 
     // Time & formatting utils:
 
@@ -183,19 +185,19 @@ var utils = new class Utils {
 
 
 // Some interesting types:
-type Action<T = void> = (arg: T) => void;
-type Func<TRet> = () => TRet;
-type AsyncFunc<T> = Func<Promise<T>>;
+export type Action<T = void> = (arg: T) => void;
+export type Func<TRet> = () => TRet;
+export type AsyncFunc<T> = Func<Promise<T>>;
 
 
 // BuildDOM types & implementation:
-type BuildDomExpr = string | BuildDomNode | HTMLElement | Node;
+export type BuildDomExpr = string | BuildDomNode | HTMLElement | Node;
 
-type BuildDomTag = string;
+export type BuildDomTag = string;
 
-type BuildDomReturn = HTMLElement | Text | Node;
+export type BuildDomReturn = HTMLElement | Text | Node;
 
-interface BuildDomNode {
+export interface BuildDomNode {
     tag?: BuildDomTag;
     child?: BuildDomExpr[] | BuildDomExpr;
     _ctx?: BuildDOMCtx | {};
@@ -261,7 +263,7 @@ utils.buildDOM = (() => {
 })();
 
 
-class SettingItem<T> {
+export class SettingItem<T> {
     key: string;
     type: SiType<T>;
     data: T;
@@ -339,7 +341,7 @@ interface SiType<T> {
     deserialize: (str: string) => T;
 }
 
-class ItemActiveHelper<T extends ListViewItem> {
+export class ItemActiveHelper<T extends ListViewItem> {
     funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
     current: T;
     set(item: T) {
@@ -349,7 +351,7 @@ class ItemActiveHelper<T extends ListViewItem> {
     }
 }
 
-class Callbacks<T extends CallableFunction> {
+export class Callbacks<T extends CallableFunction> {
     list = [] as T[];
     invoke(...args) {
         this.list.forEach((x) => x(...args));
@@ -369,7 +371,7 @@ interface I18nData {
 }
 
 /** Internationalization (aka i18n) helper class */
-class I18n {
+export class I18n {
     data: I18nData = {};
     curLang = 'en';
     missing = new Map<string, 1>();
@@ -467,7 +469,7 @@ class I18n {
     }
 }
 
-class Lazy<T> {
+export class Lazy<T> {
     private _func: Func<T>;
     private _value: T;
     get computed() { return !this._func; }
@@ -485,7 +487,7 @@ class Lazy<T> {
     }
 }
 
-class Semaphore {
+export class Semaphore {
     queue = new Array<Action>();
     maxCount = 1;
     runningCount = 0;
@@ -520,9 +522,9 @@ class Semaphore {
     }
 }
 
-var i18n = new I18n();
+export var i18n = new I18n();
 
-function I(literals: TemplateStringsArray, ...placeholders: any[]) {
+export function I(literals: TemplateStringsArray, ...placeholders: any[]) {
     if (placeholders.length == 0) {
         return i18n.get(literals[0]);
     }

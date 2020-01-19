@@ -1,8 +1,12 @@
+import { BuildDomExpr, utils, Action, I, Func, Callbacks, BuildDomNode } from "./utils";
+
+import { ContentView, ui } from "./main";
+
 // file: viewlib.ts
 
-type ViewArg = View | HTMLElement;
+export type ViewArg = View | HTMLElement;
 
-class View {
+export class View {
     constructor(dom?: BuildDomExpr) {
         if (dom) this._dom = utils.buildDOM(dom) as HTMLElement;
     }
@@ -48,8 +52,10 @@ class View {
     }
 }
 
-interface Node {
-    appendView(view: View);
+declare global {
+    interface Node {
+        appendView(view: View);
+    }
 }
 
 Node.prototype.appendView = function (this: Node, view: View) {
@@ -57,7 +63,7 @@ Node.prototype.appendView = function (this: Node, view: View) {
 };
 
 /** DragManager is used to help exchange information between views */
-var dragManager = new class DragManager {
+export var dragManager = new class DragManager {
     /** The item being dragged */
     _currentItem: any;
     get currentItem() { return this._currentItem; };
@@ -71,7 +77,7 @@ var dragManager = new class DragManager {
     }
 };
 
-abstract class ListViewItem extends View {
+export abstract class ListViewItem extends View {
     _listView: ListView;
     _position: number;
     get listview() { return this._listView; }
@@ -187,7 +193,7 @@ interface DragArg<T> {
     accept: boolean | 'move' | 'move-after', event: DragEvent;
 }
 
-class ListView<T extends ListViewItem = ListViewItem> extends View implements Iterable<T> {
+export class ListView<T extends ListViewItem = ListViewItem> extends View implements Iterable<T> {
     private items: Array<T> = [];
     onItemClicked: (item: T) => void;
     /**
@@ -269,7 +275,7 @@ class ListView<T extends ListViewItem = ListViewItem> extends View implements It
 
 type SectionActionOptions = { text: string, onclick: Action; };
 
-class Section extends View {
+export class Section extends View {
     titleDom: HTMLSpanElement;
     constructor(arg?: { title?: string, content?: ViewArg, actions?: SectionActionOptions[]; }) {
         super();
@@ -315,7 +321,7 @@ class Section extends View {
 
 type LoadingIndicatorState = 'normal' | 'running' | 'error';
 
-class LoadingIndicator extends View {
+export class LoadingIndicator extends View {
     constructor(init?: Partial<LoadingIndicator>) {
         super();
         if (init) utils.objectApply(this, init);
@@ -367,7 +373,7 @@ class LoadingIndicator extends View {
     }
 }
 
-class Overlay extends View {
+export class Overlay extends View {
     createDom() {
         return { tag: 'div.overlay' };
     }
@@ -377,7 +383,7 @@ class Overlay extends View {
     }
 }
 
-class EditableHelper {
+export class EditableHelper {
     editing = false;
     beforeEdit: string;
     element: HTMLElement;
@@ -418,7 +424,7 @@ class EditableHelper {
     }
 }
 
-class MenuItem extends ListViewItem {
+export class MenuItem extends ListViewItem {
     text: string;
     cls: 'normal' | 'dangerous' = 'normal';
     onclick: (ev: Event) => void;
@@ -447,7 +453,7 @@ class MenuItem extends ListViewItem {
     }
 }
 
-class MenuLinkItem extends MenuItem {
+export class MenuLinkItem extends MenuItem {
     link: string;
     download: string;
     constructor(init: Partial<MenuLinkItem>) {
@@ -467,7 +473,7 @@ class MenuLinkItem extends MenuItem {
     }
 }
 
-class MenuInfoItem extends MenuItem {
+export class MenuInfoItem extends MenuItem {
     text: string;
     constructor(init: Partial<MenuInfoItem>) {
         super(init);
@@ -485,7 +491,7 @@ class MenuInfoItem extends MenuItem {
 }
 
 
-class ContextMenu extends ListView {
+export class ContextMenu extends ListView {
     keepOpen = false;
     useOverlay = true;
     private _visible = false;
@@ -531,7 +537,7 @@ class ContextMenu extends ListView {
     }
 }
 
-class SidebarItem extends ListViewItem {
+export class SidebarItem extends ListViewItem {
     text: string;
     onclick: Action<Event>;
     constructor(init: Partial<SidebarItem>) {
@@ -558,7 +564,7 @@ class SidebarItem extends ListViewItem {
     }
 }
 
-class Dialog extends View {
+export class Dialog extends View {
     overlay: Overlay;
     domheader: HTMLElement;
     domcontent: HTMLElement;
@@ -648,7 +654,7 @@ class Dialog extends View {
     }
 }
 
-class TabBtn extends View {
+export class TabBtn extends View {
     text: string;
     clickable = true;
     active = false;
@@ -673,18 +679,18 @@ class TabBtn extends View {
     }
 }
 
-class InputView extends View {
+export class InputView extends View {
     createDom() {
         return { tag: 'input.input-text', _key: 'dominput' };
     }
 }
 
-class TextView extends View {
+export class TextView extends View {
     get text() { return this.dom.textContent; }
     set text(val) { this.dom.textContent = val; }
 }
 
-class ButtonView extends TextView {
+export class ButtonView extends TextView {
     disabled: boolean = false;
     onclick: Action;
     type: 'normal' | 'big';
@@ -707,7 +713,7 @@ class ButtonView extends TextView {
     }
 }
 
-class LabeledInput extends View {
+export class LabeledInput extends View {
     label: string;
     type = 'text';
     input = new InputView();

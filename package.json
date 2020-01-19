@@ -1,0 +1,29 @@
+{
+  "name": "yuuza-mcloud",
+  "version": "1.0.0",
+  "description": "The MusicCloud website.",
+  "main": "index.js",
+  "scripts": {
+    "build": "node index.js build",
+    "watch": "node index.js watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lideming/MusicCloud.git"
+  },
+  "keywords": [
+    "musiccloud"
+  ],
+  "author": "lideming",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lideming/MusicCloud/issues"
+  },
+  "homepage": "https://github.com/lideming/MusicCloud",
+  "dependencies": {
+    "browserify": "^16.5.0",
+    "tsify": "^4.0.1",
+    "typescript": "^3.7.5",
+    "watchify": "^3.11.1"
+  }
+}

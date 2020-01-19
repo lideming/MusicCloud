@@ -1,3 +1,19 @@
+import { Track, TrackViewItem } from "./tracklist";
+
+import { Semaphore, I, ItemActiveHelper, utils, i18n } from "./utils";
+
+import { ListIndexViewItem } from "./ListIndex";
+
+import { ui, playerCore, api } from "./main";
+
+import { user } from "./User";
+
+import { Api } from "./apidef";
+
+import { ListContentView } from "./ListContentView";
+
+import { ListView, LoadingIndicator, View } from "./viewlib";
+
 // file: Uploads.ts
 
 class UploadTrack extends Track {
@@ -11,7 +27,7 @@ class UploadTrack extends Track {
     };
 }
 
-var uploads = new class {
+export var uploads = new class {
     tracks: UploadTrack[] = [];
     state: false | 'fetching' | 'fetched' = false;
     private uploadSemaphore = new Semaphore({ maxCount: 2 });
