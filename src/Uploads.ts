@@ -1,21 +1,18 @@
+// file: Uploads.ts
+
 import { Track, TrackViewItem } from "./tracklist";
-
-import { Semaphore, I, ItemActiveHelper, utils, i18n } from "./utils";
-
+import { Semaphore, ItemActiveHelper, utils } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
-
-import { ui, playerCore, api } from "./main";
-
 import { user } from "./User";
-
 import { Api } from "./apidef";
-
 import { ListContentView } from "./ListContentView";
-
 import { ListView, LoadingIndicator, View } from "./viewlib";
 import { router } from "./Router";
+import { I, i18n } from "./I18n";
+import { playerCore } from "./PlayerCore";
+import { ui } from "./UI";
+import { api } from "./Api";
 
-// file: Uploads.ts
 
 class UploadTrack extends Track {
     constructor(init: Partial<UploadTrack>) {

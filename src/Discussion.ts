@@ -1,14 +1,14 @@
-import { ui, api } from "./main";
-import { LoadingIndicator, SidebarItem, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View } from "./viewlib";
+// file: discussion.ts
+
+import { ui, SidebarItem } from "./UI";
+import { api } from "./Api";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View } from "./viewlib";
 import { I, Lazy, Action, BuildDomExpr } from "./utils";
 import { ContentHeader } from "./tracklist";
 import { user } from "./User";
 import { ListContentView } from "./ListContentView";
 import { Api } from "./apidef";
 import { router } from "./Router";
-
-// file: discussion.ts
-/// <reference path="main.ts" />
 
 
 export var discussion = new class {

@@ -1,8 +1,6 @@
-import { BuildDomExpr, utils, Action, I, Func, Callbacks, BuildDomNode } from "./utils";
-
-import { ContentView, ui } from "./main";
-
 // file: viewlib.ts
+
+import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode } from "./utils";
 
 export type ViewArg = View | HTMLElement;
 
@@ -537,33 +535,6 @@ export class ContextMenu extends ListView {
     }
 }
 
-export class SidebarItem extends ListViewItem {
-    text: string;
-    onclick: Action<Event>;
-    constructor(init: Partial<SidebarItem>) {
-        super();
-        utils.objectApply(this, init);
-    }
-    protected createDom(): BuildDomExpr {
-        return {
-            tag: 'div.item.no-selection',
-            onclick: (e) => this.onclick?.(e)
-        };
-    }
-    updateDom() {
-        this.dom.textContent = this.text;
-    }
-    bindContentView(viewFunc: Func<ContentView>) {
-        var view: ContentView;
-        this.onclick = () => {
-            if (!view) view = viewFunc();
-            ui.content.setCurrent(view);
-            ui.sidebarList.setActive(this);
-        };
-        return this;
-    }
-}
-
 export class Dialog extends View {
     overlay: Overlay;
     domheader: HTMLElement;
@@ -579,6 +550,8 @@ export class Dialog extends View {
     onShown = new Callbacks<Action>();
     onClose = new Callbacks<Action>();
     autoFocus: View;
+
+    static defaultParent: HTMLElement;
 
     constructor() {
         super();
@@ -640,7 +613,7 @@ export class Dialog extends View {
         this.shown = true;
         this._cancelFadeout?.();
         this.ensureDom();
-        ui.mainContainer.dom.appendView(this.overlay);
+        (Dialog.defaultParent ?? document.body).appendView(this.overlay);
         this.dom.focus();
         this.autoFocus?.dom.focus();
         this.onShown.invoke();

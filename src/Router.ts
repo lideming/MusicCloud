@@ -1,5 +1,6 @@
-import { ContentView, ui } from "./main";
-import { SidebarItem } from "./viewlib";
+// file: Router.ts
+
+import { ContentView, ui, SidebarItem } from "./UI";
 
 export interface Route {
     path: string[];

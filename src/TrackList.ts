@@ -1,15 +1,14 @@
+// file: TrackList.ts
+
 import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr } from "./utils";
-
 import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper } from "./viewlib";
-
-import { api, listIndex, ContentView, playerCore, PlayingLoopMode } from "./main";
-
 import { ListContentView } from "./ListContentView";
-
 import { user } from "./User";
 import { Api } from "./apidef";
-
-// file: TrackList.ts
+import { api } from "./Api";
+import { listIndex } from "./main";
+import { ContentView } from "./UI";
+import { playerCore, PlayingLoopMode } from "./PlayerCore";
 
 
 /** A track binding with list */

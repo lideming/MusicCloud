@@ -1,5 +1,6 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
+// file: Api.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -11,14 +12,125 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const main_1 = require("./main");
+const utils_1 = require("./utils");
+/** API 操作 */
+exports.api = new class {
+    constructor() {
+        this.debugSleep = main_1.settings.debug ? main_1.settings.apiDebugDelay : 0;
+        this.onTrackInfoChanged = new utils_1.Callbacks();
+    }
+    get baseUrl() { return main_1.settings.apiBaseUrl; }
+    _fetch(input, init) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.debugSleep)
+                yield utils_1.utils.sleepAsync(this.debugSleep * (Math.random() + 1));
+            return yield fetch(input, Object.assign({ credentials: 'same-origin' }, init));
+        });
+    }
+    getHeaders(arg) {
+        var _a;
+        arg = arg || {};
+        var headers = {};
+        var basicAuth = (_a = arg.basicAuth, (_a !== null && _a !== void 0 ? _a : this.defaultBasicAuth));
+        if (basicAuth)
+            headers['Authorization'] = 'Basic ' + utils_1.utils.base64EncodeUtf8(basicAuth);
+        return headers;
+    }
+    getJson(path, options) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            options = options || {};
+            var resp = yield this._fetch(this.baseUrl + path, {
+                headers: Object.assign({}, this.getHeaders(options))
+            });
+            if (options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200))) {
+                if (resp.status === 450) {
+                    try {
+                        var resperr = (yield resp.json()).error;
+                    }
+                    catch (_b) { }
+                    if (resperr)
+                        throw new Error(resperr);
+                }
+                throw new Error('HTTP status ' + resp.status);
+            }
+            return yield resp.json();
+        });
+    }
+    postJson(arg) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            var body = arg.obj;
+            if (arg.mode === undefined)
+                arg.mode = 'json';
+            if (arg.mode === 'json')
+                body = body !== undefined ? JSON.stringify(body) : undefined;
+            else if (arg.mode === 'raw')
+                void 0; // noop
+            else
+                throw new Error('Unknown arg.mode');
+            var headers = this.getHeaders(arg);
+            if (arg.mode === 'json')
+                headers['Content-Type'] = 'application/json';
+            headers = Object.assign(Object.assign({}, headers), arg.headers);
+            var resp = yield this._fetch(this.baseUrl + arg.path, {
+                body: body,
+                method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
+                headers: headers
+            });
+            var contentType = resp.headers.get('Content-Type');
+            if (contentType && /^application\/json;?/.test(contentType))
+                return yield resp.json();
+            return null;
+        });
+    }
+    getListAsync(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.getJson('lists/' + id);
+        });
+    }
+    getListIndexAsync() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.getJson('lists/index');
+        });
+    }
+    putListAsync(list, creating = false) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.postJson({
+                path: 'lists/' + list.id,
+                method: creating ? 'POST' : 'PUT',
+                obj: list,
+            });
+        });
+    }
+    processUrl(url) {
+        if (url.match('^(https?:/)?/'))
+            return url;
+        return this.baseUrl + url;
+    }
+};
+
+},{"./main":11,"./utils":13}],2:[function(require,module,exports){
+"use strict";
+// file: discussion.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const UI_1 = require("./UI");
+const Api_1 = require("./Api");
 const viewlib_1 = require("./viewlib");
 const utils_1 = require("./utils");
 const tracklist_1 = require("./tracklist");
 const User_1 = require("./User");
 const ListContentView_1 = require("./ListContentView");
 const Router_1 = require("./Router");
-// file: discussion.ts
-/// <reference path="main.ts" />
 exports.discussion = new class {
     constructor() {
         this.view = new utils_1.Lazy(() => new class extends ListContentView_1.ListContentView {
@@ -37,13 +149,13 @@ exports.discussion = new class {
         });
     }
     init() {
-        this.sidebarItem = new viewlib_1.SidebarItem({ text: utils_1.I `Discussion` });
+        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Discussion` });
         Router_1.router.addRoute({
             path: ['discussion'],
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.view.value
         });
-        main_1.ui.sidebarList.addItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addItem(this.sidebarItem);
     }
 };
 exports.notes = new class {
@@ -75,13 +187,13 @@ exports.notes = new class {
         this.state = false;
     }
     init() {
-        this.sidebarItem = new viewlib_1.SidebarItem({ text: utils_1.I `Notes` }).bindContentView(() => this.view);
+        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Notes` }).bindContentView(() => this.view);
         Router_1.router.addRoute({
             path: ['notes'],
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.lazyView.value
         });
-        main_1.ui.sidebarList.addItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addItem(this.sidebarItem);
         User_1.user.onSwitchedUser.add(() => {
             if (this.state && exports.notes.state !== 'waiting')
                 this.fetch();
@@ -96,7 +208,7 @@ exports.notes = new class {
             try {
                 yield User_1.user.waitLogin(true);
                 this.state = 'fetching';
-                var resp = yield main_1.api.getJson('my/notes?reverse=1');
+                var resp = yield Api_1.api.getJson('my/notes?reverse=1');
                 this.view.useLoadingIndicator(null);
             }
             catch (error) {
@@ -113,7 +225,7 @@ exports.notes = new class {
     addItem(c) {
         const comm = new CommentViewItem(c);
         comm.onremove = () => {
-            this.ioAction(() => main_1.api.postJson({
+            this.ioAction(() => Api_1.api.postJson({
                 method: 'DELETE',
                 path: 'my/notes/' + comm.comment.id,
                 obj: undefined
@@ -133,7 +245,7 @@ exports.notes = new class {
     }
     post(content) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ioAction(() => main_1.api.postJson({
+            yield this.ioAction(() => Api_1.api.postJson({
                 method: 'POST',
                 path: 'my/notes/new',
                 obj: {
@@ -201,8 +313,199 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./ListContentView":2,"./Router":4,"./User":6,"./main":7,"./tracklist":8,"./utils":9,"./viewlib":10}],2:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],3:[function(require,module,exports){
 "use strict";
+// file: I18n.ts
+Object.defineProperty(exports, "__esModule", { value: true });
+/** Internationalization (aka i18n) helper class */
+class I18n {
+    constructor() {
+        this.data = {};
+        this.curLang = 'en';
+        this.missing = new Map();
+    }
+    /** Get i18n string for `key`, return `key` when not found. */
+    get(key, arg) {
+        return this.get2(key, arg) || key;
+    }
+    /** Get i18n string for `key`, return `null` when not found. */
+    get2(key, arg, lang) {
+        lang = lang || this.curLang;
+        var langObj = this.data[lang];
+        if (!langObj) {
+            console.log('i18n missing lang: ' + lang);
+            return null;
+        }
+        var r = langObj[key];
+        if (!r) {
+            if (!this.missing.has(key)) {
+                this.missing.set(key, 1);
+                console.log('i18n missing key: ' + key);
+            }
+            return null;
+        }
+        if (arg) {
+            for (const key in arg) {
+                if (arg.hasOwnProperty(key)) {
+                    const val = arg[key];
+                    r = r.replace('{' + key + '}', val);
+                    // Note that it only replaces the first occurrence.
+                }
+            }
+        }
+        return r;
+    }
+    /** Fills data with an 2darray */
+    add2dArray(array) {
+        const langObjs = [];
+        const langs = array[0];
+        for (const lang of langs) {
+            langObjs.push(this.data[lang] = this.data[lang] || {});
+        }
+        for (let i = 1; i < array.length; i++) {
+            const line = array[i];
+            const key = line[0];
+            for (let j = 0; j < line.length; j++) {
+                const val = line[j];
+                langObjs[j][key] = val;
+            }
+        }
+    }
+    renderElements(elements) {
+        console.log('i18n elements rendering');
+        elements.forEach(x => {
+            for (const node of x.childNodes) {
+                if (node.nodeType == Node.TEXT_NODE) {
+                    // console.log('node', node);
+                    var r = this.get2(node.beforeI18n || node.textContent);
+                    if (r) {
+                        node.beforeI18n = node.beforeI18n || node.textContent;
+                        node.textContent = r;
+                    }
+                    else {
+                        if (node.beforeI18n) {
+                            node.textContent = node.beforeI18n;
+                        }
+                        console.log('missing key for node', node);
+                    }
+                }
+            }
+        });
+    }
+    /**
+     * Detect the best available language using
+     * the user language preferences provided by the browser.
+     * @param langs Available languages
+     */
+    static detectLanguage(langs) {
+        var cur;
+        var curIdx = -1;
+        var languages = [];
+        // ['en-US'] -> ['en-US', 'en']
+        (navigator.languages || [navigator.language]).forEach(lang => {
+            languages.push(lang);
+            if (lang.indexOf('-') > 0)
+                languages.push(lang.substr(0, lang.indexOf('-')));
+        });
+        langs.forEach((l) => {
+            var idx = languages.indexOf(l);
+            if (!cur || (idx !== -1 && idx < curIdx)) {
+                cur = l;
+                curIdx = idx;
+            }
+        });
+        return cur;
+    }
+}
+exports.I18n = I18n;
+exports.i18n = new I18n();
+function I(literals, ...placeholders) {
+    if (placeholders.length == 0) {
+        return exports.i18n.get(literals[0]);
+    }
+    // Generate format string from template string:
+    var formatString = '';
+    for (var i = 0; i < literals.length; i++) {
+        var lit = literals[i];
+        formatString += lit;
+        if (i < placeholders.length) {
+            formatString += '{' + i + '}';
+        }
+    }
+    var r = exports.i18n.get(formatString);
+    for (var i = 0; i < placeholders.length; i++) {
+        r = r.replace('{' + i + '}', placeholders[i]);
+    }
+    return r;
+}
+exports.I = I;
+// Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
+exports.i18n.add2dArray(JSON.parse(`[
+    ["en", "zh"],
+    ["English", "中文"],
+    ["Pin", "固定"],
+    ["Unpin", "浮动"],
+    ["Pause", "暂停"],
+    ["Play", "播放"],
+    [" (logging in...)", " （登录中...）"],
+    ["Guest (click to login)", "游客（点击登录）"],
+    ["Login", "登录"],
+    ["Create account", "创建账户"],
+    ["Close", "关闭"],
+    ["Username", "用户名"],
+    ["Password", "密码"],
+    ["Confirm password", "确认密码"],
+    ["Requesting...", "请求中……"],
+    [" (error!)", "（错误！）"],
+    ["Username or password is not correct.", "用户名或密码不正确。"],
+    ["Logged in with previous working account.", "已登录为之前的用户。"],
+    ["Please input the username!", "请输入用户名！"],
+    ["Please input the password!", "请输入密码！"],
+    ["Password confirmation does not match!", "确认密码不相同！"],
+    ["Playlist", "播放列表"],
+    ["Playlists", "播放列表"],
+    ["New Playlist", "新建播放列表"],
+    ["New Playlist ({0})", "新播放列表（{0}）"],
+    ["Click to edit", "点击编辑"],
+    ["(Empty)", "（空）"],
+    ["Loading", "加载中"],
+    ["Oh no! Something just goes wrong:", "发生错误："],
+    ["[Click here to retry]", "[点击重试]"],
+    ["My Uploads", "我的上传"],
+    ["Click here to select files to upload", "点此选择文件并上传"],
+    ["or drag files to this zone...", "或拖放文件到此处..."],
+    ["Comments", "评论"],
+    ["Remove", "移除"],
+    ["List ID", "列表 ID"],
+    ["Track ID", "歌曲 ID"],
+    ["Name", "名称"],
+    ["Artist", "艺术家"],
+    ["Discussion", "讨论区"],
+    ["Notes", "便签"],
+    ["Submit", "提交"],
+    ["Submitting", "提交中"],
+    ["Download", "下载"],
+    ["Edit", "编辑"],
+    ["Save", "保存"],
+    ["User {0}", "用户 {0}"],
+    ["You've logged in as \\"{0}\\".", "你已登录为 \\"{0}\\"。"],
+    ["Switch user", "切换用户"],
+    ["Logout", "注销"],
+    ["Music Cloud", "Music Cloud"]
+]`));
+exports.i18n.add2dArray([
+    ["_key_", "en", "zh"],
+    ["uploads_pending", "Pending", "队列中"],
+    ["uploads_uploading", "Uploading", "上传中"],
+    ["uploads_error", "Error", "错误"],
+    ["uploads_done", "Done", "完成"],
+    ["prev_track", "Prev", "上一首"],
+    ["next_track", "Next", "下一首"],
+]);
+
+},{}],4:[function(require,module,exports){
+"use strict";
+// file: ListContentView.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -216,8 +519,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const tracklist_1 = require("./tracklist");
 const utils_1 = require("./utils");
-// file: ListContentView.ts
-/// <reference path="main.ts" />
 class DataBackedListViewItem extends viewlib_1.ListViewItem {
     constructor(data) {
         super();
@@ -319,8 +620,9 @@ class ListContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./tracklist":8,"./utils":9,"./viewlib":10}],3:[function(require,module,exports){
+},{"./tracklist":12,"./utils":13,"./viewlib":14}],5:[function(require,module,exports){
 "use strict";
+// file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -332,13 +634,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
-const main_1 = require("./main");
 const utils_1 = require("./utils");
 const tracklist_1 = require("./tracklist");
 const User_1 = require("./User");
 const Router_1 = require("./Router");
-// file: ListIndex.ts
-/// <reference path="main.ts" />
+const UI_1 = require("./UI");
+const PlayerCore_1 = require("./PlayerCore");
+const Api_1 = require("./Api");
 class ListIndex {
     constructor() {
         this.loadedList = {};
@@ -369,9 +671,9 @@ class ListIndex {
             }
         };
         this.listView.onItemClicked = (item) => {
-            if (main_1.ui.sidebarList.currentActive.current === item)
+            if (UI_1.ui.sidebarList.currentActive.current === item)
                 return;
-            main_1.ui.sidebarList.setActive(item);
+            UI_1.ui.sidebarList.setActive(item);
             this.showTracklist(item.listInfo.id);
         };
         this.section = new viewlib_1.Section({
@@ -386,9 +688,9 @@ class ListIndex {
         });
     }
     init() {
-        main_1.playerCore.onTrackChanged.add(() => {
+        PlayerCore_1.playerCore.onTrackChanged.add(() => {
             var _a, _b, _c, _d;
-            var curPlaying = (_b = (_a = main_1.playerCore.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list;
+            var curPlaying = (_b = (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list;
             if (curPlaying != this.playing) {
                 if (curPlaying)
                     (_c = this.getViewItem(curPlaying.id)) === null || _c === void 0 ? void 0 : _c.updateWith({ playing: true });
@@ -397,7 +699,7 @@ class ListIndex {
                 this.playing = curPlaying;
             }
         });
-        main_1.api.onTrackInfoChanged.add((newer) => {
+        Api_1.api.onTrackInfoChanged.add((newer) => {
             for (const id in this.loadedList) {
                 if (this.loadedList.hasOwnProperty(id)) {
                     const list = this.loadedList[id];
@@ -410,15 +712,15 @@ class ListIndex {
                 }
             }
         });
-        main_1.ui.sidebarList.container.appendView(this.section);
+        UI_1.ui.sidebarList.container.appendView(this.section);
         Router_1.router.addRoute({
             path: ['list'],
             onNav: (arg) => __awaiter(this, void 0, void 0, function* () {
                 yield User_1.user.waitLogin(false);
                 var id = window.parseInt(arg.remaining[0]);
                 var list = this.getList(id);
-                main_1.ui.content.setCurrent(list.createView());
-                main_1.ui.sidebarList.setActive(this.getViewItem(id));
+                UI_1.ui.content.setCurrent(list.createView());
+                UI_1.ui.sidebarList.setActive(this.getViewItem(id));
             })
         });
         Router_1.router.addRoute({
@@ -477,7 +779,7 @@ class ListIndex {
             if (id < 0) {
                 id = yield this.getList(id).getRealId();
             }
-            yield main_1.api.postJson({
+            yield Api_1.api.postJson({
                 method: 'DELETE',
                 path: 'my/lists/' + id,
                 obj: null
@@ -503,7 +805,7 @@ class ListIndex {
     }
 }
 exports.ListIndex = ListIndex;
-class ListIndexViewItem extends viewlib_1.SidebarItem {
+class ListIndexViewItem extends UI_1.SidebarItem {
     constructor(init) {
         super({});
         this.playing = false;
@@ -548,10 +850,110 @@ class ListIndexViewItem extends viewlib_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Router":4,"./User":6,"./main":7,"./tracklist":8,"./utils":9,"./viewlib":10}],4:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":6,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],6:[function(require,module,exports){
 "use strict";
+// file: PlayerCore.ts
 Object.defineProperty(exports, "__esModule", { value: true });
-const main_1 = require("./main");
+const UI_1 = require("./UI");
+const utils_1 = require("./utils");
+const Api_1 = require("./Api");
+/** 播放器核心：控制播放逻辑 */
+exports.playerCore = new class PlayerCore {
+    constructor() {
+        this.loopMode = 'list-loop';
+        this.onTrackChanged = new utils_1.Callbacks();
+        this.audio = document.createElement('audio');
+        this.audio.addEventListener('timeupdate', () => this.updateProgress());
+        this.audio.addEventListener('canplay', () => this.updateProgress());
+        this.audio.addEventListener('error', (e) => {
+            console.log(e);
+        });
+        this.audio.addEventListener('ended', () => {
+            this.next();
+        });
+        UI_1.ui.playerControl.setProgressChangedCallback((x) => {
+            this.audio.currentTime = x * this.audio.duration;
+        });
+    }
+    get isPlaying() { return this.audio.duration && !this.audio.paused; }
+    get isPaused() { return this.audio.paused; }
+    get canPlay() { return this.audio.readyState >= 2; }
+    prev() { return this.next(-1); }
+    next(offset) {
+        var _a, _b, _c;
+        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track, this.loopMode, offset);
+        if (nextTrack)
+            this.playTrack(nextTrack);
+        else
+            this.setTrack(null);
+    }
+    updateProgress() {
+        UI_1.ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
+    }
+    loadUrl(src) {
+        if (src) {
+            this.audio.src = src;
+        }
+        else {
+            this.audio.pause();
+            this.audio.removeAttribute('src');
+        }
+        this.audio.load();
+    }
+    setTrack(track) {
+        var _a;
+        var oldTrack = this.track;
+        this.track = track;
+        UI_1.ui.trackinfo.setTrack(track);
+        this.onTrackChanged.invoke();
+        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== this.track.url)
+            this.loadUrl(track ? Api_1.api.processUrl(track.url) : null);
+    }
+    playTrack(track) {
+        if (track === this.track)
+            return;
+        this.setTrack(track);
+        this.play();
+    }
+    play() {
+        this.audio.play();
+    }
+    pause() {
+        this.audio.pause();
+    }
+};
+if (navigator['mediaSession']) {
+    let mediaSession = navigator['mediaSession'];
+    exports.playerCore.onTrackChanged.add(() => {
+        var _a, _b;
+        try {
+            var track = exports.playerCore.track;
+            if (!track)
+                return;
+            mediaSession.metadata = new MediaMetadata({
+                title: (_a = track) === null || _a === void 0 ? void 0 : _a.name,
+                artist: (_b = track) === null || _b === void 0 ? void 0 : _b.artist
+            });
+        }
+        catch (_c) { }
+    });
+    mediaSession.setActionHandler('play', () => exports.playerCore.play());
+    mediaSession.setActionHandler('pause', () => exports.playerCore.pause());
+    mediaSession.setActionHandler('previoustrack', () => exports.playerCore.prev());
+    mediaSession.setActionHandler('nexttrack', () => exports.playerCore.next());
+}
+window.addEventListener('beforeunload', (ev) => {
+    if (!exports.playerCore.track || exports.playerCore.audio.paused)
+        return;
+    ev.preventDefault();
+    return ev.returnValue = 'The player is running. Are you sure to leave?';
+});
+
+},{"./Api":1,"./UI":8,"./utils":13}],7:[function(require,module,exports){
+"use strict";
+// file: Router.ts
+Object.defineProperty(exports, "__esModule", { value: true });
+const UI_1 = require("./UI");
 exports.router = new class {
     constructor() {
         this.routes = [];
@@ -579,9 +981,9 @@ exports.router = new class {
         for (const r of this.routes) {
             if (match(path, r)) {
                 if (r.contentView)
-                    main_1.ui.content.setCurrent(r.contentView());
+                    UI_1.ui.content.setCurrent(r.contentView());
                 if (r.sidebarItem)
-                    main_1.ui.sidebarList.setActive(r.sidebarItem());
+                    UI_1.ui.sidebarList.setActive(r.sidebarItem());
                 if (r.onNav)
                     r.onNav({ path, remaining: path.slice(r.path.length) });
                 break;
@@ -605,8 +1007,272 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./main":7}],5:[function(require,module,exports){
+},{"./UI":8}],8:[function(require,module,exports){
 "use strict";
+// file: UI.ts
+Object.defineProperty(exports, "__esModule", { value: true });
+const Router_1 = require("./Router");
+const utils_1 = require("./utils");
+const I18n_1 = require("./I18n");
+const User_1 = require("./User");
+const viewlib_1 = require("./viewlib");
+/** 常驻 UI 元素操作 */
+exports.ui = new class {
+    constructor() {
+        this.lang = new class {
+            constructor() {
+                this.availableLangs = ['en', 'zh'];
+                this.siLang = new utils_1.SettingItem('mcloud-lang', 'str', I18n_1.I18n.detectLanguage(this.availableLangs));
+            }
+            init() {
+                this.siLang.render((lang) => {
+                    I18n_1.i18n.curLang = lang;
+                    document.body.lang = lang;
+                });
+                console.log(`Current language: '${I18n_1.i18n.curLang}' - '${I18n_1.I `English`}'`);
+                I18n_1.i18n.renderElements(document.querySelectorAll('.i18ne'));
+            }
+            setLang(lang) {
+                this.siLang.set(lang);
+                window.location.reload();
+            }
+        };
+        this.bottomBar = new class {
+            constructor() {
+                this.container = document.getElementById("bottombar");
+                this.btnPin = document.getElementById('btnPin');
+                this.pinned = true;
+                this.hideTimer = new utils_1.utils.Timer(() => { this.toggle(false); });
+                this.shown = false;
+                this.inTransition = false;
+            }
+            setPinned(val) {
+                val = (val !== null && val !== void 0 ? val : !this.pinned);
+                this.pinned = val;
+                utils_1.utils.toggleClass(document.body, 'bottompinned', val);
+                this.btnPin.textContent = val ? I18n_1.I `Unpin` : I18n_1.I `Pin`;
+                if (val)
+                    this.toggle(true);
+            }
+            toggle(state, hideTimeout) {
+                this.shown = utils_1.utils.toggleClass(this.container, 'show', state);
+                if (!this.pinned && hideTimeout)
+                    this.hideTimer.timeout(hideTimeout);
+            }
+            init() {
+                var bar = this.container;
+                bar.addEventListener('transitionstart', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = true;
+                });
+                bar.addEventListener('transitionend', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = false;
+                });
+                bar.addEventListener('transitioncancel', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = false;
+                });
+                bar.addEventListener('mouseenter', () => {
+                    this.hideTimer.tryCancel();
+                    this.toggle(true);
+                });
+                bar.addEventListener('mouseleave', () => {
+                    this.hideTimer.tryCancel();
+                    if (!this.pinned)
+                        this.hideTimer.timeout(200);
+                });
+                this.siPin = new utils_1.SettingItem('mcloud-bottompin', 'bool', false)
+                    .render(x => this.setPinned(x))
+                    .bindToBtn(this.btnPin, ['', '']);
+                // this.btnPin.addEventListener('click', () => this.setPinned());
+            }
+        };
+        this.playerControl = new class {
+            constructor() {
+                this.progbar = document.getElementById('progressbar');
+                this.fill = document.getElementById('progressbar-fill');
+                this.labelCur = document.getElementById('progressbar-label-cur');
+                this.labelTotal = document.getElementById('progressbar-label-total');
+            }
+            setProg(cur, total) {
+                var prog = cur / total;
+                prog = utils_1.utils.numLimit(prog, 0, 1);
+                this.fill.style.width = (prog * 100) + '%';
+                this.labelCur.textContent = utils_1.utils.formatTime(cur);
+                this.labelTotal.textContent = utils_1.utils.formatTime(total);
+            }
+            setProgressChangedCallback(cb) {
+                var call = (e) => { cb(utils_1.utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
+                this.progbar.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
+                        if (e.buttons == 1)
+                            call(e);
+                });
+                this.progbar.addEventListener('mousemove', (e) => {
+                    if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
+                        if (e.buttons == 1)
+                            call(e);
+                });
+            }
+        };
+        this.trackinfo = new class {
+            constructor() {
+                this.element = document.getElementById('bottombar-trackinfo');
+            }
+            setTrack(track) {
+                if (track) {
+                    utils_1.utils.replaceChild(this.element, utils_1.utils.buildDOM({
+                        tag: 'span',
+                        child: [
+                            // 'Now Playing: ',
+                            { tag: 'span.name', textContent: track.name },
+                            { tag: 'span.artist', textContent: track.artist },
+                        ]
+                    }));
+                    exports.ui.bottomBar.toggle(true, 5000);
+                }
+                else {
+                    this.element.textContent = "";
+                }
+            }
+        };
+        this.mainContainer = new class {
+            constructor() {
+                this.dom = document.getElementById('main-container');
+            }
+        };
+        this.sidebarLogin = new class {
+            constructor() {
+                this.container = document.getElementById('sidebar-login');
+                this.loginState = document.getElementById('login-state');
+            }
+            init() {
+                this.loginState.addEventListener('click', (ev) => {
+                    User_1.user.openUI();
+                });
+            }
+            update() {
+                var _a, _b;
+                var text = this.loginState.textContent;
+                var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username, (_b !== null && _b !== void 0 ? _b : User_1.user.info.username));
+                if (username) {
+                    text = username;
+                    if (User_1.user.state == 'logging')
+                        text += I18n_1.I ` (logging in...)`;
+                    if (User_1.user.state == 'error')
+                        text += I18n_1.I ` (error!)`;
+                    if (User_1.user.state == 'none')
+                        text += I18n_1.I ` (not logged in)`;
+                }
+                else {
+                    if (User_1.user.state == 'logging')
+                        text = I18n_1.I `(logging...)`;
+                    else
+                        text = I18n_1.I `Guest (click to login)`;
+                }
+                this.loginState.textContent = text;
+            }
+        };
+        this.sidebarList = new class {
+            constructor() {
+                this.container = document.getElementById('sidebar-list');
+                this.listview = new viewlib_1.ListView(this.container);
+                this.currentActive = new utils_1.ItemActiveHelper();
+            }
+            setActive(item) {
+                this.currentActive.set(item);
+            }
+            addItem(item) {
+                if (typeof item == 'string')
+                    item = new SidebarItem({ text: item });
+                this.listview.add(item);
+            }
+        };
+        this.content = new class {
+            constructor() {
+                this.container = document.getElementById('content-outer');
+                this.current = null;
+            }
+            removeCurrent() {
+                const cur = this.current;
+                this.current = null;
+                if (!cur)
+                    return;
+                cur.contentViewState.scrollTop = this.container.scrollTop;
+                if (cur.onRemove)
+                    cur.onRemove();
+                if (cur.dom)
+                    this.container.removeChild(cur.dom);
+            }
+            setCurrent(arg) {
+                if (arg === this.current)
+                    return;
+                this.removeCurrent();
+                if (arg) {
+                    if (arg.onShow)
+                        arg.onShow();
+                    if (arg.dom)
+                        this.container.appendChild(arg.dom);
+                    if (!arg.contentViewState)
+                        arg.contentViewState = { scrollTop: 0 };
+                    this.container.scrollTop = arg.contentViewState.scrollTop;
+                }
+                this.current = arg;
+            }
+        };
+    }
+    init() {
+        this.lang.init();
+        this.bottomBar.init();
+        this.sidebarLogin.init();
+        viewlib_1.Dialog.defaultParent = this.mainContainer.dom;
+        Router_1.router.addRoute({
+            path: ['home'],
+            onNav: () => {
+                exports.ui.content.setCurrent(null);
+                exports.ui.sidebarList.currentActive.set(null);
+            }
+        });
+        document.addEventListener('dragover', (ev) => {
+            ev.preventDefault();
+        });
+        document.addEventListener('drop', (ev) => {
+            ev.preventDefault();
+        });
+    }
+}; // ui
+class SidebarItem extends viewlib_1.ListViewItem {
+    constructor(init) {
+        super();
+        utils_1.utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.item.no-selection',
+            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+    }
+    bindContentView(viewFunc) {
+        var view;
+        this.onclick = () => {
+            if (!view)
+                view = viewFunc();
+            exports.ui.content.setCurrent(view);
+            exports.ui.sidebarList.setActive(this);
+        };
+        return this;
+    }
+}
+exports.SidebarItem = SidebarItem;
+
+},{"./I18n":3,"./Router":7,"./User":10,"./utils":13,"./viewlib":14}],9:[function(require,module,exports){
+"use strict";
+// file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -620,12 +1286,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const tracklist_1 = require("./tracklist");
 const utils_1 = require("./utils");
 const ListIndex_1 = require("./ListIndex");
-const main_1 = require("./main");
 const User_1 = require("./User");
 const ListContentView_1 = require("./ListContentView");
 const viewlib_1 = require("./viewlib");
 const Router_1 = require("./Router");
-// file: Uploads.ts
+const I18n_1 = require("./I18n");
+const PlayerCore_1 = require("./PlayerCore");
+const UI_1 = require("./UI");
+const Api_1 = require("./Api");
 class UploadTrack extends tracklist_1.Track {
     constructor(init) {
         super(init);
@@ -642,19 +1310,19 @@ exports.uploads = new class {
                 this.playing = new utils_1.ItemActiveHelper();
                 this.updatePlaying = (item) => {
                     if (item === undefined) {
-                        if (main_1.playerCore.track)
-                            this.playing.set(this.listView.find(lvi => lvi.track.id === main_1.playerCore.track.id));
+                        if (PlayerCore_1.playerCore.track)
+                            this.playing.set(this.listView.find(lvi => lvi.track.id === PlayerCore_1.playerCore.track.id));
                         else
                             this.playing.set(null);
                     }
                     else {
-                        if (main_1.playerCore.track && item.track.id === main_1.playerCore.track.id)
+                        if (PlayerCore_1.playerCore.track && item.track.id === PlayerCore_1.playerCore.track.id)
                             this.playing.set(item);
                     }
                 };
             }
             appendHeader() {
-                this.title = utils_1.I `My Uploads`;
+                this.title = I18n_1.I `My Uploads`;
                 super.appendHeader();
                 this.uploadArea = new UploadArea({ onfile: (file) => exports.uploads.uploadFile(file) });
                 this.dom.appendView(this.uploadArea);
@@ -674,22 +1342,22 @@ exports.uploads = new class {
             onShow() {
                 super.onShow();
                 this.updatePlaying();
-                main_1.playerCore.onTrackChanged.add(this.updatePlaying);
+                PlayerCore_1.playerCore.onTrackChanged.add(this.updatePlaying);
             }
             onRemove() {
                 super.onRemove();
-                main_1.playerCore.onTrackChanged.remove(this.updatePlaying);
+                PlayerCore_1.playerCore.onTrackChanged.remove(this.updatePlaying);
             }
         };
     }
     init() {
-        this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: utils_1.I `My Uploads` });
+        this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: I18n_1.I `My Uploads` });
         Router_1.router.addRoute({
             path: ['uploads'],
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.view
         });
-        main_1.ui.sidebarList.addItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addItem(this.sidebarItem);
         User_1.user.onSwitchedUser.add(() => {
             if (this.state !== false && this.state !== 'waiting') {
                 this.tracks = [];
@@ -701,10 +1369,10 @@ exports.uploads = new class {
                 setTimeout(() => this.fetch(), 1);
             }
         });
-        main_1.playerCore.onTrackChanged.add(() => {
-            this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === main_1.playerCore.track) });
+        PlayerCore_1.playerCore.onTrackChanged.add(() => {
+            this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === PlayerCore_1.playerCore.track) });
         });
-        main_1.api.onTrackInfoChanged.add((newer) => {
+        Api_1.api.onTrackInfoChanged.add((newer) => {
             this.tracks.forEach(t => {
                 var _a;
                 if (t.id === newer.id) {
@@ -732,7 +1400,7 @@ exports.uploads = new class {
             try {
                 yield User_1.user.waitLogin(true);
                 this.state = 'fetching';
-                var fetched = (yield main_1.api.getJson('my/uploads'))['tracks']
+                var fetched = (yield Api_1.api.getJson('my/uploads'))['tracks']
                     .reverse()
                     .map(t => {
                     t._upload = { state: 'done' };
@@ -777,7 +1445,7 @@ exports.uploads = new class {
                     BlockFormat.encodeBlock(jsonBlob),
                     BlockFormat.encodeBlock(file)
                 ]);
-                var resp = yield main_1.api.postJson({
+                var resp = yield Api_1.api.postJson({
                     path: 'tracks/newfile',
                     method: 'POST',
                     mode: 'raw',
@@ -819,7 +1487,7 @@ class UploadViewItem extends tracklist_1.TrackViewItem {
                 this.dom.classList.remove('state-' + this._lastUploadState);
             if (newState)
                 this.dom.classList.add('state-' + newState);
-            this.domstate.textContent = utils_1.i18n.get('uploads_' + newState);
+            this.domstate.textContent = I18n_1.i18n.get('uploads_' + newState);
             this.dragging = newState == 'done';
         }
     }
@@ -834,8 +1502,8 @@ class UploadArea extends viewlib_1.View {
             _ctx: this,
             tag: 'div.upload-area',
             child: [
-                { tag: 'div.text.no-selection', textContent: utils_1.I `Click here to select files to upload` },
-                { tag: 'div.text.no-selection', textContent: utils_1.I `or drag files to this zone...` },
+                { tag: 'div.text.no-selection', textContent: I18n_1.I `Click here to select files to upload` },
+                { tag: 'div.text.no-selection', textContent: I18n_1.I `or drag files to this zone...` },
                 {
                     tag: 'input', type: 'file', _key: 'domfile',
                     style: 'visibility: collapse; height: 0;',
@@ -887,8 +1555,9 @@ var BlockFormat = {
     }
 };
 
-},{"./ListContentView":2,"./ListIndex":3,"./Router":4,"./User":6,"./main":7,"./tracklist":8,"./utils":9,"./viewlib":10}],6:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListContentView":4,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],10:[function(require,module,exports){
 "use strict";
+// file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -902,8 +1571,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const main_1 = require("./main");
 const viewlib_1 = require("./viewlib");
-// file: User.ts
-/// <reference path="main.ts" />
+const UI_1 = require("./UI");
+const Api_1 = require("./Api");
 exports.user = new class User {
     constructor() {
         this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
@@ -916,7 +1585,7 @@ exports.user = new class User {
     get info() { return this.siLogin.data; }
     setState(state) {
         this.state = state;
-        main_1.ui.sidebarLogin.update();
+        UI_1.ui.sidebarLogin.update();
     }
     init() {
         if (this.info.username) {
@@ -955,7 +1624,7 @@ exports.user = new class User {
             var promise = (() => __awaiter(this, void 0, void 0, function* () {
                 try {
                     // thanks to the keyword `var` of JavaScript.
-                    var resp = yield main_1.api.getJson('users/me', {
+                    var resp = yield Api_1.api.getJson('users/me', {
                         basicAuth: this.getBasicAuth(info)
                     });
                 }
@@ -980,7 +1649,7 @@ exports.user = new class User {
         return __awaiter(this, void 0, void 0, function* () {
             this.setState('logging');
             var promise = (() => __awaiter(this, void 0, void 0, function* () {
-                var resp = yield main_1.api.postJson({
+                var resp = yield Api_1.api.postJson({
                     method: 'POST',
                     path: 'users/new',
                     obj: info
@@ -1010,8 +1679,8 @@ exports.user = new class User {
             this.siLogin.save();
             // // something is dirty
             // if (switchingUser) window.location.reload();
-            main_1.api.defaultBasicAuth = this.getBasicAuth(this.info);
-            main_1.ui.sidebarLogin.update();
+            Api_1.api.defaultBasicAuth = this.getBasicAuth(this.info);
+            UI_1.ui.sidebarLogin.update();
             main_1.listIndex.setIndex(info);
             this.setState('logged');
             this.loggingin = null;
@@ -1021,8 +1690,8 @@ exports.user = new class User {
     logout() {
         utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null });
         this.siLogin.save();
-        main_1.api.defaultBasicAuth = undefined;
-        main_1.ui.content.setCurrent(null);
+        Api_1.api.defaultBasicAuth = undefined;
+        UI_1.ui.content.setCurrent(null);
         main_1.listIndex.setIndex(null);
         this.setState('none');
         this.loggingin = null;
@@ -1035,7 +1704,7 @@ exports.user = new class User {
                 username: this.info.username,
                 listids: listids
             };
-            yield main_1.api.postJson({
+            yield Api_1.api.postJson({
                 path: 'users/me',
                 method: 'PUT',
                 obj
@@ -1175,29 +1844,12 @@ class MeDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./main":7,"./utils":9,"./viewlib":10}],7:[function(require,module,exports){
+},{"./Api":1,"./UI":8,"./main":11,"./utils":13,"./viewlib":14}],11:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 // Why do we need to use React and Vue.js? ;)
-const utils_1 = require("./utils");
-const User_1 = require("./User");
-const viewlib_1 = require("./viewlib");
-const ListIndex_1 = require("./ListIndex");
-const Uploads_1 = require("./Uploads");
-const Discussion_1 = require("./Discussion");
-const Router_1 = require("./Router");
-var app = window['app'] = { router: Router_1.router };
 exports.settings = {
     apiBaseUrl: 'api/',
     // apiBaseUrl: 'http://127.0.0.1:50074/api/',
@@ -1205,432 +1857,30 @@ exports.settings = {
     debug: true,
     apiDebugDelay: 0,
 };
-/** 常驻 UI 元素操作 */
-exports.ui = new class {
-    constructor() {
-        this.lang = new class {
-            constructor() {
-                this.availableLangs = ['en', 'zh'];
-                this.siLang = new utils_1.SettingItem('mcloud-lang', 'str', utils_1.I18n.detectLanguage(this.availableLangs));
-            }
-            init() {
-                this.siLang.render((lang) => {
-                    utils_1.i18n.curLang = lang;
-                    document.body.lang = lang;
-                });
-                console.log(`Current language: '${utils_1.i18n.curLang}' - '${utils_1.I `English`}'`);
-                utils_1.i18n.renderElements(document.querySelectorAll('.i18ne'));
-            }
-            setLang(lang) {
-                this.siLang.set(lang);
-                window.location.reload();
-            }
-        };
-        this.bottomBar = new class {
-            constructor() {
-                this.container = document.getElementById("bottombar");
-                this.btnPin = document.getElementById('btnPin');
-                this.pinned = true;
-                this.hideTimer = new utils_1.utils.Timer(() => { this.toggle(false); });
-                this.shown = false;
-                this.inTransition = false;
-            }
-            setPinned(val) {
-                val = (val !== null && val !== void 0 ? val : !this.pinned);
-                this.pinned = val;
-                utils_1.utils.toggleClass(document.body, 'bottompinned', val);
-                this.btnPin.textContent = val ? utils_1.I `Unpin` : utils_1.I `Pin`;
-                if (val)
-                    this.toggle(true);
-            }
-            toggle(state, hideTimeout) {
-                this.shown = utils_1.utils.toggleClass(this.container, 'show', state);
-                if (!this.pinned && hideTimeout)
-                    this.hideTimer.timeout(hideTimeout);
-            }
-            init() {
-                var bar = this.container;
-                bar.addEventListener('transitionstart', (e) => {
-                    if (e.target === bar && e.propertyName == 'transform')
-                        this.inTransition = true;
-                });
-                bar.addEventListener('transitionend', (e) => {
-                    if (e.target === bar && e.propertyName == 'transform')
-                        this.inTransition = false;
-                });
-                bar.addEventListener('transitioncancel', (e) => {
-                    if (e.target === bar && e.propertyName == 'transform')
-                        this.inTransition = false;
-                });
-                bar.addEventListener('mouseenter', () => {
-                    this.hideTimer.tryCancel();
-                    this.toggle(true);
-                });
-                bar.addEventListener('mouseleave', () => {
-                    this.hideTimer.tryCancel();
-                    if (!this.pinned)
-                        this.hideTimer.timeout(200);
-                });
-                this.siPin = new utils_1.SettingItem('mcloud-bottompin', 'bool', false)
-                    .render(x => this.setPinned(x))
-                    .bindToBtn(this.btnPin, ['', '']);
-                // this.btnPin.addEventListener('click', () => this.setPinned());
-            }
-        };
-        this.playerControl = new class {
-            constructor() {
-                this.progbar = document.getElementById('progressbar');
-                this.fill = document.getElementById('progressbar-fill');
-                this.labelCur = document.getElementById('progressbar-label-cur');
-                this.labelTotal = document.getElementById('progressbar-label-total');
-            }
-            setProg(cur, total) {
-                var prog = cur / total;
-                prog = utils_1.utils.numLimit(prog, 0, 1);
-                this.fill.style.width = (prog * 100) + '%';
-                this.labelCur.textContent = utils_1.utils.formatTime(cur);
-                this.labelTotal.textContent = utils_1.utils.formatTime(total);
-            }
-            setProgressChangedCallback(cb) {
-                var call = (e) => { cb(utils_1.utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
-                this.progbar.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
-                        if (e.buttons == 1)
-                            call(e);
-                });
-                this.progbar.addEventListener('mousemove', (e) => {
-                    if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
-                        if (e.buttons == 1)
-                            call(e);
-                });
-            }
-        };
-        this.trackinfo = new class {
-            constructor() {
-                this.element = document.getElementById('bottombar-trackinfo');
-            }
-            setTrack(track) {
-                if (track) {
-                    utils_1.utils.replaceChild(this.element, utils_1.utils.buildDOM({
-                        tag: 'span',
-                        child: [
-                            // 'Now Playing: ',
-                            { tag: 'span.name', textContent: track.name },
-                            { tag: 'span.artist', textContent: track.artist },
-                        ]
-                    }));
-                    exports.ui.bottomBar.toggle(true, 5000);
-                }
-                else {
-                    this.element.textContent = "";
-                }
-            }
-        };
-        this.mainContainer = new class {
-            constructor() {
-                this.dom = document.getElementById('main-container');
-            }
-        };
-        this.sidebarLogin = new class {
-            constructor() {
-                this.container = document.getElementById('sidebar-login');
-                this.loginState = document.getElementById('login-state');
-            }
-            init() {
-                this.loginState.addEventListener('click', (ev) => {
-                    User_1.user.openUI();
-                });
-            }
-            update() {
-                var _a, _b;
-                var text = this.loginState.textContent;
-                var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username, (_b !== null && _b !== void 0 ? _b : User_1.user.info.username));
-                if (username) {
-                    text = username;
-                    if (User_1.user.state == 'logging')
-                        text += utils_1.I ` (logging in...)`;
-                    if (User_1.user.state == 'error')
-                        text += utils_1.I ` (error!)`;
-                    if (User_1.user.state == 'none')
-                        text += utils_1.I ` (not logged in)`;
-                }
-                else {
-                    if (User_1.user.state == 'logging')
-                        text = utils_1.I `(logging...)`;
-                    else
-                        text = utils_1.I `Guest (click to login)`;
-                }
-                this.loginState.textContent = text;
-            }
-        };
-        this.sidebarList = new class {
-            constructor() {
-                this.container = document.getElementById('sidebar-list');
-                this.listview = new viewlib_1.ListView(this.container);
-                this.currentActive = new utils_1.ItemActiveHelper();
-            }
-            setActive(item) {
-                this.currentActive.set(item);
-            }
-            addItem(item) {
-                if (typeof item == 'string')
-                    item = new viewlib_1.SidebarItem({ text: item });
-                this.listview.add(item);
-            }
-        };
-        this.content = new class {
-            constructor() {
-                this.container = document.getElementById('content-outer');
-                this.current = null;
-            }
-            removeCurrent() {
-                const cur = this.current;
-                this.current = null;
-                if (!cur)
-                    return;
-                cur.contentViewState.scrollTop = this.container.scrollTop;
-                if (cur.onRemove)
-                    cur.onRemove();
-                if (cur.dom)
-                    this.container.removeChild(cur.dom);
-            }
-            setCurrent(arg) {
-                if (arg === this.current)
-                    return;
-                this.removeCurrent();
-                if (arg) {
-                    if (arg.onShow)
-                        arg.onShow();
-                    if (arg.dom)
-                        this.container.appendChild(arg.dom);
-                    if (!arg.contentViewState)
-                        arg.contentViewState = { scrollTop: 0 };
-                    this.container.scrollTop = arg.contentViewState.scrollTop;
-                }
-                this.current = arg;
-            }
-        };
-    }
-    init() {
-        this.lang.init();
-        this.bottomBar.init();
-        this.sidebarLogin.init();
-        Router_1.router.addRoute({
-            path: ['home'],
-            onNav: () => {
-                exports.ui.content.setCurrent(null);
-                exports.ui.sidebarList.currentActive.set(null);
-            }
-        });
-    }
-}; // ui
-/** 播放器核心：控制播放逻辑 */
-exports.playerCore = new class PlayerCore {
-    constructor() {
-        this.loopMode = 'list-loop';
-        this.onTrackChanged = new utils_1.Callbacks();
-        this.audio = document.createElement('audio');
-        this.audio.addEventListener('timeupdate', () => this.updateProgress());
-        this.audio.addEventListener('canplay', () => this.updateProgress());
-        this.audio.addEventListener('error', (e) => {
-            console.log(e);
-        });
-        this.audio.addEventListener('ended', () => {
-            this.next();
-        });
-        exports.ui.playerControl.setProgressChangedCallback((x) => {
-            this.audio.currentTime = x * this.audio.duration;
-        });
-    }
-    get isPlaying() { return this.audio.duration && !this.audio.paused; }
-    get isPaused() { return this.audio.paused; }
-    get canPlay() { return this.audio.readyState >= 2; }
-    prev() { return this.next(-1); }
-    next(offset) {
-        var _a, _b, _c;
-        var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track, this.loopMode, offset);
-        if (nextTrack)
-            this.playTrack(nextTrack);
-        else
-            this.setTrack(null);
-    }
-    updateProgress() {
-        exports.ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
-    }
-    loadUrl(src) {
-        if (src) {
-            this.audio.src = src;
-        }
-        else {
-            this.audio.pause();
-            this.audio.removeAttribute('src');
-        }
-        this.audio.load();
-    }
-    setTrack(track) {
-        var _a;
-        var oldTrack = this.track;
-        this.track = track;
-        exports.ui.trackinfo.setTrack(track);
-        this.onTrackChanged.invoke();
-        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== this.track.url)
-            this.loadUrl(track ? exports.api.processUrl(track.url) : null);
-    }
-    playTrack(track) {
-        if (track === this.track)
-            return;
-        this.setTrack(track);
-        this.play();
-    }
-    play() {
-        this.audio.play();
-    }
-    pause() {
-        this.audio.pause();
-    }
-};
-/** API 操作 */
-exports.api = new class {
-    constructor() {
-        this.debugSleep = exports.settings.debug ? exports.settings.apiDebugDelay : 0;
-        this.onTrackInfoChanged = new utils_1.Callbacks();
-    }
-    get baseUrl() { return exports.settings.apiBaseUrl; }
-    _fetch(input, init) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this.debugSleep)
-                yield utils_1.utils.sleepAsync(this.debugSleep * (Math.random() + 1));
-            return yield fetch(input, Object.assign({ credentials: 'same-origin' }, init));
-        });
-    }
-    getHeaders(arg) {
-        var _a;
-        arg = arg || {};
-        var headers = {};
-        var basicAuth = (_a = arg.basicAuth, (_a !== null && _a !== void 0 ? _a : this.defaultBasicAuth));
-        if (basicAuth)
-            headers['Authorization'] = 'Basic ' + utils_1.utils.base64EncodeUtf8(basicAuth);
-        return headers;
-    }
-    getJson(path, options) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            options = options || {};
-            var resp = yield this._fetch(this.baseUrl + path, {
-                headers: Object.assign({}, this.getHeaders(options))
-            });
-            if (options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200))) {
-                if (resp.status === 450) {
-                    try {
-                        var resperr = (yield resp.json()).error;
-                    }
-                    catch (_b) { }
-                    if (resperr)
-                        throw new Error(resperr);
-                }
-                throw new Error('HTTP status ' + resp.status);
-            }
-            return yield resp.json();
-        });
-    }
-    postJson(arg) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            var body = arg.obj;
-            if (arg.mode === undefined)
-                arg.mode = 'json';
-            if (arg.mode === 'json')
-                body = body !== undefined ? JSON.stringify(body) : undefined;
-            else if (arg.mode === 'raw')
-                void 0; // noop
-            else
-                throw new Error('Unknown arg.mode');
-            var headers = this.getHeaders(arg);
-            if (arg.mode === 'json')
-                headers['Content-Type'] = 'application/json';
-            headers = Object.assign(Object.assign({}, headers), arg.headers);
-            var resp = yield this._fetch(this.baseUrl + arg.path, {
-                body: body,
-                method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
-                headers: headers
-            });
-            var contentType = resp.headers.get('Content-Type');
-            if (contentType && /^application\/json;?/.test(contentType))
-                return yield resp.json();
-            return null;
-        });
-    }
-    getListAsync(id) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.getJson('lists/' + id);
-        });
-    }
-    getListIndexAsync() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.getJson('lists/index');
-        });
-    }
-    putListAsync(list, creating = false) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.postJson({
-                path: 'lists/' + list.id,
-                method: creating ? 'POST' : 'PUT',
-                obj: list,
-            });
-        });
-    }
-    processUrl(url) {
-        if (url.match('^(https?:/)?/'))
-            return url;
-        return this.baseUrl + url;
-    }
-};
-var trackStore = new class TrackStore {
-};
-document.addEventListener('dragover', (ev) => {
-    ev.preventDefault();
-});
-document.addEventListener('drop', (ev) => {
-    ev.preventDefault();
-});
-if (navigator['mediaSession']) {
-    let mediaSession = navigator['mediaSession'];
-    exports.playerCore.onTrackChanged.add(() => {
-        var _a, _b;
-        try {
-            var track = exports.playerCore.track;
-            if (!track)
-                return;
-            mediaSession.metadata = new MediaMetadata({
-                title: (_a = track) === null || _a === void 0 ? void 0 : _a.name,
-                artist: (_b = track) === null || _b === void 0 ? void 0 : _b.artist
-            });
-        }
-        catch (_c) { }
-    });
-    mediaSession.setActionHandler('play', () => exports.playerCore.play());
-    mediaSession.setActionHandler('pause', () => exports.playerCore.pause());
-    mediaSession.setActionHandler('previoustrack', () => exports.playerCore.prev());
-    mediaSession.setActionHandler('nexttrack', () => exports.playerCore.next());
-}
-window.addEventListener('beforeunload', (ev) => {
-    if (!exports.playerCore.track || exports.playerCore.audio.paused)
-        return;
-    ev.preventDefault();
-    return ev.returnValue = 'The player is running. Are you sure to leave?';
-});
-exports.ui.init();
+const UI_1 = require("./UI");
+const User_1 = require("./User");
+const ListIndex_1 = require("./ListIndex");
+const Uploads_1 = require("./Uploads");
+const Discussion_1 = require("./Discussion");
+const Router_1 = require("./Router");
+UI_1.ui.init();
 exports.listIndex = new ListIndex_1.ListIndex();
-User_1.user.init();
-Uploads_1.uploads.init();
-Discussion_1.discussion.init();
-Discussion_1.notes.init();
-exports.listIndex.init();
-Router_1.router.init();
+var app = window['app'] = {
+    ui: UI_1.ui, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
+    init() {
+        User_1.user.init();
+        Uploads_1.uploads.init();
+        Discussion_1.discussion.init();
+        Discussion_1.notes.init();
+        exports.listIndex.init();
+        Router_1.router.init();
+    }
+};
+app.init();
 
-},{"./Discussion":1,"./ListIndex":3,"./Router":4,"./Uploads":5,"./User":6,"./utils":9,"./viewlib":10}],8:[function(require,module,exports){
+},{"./Discussion":2,"./ListIndex":5,"./Router":7,"./UI":8,"./Uploads":9,"./User":10}],12:[function(require,module,exports){
 "use strict";
+// file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -1643,10 +1893,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const viewlib_1 = require("./viewlib");
-const main_1 = require("./main");
 const ListContentView_1 = require("./ListContentView");
 const User_1 = require("./User");
-// file: TrackList.ts
+const Api_1 = require("./Api");
+const main_1 = require("./main");
+const PlayerCore_1 = require("./PlayerCore");
 /** A track binding with list */
 class Track {
     constructor(init) {
@@ -1693,7 +1944,7 @@ class Track {
                 return __awaiter(this, void 0, void 0, function* () {
                     this.btnSave.updateWith({ clickable: false, text: utils_1.I `Saving...` });
                     try {
-                        var newinfo = yield main_1.api.postJson({
+                        var newinfo = yield Api_1.api.postJson({
                             method: 'PUT', path: 'tracks/' + this.trackId,
                             obj: {
                                 id: this.trackId,
@@ -1703,7 +1954,7 @@ class Track {
                         });
                         if (newinfo.id != this.trackId)
                             throw new Error('Bad ID in response');
-                        main_1.api.onTrackInfoChanged.invoke(newinfo);
+                        Api_1.api.onTrackInfoChanged.invoke(newinfo);
                         this.close();
                     }
                     catch (error) {
@@ -1726,7 +1977,7 @@ class TrackList {
         this.canEdit = true;
         this.trackChanged = () => {
             var _a;
-            var track = main_1.playerCore.track;
+            var track = PlayerCore_1.playerCore.track;
             var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this) ? this.listView.get(track._bind.position) : null;
             this.curActive.set(item);
         };
@@ -1786,7 +2037,7 @@ class TrackList {
                 name: this.name,
                 trackids: this.tracks.map(t => t.id)
             };
-            var resp = yield main_1.api.postJson({
+            var resp = yield Api_1.api.postJson({
                 path: 'users/me/lists/new',
                 method: 'POST',
                 obj: obj
@@ -1816,7 +2067,7 @@ class TrackList {
                 name: this.name,
                 trackids: this.tracks.map(t => t.id)
             };
-            var resp = yield main_1.api.postJson({
+            var resp = yield Api_1.api.postJson({
                 path: 'lists/' + this.apiid,
                 method: 'PUT',
                 obj: obj
@@ -1829,7 +2080,7 @@ class TrackList {
             if (arg === undefined)
                 arg = this.apiid;
             if (typeof arg == 'number')
-                func = () => main_1.api.getListAsync(arg);
+                func = () => Api_1.api.getListAsync(arg);
             else
                 func = arg;
             this.setLoadIndicator(new viewlib_1.LoadingIndicator());
@@ -1868,12 +2119,12 @@ class TrackList {
             }
             onShow() {
                 super.onShow();
-                main_1.playerCore.onTrackChanged.add(list.trackChanged);
+                PlayerCore_1.playerCore.onTrackChanged.add(list.trackChanged);
                 this.updateItems();
             }
             onRemove() {
                 super.onRemove();
-                main_1.playerCore.onTrackChanged.remove(list.trackChanged);
+                PlayerCore_1.playerCore.onTrackChanged.remove(list.trackChanged);
             }
             appendListView() {
                 super.appendListView();
@@ -1892,7 +2143,7 @@ class TrackList {
                 var _a, _b;
                 // update active state of items
                 list.curActive.set(null);
-                var playing = main_1.playerCore.track;
+                var playing = PlayerCore_1.playerCore.track;
                 for (const lvi of this.listView) {
                     const t = lvi.track;
                     if (playing
@@ -1965,7 +2216,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
             if (this.track.url)
                 m.add(new viewlib_1.MenuLinkItem({
                     text: utils_1.I `Download`,
-                    link: main_1.api.processUrl(this.track.url),
+                    link: Api_1.api.processUrl(this.track.url),
                     download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
                 }));
             m.add(new viewlib_1.MenuItem({
@@ -1993,7 +2244,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                 { tag: 'span.name', _key: 'domname' },
                 { tag: 'span.artist', _key: 'domartist' },
             ],
-            onclick: () => { main_1.playerCore.playTrack(track); },
+            onclick: () => { PlayerCore_1.playerCore.playTrack(track); },
             draggable: true,
             _item: this
         };
@@ -2057,7 +2308,7 @@ class ContentHeader extends viewlib_1.View {
 }
 exports.ContentHeader = ContentHeader;
 
-},{"./ListContentView":2,"./User":6,"./main":7,"./utils":9,"./viewlib":10}],9:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./User":10,"./main":11,"./utils":13,"./viewlib":14}],13:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2070,6 +2321,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const I18n_1 = require("./I18n");
+exports.i18n = I18n_1.i18n;
+exports.I = I18n_1.I;
 /** The name "utils" tells it all. */
 exports.utils = new class Utils {
     constructor() {
@@ -2402,107 +2656,6 @@ class Callbacks {
     }
 }
 exports.Callbacks = Callbacks;
-/** Internationalization (aka i18n) helper class */
-class I18n {
-    constructor() {
-        this.data = {};
-        this.curLang = 'en';
-        this.missing = new Map();
-    }
-    /** Get i18n string for `key`, return `key` when not found. */
-    get(key, arg) {
-        return this.get2(key, arg) || key;
-    }
-    /** Get i18n string for `key`, return `null` when not found. */
-    get2(key, arg, lang) {
-        lang = lang || this.curLang;
-        var langObj = this.data[lang];
-        if (!langObj) {
-            console.log('i18n missing lang: ' + lang);
-            return null;
-        }
-        var r = langObj[key];
-        if (!r) {
-            if (!this.missing.has(key)) {
-                this.missing.set(key, 1);
-                console.log('i18n missing key: ' + key);
-            }
-            return null;
-        }
-        if (arg) {
-            for (const key in arg) {
-                if (arg.hasOwnProperty(key)) {
-                    const val = arg[key];
-                    r = r.replace('{' + key + '}', val);
-                    // Note that it only replaces the first occurrence.
-                }
-            }
-        }
-        return r;
-    }
-    /** Fills data with an 2darray */
-    add2dArray(array) {
-        const langObjs = [];
-        const langs = array[0];
-        for (const lang of langs) {
-            langObjs.push(this.data[lang] = this.data[lang] || {});
-        }
-        for (let i = 1; i < array.length; i++) {
-            const line = array[i];
-            const key = line[0];
-            for (let j = 0; j < line.length; j++) {
-                const val = line[j];
-                langObjs[j][key] = val;
-            }
-        }
-    }
-    renderElements(elements) {
-        console.log('i18n elements rendering');
-        elements.forEach(x => {
-            for (const node of x.childNodes) {
-                if (node.nodeType == Node.TEXT_NODE) {
-                    // console.log('node', node);
-                    var r = this.get2(node.beforeI18n || node.textContent);
-                    if (r) {
-                        node.beforeI18n = node.beforeI18n || node.textContent;
-                        node.textContent = r;
-                    }
-                    else {
-                        if (node.beforeI18n) {
-                            node.textContent = node.beforeI18n;
-                        }
-                        console.log('missing key for node', node);
-                    }
-                }
-            }
-        });
-    }
-    /**
-     * Detect the best available language using
-     * the user language preferences provided by the browser.
-     * @param langs Available languages
-     */
-    static detectLanguage(langs) {
-        var cur;
-        var curIdx = -1;
-        var languages = [];
-        // ['en-US'] -> ['en-US', 'en']
-        (navigator.languages || [navigator.language]).forEach(lang => {
-            languages.push(lang);
-            if (lang.indexOf('-') > 0)
-                languages.push(lang.substr(0, lang.indexOf('-')));
-        });
-        langs.forEach((l) => {
-            var idx = languages.indexOf(l);
-            if (!cur || (idx !== -1 && idx < curIdx)) {
-                cur = l;
-                curIdx = idx;
-            }
-        });
-        return cur;
-    }
-}
-exports.I18n = I18n;
 class Lazy {
     constructor(func) {
         if (typeof func != 'function')
@@ -2563,93 +2716,10 @@ class Semaphore {
     }
 }
 exports.Semaphore = Semaphore;
-exports.i18n = new I18n();
-function I(literals, ...placeholders) {
-    if (placeholders.length == 0) {
-        return exports.i18n.get(literals[0]);
-    }
-    // Generate format string from template string:
-    var formatString = '';
-    for (var i = 0; i < literals.length; i++) {
-        var lit = literals[i];
-        formatString += lit;
-        if (i < placeholders.length) {
-            formatString += '{' + i + '}';
-        }
-    }
-    var r = exports.i18n.get(formatString);
-    for (var i = 0; i < placeholders.length; i++) {
-        r = r.replace('{' + i + '}', placeholders[i]);
-    }
-    return r;
-}
-exports.I = I;
-// Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
-exports.i18n.add2dArray(JSON.parse(`[
-    ["en", "zh"],
-    ["English", "中文"],
-    ["Pin", "固定"],
-    ["Unpin", "浮动"],
-    ["Pause", "暂停"],
-    ["Play", "播放"],
-    [" (logging in...)", " （登录中...）"],
-    ["Guest (click to login)", "游客（点击登录）"],
-    ["Login", "登录"],
-    ["Create account", "创建账户"],
-    ["Close", "关闭"],
-    ["Username", "用户名"],
-    ["Password", "密码"],
-    ["Confirm password", "确认密码"],
-    ["Requesting...", "请求中……"],
-    [" (error!)", "（错误！）"],
-    ["Username or password is not correct.", "用户名或密码不正确。"],
-    ["Logged in with previous working account.", "已登录为之前的用户。"],
-    ["Please input the username!", "请输入用户名！"],
-    ["Please input the password!", "请输入密码！"],
-    ["Password confirmation does not match!", "确认密码不相同！"],
-    ["Playlist", "播放列表"],
-    ["Playlists", "播放列表"],
-    ["New Playlist", "新建播放列表"],
-    ["New Playlist ({0})", "新播放列表（{0}）"],
-    ["Click to edit", "点击编辑"],
-    ["(Empty)", "（空）"],
-    ["Loading", "加载中"],
-    ["Oh no! Something just goes wrong:", "发生错误："],
-    ["[Click here to retry]", "[点击重试]"],
-    ["My Uploads", "我的上传"],
-    ["Click here to select files to upload", "点此选择文件并上传"],
-    ["or drag files to this zone...", "或拖放文件到此处..."],
-    ["Comments", "评论"],
-    ["Remove", "移除"],
-    ["List ID", "列表 ID"],
-    ["Track ID", "歌曲 ID"],
-    ["Name", "名称"],
-    ["Artist", "艺术家"],
-    ["Discussion", "讨论区"],
-    ["Notes", "便签"],
-    ["Submit", "提交"],
-    ["Submitting", "提交中"],
-    ["Download", "下载"],
-    ["Edit", "编辑"],
-    ["Save", "保存"],
-    ["User {0}", "用户 {0}"],
-    ["You've logged in as \\"{0}\\".", "你已登录为 \\"{0}\\"。"],
-    ["Switch user", "切换用户"],
-    ["Logout", "注销"],
-    ["Music Cloud", "Music Cloud"]
-]`));
-exports.i18n.add2dArray([
-    ["_key_", "en", "zh"],
-    ["uploads_pending", "Pending", "队列中"],
-    ["uploads_uploading", "Uploading", "上传中"],
-    ["uploads_error", "Error", "错误"],
-    ["uploads_done", "Done", "完成"],
-    ["prev_track", "Prev", "上一首"],
-    ["next_track", "Next", "下一首"],
-]);
 
-},{}],10:[function(require,module,exports){
+},{"./I18n":3}],14:[function(require,module,exports){
 "use strict";
+// file: viewlib.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -2661,7 +2731,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
-const main_1 = require("./main");
 class View {
     constructor(dom) {
         if (dom)
@@ -3195,32 +3264,6 @@ class ContextMenu extends ListView {
     }
 }
 exports.ContextMenu = ContextMenu;
-class SidebarItem extends ListViewItem {
-    constructor(init) {
-        super();
-        utils_1.utils.objectApply(this, init);
-    }
-    createDom() {
-        return {
-            tag: 'div.item.no-selection',
-            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
-        };
-    }
-    updateDom() {
-        this.dom.textContent = this.text;
-    }
-    bindContentView(viewFunc) {
-        var view;
-        this.onclick = () => {
-            if (!view)
-                view = viewFunc();
-            main_1.ui.content.setCurrent(view);
-            main_1.ui.sidebarList.setActive(this);
-        };
-        return this;
-    }
-}
-exports.SidebarItem = SidebarItem;
 class Dialog extends View {
     constructor() {
         super();
@@ -3287,15 +3330,15 @@ class Dialog extends View {
         this.domcontent.appendChild(View.getDOM(view));
     }
     show() {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         if (this.shown)
             return;
         this.shown = true;
         (_b = (_a = this)._cancelFadeout) === null || _b === void 0 ? void 0 : _b.call(_a);
         this.ensureDom();
-        main_1.ui.mainContainer.dom.appendView(this.overlay);
+        (_c = Dialog.defaultParent, (_c !== null && _c !== void 0 ? _c : document.body)).appendView(this.overlay);
         this.dom.focus();
-        (_c = this.autoFocus) === null || _c === void 0 ? void 0 : _c.dom.focus();
+        (_d = this.autoFocus) === null || _d === void 0 ? void 0 : _d.dom.focus();
         this.onShown.invoke();
     }
     close() {
@@ -3392,4 +3435,4 @@ class LabeledInput extends View {
 }
 exports.LabeledInput = LabeledInput;
 
-},{"./main":7,"./utils":9}]},{},[7]);
+},{"./utils":13}]},{},[11]);

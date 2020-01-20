@@ -1,10 +1,9 @@
-import { ContentView } from "./main";
+// file: ListContentView.ts
+
 import { ListViewItem, ListView, LoadingIndicator } from "./viewlib";
 import { ContentHeader } from "./tracklist";
 import { utils, I } from "./utils";
-
-// file: ListContentView.ts
-/// <reference path="main.ts" />
+import { ContentView } from "./UI";
 
 class DataBackedListViewItem extends ListViewItem {
     data: any;

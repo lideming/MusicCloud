@@ -1,15 +1,14 @@
-import { ListView, Section, LoadingIndicator, SidebarItem, ContextMenu, MenuItem, MenuInfoItem } from "./viewlib";
+// file: ListIndex.ts
 
-import { ui, playerCore, api } from "./main";
-
+import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem } from "./viewlib";
 import { I, utils, BuildDomExpr } from "./utils";
 import { TrackList, TrackViewItem } from "./tracklist";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";
-
-// file: ListIndex.ts
-/// <reference path="main.ts" />
+import { ui, SidebarItem } from "./UI";
+import { playerCore } from "./PlayerCore";
+import { api } from "./Api";
 
 export class ListIndex {
     loadedList: { [x: number]: TrackList; } = {};

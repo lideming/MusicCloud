@@ -1,14 +1,11 @@
-import { SettingItem, Callbacks, Action, I, utils } from "./utils";
-
-import { ui, api, listIndex } from "./main";
-
-import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView } from "./viewlib";
-import { Api } from "./apidef";
-
 // file: User.ts
 
-/// <reference path="main.ts" />
-
+import { SettingItem, Callbacks, Action, I, utils } from "./utils";
+import { listIndex } from "./main";
+import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView } from "./viewlib";
+import { Api } from "./apidef";
+import { ui } from "./UI";
+import { api } from "./Api";
 
 export var user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
