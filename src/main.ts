@@ -12,6 +12,9 @@ import { Track } from "./TrackList";
 import { ListIndex } from "./ListIndex";
 import { uploads } from "./Uploads";
 import { discussion, notes } from "./Discussion";
+import { router } from "./Router";
+
+var app = window['app'] = { router };
 
 export var settings = {
     apiBaseUrl: 'api/',
@@ -27,6 +30,13 @@ export var ui = new class {
         this.lang.init();
         this.bottomBar.init();
         this.sidebarLogin.init();
+        router.addRoute({
+            path: ['home'],
+            onNav: () => {
+                ui.content.setCurrent(null);
+                ui.sidebarList.currentActive.set(null);
+            }
+        });
     }
     lang = new class {
         availableLangs = ['en', 'zh'];
@@ -406,3 +416,4 @@ uploads.init();
 discussion.init();
 notes.init();
 listIndex.init();
+router.init();

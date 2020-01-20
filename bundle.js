@@ -16,6 +16,7 @@ const utils_1 = require("./utils");
 const tracklist_1 = require("./tracklist");
 const User_1 = require("./User");
 const ListContentView_1 = require("./ListContentView");
+const Router_1 = require("./Router");
 // file: discussion.ts
 /// <reference path="main.ts" />
 exports.discussion = new class {
@@ -36,7 +37,12 @@ exports.discussion = new class {
         });
     }
     init() {
-        this.sidebarItem = new viewlib_1.SidebarItem({ text: utils_1.I `Discussion` }).bindContentView(() => this.view.value);
+        this.sidebarItem = new viewlib_1.SidebarItem({ text: utils_1.I `Discussion` });
+        Router_1.router.addRoute({
+            path: ['discussion'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.view.value
+        });
         main_1.ui.sidebarList.addItem(this.sidebarItem);
     }
 };
@@ -70,20 +76,26 @@ exports.notes = new class {
     }
     init() {
         this.sidebarItem = new viewlib_1.SidebarItem({ text: utils_1.I `Notes` }).bindContentView(() => this.view);
+        Router_1.router.addRoute({
+            path: ['notes'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.lazyView.value
+        });
         main_1.ui.sidebarList.addItem(this.sidebarItem);
         User_1.user.onSwitchedUser.add(() => {
-            if (this.state)
+            if (this.state && exports.notes.state !== 'waiting')
                 this.fetch();
         });
     }
     get view() { return this.lazyView.value; }
     fetch() {
         return __awaiter(this, void 0, void 0, function* () {
-            this.state = 'fetching';
+            this.state = 'waiting';
             var li = new viewlib_1.LoadingIndicator();
             this.view.useLoadingIndicator(li);
             try {
                 yield User_1.user.waitLogin(true);
+                this.state = 'fetching';
                 var resp = yield main_1.api.getJson('my/notes?reverse=1');
                 this.view.useLoadingIndicator(null);
             }
@@ -189,7 +201,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./ListContentView":2,"./User":5,"./main":6,"./tracklist":7,"./utils":8,"./viewlib":9}],2:[function(require,module,exports){
+},{"./ListContentView":2,"./Router":4,"./User":6,"./main":7,"./tracklist":8,"./utils":9,"./viewlib":10}],2:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -307,7 +319,7 @@ class ListContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./tracklist":7,"./utils":8,"./viewlib":9}],3:[function(require,module,exports){
+},{"./tracklist":8,"./utils":9,"./viewlib":10}],3:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -324,6 +336,7 @@ const main_1 = require("./main");
 const utils_1 = require("./utils");
 const tracklist_1 = require("./tracklist");
 const User_1 = require("./User");
+const Router_1 = require("./Router");
 // file: ListIndex.ts
 /// <reference path="main.ts" />
 class ListIndex {
@@ -398,22 +411,24 @@ class ListIndex {
             }
         });
         main_1.ui.sidebarList.container.appendView(this.section);
-        // listIndex.fetch();
-    }
-    /** Fetch lists from API and update the view */
-    fetch() {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.loadIndicator.reset();
-            this.listView.ReplaceChild(this.loadIndicator.dom);
-            try {
-                var index = yield main_1.api.getListIndexAsync();
-                this.setIndex(index);
-            }
-            catch (err) {
-                this.loadIndicator.error(err, () => this.fetch());
-            }
-            if (this.listView.length > 0)
-                this.listView.onItemClicked(this.listView.get(0));
+        Router_1.router.addRoute({
+            path: ['list'],
+            onNav: (arg) => __awaiter(this, void 0, void 0, function* () {
+                yield User_1.user.waitLogin(false);
+                var id = window.parseInt(arg.remaining[0]);
+                var list = this.getList(id);
+                main_1.ui.content.setCurrent(list.createView());
+                main_1.ui.sidebarList.setActive(this.getViewItem(id));
+            })
+        });
+        Router_1.router.addRoute({
+            path: [''],
+            onNav: (arg) => __awaiter(this, void 0, void 0, function* () {
+                if (yield User_1.user.waitLogin(false)) {
+                    if (this.listView.length > 0)
+                        Router_1.router.nav(['list', this.listView.get(0).listInfo.id.toString()], false);
+                }
+            })
         });
     }
     setIndex(index) {
@@ -422,8 +437,6 @@ class ListIndex {
         for (const item of (_b = (_a = index) === null || _a === void 0 ? void 0 : _a.lists, (_b !== null && _b !== void 0 ? _b : []))) {
             this.addListInfo(item);
         }
-        if (this.listView.length > 0 && !main_1.ui.content.current)
-            this.listView.onItemClicked(this.listView.get(0));
     }
     addListInfo(listinfo) {
         this.listView.add(new ListIndexViewItem({ index: this, listInfo: listinfo }));
@@ -451,8 +464,7 @@ class ListIndex {
         return this.listView.find(lvi => lvi.listInfo.id == id);
     }
     showTracklist(id) {
-        var list = this.getList(id);
-        main_1.ui.content.setCurrent(list.createView());
+        Router_1.router.nav(['list', id.toString()]);
     }
     onrename(id, newName) {
         var lvi = this.getViewItem(id);
@@ -536,7 +548,64 @@ class ListIndexViewItem extends viewlib_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./User":5,"./main":6,"./tracklist":7,"./utils":8,"./viewlib":9}],4:[function(require,module,exports){
+},{"./Router":4,"./User":6,"./main":7,"./tracklist":8,"./utils":9,"./viewlib":10}],4:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const main_1 = require("./main");
+exports.router = new class {
+    constructor() {
+        this.routes = [];
+    }
+    init() {
+        window.addEventListener('popstate', (ev) => {
+            this.navByLocation();
+        });
+        this.navByLocation();
+    }
+    navByLocation() {
+        var hash = window.location.hash;
+        this.nav(hash ? hash.substr(1) : '', false);
+    }
+    addRoute(arg) {
+        this.routes.push(arg);
+        if (arg.sidebarItem)
+            arg.sidebarItem().onclick = () => {
+                this.nav([...arg.path]);
+            };
+    }
+    nav(path, pushState) {
+        if (typeof path === 'string')
+            path = parsePath(path);
+        for (const r of this.routes) {
+            if (match(path, r)) {
+                if (r.contentView)
+                    main_1.ui.content.setCurrent(r.contentView());
+                if (r.sidebarItem)
+                    main_1.ui.sidebarList.setActive(r.sidebarItem());
+                if (r.onNav)
+                    r.onNav({ path, remaining: path.slice(r.path.length) });
+                break;
+            }
+        }
+        var strPath = path.join('/');
+        if (pushState === undefined || pushState) {
+            window.history.pushState({}, strPath, '#' + strPath);
+        }
+    }
+};
+function match(path, route) {
+    var rp = route.path;
+    for (let i = 0; i < rp.length; i++) {
+        if (path[i] !== rp[i])
+            return false;
+    }
+    return true;
+}
+function parsePath(path) {
+    return path.split('/');
+}
+
+},{"./main":7}],5:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -555,6 +624,7 @@ const main_1 = require("./main");
 const User_1 = require("./User");
 const ListContentView_1 = require("./ListContentView");
 const viewlib_1 = require("./viewlib");
+const Router_1 = require("./Router");
 // file: Uploads.ts
 class UploadTrack extends tracklist_1.Track {
     constructor(init) {
@@ -613,11 +683,15 @@ exports.uploads = new class {
         };
     }
     init() {
-        this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: utils_1.I `My Uploads` })
-            .bindContentView(() => this.view);
+        this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: utils_1.I `My Uploads` });
+        Router_1.router.addRoute({
+            path: ['uploads'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.view
+        });
         main_1.ui.sidebarList.addItem(this.sidebarItem);
         User_1.user.onSwitchedUser.add(() => {
-            if (this.state != false) {
+            if (this.state !== false && this.state !== 'waiting') {
                 this.tracks = [];
                 this.state = false;
                 if (this.view.rendered) {
@@ -652,11 +726,12 @@ exports.uploads = new class {
     }
     fetch() {
         return __awaiter(this, void 0, void 0, function* () {
-            this.state = 'fetching';
+            this.state = 'waiting';
             var li = new viewlib_1.LoadingIndicator();
             this.view.useLoadingIndicator(li);
             try {
                 yield User_1.user.waitLogin(true);
+                this.state = 'fetching';
                 var fetched = (yield main_1.api.getJson('my/uploads'))['tracks']
                     .reverse()
                     .map(t => {
@@ -812,7 +887,7 @@ var BlockFormat = {
     }
 };
 
-},{"./ListContentView":2,"./ListIndex":3,"./User":5,"./main":6,"./tracklist":7,"./utils":8,"./viewlib":9}],5:[function(require,module,exports){
+},{"./ListContentView":2,"./ListIndex":3,"./Router":4,"./User":6,"./main":7,"./tracklist":8,"./utils":9,"./viewlib":10}],6:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -1100,7 +1175,7 @@ class MeDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./main":6,"./utils":8,"./viewlib":9}],6:[function(require,module,exports){
+},{"./main":7,"./utils":9,"./viewlib":10}],7:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -1121,6 +1196,8 @@ const viewlib_1 = require("./viewlib");
 const ListIndex_1 = require("./ListIndex");
 const Uploads_1 = require("./Uploads");
 const Discussion_1 = require("./Discussion");
+const Router_1 = require("./Router");
+var app = window['app'] = { router: Router_1.router };
 exports.settings = {
     apiBaseUrl: 'api/',
     // apiBaseUrl: 'http://127.0.0.1:50074/api/',
@@ -1339,6 +1416,13 @@ exports.ui = new class {
         this.lang.init();
         this.bottomBar.init();
         this.sidebarLogin.init();
+        Router_1.router.addRoute({
+            path: ['home'],
+            onNav: () => {
+                exports.ui.content.setCurrent(null);
+                exports.ui.sidebarList.currentActive.set(null);
+            }
+        });
     }
 }; // ui
 /** 播放器核心：控制播放逻辑 */
@@ -1543,8 +1627,9 @@ Uploads_1.uploads.init();
 Discussion_1.discussion.init();
 Discussion_1.notes.init();
 exports.listIndex.init();
+Router_1.router.init();
 
-},{"./Discussion":1,"./ListIndex":3,"./Uploads":4,"./User":5,"./utils":8,"./viewlib":9}],7:[function(require,module,exports){
+},{"./Discussion":1,"./ListIndex":3,"./Router":4,"./Uploads":5,"./User":6,"./utils":9,"./viewlib":10}],8:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -1972,7 +2057,7 @@ class ContentHeader extends viewlib_1.View {
 }
 exports.ContentHeader = ContentHeader;
 
-},{"./ListContentView":2,"./User":5,"./main":6,"./utils":8,"./viewlib":9}],8:[function(require,module,exports){
+},{"./ListContentView":2,"./User":6,"./main":7,"./utils":9,"./viewlib":10}],9:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2563,7 +2648,7 @@ exports.i18n.add2dArray([
     ["next_track", "Next", "下一首"],
 ]);
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -3307,4 +3392,4 @@ class LabeledInput extends View {
 }
 exports.LabeledInput = LabeledInput;
 
-},{"./main":6,"./utils":8}]},{},[6]);
+},{"./main":7,"./utils":9}]},{},[7]);

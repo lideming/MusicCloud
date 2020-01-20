@@ -6,6 +6,7 @@ import { I, utils, BuildDomExpr } from "./utils";
 import { TrackList, TrackViewItem } from "./tracklist";
 import { user } from "./User";
 import { Api } from "./apidef";
+import { router } from "./Router";
 
 // file: ListIndex.ts
 /// <reference path="main.ts" />
@@ -79,26 +80,31 @@ export class ListIndex {
             }
         });
         ui.sidebarList.container.appendView(this.section);
-        // listIndex.fetch();
-    }
-    /** Fetch lists from API and update the view */
-    async fetch() {
-        this.loadIndicator.reset();
-        this.listView.ReplaceChild(this.loadIndicator.dom);
-        try {
-            var index = await api.getListIndexAsync();
-            this.setIndex(index);
-        } catch (err) {
-            this.loadIndicator.error(err, () => this.fetch());
-        }
-        if (this.listView.length > 0) this.listView.onItemClicked(this.listView.get(0));
+        router.addRoute({
+            path: ['list'],
+            onNav: async (arg) => {
+                await user.waitLogin(false);
+                var id = window.parseInt(arg.remaining[0]);
+                var list = this.getList(id);
+                ui.content.setCurrent(list.createView());
+                ui.sidebarList.setActive(this.getViewItem(id));
+            }
+        });
+        router.addRoute({
+            path: [''],
+            onNav: async (arg) => {
+                if (await user.waitLogin(false)) {
+                    if (this.listView.length > 0)
+                        router.nav(['list', this.listView.get(0).listInfo.id.toString()], false);
+                }
+            }
+        });
     }
     setIndex(index: Api.TrackListIndex) {
         this.listView.clear();
         for (const item of index?.lists ?? []) {
             this.addListInfo(item);
         }
-        if (this.listView.length > 0 && !ui.content.current) this.listView.onItemClicked(this.listView.get(0));
     }
     addListInfo(listinfo: Api.TrackListInfo) {
         this.listView.add(new ListIndexViewItem({ index: this, listInfo: listinfo }));
@@ -124,8 +130,7 @@ export class ListIndex {
         return this.listView.find(lvi => lvi.listInfo.id == id);
     }
     showTracklist(id: number) {
-        var list = this.getList(id);
-        ui.content.setCurrent(list.createView());
+        router.nav(['list', id.toString()]);
     }
     onrename(id: number, newName: string) {
         var lvi = this.getViewItem(id);

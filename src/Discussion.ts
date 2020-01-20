@@ -5,6 +5,7 @@ import { ContentHeader } from "./tracklist";
 import { user } from "./User";
 import { ListContentView } from "./ListContentView";
 import { Api } from "./apidef";
+import { router } from "./Router";
 
 // file: discussion.ts
 /// <reference path="main.ts" />
@@ -12,7 +13,12 @@ import { Api } from "./apidef";
 
 export var discussion = new class {
     init() {
-        this.sidebarItem = new SidebarItem({ text: I`Discussion` }).bindContentView(() => this.view.value);
+        this.sidebarItem = new SidebarItem({ text: I`Discussion` });
+        router.addRoute({
+            path: ['discussion'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.view.value
+        });
         ui.sidebarList.addItem(this.sidebarItem);
     }
     sidebarItem: SidebarItem;
@@ -35,9 +41,14 @@ export var discussion = new class {
 export var notes = new class {
     init() {
         this.sidebarItem = new SidebarItem({ text: I`Notes` }).bindContentView(() => this.view);
+        router.addRoute({
+            path: ['notes'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.lazyView.value
+        });
         ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
-            if (this.state) this.fetch();
+            if (this.state && notes.state !== 'waiting') this.fetch();
         });
     }
     sidebarItem: SidebarItem;
@@ -65,13 +76,14 @@ export var notes = new class {
         }
     });
     get view() { return this.lazyView.value; }
-    state: false | 'fetching' | 'error' | 'fetched' = false;
+    state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
     async fetch() {
-        this.state = 'fetching';
+        this.state = 'waiting';
         var li = new LoadingIndicator();
         this.view.useLoadingIndicator(li);
         try {
             await user.waitLogin(true);
+            this.state = 'fetching';
             var resp = await api.getJson('my/notes?reverse=1') as Api.CommentList;
             this.view.useLoadingIndicator(null);
         } catch (error) {

@@ -13,6 +13,7 @@ import { Api } from "./apidef";
 import { ListContentView } from "./ListContentView";
 
 import { ListView, LoadingIndicator, View } from "./viewlib";
+import { router } from "./Router";
 
 // file: Uploads.ts
 
@@ -29,14 +30,18 @@ class UploadTrack extends Track {
 
 export var uploads = new class {
     tracks: UploadTrack[] = [];
-    state: false | 'fetching' | 'fetched' = false;
+    state: false | 'waiting' | 'fetching' | 'fetched' = false;
     private uploadSemaphore = new Semaphore({ maxCount: 2 });
     init() {
-        this.sidebarItem = new ListIndexViewItem({ text: I`My Uploads` })
-            .bindContentView(() => this.view);
+        this.sidebarItem = new ListIndexViewItem({ text: I`My Uploads` });
+        router.addRoute({
+            path: ['uploads'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.view
+        });
         ui.sidebarList.addItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
-            if (this.state != false) {
+            if (this.state !== false && this.state !== 'waiting') {
                 this.tracks = [];
                 this.state = false;
                 if (this.view.rendered) {
@@ -52,7 +57,7 @@ export var uploads = new class {
         api.onTrackInfoChanged.add((newer: Api.Track) => {
             this.tracks.forEach(t => {
                 if (t.id === newer.id) {
-                    t.updateFromApiTrack(newer)
+                    t.updateFromApiTrack(newer);
                     t._upload.view?.updateDom();
                 }
             });
@@ -111,11 +116,12 @@ export var uploads = new class {
         if (this.view.rendered) this.view.addTrack(t);
     }
     async fetch() {
-        this.state = 'fetching';
+        this.state = 'waiting';
         var li = new LoadingIndicator();
         this.view.useLoadingIndicator(li);
         try {
             await user.waitLogin(true);
+            this.state = 'fetching';
             var fetched = ((await api.getJson('my/uploads'))['tracks'] as any[])
                 .reverse()
                 .map(t => {
