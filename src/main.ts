@@ -12,6 +12,7 @@ export var settings = {
 };
 
 import { ui } from "./UI";
+import { playerCore } from "./PlayerCore";
 import { user } from "./User";
 import { ListIndex } from "./ListIndex";
 import { uploads } from "./Uploads";
@@ -23,7 +24,7 @@ ui.init();
 export var listIndex = new ListIndex();
 
 var app = window['app'] = {
-    ui, router, listIndex, user, uploads, discussion, notes,
+    ui, playerCore, router, listIndex, user, uploads, discussion, notes,
     init() {
         user.init();
         uploads.init();

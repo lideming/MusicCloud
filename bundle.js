@@ -1858,6 +1858,7 @@ exports.settings = {
     apiDebugDelay: 0,
 };
 const UI_1 = require("./UI");
+const PlayerCore_1 = require("./PlayerCore");
 const User_1 = require("./User");
 const ListIndex_1 = require("./ListIndex");
 const Uploads_1 = require("./Uploads");
@@ -1866,7 +1867,7 @@ const Router_1 = require("./Router");
 UI_1.ui.init();
 exports.listIndex = new ListIndex_1.ListIndex();
 var app = window['app'] = {
-    ui: UI_1.ui, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
+    ui: UI_1.ui, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
     init() {
         User_1.user.init();
         Uploads_1.uploads.init();
@@ -1878,7 +1879,7 @@ var app = window['app'] = {
 };
 app.init();
 
-},{"./Discussion":2,"./ListIndex":5,"./Router":7,"./UI":8,"./Uploads":9,"./User":10}],12:[function(require,module,exports){
+},{"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./Uploads":9,"./User":10}],12:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
