@@ -1974,14 +1974,7 @@ exports.Track = Track;
 class TrackList {
     constructor() {
         this.tracks = [];
-        this.curActive = new utils_1.ItemActiveHelper();
         this.canEdit = true;
-        this.trackChanged = () => {
-            var _a;
-            var track = PlayerCore_1.playerCore.track;
-            var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this) ? this.listView.get(track._bind.position) : null;
-            this.curActive.set(item);
-        };
     }
     setLoadIndicator(li) {
         this.loadIndicator = li;
@@ -2010,10 +2003,8 @@ class TrackList {
                 position: this.tracks.length
             } }));
         this.tracks.push(track);
-        if (this.listView) {
-            this.listView.add(this.createViewItem(track));
-            this.contentView.updateView();
-        }
+        if (this.contentView)
+            this.contentView.addItem(track);
         return track;
     }
     loadEmpty() {
@@ -2109,51 +2100,7 @@ class TrackList {
     }
     createView() {
         var list = this;
-        return this.contentView = this.contentView || new class extends ListContentView_1.ListContentView {
-            createHeader() {
-                return new ContentHeader({
-                    catalog: utils_1.I `Playlist`,
-                    title: list.name,
-                    titleEditable: !!list.rename,
-                    onTitleEdit: (newName) => list.rename(newName)
-                });
-            }
-            onShow() {
-                super.onShow();
-                PlayerCore_1.playerCore.onTrackChanged.add(list.trackChanged);
-                this.updateItems();
-            }
-            onRemove() {
-                super.onRemove();
-                PlayerCore_1.playerCore.onTrackChanged.remove(list.trackChanged);
-            }
-            appendListView() {
-                super.appendListView();
-                var lv = this.listView;
-                list.listView = lv;
-                lv.dragging = true;
-                if (list.canEdit)
-                    lv.moveByDragging = true;
-                lv.onItemMoved = () => list.updateTracksFromListView();
-                list.tracks.forEach(t => this.listView.add(list.createViewItem(t)));
-                this.updateItems();
-                this.useLoadingIndicator(list.loadIndicator);
-                this.updateView();
-            }
-            updateItems() {
-                var _a, _b;
-                // update active state of items
-                list.curActive.set(null);
-                var playing = PlayerCore_1.playerCore.track;
-                for (const lvi of this.listView) {
-                    const t = lvi.track;
-                    if (playing
-                        && ((((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) !== list && t.id === playing.id)
-                            || (((_b = playing._bind) === null || _b === void 0 ? void 0 : _b.list) === list && playing._bind.position === t._bind.position)))
-                        list.curActive.set(lvi);
-                }
-            }
-        };
+        return this.contentView = this.contentView || new TrackListView(this);
     }
     getNextTrack(track, loopMode, offset) {
         var _a, _b, _c;
@@ -2198,15 +2145,76 @@ class TrackList {
         (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
         this.put();
     }
+}
+exports.TrackList = TrackList;
+class TrackListView extends ListContentView_1.ListContentView {
+    constructor(list) {
+        super();
+        this.curActive = new utils_1.ItemActiveHelper();
+        this.trackChanged = () => {
+            var _a;
+            var track = PlayerCore_1.playerCore.track;
+            var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this.list) ? this.listView.get(track._bind.position) : null;
+            this.curActive.set(item);
+        };
+        this.list = list;
+    }
+    createHeader() {
+        return new ContentHeader({
+            catalog: utils_1.I `Playlist`,
+            title: this.list.name,
+            titleEditable: !!this.list.rename,
+            onTitleEdit: (newName) => this.list.rename(newName)
+        });
+    }
+    onShow() {
+        super.onShow();
+        PlayerCore_1.playerCore.onTrackChanged.add(this.trackChanged);
+        this.updateItems();
+    }
+    onRemove() {
+        super.onRemove();
+        PlayerCore_1.playerCore.onTrackChanged.remove(this.trackChanged);
+    }
+    appendListView() {
+        super.appendListView();
+        var lv = this.listView;
+        this.list.listView = lv;
+        lv.dragging = true;
+        if (this.list.canEdit)
+            lv.moveByDragging = true;
+        lv.onItemMoved = () => this.list.updateTracksFromListView();
+        this.list.tracks.forEach(t => this.listView.add(this.createViewItem(t)));
+        this.updateItems();
+        this.useLoadingIndicator(this.list.loadIndicator);
+        this.updateView();
+    }
+    updateItems() {
+        var _a, _b;
+        // update active state of items
+        this.curActive.set(null);
+        var playing = PlayerCore_1.playerCore.track;
+        for (const lvi of this.listView) {
+            const t = lvi.track;
+            if (playing
+                && ((((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) !== this.list && t.id === playing.id)
+                    || (((_b = playing._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list && playing._bind.position === t._bind.position)))
+                this.curActive.set(lvi);
+        }
+    }
+    addItem(t) {
+        this.listView.add(this.createViewItem(t));
+        this.updateView();
+    }
     createViewItem(t) {
         var view = new TrackViewItem(t);
-        if (this.canEdit) {
-            view.onRemove = (item) => this.remove(item.track);
+        if (this.list.canEdit) {
+            view.onRemove = (item) => this.list.remove(item.track);
         }
         return view;
     }
 }
-exports.TrackList = TrackList;
+;
 class TrackViewItem extends viewlib_1.ListViewItem {
     constructor(item) {
         super();
@@ -2279,19 +2287,18 @@ class ContentHeader extends viewlib_1.View {
                 { tag: 'span.catalog', textContent: this.catalog, _key: 'catalog' },
                 {
                     tag: 'span.title', textContent: this.title, _key: 'title',
-                    onclick: (ev) => {
+                    onclick: (ev) => __awaiter(this, void 0, void 0, function* () {
                         if (!this.titleEditable)
                             return;
                         editHelper = editHelper || new viewlib_1.EditableHelper(this.domctx.title);
                         if (editHelper.editing)
                             return;
-                        editHelper.startEdit((newName) => {
-                            if (newName !== editHelper.beforeEdit && newName != '') {
-                                this.onTitleEdit(newName);
-                            }
-                            this.updateDom();
-                        });
-                    }
+                        var newName = yield editHelper.startEditAsync();
+                        if (newName !== editHelper.beforeEdit && newName != '') {
+                            this.onTitleEdit(newName);
+                        }
+                        this.updateDom();
+                    })
                 },
             ]
         });
@@ -2630,8 +2637,9 @@ SettingItem.types = {
     }
 };
 class ItemActiveHelper {
-    constructor() {
+    constructor(init) {
         this.funcSetActive = (item, val) => item.toggleClass('active', val);
+        exports.utils.objectApply(this, init);
     }
     set(item) {
         if (this.current)
@@ -3144,6 +3152,9 @@ class EditableHelper {
             }),
             utils_1.utils.addEvent(input, 'focusout', (evv) => { stopEdit(); }),
         ];
+    }
+    startEditAsync() {
+        return new Promise((resolve) => this.startEdit(resolve));
     }
 }
 exports.EditableHelper = EditableHelper;

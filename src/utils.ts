@@ -103,9 +103,11 @@ export var utils = new class Utils {
      * @param force - true -> add; false -> remove; undefined -> toggle.
      */
     toggleClass(element: HTMLElement, clsName: string, force?: boolean) {
-        if (force === undefined) force = !element.classList.contains(clsName);
-        if (force) element.classList.add(clsName);
-        else element.classList.remove(clsName);
+        var clsList = element.classList;
+        if (clsList.toggle) return clsList.toggle(clsName, force);
+        if (force === undefined) force = !clsList.contains(clsName);
+        if (force) clsList.add(clsName);
+        else clsList.remove(clsName);
         return force;
     }
 
@@ -347,6 +349,9 @@ interface SiType<T> {
 export class ItemActiveHelper<T extends ListViewItem> {
     funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
     current: T;
+    constructor(init?: Partial<ItemActiveHelper<T>>) {
+        utils.objectApply(this, init);
+    }
     set(item: T) {
         if (this.current) this.funcSetActive(this.current, false);
         this.current = item;
