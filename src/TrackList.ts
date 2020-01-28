@@ -95,7 +95,6 @@ export class TrackList {
     tracks: Track[] = [];
     fetching: Promise<void>;
     posting: Promise<void>;
-    curActive = new ItemActiveHelper<TrackViewItem>();
 
     canEdit = true;
 
@@ -107,7 +106,7 @@ export class TrackList {
     }
 
     /** Available when the view is created */
-    contentView: ListContentView;
+    contentView: TrackListView;
     listView: ListView<TrackViewItem>;
 
     loadInfo(info: Api.TrackListInfo) {
@@ -134,10 +133,7 @@ export class TrackList {
             }
         });
         this.tracks.push(track);
-        if (this.listView) {
-            this.listView.add(this.createViewItem(track));
-            this.contentView.updateView();
-        }
+        if (this.contentView) this.contentView.addItem(track);
         return track;
     }
     loadEmpty() {
@@ -210,50 +206,7 @@ export class TrackList {
     }
     createView(): ContentView {
         var list = this;
-        return this.contentView = this.contentView || new class extends ListContentView {
-            listView: ListView<TrackViewItem>;
-            createHeader() {
-                return new ContentHeader({
-                    catalog: I`Playlist`,
-                    title: list.name,
-                    titleEditable: !!list.rename,
-                    onTitleEdit: (newName) => list.rename(newName)
-                });
-            }
-            onShow() {
-                super.onShow();
-                playerCore.onTrackChanged.add(list.trackChanged);
-                this.updateItems();
-            }
-            onRemove() {
-                super.onRemove();
-                playerCore.onTrackChanged.remove(list.trackChanged);
-            }
-            protected appendListView() {
-                super.appendListView();
-                var lv = this.listView;
-                list.listView = lv;
-                lv.dragging = true;
-                if (list.canEdit) lv.moveByDragging = true;
-                lv.onItemMoved = () => list.updateTracksFromListView();
-                list.tracks.forEach(t => this.listView.add(list.createViewItem(t)));
-                this.updateItems();
-                this.useLoadingIndicator(list.loadIndicator);
-                this.updateView();
-            }
-            updateItems() {
-                // update active state of items
-                list.curActive.set(null);
-                var playing = playerCore.track;
-                for (const lvi of this.listView) {
-                    const t = lvi.track;
-                    if (playing
-                        && ((playing._bind?.list !== list && t.id === playing.id)
-                            || (playing._bind?.list === list && playing._bind.position === t._bind.position)))
-                        list.curActive.set(lvi);
-                }
-            }
-        };
+        return this.contentView = this.contentView || new TrackListView(this);
     }
     getNextTrack(track: Track, loopMode: PlayingLoopMode, offset?: number): Track {
         offset = offset ?? 1;
@@ -270,12 +223,7 @@ export class TrackList {
         }
         return null;
     }
-    private trackChanged = () => {
-        var track = playerCore.track;
-        var item = (track?._bind.list === this) ? this.listView.get(track._bind.position) : null;
-        this.curActive.set(item);
-    };
-    private updateTracksFromListView() {
+    updateTracksFromListView() {
         this.tracks = this.listView.map(lvi => {
             lvi.track._bind.position = lvi.position;
             lvi.updateDom();
@@ -283,7 +231,7 @@ export class TrackList {
         });
         this.put();
     }
-    protected remove(track: Track) {
+    remove(track: Track) {
         var pos = track._bind.position;
         track._bind = null;
         this.tracks.splice(pos, 1);
@@ -296,14 +244,74 @@ export class TrackList {
         this.contentView?.updateView();
         this.put();
     }
+}
+
+class TrackListView extends ListContentView {
+    list: TrackList;
+    listView: ListView<TrackViewItem>;
+    curActive = new ItemActiveHelper<TrackViewItem>();
+    constructor(list: TrackList) {
+        super();
+        this.list = list;
+    }
+    createHeader() {
+        return new ContentHeader({
+            catalog: I`Playlist`,
+            title: this.list.name,
+            titleEditable: !!this.list.rename,
+            onTitleEdit: (newName) => this.list.rename(newName)
+        });
+    }
+    onShow() {
+        super.onShow();
+        playerCore.onTrackChanged.add(this.trackChanged);
+        this.updateItems();
+    }
+    onRemove() {
+        super.onRemove();
+        playerCore.onTrackChanged.remove(this.trackChanged);
+    }
+    protected appendListView() {
+        super.appendListView();
+        var lv = this.listView;
+        this.list.listView = lv;
+        lv.dragging = true;
+        if (this.list.canEdit) lv.moveByDragging = true;
+        lv.onItemMoved = () => this.list.updateTracksFromListView();
+        this.list.tracks.forEach(t => this.listView.add(this.createViewItem(t)));
+        this.updateItems();
+        this.useLoadingIndicator(this.list.loadIndicator);
+        this.updateView();
+    }
+    updateItems() {
+        // update active state of items
+        this.curActive.set(null);
+        var playing = playerCore.track;
+        for (const lvi of this.listView) {
+            const t = lvi.track;
+            if (playing
+                && ((playing._bind?.list !== this.list && t.id === playing.id)
+                    || (playing._bind?.list === this.list && playing._bind.position === t._bind.position)))
+                this.curActive.set(lvi);
+        }
+    }
+    addItem(t: Track) {
+        this.listView.add(this.createViewItem(t));
+        this.updateView();
+    }
     protected createViewItem(t: Track) {
         var view = new TrackViewItem(t);
-        if (this.canEdit) {
-            view.onRemove = (item) => this.remove(item.track);
+        if (this.list.canEdit) {
+            view.onRemove = (item) => this.list.remove(item.track);
         }
         return view;
     }
-}
+    private trackChanged = () => {
+        var track = playerCore.track;
+        var item = (track?._bind.list === this.list) ? this.listView.get(track._bind.position) : null;
+        this.curActive.set(item);
+    };
+};
 
 export class TrackViewItem extends ListViewItem {
     track: Track;
@@ -384,16 +392,15 @@ export class ContentHeader extends View {
                 { tag: 'span.catalog', textContent: this.catalog, _key: 'catalog' },
                 {
                     tag: 'span.title', textContent: this.title, _key: 'title',
-                    onclick: (ev) => {
+                    onclick: async (ev) => {
                         if (!this.titleEditable) return;
                         editHelper = editHelper || new EditableHelper(this.domctx.title);
                         if (editHelper.editing) return;
-                        editHelper.startEdit((newName) => {
-                            if (newName !== editHelper.beforeEdit && newName != '') {
-                                this.onTitleEdit(newName);
-                            }
-                            this.updateDom();
-                        });
+                        var newName = await editHelper.startEditAsync();
+                        if (newName !== editHelper.beforeEdit && newName != '') {
+                            this.onTitleEdit(newName);
+                        }
+                        this.updateDom();
                     }
                 },
             ]

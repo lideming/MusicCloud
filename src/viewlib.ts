@@ -420,6 +420,9 @@ export class EditableHelper {
             utils.addEvent(input, 'focusout', (evv) => { stopEdit(); }),
         ];
     }
+    startEditAsync() {
+        return new Promise<string>((resolve) => this.startEdit(resolve));
+    }
 }
 
 export class MenuItem extends ListViewItem {
