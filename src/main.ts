@@ -11,8 +11,10 @@ export var settings = {
     apiDebugDelay: 0,
 };
 
+import { Toast, ToastsContainer } from "./viewlib";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
+import { api } from "./Api";
 import { user } from "./User";
 import { ListIndex } from "./ListIndex";
 import { uploads } from "./Uploads";
@@ -24,7 +26,8 @@ ui.init();
 export var listIndex = new ListIndex();
 
 var app = window['app'] = {
-    ui, playerCore, router, listIndex, user, uploads, discussion, notes,
+    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes,
+    Toast, ToastsContainer,
     init() {
         user.init();
         uploads.init();

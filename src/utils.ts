@@ -114,16 +114,22 @@ export var utils = new class Utils {
     /** Fade out the element and remove it */
     fadeout(element: HTMLElement) {
         element.classList.add('fading-out');
+        var cb: Action = null;
         var end = () => {
             if (!end) return; // use a random variable as flag ;)
             end = null;
             element.classList.remove('fading-out');
             element.remove();
+            cb && cb();
         };
         element.addEventListener('transitionend', end);
         setTimeout(end, 350); // failsafe
         return {
             get finished() { return !end; },
+            onFinished(callback: Action) {
+                if (!end) callback();
+                else cb = callback;
+            },
             cancel() { end?.(); }
         };
     }

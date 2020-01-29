@@ -37,23 +37,12 @@ exports.api = new class {
         return headers;
     }
     getJson(path, options) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             options = options || {};
             var resp = yield this._fetch(this.baseUrl + path, {
                 headers: Object.assign({}, this.getHeaders(options))
             });
-            if (options.status !== false && resp.status != (_a = options.status, (_a !== null && _a !== void 0 ? _a : 200))) {
-                if (resp.status === 450) {
-                    try {
-                        var resperr = (yield resp.json()).error;
-                    }
-                    catch (_b) { }
-                    if (resperr)
-                        throw new Error(resperr);
-                }
-                throw new Error('HTTP status ' + resp.status);
-            }
+            yield this.checkResp(options, resp);
             return yield resp.json();
         });
     }
@@ -78,10 +67,28 @@ exports.api = new class {
                 method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
                 headers: headers
             });
+            yield this.checkResp(arg, resp);
             var contentType = resp.headers.get('Content-Type');
             if (contentType && /^application\/json;?/.test(contentType))
                 return yield resp.json();
             return null;
+        });
+    }
+    checkResp(options, resp) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (options.status !== false &&
+                ((options.status !== undefined && resp.status != options.status)
+                    || resp.status >= 400)) {
+                if (resp.status === 450) {
+                    try {
+                        var resperr = (yield resp.json()).error;
+                    }
+                    catch (_a) { }
+                    if (resperr)
+                        throw new Error(resperr);
+                }
+                throw new Error('HTTP status ' + resp.status);
+            }
         });
     }
     getListAsync(id) {
@@ -792,15 +799,24 @@ class ListIndex {
      * It should be sync to server and get a real ID later.
      */
     newTracklist() {
-        var id = this.nextId--;
-        var list = {
-            id,
-            name: utils_1.utils.createName((x) => x ? utils_1.I `New Playlist (${x + 1})` : utils_1.I `New Playlist`, (x) => !!this.listView.find((l) => l.listInfo.name == x))
-        };
-        this.addListInfo(list);
-        var listview = this.getList(id);
-        listview.postToUser().then(() => {
-            list.id = listview.apiid;
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!(yield User_1.user.waitLogin(false))) {
+                this._toastLogin = this._toastLogin || new viewlib_1.Toast({ text: utils_1.I `Login to create playlists!` });
+                this._toastLogin.show(3000);
+                return;
+            }
+            var id = this.nextId--;
+            var list = {
+                id,
+                name: utils_1.utils.createName((x) => x ? utils_1.I `New Playlist (${x + 1})` : utils_1.I `New Playlist`, (x) => !!this.listView.find((l) => l.listInfo.name == x))
+            };
+            this.addListInfo(list);
+            var listview = this.getList(id);
+            listview.postToUser().then(() => {
+                list.id = listview.apiid;
+            }, (err) => {
+                viewlib_1.Toast.show(utils_1.I `Failed to create playlist "${list.name}".` + '\n' + err, 5000);
+            });
         });
     }
 }
@@ -1228,6 +1244,7 @@ exports.ui = new class {
         this.bottomBar.init();
         this.sidebarLogin.init();
         viewlib_1.Dialog.defaultParent = this.mainContainer.dom;
+        viewlib_1.ToastsContainer.default.parentDom = this.mainContainer.dom;
         Router_1.router.addRoute({
             path: ['home'],
             onNav: () => {
@@ -1287,7 +1304,6 @@ const tracklist_1 = require("./tracklist");
 const utils_1 = require("./utils");
 const ListIndex_1 = require("./ListIndex");
 const User_1 = require("./User");
-const ListContentView_1 = require("./ListContentView");
 const viewlib_1 = require("./viewlib");
 const Router_1 = require("./Router");
 const I18n_1 = require("./I18n");
@@ -1299,56 +1315,34 @@ class UploadTrack extends tracklist_1.Track {
         super(init);
     }
 }
-exports.uploads = new class {
+exports.uploads = new class extends tracklist_1.TrackList {
     constructor() {
+        super(...arguments);
         this.tracks = [];
         this.state = false;
+        this.canEdit = false;
         this.uploadSemaphore = new utils_1.Semaphore({ maxCount: 2 });
-        this.view = new class extends ListContentView_1.ListContentView {
-            constructor() {
-                super(...arguments);
-                this.playing = new utils_1.ItemActiveHelper();
-                this.updatePlaying = (item) => {
-                    if (item === undefined) {
-                        if (PlayerCore_1.playerCore.track)
-                            this.playing.set(this.listView.find(lvi => lvi.track.id === PlayerCore_1.playerCore.track.id));
-                        else
-                            this.playing.set(null);
-                    }
-                    else {
-                        if (PlayerCore_1.playerCore.track && item.track.id === PlayerCore_1.playerCore.track.id)
-                            this.playing.set(item);
-                    }
-                };
-            }
+        this.view = new class extends tracklist_1.TrackListView {
             appendHeader() {
                 this.title = I18n_1.I `My Uploads`;
                 super.appendHeader();
                 this.uploadArea = new UploadArea({ onfile: (file) => exports.uploads.uploadFile(file) });
                 this.dom.appendView(this.uploadArea);
             }
+            createHeader() {
+                return new tracklist_1.ContentHeader({
+                    title: this.title
+                });
+            }
             appendListView() {
                 super.appendListView();
-                exports.uploads.tracks.forEach(t => this.addTrack(t));
                 if (!exports.uploads.state)
                     exports.uploads.fetch();
             }
-            addTrack(t, pos) {
-                var lvi = new UploadViewItem(t);
-                this.listView.add(lvi, pos);
-                this.updatePlaying(lvi);
-                this.updateView();
+            createViewItem(t) {
+                return new UploadViewItem(t);
             }
-            onShow() {
-                super.onShow();
-                this.updatePlaying();
-                PlayerCore_1.playerCore.onTrackChanged.add(this.updatePlaying);
-            }
-            onRemove() {
-                super.onRemove();
-                PlayerCore_1.playerCore.onTrackChanged.remove(this.updatePlaying);
-            }
-        };
+        }(this);
     }
     init() {
         this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: I18n_1.I `My Uploads` });
@@ -1385,21 +1379,23 @@ exports.uploads = new class {
     prependTrack(t) {
         this.tracks.unshift(t);
         if (this.view.rendered)
-            this.view.addTrack(t, 0);
+            this.view.addItem(t, 0);
     }
     appendTrack(t) {
         this.tracks.push(t);
         if (this.view.rendered)
-            this.view.addTrack(t);
+            this.view.addItem(t);
     }
     fetch() {
         return __awaiter(this, void 0, void 0, function* () {
             this.state = 'waiting';
             var li = new viewlib_1.LoadingIndicator();
+            li.content = I18n_1.I `Logging in`;
             this.view.useLoadingIndicator(li);
             try {
                 yield User_1.user.waitLogin(true);
                 this.state = 'fetching';
+                li.reset();
                 var fetched = (yield Api_1.api.getJson('my/uploads'))['tracks']
                     .reverse()
                     .map(t => {
@@ -1500,7 +1496,7 @@ class UploadArea extends viewlib_1.View {
     createDom() {
         return {
             _ctx: this,
-            tag: 'div.upload-area',
+            tag: 'div.upload-area.clickable',
             child: [
                 { tag: 'div.text.no-selection', textContent: I18n_1.I `Click here to select files to upload` },
                 { tag: 'div.text.no-selection', textContent: I18n_1.I `or drag files to this zone...` },
@@ -1555,7 +1551,7 @@ var BlockFormat = {
     }
 };
 
-},{"./Api":1,"./I18n":3,"./ListContentView":4,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],10:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],10:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1589,7 +1585,9 @@ exports.user = new class User {
     }
     init() {
         if (this.info.username) {
-            this.login(this.info);
+            this.login(this.info).then(null, (err) => {
+                viewlib_1.Toast.show(utils_1.I `Failed to login.` + '\n' + err, 5000);
+            });
         }
         else {
             this.setState('none');
@@ -1677,8 +1675,9 @@ exports.user = new class User {
             this.info.username = info.username;
             this.info.passwd = info.passwd;
             this.siLogin.save();
-            // // something is dirty
-            // if (switchingUser) window.location.reload();
+            var servermsg = info['servermsg'];
+            if (servermsg)
+                viewlib_1.Toast.show(utils_1.I `Server: ` + servermsg, 3000);
             Api_1.api.defaultBasicAuth = this.getBasicAuth(this.info);
             UI_1.ui.sidebarLogin.update();
             main_1.listIndex.setIndex(info);
@@ -1857,8 +1856,10 @@ exports.settings = {
     debug: true,
     apiDebugDelay: 0,
 };
+const viewlib_1 = require("./viewlib");
 const UI_1 = require("./UI");
 const PlayerCore_1 = require("./PlayerCore");
+const Api_1 = require("./Api");
 const User_1 = require("./User");
 const ListIndex_1 = require("./ListIndex");
 const Uploads_1 = require("./Uploads");
@@ -1867,7 +1868,8 @@ const Router_1 = require("./Router");
 UI_1.ui.init();
 exports.listIndex = new ListIndex_1.ListIndex();
 var app = window['app'] = {
-    ui: UI_1.ui, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
+    ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
+    Toast: viewlib_1.Toast, ToastsContainer: viewlib_1.ToastsContainer,
     init() {
         User_1.user.init();
         Uploads_1.uploads.init();
@@ -1879,7 +1881,7 @@ var app = window['app'] = {
 };
 app.init();
 
-},{"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./Uploads":9,"./User":10}],12:[function(require,module,exports){
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./Uploads":9,"./User":10,"./viewlib":14}],12:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2047,23 +2049,30 @@ class TrackList {
     }
     put() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield User_1.user.waitLogin();
-            if (this.fetching)
-                yield this.fetching;
-            if (this.posting)
-                yield this.posting;
-            if (this.apiid === undefined)
-                throw new Error('cannot put: no apiid');
-            var obj = {
-                id: this.apiid,
-                name: this.name,
-                trackids: this.tracks.map(t => t.id)
-            };
-            var resp = yield Api_1.api.postJson({
-                path: 'lists/' + this.apiid,
-                method: 'PUT',
-                obj: obj
-            });
+            try {
+                yield User_1.user.waitLogin(true);
+                if (this.fetching)
+                    yield this.fetching;
+                if (this.posting)
+                    yield this.posting;
+                if (this.apiid === undefined)
+                    throw new Error('cannot put: no apiid');
+                var obj = {
+                    id: this.apiid,
+                    name: this.name,
+                    trackids: this.tracks.map(t => t.id)
+                };
+                var resp = yield Api_1.api.postJson({
+                    path: 'lists/' + this.apiid,
+                    method: 'PUT',
+                    obj: obj
+                });
+            }
+            catch (error) {
+                console.error('list put() failed', this, error);
+                viewlib_1.Toast.show(utils_1.I `Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
+                throw error;
+            }
         });
     }
     fetchForce(arg) {
@@ -2150,12 +2159,11 @@ exports.TrackList = TrackList;
 class TrackListView extends ListContentView_1.ListContentView {
     constructor(list) {
         super();
-        this.curActive = new utils_1.ItemActiveHelper();
+        this.curPlaying = new utils_1.ItemActiveHelper({
+            funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
+        });
         this.trackChanged = () => {
-            var _a;
-            var track = PlayerCore_1.playerCore.track;
-            var item = (((_a = track) === null || _a === void 0 ? void 0 : _a._bind.list) === this.list) ? this.listView.get(track._bind.position) : null;
-            this.curActive.set(item);
+            this.updateCurPlaying();
         };
         this.list = list;
     }
@@ -2184,26 +2192,20 @@ class TrackListView extends ListContentView_1.ListContentView {
         if (this.list.canEdit)
             lv.moveByDragging = true;
         lv.onItemMoved = () => this.list.updateTracksFromListView();
-        this.list.tracks.forEach(t => this.listView.add(this.createViewItem(t)));
+        this.list.tracks.forEach(t => this.addItem(t));
         this.updateItems();
-        this.useLoadingIndicator(this.list.loadIndicator);
+        if (this.list.loadIndicator)
+            this.useLoadingIndicator(this.list.loadIndicator);
         this.updateView();
     }
     updateItems() {
-        var _a, _b;
         // update active state of items
-        this.curActive.set(null);
-        var playing = PlayerCore_1.playerCore.track;
-        for (const lvi of this.listView) {
-            const t = lvi.track;
-            if (playing
-                && ((((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) !== this.list && t.id === playing.id)
-                    || (((_b = playing._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list && playing._bind.position === t._bind.position)))
-                this.curActive.set(lvi);
-        }
+        this.trackChanged();
     }
-    addItem(t) {
-        this.listView.add(this.createViewItem(t));
+    addItem(t, pos) {
+        var item = this.createViewItem(t);
+        this.listView.add(item, pos);
+        this.updateCurPlaying(item);
         this.updateView();
     }
     createViewItem(t) {
@@ -2213,7 +2215,24 @@ class TrackListView extends ListContentView_1.ListContentView {
         }
         return view;
     }
+    updateCurPlaying(item) {
+        var _a, _b, _c;
+        var playing = PlayerCore_1.playerCore.track;
+        if (item === undefined) {
+            item = (((_b = (_a = playing) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list) ? this.listView.get(playing._bind.position) :
+                playing ? this.listView.find(x => x.track.id === playing.id) : null;
+            this.curPlaying.set(item);
+        }
+        else if (playing) {
+            var track = item.track;
+            if ((((_c = playing._bind) === null || _c === void 0 ? void 0 : _c.list) === this.list && track === playing)
+                || (track.id === playing.id)) {
+                this.curPlaying.set(item);
+            }
+        }
+    }
 }
+exports.TrackListView = TrackListView;
 ;
 class TrackViewItem extends viewlib_1.ListViewItem {
     constructor(item) {
@@ -2261,12 +2280,13 @@ class TrackViewItem extends viewlib_1.ListViewItem {
     updateDom() {
         this.domname.textContent = this.track.name;
         this.domartist.textContent = this.track.artist;
-        if (!this.noPos) {
+        if (this.playing) {
+            this.dompos.textContent = '🎵';
+        }
+        else if (!this.noPos) {
             this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
         }
-        else {
-            this.dompos.hidden = true;
-        }
+        this.dompos.hidden = this.noPos && !this.playing;
     }
 }
 exports.TrackViewItem = TrackViewItem;
@@ -2412,28 +2432,39 @@ exports.utils = new class Utils {
      * @param force - true -> add; false -> remove; undefined -> toggle.
      */
     toggleClass(element, clsName, force) {
+        var clsList = element.classList;
+        if (clsList.toggle)
+            return clsList.toggle(clsName, force);
         if (force === undefined)
-            force = !element.classList.contains(clsName);
+            force = !clsList.contains(clsName);
         if (force)
-            element.classList.add(clsName);
+            clsList.add(clsName);
         else
-            element.classList.remove(clsName);
+            clsList.remove(clsName);
         return force;
     }
     /** Fade out the element and remove it */
     fadeout(element) {
         element.classList.add('fading-out');
+        var cb = null;
         var end = () => {
             if (!end)
                 return; // use a random variable as flag ;)
             end = null;
             element.classList.remove('fading-out');
             element.remove();
+            cb && cb();
         };
         element.addEventListener('transitionend', end);
         setTimeout(end, 350); // failsafe
         return {
             get finished() { return !end; },
+            onFinished(callback) {
+                if (!end)
+                    callback();
+                else
+                    cb = callback;
+            },
             cancel() { var _a; (_a = end) === null || _a === void 0 ? void 0 : _a(); }
         };
     }
@@ -3446,5 +3477,73 @@ class LabeledInput extends View {
     }
 }
 exports.LabeledInput = LabeledInput;
+class ToastsContainer extends View {
+    constructor() {
+        super(...arguments);
+        this.toasts = [];
+    }
+    createDom() {
+        return { tag: 'div.toasts-container' };
+    }
+    addToast(toast) {
+        if (this.toasts.length === 0)
+            this.show();
+        this.toasts.push(toast);
+    }
+    removeToast(toast) {
+        utils_1.utils.arrayRemove(this.toasts, toast);
+        if (this.toasts.length === 0)
+            this.remove();
+    }
+    show() {
+        var parent = this.parentDom || document.body;
+        parent.appendChild(this.dom);
+    }
+    remove() {
+        this.dom.remove();
+    }
+}
+exports.ToastsContainer = ToastsContainer;
+ToastsContainer.default = new ToastsContainer();
+class Toast extends View {
+    constructor(init) {
+        super();
+        this.shown = false;
+        this.timer = new utils_1.utils.Timer(() => this.close());
+        utils_1.utils.objectApply(this, init);
+        if (!this.container)
+            this.container = ToastsContainer.default;
+    }
+    show(timeout) {
+        if (!this.shown) {
+            this.container.addToast(this);
+            this.container.appendView(this);
+            this.shown = true;
+        }
+        if (timeout)
+            this.timer.timeout(timeout);
+        else
+            this.timer.tryCancel();
+    }
+    close() {
+        if (!this.shown)
+            return;
+        this.shown = false;
+        utils_1.utils.fadeout(this.dom)
+            .onFinished(() => this.container.removeToast(this));
+    }
+    createDom() {
+        return { tag: 'div.toast' };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+    }
+    static show(text, timeout) {
+        var toast = new Toast({ text });
+        toast.show(timeout);
+        return toast;
+    }
+}
+exports.Toast = Toast;
 
 },{"./utils":13}]},{},[11]);

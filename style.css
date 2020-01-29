@@ -32,7 +32,6 @@ html, body {
 }
 
 .no-selection {
-    cursor: default;
     user-select: none;
     -ms-user-select: none;
     -moz-user-select: none;
@@ -445,6 +444,17 @@ html, body {
     }
 }
 
+@keyframes showing-right {
+    0% {
+        opacity: .3;
+        transform: translate(20px, 0)
+    }
+    100% {
+        opacity: 1;
+        transform: translate(0, 0)
+    }
+}
+
 #sidebar-login {
     border-bottom: 1px solid #ccc;
     padding: 10px;
@@ -666,4 +676,22 @@ html, body {
 
 .comment .content {
     white-space: pre-wrap;
+}
+
+.toasts-container {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 300px;
+    z-index: 10001;
+}
+
+.toast {
+    margin: 5px;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 6px #666;
+    background: white;
+    white-space: pre-wrap;
+    animation: showing-right .3s;
 }

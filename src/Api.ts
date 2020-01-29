@@ -32,15 +32,7 @@ export var api = new class {
         var resp = await this._fetch(this.baseUrl + path, {
             headers: { ...this.getHeaders(options) }
         });
-        if (options.status !== false && resp.status != (options.status ?? 200)) {
-            if (resp.status === 450) {
-                try {
-                    var resperr = (await resp.json()).error;
-                } catch { }
-                if (resperr) throw new Error(resperr);
-            }
-            throw new Error('HTTP status ' + resp.status);
-        }
+        await this.checkResp(options, resp);
         return await resp.json();
     }
     async postJson(arg: {
@@ -48,7 +40,8 @@ export var api = new class {
         mode?: 'json' | 'raw',
         method?: 'POST' | 'PUT' | 'DELETE',
         basicAuth?: string,
-        headers?: Record<string, string>;
+        headers?: Record<string, string>,
+        status?: number;
     }) {
         var body = arg.obj;
         if (arg.mode === undefined) arg.mode = 'json';
@@ -66,10 +59,26 @@ export var api = new class {
             method: arg.method ?? 'POST',
             headers: headers
         });
+        await this.checkResp(arg, resp);
         var contentType = resp.headers.get('Content-Type');
         if (contentType && /^application\/json;?/.test(contentType))
             return await resp.json();
         return null;
+    }
+    private async checkResp(options: { status?: number | false; }, resp: Response) {
+        if (options.status !== false &&
+            ((options.status !== undefined && resp.status != options.status)
+                || resp.status >= 400)) {
+            if (resp.status === 450) {
+                try {
+                    var resperr = (await resp.json()).error;
+                }
+                catch { }
+                if (resperr)
+                    throw new Error(resperr);
+            }
+            throw new Error('HTTP status ' + resp.status);
+        }
     }
     async getListAsync(id: number): Promise<Api.TrackListGet> {
         return await this.getJson('lists/' + id);

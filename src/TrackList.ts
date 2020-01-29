@@ -1,7 +1,7 @@
 // file: TrackList.ts
 
 import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr } from "./utils";
-import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper } from "./viewlib";
+import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -167,20 +167,26 @@ export class TrackList {
         return this.apiid;
     }
     async put() {
-        await user.waitLogin();
-        if (this.fetching) await this.fetching;
-        if (this.posting) await this.posting;
-        if (this.apiid === undefined) throw new Error('cannot put: no apiid');
-        var obj: Api.TrackListPut = {
-            id: this.apiid,
-            name: this.name,
-            trackids: this.tracks.map(t => t.id)
-        };
-        var resp: Api.TrackListPutResult = await api.postJson({
-            path: 'lists/' + this.apiid,
-            method: 'PUT',
-            obj: obj
-        });
+        try {
+            await user.waitLogin(true);
+            if (this.fetching) await this.fetching;
+            if (this.posting) await this.posting;
+            if (this.apiid === undefined) throw new Error('cannot put: no apiid');
+            var obj: Api.TrackListPut = {
+                id: this.apiid,
+                name: this.name,
+                trackids: this.tracks.map(t => t.id)
+            };
+            var resp: Api.TrackListPutResult = await api.postJson({
+                path: 'lists/' + this.apiid,
+                method: 'PUT',
+                obj: obj
+            });
+        } catch (error) {
+            console.error('list put() failed', this, error);
+            Toast.show(I`Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
+            throw error;
+        }
     }
     async fetchForce(arg: number | AsyncFunc<Api.TrackListGet>) {
         var func: AsyncFunc<Api.TrackListGet>;
@@ -246,10 +252,12 @@ export class TrackList {
     }
 }
 
-class TrackListView extends ListContentView {
+export class TrackListView extends ListContentView {
     list: TrackList;
     listView: ListView<TrackViewItem>;
-    curActive = new ItemActiveHelper<TrackViewItem>();
+    curPlaying = new ItemActiveHelper<TrackViewItem>({
+        funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
+    });
     constructor(list: TrackList) {
         super();
         this.list = list;
@@ -278,25 +286,19 @@ class TrackListView extends ListContentView {
         lv.dragging = true;
         if (this.list.canEdit) lv.moveByDragging = true;
         lv.onItemMoved = () => this.list.updateTracksFromListView();
-        this.list.tracks.forEach(t => this.listView.add(this.createViewItem(t)));
+        this.list.tracks.forEach(t => this.addItem(t));
         this.updateItems();
-        this.useLoadingIndicator(this.list.loadIndicator);
+        if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);
         this.updateView();
     }
     updateItems() {
         // update active state of items
-        this.curActive.set(null);
-        var playing = playerCore.track;
-        for (const lvi of this.listView) {
-            const t = lvi.track;
-            if (playing
-                && ((playing._bind?.list !== this.list && t.id === playing.id)
-                    || (playing._bind?.list === this.list && playing._bind.position === t._bind.position)))
-                this.curActive.set(lvi);
-        }
+        this.trackChanged();
     }
-    addItem(t: Track) {
-        this.listView.add(this.createViewItem(t));
+    addItem(t: Track, pos?: number) {
+        var item = this.createViewItem(t);
+        this.listView.add(item, pos);
+        this.updateCurPlaying(item);
         this.updateView();
     }
     protected createViewItem(t: Track) {
@@ -306,10 +308,22 @@ class TrackListView extends ListContentView {
         }
         return view;
     }
+    protected updateCurPlaying(item?: TrackViewItem) {
+        var playing = playerCore.track;
+        if (item === undefined) {
+            item = (playing?._bind?.list === this.list) ? this.listView.get(playing._bind.position) :
+                playing ? this.listView.find(x => x.track.id === playing.id) : null;
+            this.curPlaying.set(item);
+        } else if (playing) {
+            var track = item.track;
+            if ((playing._bind?.list === this.list && track === playing)
+                || (track.id === playing.id)) {
+                this.curPlaying.set(item);
+            }
+        }
+    }
     private trackChanged = () => {
-        var track = playerCore.track;
-        var item = (track?._bind.list === this.list) ? this.listView.get(track._bind.position) : null;
-        this.curActive.set(item);
+        this.updateCurPlaying();
     };
 };
 
@@ -319,6 +333,7 @@ export class TrackViewItem extends ListViewItem {
     /** When undefined, the item is not removable */
     onRemove?: Action<TrackViewItem>;
     noPos: boolean;
+    playing: boolean;
     private dompos: HTMLElement;
     private domname: HTMLElement;
     private domartist: HTMLElement;
@@ -345,11 +360,12 @@ export class TrackViewItem extends ListViewItem {
     updateDom() {
         this.domname.textContent = this.track.name;
         this.domartist.textContent = this.track.artist;
-        if (!this.noPos) {
+        if (this.playing) {
+            this.dompos.textContent = '🎵';
+        } else if (!this.noPos) {
             this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
-        } else {
-            this.dompos.hidden = true;
         }
+        this.dompos.hidden = this.noPos && !this.playing;
     }
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
         ev.preventDefault();

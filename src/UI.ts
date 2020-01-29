@@ -5,7 +5,7 @@ import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func } from
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";
-import { ListView, ListViewItem, Dialog } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer } from "./viewlib";
 
 
 /** 常驻 UI 元素操作 */
@@ -15,6 +15,7 @@ export var ui = new class {
         this.bottomBar.init();
         this.sidebarLogin.init();
         Dialog.defaultParent = this.mainContainer.dom;
+        ToastsContainer.default.parentDom = this.mainContainer.dom;
         router.addRoute({
             path: ['home'],
             onNav: () => {

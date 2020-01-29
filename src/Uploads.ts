@@ -1,6 +1,6 @@
 // file: Uploads.ts
 
-import { Track, TrackViewItem } from "./tracklist";
+import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader } from "./tracklist";
 import { Semaphore, ItemActiveHelper, utils } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
@@ -25,9 +25,10 @@ class UploadTrack extends Track {
     };
 }
 
-export var uploads = new class {
+export var uploads = new class extends TrackList {
     tracks: UploadTrack[] = [];
     state: false | 'waiting' | 'fetching' | 'fetched' = false;
+    canEdit = false;
     private uploadSemaphore = new Semaphore({ maxCount: 2 });
     init() {
         this.sidebarItem = new ListIndexViewItem({ text: I`My Uploads` });
@@ -61,10 +62,9 @@ export var uploads = new class {
         });
     }
     sidebarItem: ListIndexViewItem;
-    view = new class extends ListContentView {
+    view = new class extends TrackListView {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;
-        playing = new ItemActiveHelper<UploadViewItem>();
 
         protected appendHeader() {
             this.title = I`My Uploads`;
@@ -72,53 +72,36 @@ export var uploads = new class {
             this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
             this.dom.appendView(this.uploadArea);
         }
+        createHeader() {
+            return new ContentHeader({
+                title: this.title
+            });
+        }
         protected appendListView() {
             super.appendListView();
-            uploads.tracks.forEach(t => this.addTrack(t));
             if (!uploads.state) uploads.fetch();
         }
-        addTrack(t: UploadTrack, pos?: number) {
-            var lvi = new UploadViewItem(t);
-            this.listView.add(lvi, pos);
-            this.updatePlaying(lvi);
-            this.updateView();
+        createViewItem(t: Track) {
+            return new UploadViewItem(t as UploadTrack);
         }
-        onShow() {
-            super.onShow();
-            this.updatePlaying();
-            playerCore.onTrackChanged.add(this.updatePlaying as any);
-        }
-        onRemove() {
-            super.onRemove();
-            playerCore.onTrackChanged.remove(this.updatePlaying as any);
-        }
-        updatePlaying = (item?: UploadViewItem) => {
-            if (item === undefined) {
-                if (playerCore.track)
-                    this.playing.set(this.listView.find(lvi => lvi.track.id === playerCore.track.id));
-                else
-                    this.playing.set(null);
-            } else {
-                if (playerCore.track && item.track.id === playerCore.track.id)
-                    this.playing.set(item);
-            }
-        };
-    };
+    }(this);
     private prependTrack(t: UploadTrack) {
         this.tracks.unshift(t);
-        if (this.view.rendered) this.view.addTrack(t, 0);
+        if (this.view.rendered) this.view.addItem(t, 0);
     }
     private appendTrack(t: UploadTrack) {
         this.tracks.push(t);
-        if (this.view.rendered) this.view.addTrack(t);
+        if (this.view.rendered) this.view.addItem(t);
     }
     async fetch() {
         this.state = 'waiting';
         var li = new LoadingIndicator();
+        li.content = I`Logging in`;
         this.view.useLoadingIndicator(li);
         try {
             await user.waitLogin(true);
             this.state = 'fetching';
+            li.reset();
             var fetched = ((await api.getJson('my/uploads'))['tracks'] as any[])
                 .reverse()
                 .map(t => {
@@ -222,7 +205,7 @@ class UploadArea extends View {
     createDom() {
         return {
             _ctx: this,
-            tag: 'div.upload-area',
+            tag: 'div.upload-area.clickable',
             child: [
                 { tag: 'div.text.no-selection', textContent: I`Click here to select files to upload` },
                 { tag: 'div.text.no-selection', textContent: I`or drag files to this zone...` },

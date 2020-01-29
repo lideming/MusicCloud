@@ -1,6 +1,6 @@
 // file: ListIndex.ts
 
-import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem } from "./viewlib";
+import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast } from "./viewlib";
 import { I, utils, BuildDomExpr } from "./utils";
 import { TrackList, TrackViewItem } from "./tracklist";
 import { user } from "./User";
@@ -150,11 +150,17 @@ export class ListIndex {
     }
 
     private nextId = -100;
+    private _toastLogin: Toast;
     /** 
      * Create a Tracklist with an temporary local ID (negative number).
      * It should be sync to server and get a real ID later.
      */
-    newTracklist() {
+    async newTracklist() {
+        if (!await user.waitLogin(false)) {
+            this._toastLogin = this._toastLogin || new Toast({text: I`Login to create playlists!`});
+            this._toastLogin.show(3000);
+            return;
+        }
         var id = this.nextId--;
         var list: Api.TrackListInfo = {
             id,
@@ -166,6 +172,8 @@ export class ListIndex {
         var listview = this.getList(id);
         listview.postToUser().then(() => {
             list.id = listview.apiid;
+        }, (err) => {
+            Toast.show(I`Failed to create playlist "${list.name}".` + '\n' + err, 5000);
         });
     }
 }

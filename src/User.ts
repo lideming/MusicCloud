@@ -2,7 +2,7 @@
 
 import { SettingItem, Callbacks, Action, I, utils } from "./utils";
 import { listIndex } from "./main";
-import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView } from "./viewlib";
+import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast } from "./viewlib";
 import { Api } from "./apidef";
 import { ui } from "./UI";
 import { api } from "./Api";
@@ -25,7 +25,9 @@ export var user = new class User {
     }
     init() {
         if (this.info.username) {
-            this.login(this.info);
+            this.login(this.info).then(null, (err) => {
+                Toast.show(I`Failed to login.` + '\n' + err, 5000);
+            });
         } else {
             this.setState('none');
             this.openUI();
@@ -101,8 +103,8 @@ export var user = new class User {
         this.info.passwd = info.passwd;
         this.siLogin.save();
 
-        // // something is dirty
-        // if (switchingUser) window.location.reload();
+        var servermsg = info['servermsg'];
+        if (servermsg) Toast.show(I`Server: ` + servermsg, 3000);
 
         api.defaultBasicAuth = this.getBasicAuth(this.info);
         ui.sidebarLogin.update();
@@ -250,7 +252,7 @@ class MeDialog extends Dialog {
         this.btnSwitch.onclick = () => {
             user.openUI(true);
             this.close();
-        }
+        };
         this.btnLogout.onclick = () => {
             user.logout();
             this.close();
