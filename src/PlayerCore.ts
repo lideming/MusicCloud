@@ -18,14 +18,36 @@ export var playerCore = new class PlayerCore {
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.updateProgress());
         this.audio.addEventListener('canplay', () => this.updateProgress());
+        this.audio.addEventListener('seeking', () => {
+            if (!this.audio.paused)
+                ui.playerControl.setState('stalled');
+        });
+        this.audio.addEventListener('stalled', () => {
+            ui.playerControl.setState('stalled');
+        });
+        this.audio.addEventListener('play', () => {
+            ui.playerControl.setState('playing');
+        });
+        this.audio.addEventListener('playing', () => {
+            ui.playerControl.setState('playing');
+        });
+        this.audio.addEventListener('pause', () => {
+            ui.playerControl.setState('paused');
+        });
         this.audio.addEventListener('error', (e) => {
             console.log(e);
+            ui.playerControl.setState('paused');
         });
         this.audio.addEventListener('ended', () => {
             this.next();
         });
-        ui.playerControl.setProgressChangedCallback((x) => {
+        ui.playerControl.onProgressChanged((x) => {
             this.audio.currentTime = x * this.audio.duration;
+        });
+        ui.playerControl.onPlayButtonClicked(() => {
+            var state = ui.playerControl.state;
+            if (state === 'paused') this.play();
+            else this.pause();
         });
     }
     prev() { return this.next(-1); }
@@ -53,7 +75,7 @@ export var playerCore = new class PlayerCore {
         this.track = track;
         ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        if (oldTrack?.url !== this.track.url)
+        if (oldTrack?.url !== this.track?.url)
             this.loadUrl(track ? api.processUrl(track.url) : null);
     }
     playTrack(track: Track) {

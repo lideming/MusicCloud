@@ -881,14 +881,38 @@ exports.playerCore = new class PlayerCore {
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.updateProgress());
         this.audio.addEventListener('canplay', () => this.updateProgress());
+        this.audio.addEventListener('seeking', () => {
+            if (!this.audio.paused)
+                UI_1.ui.playerControl.setState('stalled');
+        });
+        this.audio.addEventListener('stalled', () => {
+            UI_1.ui.playerControl.setState('stalled');
+        });
+        this.audio.addEventListener('play', () => {
+            UI_1.ui.playerControl.setState('playing');
+        });
+        this.audio.addEventListener('playing', () => {
+            UI_1.ui.playerControl.setState('playing');
+        });
+        this.audio.addEventListener('pause', () => {
+            UI_1.ui.playerControl.setState('paused');
+        });
         this.audio.addEventListener('error', (e) => {
             console.log(e);
+            UI_1.ui.playerControl.setState('paused');
         });
         this.audio.addEventListener('ended', () => {
             this.next();
         });
-        UI_1.ui.playerControl.setProgressChangedCallback((x) => {
+        UI_1.ui.playerControl.onProgressChanged((x) => {
             this.audio.currentTime = x * this.audio.duration;
+        });
+        UI_1.ui.playerControl.onPlayButtonClicked(() => {
+            var state = UI_1.ui.playerControl.state;
+            if (state === 'paused')
+                this.play();
+            else
+                this.pause();
         });
     }
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
@@ -917,12 +941,12 @@ exports.playerCore = new class PlayerCore {
         this.audio.load();
     }
     setTrack(track) {
-        var _a;
+        var _a, _b;
         var oldTrack = this.track;
         this.track = track;
         UI_1.ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
-        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== this.track.url)
+        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url))
             this.loadUrl(track ? Api_1.api.processUrl(track.url) : null);
     }
     playTrack(track) {
@@ -1110,6 +1134,33 @@ exports.ui = new class {
                 this.fill = document.getElementById('progressbar-fill');
                 this.labelCur = document.getElementById('progressbar-label-cur');
                 this.labelTotal = document.getElementById('progressbar-label-total');
+                this.btnPlay = new viewlib_1.TextView(document.getElementById('btn-play'));
+            }
+            init() {
+                this.setState('none');
+            }
+            setState(state) {
+                var btn = this.btnPlay;
+                if (state === 'none') {
+                    btn.text = I18n_1.I `Play`;
+                    btn.toggleClass('disabled', true);
+                }
+                else if (state === 'paused') {
+                    btn.text = I18n_1.I `Play`;
+                    btn.toggleClass('disabled', false);
+                }
+                else if (state === 'playing') {
+                    btn.text = I18n_1.I `Pause`;
+                    btn.toggleClass('disabled', false);
+                }
+                else if (state === 'stalled') {
+                    btn.text = I18n_1.I `Pause...`;
+                    btn.toggleClass('disabled', false);
+                }
+                else {
+                    throw new Error("invalid state value: " + state);
+                }
+                this.state = state;
             }
             setProg(cur, total) {
                 var prog = cur / total;
@@ -1118,7 +1169,10 @@ exports.ui = new class {
                 this.labelCur.textContent = utils_1.utils.formatTime(cur);
                 this.labelTotal.textContent = utils_1.utils.formatTime(total);
             }
-            setProgressChangedCallback(cb) {
+            onPlayButtonClicked(cb) {
+                this.btnPlay.dom.addEventListener('click', cb);
+            }
+            onProgressChanged(cb) {
                 var call = (e) => { cb(utils_1.utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
                 this.progbar.addEventListener('mousedown', (e) => {
                     e.preventDefault();
@@ -1242,6 +1296,7 @@ exports.ui = new class {
     init() {
         this.lang.init();
         this.bottomBar.init();
+        this.playerControl.init();
         this.sidebarLogin.init();
         viewlib_1.Dialog.defaultParent = this.mainContainer.dom;
         viewlib_1.ToastsContainer.default.parentDom = this.mainContainer.dom;

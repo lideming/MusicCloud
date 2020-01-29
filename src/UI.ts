@@ -5,7 +5,7 @@ import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func } from
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";
-import { ListView, ListViewItem, Dialog, ToastsContainer } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView } from "./viewlib";
 
 
 /** 常驻 UI 元素操作 */
@@ -13,6 +13,7 @@ export var ui = new class {
     init() {
         this.lang.init();
         this.bottomBar.init();
+        this.playerControl.init();
         this.sidebarLogin.init();
         Dialog.defaultParent = this.mainContainer.dom;
         ToastsContainer.default.parentDom = this.mainContainer.dom;
@@ -95,7 +96,26 @@ export var ui = new class {
         fill = document.getElementById('progressbar-fill');
         labelCur = document.getElementById('progressbar-label-cur');
         labelTotal = document.getElementById('progressbar-label-total');
-
+        btnPlay = new TextView(document.getElementById('btn-play'));
+        state: 'none' | 'playing' | 'paused' | 'stalled';
+        init() {
+            this.setState('none');
+        }
+        setState(state: this['state']) {
+            var btn = this.btnPlay;
+            if (state === 'none') {
+                btn.text = I`Play`; btn.toggleClass('disabled', true);
+            } else if (state === 'paused') {
+                btn.text = I`Play`; btn.toggleClass('disabled', false);
+            } else if (state === 'playing') {
+                btn.text = I`Pause`; btn.toggleClass('disabled', false);
+            } else if (state === 'stalled') {
+                btn.text = I`Pause...`; btn.toggleClass('disabled', false);
+            } else {
+                throw new Error("invalid state value: " + state);
+            }
+            this.state = state;
+        }
         setProg(cur: number, total: number) {
             var prog = cur / total;
             prog = utils.numLimit(prog, 0, 1);
@@ -103,7 +123,10 @@ export var ui = new class {
             this.labelCur.textContent = utils.formatTime(cur);
             this.labelTotal.textContent = utils.formatTime(total);
         }
-        setProgressChangedCallback(cb: (percent: number) => void) {
+        onPlayButtonClicked(cb: () => void) {
+            this.btnPlay.dom.addEventListener('click', cb);
+        }
+        onProgressChanged(cb: (percent: number) => void) {
             var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
             this.progbar.addEventListener('mousedown', (e) => {
                 e.preventDefault();
