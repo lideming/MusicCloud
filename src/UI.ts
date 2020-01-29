@@ -1,12 +1,12 @@
 // file: UI.ts
 
 import { router } from "./Router";
-import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func } from "./utils";
+import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func, Callbacks } from "./utils";
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";
 import { ListView, ListViewItem, Dialog, ToastsContainer, TextView } from "./viewlib";
-
+import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 
 /** 常驻 UI 元素操作 */
 export var ui = new class {
@@ -97,9 +97,17 @@ export var ui = new class {
         labelCur = document.getElementById('progressbar-label-cur');
         labelTotal = document.getElementById('progressbar-label-total');
         btnPlay = new TextView(document.getElementById('btn-play'));
+        btnLoop = new TextView(document.getElementById('btn-loop'));
+
         state: 'none' | 'playing' | 'paused' | 'stalled';
+
         init() {
             this.setState('none');
+            this.btnLoop.dom.addEventListener('click', () => {
+                var modes = playingLoopModes;
+                var next = modes[(modes.indexOf(playerCore.loopMode) + 1) % modes.length];
+                playerCore.setLoopMode(next);
+            });
         }
         setState(state: this['state']) {
             var btn = this.btnPlay;
@@ -122,6 +130,10 @@ export var ui = new class {
             this.fill.style.width = (prog * 100) + '%';
             this.labelCur.textContent = utils.formatTime(cur);
             this.labelTotal.textContent = utils.formatTime(total);
+        }
+        setLoopMode(str: PlayingLoopMode) {
+            this.btnLoop.hidden = false;
+            this.btnLoop.text = i18n.get('loopmode_' + str);
         }
         onPlayButtonClicked(cb: () => void) {
             this.btnPlay.dom.addEventListener('click', cb);

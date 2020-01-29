@@ -508,6 +508,9 @@ exports.i18n.add2dArray([
     ["uploads_done", "Done", "完成"],
     ["prev_track", "Prev", "上一首"],
     ["next_track", "Next", "下一首"],
+    ["loopmode_list-seq", "List-seq", "顺序播放"],
+    ["loopmode_list-loop", "List-loop", "列表循环"],
+    ["loopmode_track-loop", "Track-loop", "单曲循环"],
 ]);
 
 },{}],4:[function(require,module,exports){
@@ -878,6 +881,11 @@ exports.playerCore = new class PlayerCore {
     constructor() {
         this.loopMode = 'list-loop';
         this.onTrackChanged = new utils_1.Callbacks();
+    }
+    get isPlaying() { return this.audio.duration && !this.audio.paused; }
+    get isPaused() { return this.audio.paused; }
+    get canPlay() { return this.audio.readyState >= 2; }
+    init() {
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.updateProgress());
         this.audio.addEventListener('canplay', () => this.updateProgress());
@@ -914,16 +922,14 @@ exports.playerCore = new class PlayerCore {
             else
                 this.pause();
         });
+        UI_1.ui.playerControl.setLoopMode(this.loopMode);
     }
-    get isPlaying() { return this.audio.duration && !this.audio.paused; }
-    get isPaused() { return this.audio.paused; }
-    get canPlay() { return this.audio.readyState >= 2; }
     prev() { return this.next(-1); }
     next(offset) {
         var _a, _b, _c;
         var nextTrack = (_c = (_b = (_a = this.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.getNextTrack(this.track, this.loopMode, offset);
         if (nextTrack)
-            this.playTrack(nextTrack);
+            this.playTrack(nextTrack, true);
         else
             this.setTrack(null);
     }
@@ -949,10 +955,11 @@ exports.playerCore = new class PlayerCore {
         if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url))
             this.loadUrl(track ? Api_1.api.processUrl(track.url) : null);
     }
-    playTrack(track) {
-        if (track === this.track)
-            return;
-        this.setTrack(track);
+    playTrack(track, forceStart) {
+        if (track !== this.track)
+            this.setTrack(track);
+        if (forceStart)
+            this.audio.currentTime = 0;
         this.play();
     }
     play() {
@@ -961,7 +968,12 @@ exports.playerCore = new class PlayerCore {
     pause() {
         this.audio.pause();
     }
+    setLoopMode(mode) {
+        this.loopMode = mode;
+        UI_1.ui.playerControl.setLoopMode(mode);
+    }
 };
+exports.playingLoopModes = ['list-seq', 'list-loop', 'track-loop'];
 if (navigator['mediaSession']) {
     let mediaSession = navigator['mediaSession'];
     exports.playerCore.onTrackChanged.add(() => {
@@ -1056,6 +1068,7 @@ const utils_1 = require("./utils");
 const I18n_1 = require("./I18n");
 const User_1 = require("./User");
 const viewlib_1 = require("./viewlib");
+const PlayerCore_1 = require("./PlayerCore");
 /** 常驻 UI 元素操作 */
 exports.ui = new class {
     constructor() {
@@ -1135,9 +1148,15 @@ exports.ui = new class {
                 this.labelCur = document.getElementById('progressbar-label-cur');
                 this.labelTotal = document.getElementById('progressbar-label-total');
                 this.btnPlay = new viewlib_1.TextView(document.getElementById('btn-play'));
+                this.btnLoop = new viewlib_1.TextView(document.getElementById('btn-loop'));
             }
             init() {
                 this.setState('none');
+                this.btnLoop.dom.addEventListener('click', () => {
+                    var modes = PlayerCore_1.playingLoopModes;
+                    var next = modes[(modes.indexOf(PlayerCore_1.playerCore.loopMode) + 1) % modes.length];
+                    PlayerCore_1.playerCore.setLoopMode(next);
+                });
             }
             setState(state) {
                 var btn = this.btnPlay;
@@ -1168,6 +1187,10 @@ exports.ui = new class {
                 this.fill.style.width = (prog * 100) + '%';
                 this.labelCur.textContent = utils_1.utils.formatTime(cur);
                 this.labelTotal.textContent = utils_1.utils.formatTime(total);
+            }
+            setLoopMode(str) {
+                this.btnLoop.hidden = false;
+                this.btnLoop.text = I18n_1.i18n.get('loopmode_' + str);
             }
             onPlayButtonClicked(cb) {
                 this.btnPlay.dom.addEventListener('click', cb);
@@ -1342,7 +1365,7 @@ class SidebarItem extends viewlib_1.ListViewItem {
 }
 exports.SidebarItem = SidebarItem;
 
-},{"./I18n":3,"./Router":7,"./User":10,"./utils":13,"./viewlib":14}],9:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./User":10,"./utils":13,"./viewlib":14}],9:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1921,6 +1944,7 @@ const Uploads_1 = require("./Uploads");
 const Discussion_1 = require("./Discussion");
 const Router_1 = require("./Router");
 UI_1.ui.init();
+PlayerCore_1.playerCore.init();
 exports.listIndex = new ListIndex_1.ListIndex();
 var app = window['app'] = {
     ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,

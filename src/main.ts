@@ -22,6 +22,7 @@ import { discussion, notes } from "./Discussion";
 import { router } from "./Router";
 
 ui.init();
+playerCore.init();
 
 export var listIndex = new ListIndex();
 
