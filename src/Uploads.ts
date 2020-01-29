@@ -6,7 +6,7 @@ import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { ListContentView } from "./ListContentView";
-import { ListView, LoadingIndicator, View } from "./viewlib";
+import { ListView, LoadingIndicator, View, Toast } from "./viewlib";
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
@@ -159,6 +159,8 @@ export var uploads = new class extends TrackList {
         } catch (err) {
             track._upload.state = 'error';
             track._upload.view?.updateDom();
+            Toast.show(I`Failed to upload file "${file.name}".` + '\n' + err, 3000);
+            console.log('uploads failed: ', file.name, err);
             throw err;
         } finally {
             this.uploadSemaphore.exit();

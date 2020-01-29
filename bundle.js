@@ -498,6 +498,12 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["You've logged in as \\"{0}\\".", "你已登录为 \\"{0}\\"。"],
     ["Switch user", "切换用户"],
     ["Logout", "注销"],
+    ["Failed to create playlist \\"{0}\\".", "创建播放列表 \\"{0}\\" 失败。"],
+    ["Failed to sync playlist \\"{0}\\".", "同步播放列表 \\"{0}\\" 失败。"],
+    ["Login to create playlists.", "登录以创建播放列表。"],
+    ["Failed to login.", "登录失败。"],
+    ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
+    ["Server: ", "服务器："],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -804,7 +810,7 @@ class ListIndex {
     newTracklist() {
         return __awaiter(this, void 0, void 0, function* () {
             if (!(yield User_1.user.waitLogin(false))) {
-                this._toastLogin = this._toastLogin || new viewlib_1.Toast({ text: utils_1.I `Login to create playlists!` });
+                this._toastLogin = this._toastLogin || new viewlib_1.Toast({ text: utils_1.I `Login to create playlists.` });
                 this._toastLogin.show(3000);
                 return;
             }
@@ -1532,6 +1538,8 @@ exports.uploads = new class extends tracklist_1.TrackList {
             catch (err) {
                 track._upload.state = 'error';
                 (_b = track._upload.view) === null || _b === void 0 ? void 0 : _b.updateDom();
+                viewlib_1.Toast.show(I18n_1.I `Failed to upload file "${file.name}".` + '\n' + err, 3000);
+                console.log('uploads failed: ', file.name, err);
                 throw err;
             }
             finally {

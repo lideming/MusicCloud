@@ -157,7 +157,7 @@ export class ListIndex {
      */
     async newTracklist() {
         if (!await user.waitLogin(false)) {
-            this._toastLogin = this._toastLogin || new Toast({text: I`Login to create playlists!`});
+            this._toastLogin = this._toastLogin || new Toast({text: I`Login to create playlists.`});
             this._toastLogin.show(3000);
             return;
         }
