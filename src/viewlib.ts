@@ -1,6 +1,6 @@
 // file: viewlib.ts
 
-import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode } from "./utils";
+import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode, Timer } from "./utils";
 
 export type ViewArg = View | HTMLElement;
 
@@ -749,7 +749,7 @@ export class Toast extends View {
     text: string;
     container: ToastsContainer;
     shown = false;
-    timer = new utils.Timer(() => this.close());
+    timer = new Timer(() => this.close());
     constructor(init?: Partial<Toast>) {
         super();
         utils.objectApply(this, init);

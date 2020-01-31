@@ -13,6 +13,7 @@ export var ui = new class {
     init() {
         this.lang.init();
         this.bottomBar.init();
+        this.trackinfo.init();
         this.playerControl.init();
         this.sidebarLogin.init();
         Dialog.defaultParent = this.mainContainer.dom;
@@ -99,14 +100,25 @@ export var ui = new class {
         btnPlay = new TextView(document.getElementById('btn-play'));
         btnLoop = new TextView(document.getElementById('btn-loop'));
 
-        state: 'none' | 'playing' | 'paused' | 'stalled';
+        state: typeof playerCore['state'];
 
         init() {
             this.setState('none');
             this.btnLoop.dom.addEventListener('click', () => {
                 var modes = playingLoopModes;
                 var next = modes[(modes.indexOf(playerCore.loopMode) + 1) % modes.length];
-                playerCore.setLoopMode(next);
+                playerCore.loopMode = next;
+            });
+            playerCore.onLoopModeChanged.add(() => this.setLoopMode(playerCore.loopMode))();
+            playerCore.onStateChanged.add(() => this.setState(playerCore.state))();
+            playerCore.onProgressChanged.add(() => this.setProg(playerCore.currentTime, playerCore.duration));
+            this.onProgressSeeking((percent) => {
+                playerCore.currentTime = percent * playerCore.duration;
+            });
+            this.onPlayButtonClicked(() => {
+                var state = playerCore.state;
+                if (state === 'paused') playerCore.play();
+                else playerCore.pause();
             });
         }
         setState(state: this['state']) {
@@ -138,7 +150,7 @@ export var ui = new class {
         onPlayButtonClicked(cb: () => void) {
             this.btnPlay.dom.addEventListener('click', cb);
         }
-        onProgressChanged(cb: (percent: number) => void) {
+        onProgressSeeking(cb: (percent: number) => void) {
             var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
             this.progbar.addEventListener('mousedown', (e) => {
                 e.preventDefault();
@@ -153,6 +165,9 @@ export var ui = new class {
     };
     trackinfo = new class {
         element = document.getElementById('bottombar-trackinfo');
+        init() {
+            playerCore.onTrackChanged.add(() => this.setTrack(playerCore.track));
+        }
         setTrack(track: Track) {
             if (track) {
                 utils.replaceChild(this.element, utils.buildDOM({

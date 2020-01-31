@@ -5,6 +5,9 @@ import { i18n, I } from "./I18n";
 
 export { i18n, I };
 
+const _object_assign = Object.assign;
+const _object_hasOwnProperty = Object.prototype.hasOwnProperty;
+
 /** The name "utils" tells it all. */
 export var utils = new class Utils {
 
@@ -49,29 +52,7 @@ export var utils = new class Utils {
     }
 
 
-    Timer = class {
-        callback: () => void;
-        cancelFunc: () => void;
-        constructor(callback: () => void) {
-            this.callback = callback;
-        }
-        timeout(time) {
-            this.tryCancel();
-            var handle = setTimeout(this.callback, time);
-            this.cancelFunc = () => window.clearTimeout(handle);
-        }
-        interval(time) {
-            this.tryCancel();
-            var handle = setInterval(this.callback, time);
-            this.cancelFunc = () => window.clearInterval(handle);
-        }
-        tryCancel() {
-            if (this.cancelFunc) {
-                this.cancelFunc();
-                this.cancelFunc = undefined;
-            }
-        }
-    };
+    Timer: typeof Timer;
 
     sleepAsync(time: number): Promise<void> {
         return new Promise((resolve) => {
@@ -178,8 +159,9 @@ export var utils = new class Utils {
 
     objectApply<T>(obj: Partial<T>, kv?: Partial<T>, keys?: Array<keyof T>) {
         if (kv) {
+            if (!keys) return _object_assign(obj, kv);
             for (const key in kv as any) {
-                if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key as any) >= 0)) {
+                if (_object_hasOwnProperty.call(kv, key) && (!keys || keys.indexOf(key as any) >= 0)) {
                     const val = kv[key];
                     obj[key] = val;
                 }
@@ -193,6 +175,31 @@ export var utils = new class Utils {
         return a % b;
     }
 };
+
+export class Timer {
+    callback: () => void;
+    cancelFunc: () => void;
+    constructor(callback: () => void) {
+        this.callback = callback;
+    }
+    timeout(time) {
+        this.tryCancel();
+        var handle = setTimeout(this.callback, time);
+        this.cancelFunc = () => window.clearTimeout(handle);
+    }
+    interval(time) {
+        this.tryCancel();
+        var handle = setInterval(this.callback, time);
+        this.cancelFunc = () => window.clearInterval(handle);
+    }
+    tryCancel() {
+        if (this.cancelFunc) {
+            this.cancelFunc();
+            this.cancelFunc = undefined;
+        }
+    }
+}
+utils.Timer = Timer;
 
 
 // Some interesting types:
@@ -279,9 +286,10 @@ export class SettingItem<T> {
     type: SiType<T>;
     data: T;
     onRender: (obj: T) => void;
-    constructor(key: string, type: string | SiType<T>, initial: T) {
+    constructor(key: string, type: 'bool' | 'str' | 'json' | SiType<T>, initial: T) {
         this.key = key;
-        this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+        type = this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+        if (!type || !type.serialize || !type.deserialize) throw new Error("invalid 'type' arugment");
         var str = key ? localStorage.getItem(key) : null;
         this.set(str ? this.type.deserialize(str) : initial, true);
     }
@@ -372,6 +380,7 @@ export class Callbacks<T extends CallableFunction> {
     }
     add(callback: T) {
         this.list.push(callback);
+        return callback;
     }
     remove(callback: T) {
         utils.arrayRemove(this.list, callback);

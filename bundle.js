@@ -879,56 +879,61 @@ exports.ListIndexViewItem = ListIndexViewItem;
 "use strict";
 // file: PlayerCore.ts
 Object.defineProperty(exports, "__esModule", { value: true });
-const UI_1 = require("./UI");
 const utils_1 = require("./utils");
 const Api_1 = require("./Api");
 /** 播放器核心：控制播放逻辑 */
 exports.playerCore = new class PlayerCore {
     constructor() {
-        this.loopMode = 'list-loop';
         this.onTrackChanged = new utils_1.Callbacks();
+        this.siLoopMode = new utils_1.SettingItem('mcloud-loop', 'str', 'list-loop');
+        this.onLoopModeChanged = new utils_1.Callbacks();
+        this._state = 'none';
+        this.onStateChanged = new utils_1.Callbacks();
+        this.onProgressChanged = new utils_1.Callbacks();
     }
+    get loopMode() { return this.siLoopMode.data; }
+    set loopMode(val) {
+        this.siLoopMode.set(val);
+        this.onLoopModeChanged.invoke();
+    }
+    get state() { return this._state; }
+    set state(val) {
+        this._state = val;
+        this.onStateChanged.invoke();
+    }
+    get currentTime() { return this.audio.currentTime; }
+    set currentTime(val) { this.audio.currentTime = val; }
+    get duration() { return this.audio.duration; }
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
     init() {
         this.audio = document.createElement('audio');
-        this.audio.addEventListener('timeupdate', () => this.updateProgress());
-        this.audio.addEventListener('canplay', () => this.updateProgress());
+        this.audio.addEventListener('timeupdate', () => this.onProgressChanged.invoke());
+        this.audio.addEventListener('canplay', () => this.onProgressChanged.invoke());
         this.audio.addEventListener('seeking', () => {
             if (!this.audio.paused)
-                UI_1.ui.playerControl.setState('stalled');
+                this.state = 'stalled';
         });
         this.audio.addEventListener('stalled', () => {
-            UI_1.ui.playerControl.setState('stalled');
+            this.state = 'stalled';
         });
         this.audio.addEventListener('play', () => {
-            UI_1.ui.playerControl.setState('playing');
+            this.state = 'playing';
         });
         this.audio.addEventListener('playing', () => {
-            UI_1.ui.playerControl.setState('playing');
+            this.state = 'playing';
         });
         this.audio.addEventListener('pause', () => {
-            UI_1.ui.playerControl.setState('paused');
+            this.state = 'paused';
         });
         this.audio.addEventListener('error', (e) => {
             console.log(e);
-            UI_1.ui.playerControl.setState('paused');
+            this.state = 'paused';
         });
         this.audio.addEventListener('ended', () => {
             this.next();
         });
-        UI_1.ui.playerControl.onProgressChanged((x) => {
-            this.audio.currentTime = x * this.audio.duration;
-        });
-        UI_1.ui.playerControl.onPlayButtonClicked(() => {
-            var state = UI_1.ui.playerControl.state;
-            if (state === 'paused')
-                this.play();
-            else
-                this.pause();
-        });
-        UI_1.ui.playerControl.setLoopMode(this.loopMode);
     }
     prev() { return this.next(-1); }
     next(offset) {
@@ -938,9 +943,6 @@ exports.playerCore = new class PlayerCore {
             this.playTrack(nextTrack, true);
         else
             this.setTrack(null);
-    }
-    updateProgress() {
-        UI_1.ui.playerControl.setProg(this.audio.currentTime, this.audio.duration);
     }
     loadUrl(src) {
         if (src) {
@@ -956,7 +958,6 @@ exports.playerCore = new class PlayerCore {
         var _a, _b;
         var oldTrack = this.track;
         this.track = track;
-        UI_1.ui.trackinfo.setTrack(track);
         this.onTrackChanged.invoke();
         if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url))
             this.loadUrl(track ? Api_1.api.processUrl(track.url) : null);
@@ -973,10 +974,6 @@ exports.playerCore = new class PlayerCore {
     }
     pause() {
         this.audio.pause();
-    }
-    setLoopMode(mode) {
-        this.loopMode = mode;
-        UI_1.ui.playerControl.setLoopMode(mode);
     }
 };
 exports.playingLoopModes = ['list-seq', 'list-loop', 'track-loop'];
@@ -1007,7 +1004,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./UI":8,"./utils":13}],7:[function(require,module,exports){
+},{"./Api":1,"./utils":13}],7:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1161,7 +1158,20 @@ exports.ui = new class {
                 this.btnLoop.dom.addEventListener('click', () => {
                     var modes = PlayerCore_1.playingLoopModes;
                     var next = modes[(modes.indexOf(PlayerCore_1.playerCore.loopMode) + 1) % modes.length];
-                    PlayerCore_1.playerCore.setLoopMode(next);
+                    PlayerCore_1.playerCore.loopMode = next;
+                });
+                PlayerCore_1.playerCore.onLoopModeChanged.add(() => this.setLoopMode(PlayerCore_1.playerCore.loopMode))();
+                PlayerCore_1.playerCore.onStateChanged.add(() => this.setState(PlayerCore_1.playerCore.state))();
+                PlayerCore_1.playerCore.onProgressChanged.add(() => this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration));
+                this.onProgressSeeking((percent) => {
+                    PlayerCore_1.playerCore.currentTime = percent * PlayerCore_1.playerCore.duration;
+                });
+                this.onPlayButtonClicked(() => {
+                    var state = PlayerCore_1.playerCore.state;
+                    if (state === 'paused')
+                        PlayerCore_1.playerCore.play();
+                    else
+                        PlayerCore_1.playerCore.pause();
                 });
             }
             setState(state) {
@@ -1201,7 +1211,7 @@ exports.ui = new class {
             onPlayButtonClicked(cb) {
                 this.btnPlay.dom.addEventListener('click', cb);
             }
-            onProgressChanged(cb) {
+            onProgressSeeking(cb) {
                 var call = (e) => { cb(utils_1.utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
                 this.progbar.addEventListener('mousedown', (e) => {
                     e.preventDefault();
@@ -1219,6 +1229,9 @@ exports.ui = new class {
         this.trackinfo = new class {
             constructor() {
                 this.element = document.getElementById('bottombar-trackinfo');
+            }
+            init() {
+                PlayerCore_1.playerCore.onTrackChanged.add(() => this.setTrack(PlayerCore_1.playerCore.track));
             }
             setTrack(track) {
                 if (track) {
@@ -1325,6 +1338,7 @@ exports.ui = new class {
     init() {
         this.lang.init();
         this.bottomBar.init();
+        this.trackinfo.init();
         this.playerControl.init();
         this.sidebarLogin.init();
         viewlib_1.Dialog.defaultParent = this.mainContainer.dom;
@@ -2439,32 +2453,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const I18n_1 = require("./I18n");
 exports.i18n = I18n_1.i18n;
 exports.I = I18n_1.I;
+const _object_assign = Object.assign;
+const _object_hasOwnProperty = Object.prototype.hasOwnProperty;
 /** The name "utils" tells it all. */
 exports.utils = new class Utils {
-    constructor() {
-        // Time & formatting utils:
-        this.Timer = class {
-            constructor(callback) {
-                this.callback = callback;
-            }
-            timeout(time) {
-                this.tryCancel();
-                var handle = setTimeout(this.callback, time);
-                this.cancelFunc = () => window.clearTimeout(handle);
-            }
-            interval(time) {
-                this.tryCancel();
-                var handle = setInterval(this.callback, time);
-                this.cancelFunc = () => window.clearInterval(handle);
-            }
-            tryCancel() {
-                if (this.cancelFunc) {
-                    this.cancelFunc();
-                    this.cancelFunc = undefined;
-                }
-            }
-        };
-    }
+    // Time & formatting utils:
     strPadLeft(str, len, ch = ' ') {
         while (str.length < len) {
             str = ch + str;
@@ -2597,8 +2590,10 @@ exports.utils = new class Utils {
     }
     objectApply(obj, kv, keys) {
         if (kv) {
+            if (!keys)
+                return _object_assign(obj, kv);
             for (const key in kv) {
-                if (kv.hasOwnProperty(key) && (!keys || keys.indexOf(key) >= 0)) {
+                if (_object_hasOwnProperty.call(kv, key) && (!keys || keys.indexOf(key) >= 0)) {
                     const val = kv[key];
                     obj[key] = val;
                 }
@@ -2612,6 +2607,28 @@ exports.utils = new class Utils {
         return a % b;
     }
 };
+class Timer {
+    constructor(callback) {
+        this.callback = callback;
+    }
+    timeout(time) {
+        this.tryCancel();
+        var handle = setTimeout(this.callback, time);
+        this.cancelFunc = () => window.clearTimeout(handle);
+    }
+    interval(time) {
+        this.tryCancel();
+        var handle = setInterval(this.callback, time);
+        this.cancelFunc = () => window.clearInterval(handle);
+    }
+    tryCancel() {
+        if (this.cancelFunc) {
+            this.cancelFunc();
+            this.cancelFunc = undefined;
+        }
+    }
+}
+exports.Timer = Timer;
 class BuildDOMCtx {
 }
 exports.utils.buildDOM = (() => {
@@ -2678,7 +2695,9 @@ exports.utils.buildDOM = (() => {
 class SettingItem {
     constructor(key, type, initial) {
         this.key = key;
-        this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+        type = this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+        if (!type || !type.serialize || !type.deserialize)
+            throw new Error("invalid 'type' arugment");
         var str = key ? localStorage.getItem(key) : null;
         this.set(str ? this.type.deserialize(str) : initial, true);
     }
@@ -2777,6 +2796,7 @@ class Callbacks {
     }
     add(callback) {
         this.list.push(callback);
+        return callback;
     }
     remove(callback) {
         exports.utils.arrayRemove(this.list, callback);
@@ -3596,7 +3616,7 @@ class Toast extends View {
     constructor(init) {
         super();
         this.shown = false;
-        this.timer = new utils_1.utils.Timer(() => this.close());
+        this.timer = new utils_1.Timer(() => this.close());
         utils_1.utils.objectApply(this, init);
         if (!this.container)
             this.container = ToastsContainer.default;
