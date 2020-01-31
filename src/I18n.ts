@@ -185,6 +185,8 @@ i18n.add2dArray(JSON.parse(`[
     ["Failed to login.", "登录失败。"],
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
     ["Server: ", "服务器："],
+    ["Volume", "音量"],
+    ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

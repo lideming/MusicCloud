@@ -1,15 +1,15 @@
 // file: UI.ts
 
 import { router } from "./Router";
-import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func, Callbacks } from "./utils";
+import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func, Callbacks, Timer } from "./utils";
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View } from "./viewlib";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 
 /** 常驻 UI 元素操作 */
-export var ui = new class {
+export const ui = new class {
     init() {
         this.lang.init();
         this.bottomBar.init();
@@ -99,6 +99,7 @@ export var ui = new class {
         labelTotal = document.getElementById('progressbar-label-total');
         btnPlay = new TextView(document.getElementById('btn-play'));
         btnLoop = new TextView(document.getElementById('btn-loop'));
+        btnVolume: VolumeButton;
 
         state: typeof playerCore['state'];
 
@@ -120,6 +121,9 @@ export var ui = new class {
                 if (state === 'paused') playerCore.play();
                 else playerCore.pause();
             });
+            this.btnVolume = new VolumeButton(document.getElementById('btn-volume'));
+            this.btnVolume.text = I`Volume`;
+            this.btnVolume.bindToPlayer();
         }
         setState(state: this['state']) {
             var btn = this.btnPlay;
@@ -151,16 +155,21 @@ export var ui = new class {
             this.btnPlay.dom.addEventListener('click', cb);
         }
         onProgressSeeking(cb: (percent: number) => void) {
-            var call = (e) => { cb(utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
+            var call = (offsetX) => { cb(utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
             this.progbar.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
-                    if (e.buttons == 1) call(e);
+                    if (e.buttons == 1) call(e.offsetX);
+                document.addEventListener('mousemove', mousemove);
+                document.addEventListener('mouseup', mouseup);
             });
-            this.progbar.addEventListener('mousemove', (e) => {
-                if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
-                    if (e.buttons == 1) call(e);
-            });
+            var mousemove = (e: MouseEvent) => {
+                call(e.pageX - this.progbar.getBoundingClientRect().left);
+            };
+            var mouseup = () => {
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+            };
         }
     };
     trackinfo = new class {
@@ -282,5 +291,74 @@ export class SidebarItem extends ListViewItem {
             ui.sidebarList.setActive(this);
         };
         return this;
+    }
+}
+
+class ProgressButton extends View {
+    fill = new View({
+        tag: 'div.btn-fill'
+    });
+    textSpan = new TextView({ tag: 'span.text' });
+
+    get text() { return this.textSpan.text; }
+    set text(val) { this.textSpan.text = val; }
+
+    private _progress: number;
+    public get progress(): number { return this._progress; }
+    public set progress(v: number) {
+        this.fill.dom.style.width = (v * 100) + '%';
+        this._progress = v;
+    }
+
+    constructor(dom?: BuildDomExpr) {
+        super(dom ?? { tag: 'div.btn' });
+        this.dom.classList.add('btn-progress');
+        this.dom.appendView(this.fill);
+        this.dom.appendView(this.textSpan);
+    }
+}
+
+class VolumeButton extends ProgressButton {
+    onChanging = new Callbacks<(delta: number) => void>();
+    tip = '\n' + I`(Scroll whell or drag to adjust volume)`;
+
+    constructor(dom?: HTMLElement) {
+        super(dom);
+        dom.addEventListener('wheel', (ev) => {
+            ev.preventDefault();
+            var delta = Math.sign(ev.deltaY) * -0.1;
+            this.onChanging.invoke(delta);
+        });
+        this.dom.addEventListener('mousedown', (ev) => {
+            if (ev.buttons !== 1) return;
+            ev.preventDefault();
+            var startX = ev.pageX;
+            var mousemove = (ev) => {
+                var deltaX = ev.pageX - startX;
+                startX = ev.pageX;
+                this.onChanging.invoke(deltaX * 0.01);
+            };
+            var mouseup = (ev) => {
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+                this.dom.classList.remove('btn-down');
+                this.fill.dom.style.transition = '';
+            };
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+            this.dom.classList.add('btn-down');
+            this.fill.dom.style.transition = 'none';
+        });
+    }
+    bindToPlayer() {
+        playerCore.onVolumeChanged.add(() => {
+            this.progress = playerCore.volume;
+            this.dom.title = I`Volume` + ' ' + Math.floor(this.progress * 100) + '%' + this.tip;
+        })();
+        this.onChanging.add((x) => {
+            var r = utils.numLimit(playerCore.volume + x, 0, 1);
+            playerCore.volume = r;
+            this.tip = '';
+        });
     }
 }

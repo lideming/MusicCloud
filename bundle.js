@@ -504,6 +504,8 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Failed to login.", "登录失败。"],
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
     ["Server: ", "服务器："],
+    ["Volume", "音量"],
+    ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -890,6 +892,7 @@ exports.playerCore = new class PlayerCore {
         this._state = 'none';
         this.onStateChanged = new utils_1.Callbacks();
         this.onProgressChanged = new utils_1.Callbacks();
+        this.onVolumeChanged = new utils_1.Callbacks();
     }
     get loopMode() { return this.siLoopMode.data; }
     set loopMode(val) {
@@ -904,6 +907,8 @@ exports.playerCore = new class PlayerCore {
     get currentTime() { return this.audio.currentTime; }
     set currentTime(val) { this.audio.currentTime = val; }
     get duration() { return this.audio.duration; }
+    get volume() { var _a, _b; return _b = (_a = this.audio) === null || _a === void 0 ? void 0 : _a.volume, (_b !== null && _b !== void 0 ? _b : 1); }
+    set volume(val) { this.audio.volume = val; }
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
@@ -934,6 +939,7 @@ exports.playerCore = new class PlayerCore {
         this.audio.addEventListener('ended', () => {
             this.next();
         });
+        this.audio.addEventListener('volumechange', () => this.onVolumeChanged.invoke());
     }
     prev() { return this.next(-1); }
     next(offset) {
@@ -1173,6 +1179,9 @@ exports.ui = new class {
                     else
                         PlayerCore_1.playerCore.pause();
                 });
+                this.btnVolume = new VolumeButton(document.getElementById('btn-volume'));
+                this.btnVolume.text = I18n_1.I `Volume`;
+                this.btnVolume.bindToPlayer();
             }
             setState(state) {
                 var btn = this.btnPlay;
@@ -1212,18 +1221,22 @@ exports.ui = new class {
                 this.btnPlay.dom.addEventListener('click', cb);
             }
             onProgressSeeking(cb) {
-                var call = (e) => { cb(utils_1.utils.numLimit(e.offsetX / this.progbar.clientWidth, 0, 1)); };
+                var call = (offsetX) => { cb(utils_1.utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
                 this.progbar.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
                         if (e.buttons == 1)
-                            call(e);
+                            call(e.offsetX);
+                    document.addEventListener('mousemove', mousemove);
+                    document.addEventListener('mouseup', mouseup);
                 });
-                this.progbar.addEventListener('mousemove', (e) => {
-                    if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
-                        if (e.buttons == 1)
-                            call(e);
-                });
+                var mousemove = (e) => {
+                    call(e.pageX - this.progbar.getBoundingClientRect().left);
+                };
+                var mouseup = () => {
+                    document.removeEventListener('mousemove', mousemove);
+                    document.removeEventListener('mouseup', mouseup);
+                };
             }
         };
         this.trackinfo = new class {
@@ -1384,6 +1397,69 @@ class SidebarItem extends viewlib_1.ListViewItem {
     }
 }
 exports.SidebarItem = SidebarItem;
+class ProgressButton extends viewlib_1.View {
+    constructor(dom) {
+        super((dom !== null && dom !== void 0 ? dom : { tag: 'div.btn' }));
+        this.fill = new viewlib_1.View({
+            tag: 'div.btn-fill'
+        });
+        this.textSpan = new viewlib_1.TextView({ tag: 'span.text' });
+        this.dom.classList.add('btn-progress');
+        this.dom.appendView(this.fill);
+        this.dom.appendView(this.textSpan);
+    }
+    get text() { return this.textSpan.text; }
+    set text(val) { this.textSpan.text = val; }
+    get progress() { return this._progress; }
+    set progress(v) {
+        this.fill.dom.style.width = (v * 100) + '%';
+        this._progress = v;
+    }
+}
+class VolumeButton extends ProgressButton {
+    constructor(dom) {
+        super(dom);
+        this.onChanging = new utils_1.Callbacks();
+        this.tip = '\n' + I18n_1.I `(Scroll whell or drag to adjust volume)`;
+        dom.addEventListener('wheel', (ev) => {
+            ev.preventDefault();
+            var delta = Math.sign(ev.deltaY) * -0.1;
+            this.onChanging.invoke(delta);
+        });
+        this.dom.addEventListener('mousedown', (ev) => {
+            if (ev.buttons !== 1)
+                return;
+            ev.preventDefault();
+            var startX = ev.pageX;
+            var mousemove = (ev) => {
+                var deltaX = ev.pageX - startX;
+                startX = ev.pageX;
+                this.onChanging.invoke(deltaX * 0.01);
+            };
+            var mouseup = (ev) => {
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+                this.dom.classList.remove('btn-down');
+                this.fill.dom.style.transition = '';
+            };
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+            this.dom.classList.add('btn-down');
+            this.fill.dom.style.transition = 'none';
+        });
+    }
+    bindToPlayer() {
+        PlayerCore_1.playerCore.onVolumeChanged.add(() => {
+            this.progress = PlayerCore_1.playerCore.volume;
+            this.dom.title = I18n_1.I `Volume` + ' ' + Math.floor(this.progress * 100) + '%' + this.tip;
+        })();
+        this.onChanging.add((x) => {
+            var r = utils_1.utils.numLimit(PlayerCore_1.playerCore.volume + x, 0, 1);
+            PlayerCore_1.playerCore.volume = r;
+            this.tip = '';
+        });
+    }
+}
 
 },{"./I18n":3,"./PlayerCore":6,"./Router":7,"./User":10,"./utils":13,"./viewlib":14}],9:[function(require,module,exports){
 "use strict";
@@ -2629,6 +2705,7 @@ class Timer {
     }
 }
 exports.Timer = Timer;
+exports.utils.Timer = Timer;
 class BuildDOMCtx {
 }
 exports.utils.buildDOM = (() => {

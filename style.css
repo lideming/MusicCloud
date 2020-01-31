@@ -695,3 +695,37 @@ html, body {
     white-space: pre-wrap;
     animation: showing-right .3s;
 }
+
+.btn-progress {
+    background: #9a0007;
+}
+
+.btn-progress:hover {
+    background-color: hsl(5, 100%, 20%);
+}
+
+.btn-progress.btn-down {
+    background-color: hsl(5, 100%, 10%);
+}
+
+.btn-progress .text {
+    position: relative;
+}
+
+.btn-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: #ff6659;
+    transition: all .2s;
+}
+
+.btn:hover .btn-fill {
+    background-color: hsl(5, 100%, 60%);
+    transition: all .05s;
+}
+
+.btn.btn-down .btn-fill {
+    background: hsl(5, 100%, 50%);
+}

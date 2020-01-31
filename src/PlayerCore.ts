@@ -31,6 +31,10 @@ export var playerCore = new class PlayerCore {
     get duration() { return this.audio.duration; }
     onProgressChanged = new Callbacks<Action>();
 
+    get volume() { return this.audio?.volume ?? 1; }
+    set volume(val) { this.audio.volume = val; }
+    onVolumeChanged = new Callbacks<Action>();
+
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
@@ -61,6 +65,7 @@ export var playerCore = new class PlayerCore {
         this.audio.addEventListener('ended', () => {
             this.next();
         });
+        this.audio.addEventListener('volumechange', () => this.onVolumeChanged.invoke());
     }
     prev() { return this.next(-1); }
     next(offset?: number) {
