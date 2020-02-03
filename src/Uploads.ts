@@ -46,7 +46,7 @@ export var uploads = new class extends TrackList {
                     this.view.listView.removeAll();
                     this.view.updateView();
                 }
-                setTimeout(() => this.fetch(), 1);
+                setTimeout(() => this.fetch(true), 1);
             }
         });
         playerCore.onTrackChanged.add(() => {
@@ -93,7 +93,7 @@ export var uploads = new class extends TrackList {
         this.tracks.push(t);
         if (this.view.rendered) this.view.addItem(t);
     }
-    async fetch() {
+    async fetchImpl() {
         this.state = 'waiting';
         var li = new LoadingIndicator();
         li.content = I`Logging in`;
@@ -110,7 +110,7 @@ export var uploads = new class extends TrackList {
                 });
             this.state = 'fetched';
         } catch (error) {
-            li.error(error, () => this.fetch());
+            li.error(error, () => this.fetchImpl());
             return;
         }
         this.tracks = this.tracks.filter(t => {

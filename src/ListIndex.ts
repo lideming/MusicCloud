@@ -117,7 +117,7 @@ export class ListIndex {
             list = new TrackList();
             list.loadInfo(this.getListInfo(id));
             if (list.apiid) {
-                list.loadFromApi();
+                list.fetch();
             } else {
                 list.loadEmpty();
             }

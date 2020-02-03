@@ -1,11 +1,39 @@
 // file: UI.ts
 
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View } from "./viewlib";
+
+export class SidebarItem extends ListViewItem {
+    text: string;
+    onclick: Action<Event>;
+    constructor(init: Partial<SidebarItem>) {
+        super();
+        utils.objectApply(this, init);
+    }
+    protected createDom(): BuildDomExpr {
+        return {
+            tag: 'div.item.no-selection',
+            onclick: (e) => this.onclick?.(e)
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+    }
+    bindContentView(viewFunc: Func<ContentView>) {
+        var view: ContentView;
+        this.onclick = () => {
+            if (!view) view = viewFunc();
+            ui.content.setCurrent(view);
+            ui.sidebarList.setActive(this);
+        };
+        return this;
+    }
+}
+
 import { router } from "./Router";
 import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func, Callbacks, Timer } from "./utils";
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View } from "./viewlib";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 
 /** 常驻 UI 元素操作 */
@@ -265,33 +293,6 @@ export interface ContentView {
 
 interface ContentViewState {
     scrollTop: number;
-}
-
-export class SidebarItem extends ListViewItem {
-    text: string;
-    onclick: Action<Event>;
-    constructor(init: Partial<SidebarItem>) {
-        super();
-        utils.objectApply(this, init);
-    }
-    protected createDom(): BuildDomExpr {
-        return {
-            tag: 'div.item.no-selection',
-            onclick: (e) => this.onclick?.(e)
-        };
-    }
-    updateDom() {
-        this.dom.textContent = this.text;
-    }
-    bindContentView(viewFunc: Func<ContentView>) {
-        var view: ContentView;
-        this.onclick = () => {
-            if (!view) view = viewFunc();
-            ui.content.setCurrent(view);
-            ui.sidebarList.setActive(this);
-        };
-        return this;
-    }
 }
 
 class ProgressButton extends View {

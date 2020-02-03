@@ -90,6 +90,7 @@ export var playerCore = new class PlayerCore {
         this.onTrackChanged.invoke();
         if (oldTrack?.url !== this.track?.url)
             this.loadUrl(track ? api.processUrl(track.url) : null);
+        this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
     }
     playTrack(track: Track, forceStart?: boolean) {
         if (track !== this.track) this.setTrack(track);

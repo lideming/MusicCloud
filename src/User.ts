@@ -6,6 +6,9 @@ import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast } from 
 import { Api } from "./apidef";
 import { ui } from "./UI";
 import { api } from "./Api";
+import { playerCore } from "./PlayerCore";
+import { uploads } from "./Uploads";
+import { TrackList, Track } from "./TrackList";
 
 export var user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
@@ -24,6 +27,7 @@ export var user = new class User {
         ui.sidebarLogin.update();
     }
     init() {
+        playerCore.onTrackChanged.add(() => this.playingTrackChanged());
         if (this.info.username) {
             this.login(this.info).then(null, (err) => {
                 Toast.show(I`Failed to login.` + '\n' + err, 5000);
@@ -112,6 +116,8 @@ export var user = new class User {
         this.setState('logged');
         this.loggingin = null;
         this.onSwitchedUser.invoke();
+
+        this.tryRestorePlaying(info.playing);
     }
     logout() {
         utils.objectApply(this.info, { id: -1, username: null, passwd: null });
@@ -153,6 +159,48 @@ export var user = new class User {
         } while (0);
         if (throwOnFail) throw new Error('No login');
         return false;
+    }
+
+    _ignore_track_once: Track;
+    playingTrackChanged() {
+        var track = playerCore.track;
+        if (track && this._ignore_track_once === track) {
+            this._ignore_track_once = null;
+            return;
+        }
+        var tl: Api.TrackLocation = {
+            listid: track?._bind?.list?.id ?? 0,
+            position: track?._bind?.position ?? 0,
+            trackid: track?.id ?? 0
+        };
+        this.postPlaying(tl)
+            .then(() => console.info("post playing OK"),
+                (err) => console.warn('post playing error', err));
+    }
+    async tryRestorePlaying(playing: Api.TrackLocation) {
+        if (playing.trackid) {
+            var list: TrackList = playing.listid ? listIndex.getList(playing.listid) : uploads;
+            await list.fetch();
+            var track = list.tracks[playing.position];
+            if (track?.id !== playing.trackid)
+                track = list.tracks.find(x => x.id === playing.trackid);
+            this._ignore_track_once = track;
+            playerCore.setTrack(track);
+        }
+    }
+    async getPlaying(): Promise<Api.TrackLocation> {
+        await this.waitLogin(true);
+        var result: Api.TrackLocation = await api.getJson('my/playing');
+        return result;
+    }
+
+    async postPlaying(trackLocation: Api.TrackLocation): Promise<void> {
+        await this.waitLogin(true);
+        await api.postJson({
+            method: 'POST',
+            path: 'my/playing',
+            obj: trackLocation
+        });
     }
 };
 

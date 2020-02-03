@@ -771,7 +771,7 @@ class ListIndex {
             list = new tracklist_1.TrackList();
             list.loadInfo(this.getListInfo(id));
             if (list.apiid) {
-                list.loadFromApi();
+                list.fetch();
             }
             else {
                 list.loadEmpty();
@@ -967,6 +967,7 @@ exports.playerCore = new class PlayerCore {
         this.onTrackChanged.invoke();
         if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url))
             this.loadUrl(track ? Api_1.api.processUrl(track.url) : null);
+        this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
     }
     playTrack(track, forceStart) {
         if (track !== this.track)
@@ -1072,11 +1073,37 @@ function parsePath(path) {
 "use strict";
 // file: UI.ts
 Object.defineProperty(exports, "__esModule", { value: true });
+const viewlib_1 = require("./viewlib");
+class SidebarItem extends viewlib_1.ListViewItem {
+    constructor(init) {
+        super();
+        utils_1.utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.item.no-selection',
+            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
+        };
+    }
+    updateDom() {
+        this.dom.textContent = this.text;
+    }
+    bindContentView(viewFunc) {
+        var view;
+        this.onclick = () => {
+            if (!view)
+                view = viewFunc();
+            exports.ui.content.setCurrent(view);
+            exports.ui.sidebarList.setActive(this);
+        };
+        return this;
+    }
+}
+exports.SidebarItem = SidebarItem;
 const Router_1 = require("./Router");
 const utils_1 = require("./utils");
 const I18n_1 = require("./I18n");
 const User_1 = require("./User");
-const viewlib_1 = require("./viewlib");
 const PlayerCore_1 = require("./PlayerCore");
 /** 常驻 UI 元素操作 */
 exports.ui = new class {
@@ -1371,32 +1398,6 @@ exports.ui = new class {
         });
     }
 }; // ui
-class SidebarItem extends viewlib_1.ListViewItem {
-    constructor(init) {
-        super();
-        utils_1.utils.objectApply(this, init);
-    }
-    createDom() {
-        return {
-            tag: 'div.item.no-selection',
-            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
-        };
-    }
-    updateDom() {
-        this.dom.textContent = this.text;
-    }
-    bindContentView(viewFunc) {
-        var view;
-        this.onclick = () => {
-            if (!view)
-                view = viewFunc();
-            exports.ui.content.setCurrent(view);
-            exports.ui.sidebarList.setActive(this);
-        };
-        return this;
-    }
-}
-exports.SidebarItem = SidebarItem;
 class ProgressButton extends viewlib_1.View {
     constructor(dom) {
         super((dom !== null && dom !== void 0 ? dom : { tag: 'div.btn' }));
@@ -1534,7 +1535,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
                     this.view.listView.removeAll();
                     this.view.updateView();
                 }
-                setTimeout(() => this.fetch(), 1);
+                setTimeout(() => this.fetch(true), 1);
             }
         });
         PlayerCore_1.playerCore.onTrackChanged.add(() => {
@@ -1560,7 +1561,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
         if (this.view.rendered)
             this.view.addItem(t);
     }
-    fetch() {
+    fetchImpl() {
         return __awaiter(this, void 0, void 0, function* () {
             this.state = 'waiting';
             var li = new viewlib_1.LoadingIndicator();
@@ -1579,7 +1580,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 this.state = 'fetched';
             }
             catch (error) {
-                li.error(error, () => this.fetch());
+                li.error(error, () => this.fetchImpl());
                 return;
             }
             this.tracks = this.tracks.filter(t => {
@@ -1745,6 +1746,8 @@ const main_1 = require("./main");
 const viewlib_1 = require("./viewlib");
 const UI_1 = require("./UI");
 const Api_1 = require("./Api");
+const PlayerCore_1 = require("./PlayerCore");
+const Uploads_1 = require("./Uploads");
 exports.user = new class User {
     constructor() {
         this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
@@ -1760,6 +1763,7 @@ exports.user = new class User {
         UI_1.ui.sidebarLogin.update();
     }
     init() {
+        PlayerCore_1.playerCore.onTrackChanged.add(() => this.playingTrackChanged());
         if (this.info.username) {
             this.login(this.info).then(null, (err) => {
                 viewlib_1.Toast.show(utils_1.I `Failed to login.` + '\n' + err, 5000);
@@ -1860,6 +1864,7 @@ exports.user = new class User {
             this.setState('logged');
             this.loggingin = null;
             this.onSwitchedUser.invoke();
+            this.tryRestorePlaying(info.playing);
         });
     }
     logout() {
@@ -1909,6 +1914,52 @@ exports.user = new class User {
             if (throwOnFail)
                 throw new Error('No login');
             return false;
+        });
+    }
+    playingTrackChanged() {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        var track = PlayerCore_1.playerCore.track;
+        if (track && this._ignore_track_once === track) {
+            this._ignore_track_once = null;
+            return;
+        }
+        var tl = {
+            listid: (_d = (_c = (_b = (_a = track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.id, (_d !== null && _d !== void 0 ? _d : 0)),
+            position: (_g = (_f = (_e = track) === null || _e === void 0 ? void 0 : _e._bind) === null || _f === void 0 ? void 0 : _f.position, (_g !== null && _g !== void 0 ? _g : 0)),
+            trackid: (_j = (_h = track) === null || _h === void 0 ? void 0 : _h.id, (_j !== null && _j !== void 0 ? _j : 0))
+        };
+        this.postPlaying(tl)
+            .then(() => console.info("post playing OK"), (err) => console.warn('post playing error', err));
+    }
+    tryRestorePlaying(playing) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            if (playing.trackid) {
+                var list = playing.listid ? main_1.listIndex.getList(playing.listid) : Uploads_1.uploads;
+                yield list.fetch();
+                var track = list.tracks[playing.position];
+                if (((_a = track) === null || _a === void 0 ? void 0 : _a.id) !== playing.trackid)
+                    track = list.tracks.find(x => x.id === playing.trackid);
+                this._ignore_track_once = track;
+                PlayerCore_1.playerCore.setTrack(track);
+            }
+        });
+    }
+    getPlaying() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.waitLogin(true);
+            var result = yield Api_1.api.getJson('my/playing');
+            return result;
+        });
+    }
+    postPlaying(trackLocation) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.waitLogin(true);
+            yield Api_1.api.postJson({
+                method: 'POST',
+                path: 'my/playing',
+                obj: trackLocation
+            });
         });
     }
 };
@@ -2019,7 +2070,7 @@ class MeDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./Api":1,"./UI":8,"./main":11,"./utils":13,"./viewlib":14}],11:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":6,"./UI":8,"./Uploads":9,"./main":11,"./utils":13,"./viewlib":14}],11:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -2191,9 +2242,11 @@ class TrackList {
         (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
         return this.fetching = Promise.resolve();
     }
-    loadFromApi(arg) {
+    fetch(force) {
         var _a;
-        return this.fetching = (_a = this.fetching, (_a !== null && _a !== void 0 ? _a : this.fetchForce(arg)));
+        if (force)
+            this.fetching = null;
+        return this.fetching = (_a = this.fetching, (_a !== null && _a !== void 0 ? _a : this.fetchImpl()));
     }
     postToUser() {
         return this.posting = this.posting || this._post();
@@ -2252,23 +2305,16 @@ class TrackList {
             }
         });
     }
-    fetchForce(arg) {
+    fetchImpl() {
         return __awaiter(this, void 0, void 0, function* () {
-            var func;
-            if (arg === undefined)
-                arg = this.apiid;
-            if (typeof arg == 'number')
-                func = () => Api_1.api.getListAsync(arg);
-            else
-                func = arg;
             this.setLoadIndicator(new viewlib_1.LoadingIndicator());
             try {
-                var obj = yield func();
+                var obj = yield Api_1.api.getListAsync(this.apiid);
                 this.loadFromGetResult(obj);
                 this.setLoadIndicator(null);
             }
             catch (err) {
-                this.loadIndicator.error(err, () => this.fetchForce(arg));
+                this.loadIndicator.error(err, () => this.fetchImpl());
                 throw err;
             }
         });

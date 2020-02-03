@@ -140,8 +140,9 @@ export class TrackList {
         this.contentView?.updateView();
         return this.fetching = Promise.resolve();
     }
-    loadFromApi(arg?: number | (AsyncFunc<Api.TrackListGet>)) {
-        return this.fetching = this.fetching ?? this.fetchForce(arg);
+    fetch(force?: boolean) {
+        if (force) this.fetching = null;
+        return this.fetching = this.fetching ?? this.fetchImpl();
     }
     postToUser() {
         return this.posting = this.posting || this._post();
@@ -188,18 +189,14 @@ export class TrackList {
             throw error;
         }
     }
-    async fetchForce(arg: number | AsyncFunc<Api.TrackListGet>) {
-        var func: AsyncFunc<Api.TrackListGet>;
-        if (arg === undefined) arg = this.apiid;
-        if (typeof arg == 'number') func = () => api.getListAsync(arg as number);
-        else func = arg;
+    async fetchImpl() {
         this.setLoadIndicator(new LoadingIndicator());
         try {
-            var obj = await func();
+            var obj = await api.getListAsync(this.apiid);
             this.loadFromGetResult(obj);
             this.setLoadIndicator(null);
         } catch (err) {
-            this.loadIndicator.error(err, () => this.fetchForce(arg));
+            this.loadIndicator.error(err, () => this.fetchImpl());
             throw err;
         }
     }

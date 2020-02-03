@@ -71,6 +71,12 @@ export namespace Api {
 
         /** When register */
         passwd?: string;
+
+        /** When GET me */
+        servermsg?: string;
+
+        /** When GET me */
+        playing?: Api.TrackLocation;
     }
 
     interface Error {
@@ -90,5 +96,12 @@ export namespace Api {
         username: string;
         date: number;
         content: string;
+    }
+
+    // GET/POST {api}/users/me/playing
+    interface TrackLocation {
+        listid: number;
+        position: number;
+        trackid: number;
     }
 }
