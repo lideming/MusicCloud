@@ -250,13 +250,20 @@ export const ui = new class {
     sidebarList = new class {
         container = document.getElementById('sidebar-list');
         listview = new ListView(this.container);
+
+        features = document.getElementById('sidebar-features');
+        featuresListview = new ListView(this.features);
+
         currentActive = new ItemActiveHelper<ListViewItem>();
+
         setActive(item: ListViewItem) {
             this.currentActive.set(item);
         }
-        addItem(item: ListViewItem | string) {
-            if (typeof item == 'string') item = new SidebarItem({ text: item });
+        addItem(item: ListViewItem) {
             this.listview.add(item);
+        }
+        addFeatureItem(item: ListViewItem) {
+            this.featuresListview.add(item);
         }
     };
     content = new class {

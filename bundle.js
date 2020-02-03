@@ -162,7 +162,7 @@ exports.discussion = new class {
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.view.value
         });
-        UI_1.ui.sidebarList.addItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
     }
 };
 exports.notes = new class {
@@ -200,7 +200,7 @@ exports.notes = new class {
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.lazyView.value
         });
-        UI_1.ui.sidebarList.addItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
         User_1.user.onSwitchedUser.add(() => {
             if (this.state && exports.notes.state !== 'waiting')
                 this.fetch();
@@ -1356,15 +1356,18 @@ exports.ui = new class {
             constructor() {
                 this.container = document.getElementById('sidebar-list');
                 this.listview = new viewlib_1.ListView(this.container);
+                this.features = document.getElementById('sidebar-features');
+                this.featuresListview = new viewlib_1.ListView(this.features);
                 this.currentActive = new utils_1.ItemActiveHelper();
             }
             setActive(item) {
                 this.currentActive.set(item);
             }
             addItem(item) {
-                if (typeof item == 'string')
-                    item = new SidebarItem({ text: item });
                 this.listview.add(item);
+            }
+            addFeatureItem(item) {
+                this.featuresListview.add(item);
             }
         };
         this.content = new class {
@@ -1551,7 +1554,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.view
         });
-        UI_1.ui.sidebarList.addItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
         User_1.user.onSwitchedUser.add(() => {
             if (this.state !== false && this.state !== 'waiting') {
                 this.tracks = [];

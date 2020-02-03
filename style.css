@@ -455,17 +455,8 @@ html, body {
     }
 }
 
-#sidebar-login {
+#sidebar-login, #sidebar-features {
     border-bottom: 1px solid #ccc;
-    padding: 10px;
-}
-
-#login-actions {
-    color: gray;
-}
-
-#login-actions :hover {
-    color: black;
 }
 
 .overlay {

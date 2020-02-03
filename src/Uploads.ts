@@ -37,7 +37,7 @@ export var uploads = new class extends TrackList {
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.view
         });
-        ui.sidebarList.addItem(this.sidebarItem);
+        ui.sidebarList.addFeatureItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state !== false && this.state !== 'waiting') {
                 this.tracks = [];

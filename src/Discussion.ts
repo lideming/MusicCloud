@@ -19,7 +19,7 @@ export var discussion = new class {
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.view.value
         });
-        ui.sidebarList.addItem(this.sidebarItem);
+        ui.sidebarList.addFeatureItem(this.sidebarItem);
     }
     sidebarItem: SidebarItem;
     view = new Lazy(() => new class extends ListContentView {
@@ -46,7 +46,7 @@ export var notes = new class {
             sidebarItem: () => this.sidebarItem,
             contentView: () => this.lazyView.value
         });
-        ui.sidebarList.addItem(this.sidebarItem);
+        ui.sidebarList.addFeatureItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             if (this.state && notes.state !== 'waiting') this.fetch();
         });
