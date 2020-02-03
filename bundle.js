@@ -887,16 +887,20 @@ const Api_1 = require("./Api");
 exports.playerCore = new class PlayerCore {
     constructor() {
         this.onTrackChanged = new utils_1.Callbacks();
-        this.siLoopMode = new utils_1.SettingItem('mcloud-loop', 'str', 'list-loop');
+        this.siPlayer = new utils_1.SettingItem('mcloud-player', 'json', {
+            loopMode: 'list-loop',
+            volume: 1
+        });
         this.onLoopModeChanged = new utils_1.Callbacks();
         this._state = 'none';
         this.onStateChanged = new utils_1.Callbacks();
         this.onProgressChanged = new utils_1.Callbacks();
         this.onVolumeChanged = new utils_1.Callbacks();
     }
-    get loopMode() { return this.siLoopMode.data; }
+    get loopMode() { return this.siPlayer.data.loopMode; }
     set loopMode(val) {
-        this.siLoopMode.set(val);
+        this.siPlayer.data.loopMode = val;
+        this.siPlayer.save();
         this.onLoopModeChanged.invoke();
     }
     get state() { return this._state; }
@@ -908,11 +912,23 @@ exports.playerCore = new class PlayerCore {
     set currentTime(val) { this.audio.currentTime = val; }
     get duration() { return this.audio.duration; }
     get volume() { var _a, _b; return _b = (_a = this.audio) === null || _a === void 0 ? void 0 : _a.volume, (_b !== null && _b !== void 0 ? _b : 1); }
-    set volume(val) { this.audio.volume = val; }
+    set volume(val) {
+        this.audio.volume = val;
+        if (val !== this.siPlayer.data.volume) {
+            this.siPlayer.data.volume = val;
+            this.siPlayer.save();
+        }
+    }
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
     init() {
+        // migration
+        var siLoop = new utils_1.SettingItem('mcloud-loop', 'str', null);
+        if (siLoop.data !== null) {
+            this.loopMode = siLoop.data;
+            siLoop.remove();
+        }
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.onProgressChanged.invoke());
         this.audio.addEventListener('canplay', () => this.onProgressChanged.invoke());
@@ -940,6 +956,7 @@ exports.playerCore = new class PlayerCore {
             this.next();
         });
         this.audio.addEventListener('volumechange', () => this.onVolumeChanged.invoke());
+        this.audio.volume = this.siPlayer.data.volume;
     }
     prev() { return this.next(-1); }
     next(offset) {

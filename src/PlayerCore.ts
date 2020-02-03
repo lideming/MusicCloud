@@ -10,10 +10,14 @@ export var playerCore = new class PlayerCore {
     track: Track;
     onTrackChanged = new Callbacks<Action>();
 
-    siLoopMode = new SettingItem<PlayingLoopMode>('mcloud-loop', 'str', 'list-loop');
-    get loopMode() { return this.siLoopMode.data; }
+    siPlayer = new SettingItem('mcloud-player', 'json', {
+        loopMode: 'list-loop' as PlayingLoopMode,
+        volume: 1
+    });
+    get loopMode() { return this.siPlayer.data.loopMode; }
     set loopMode(val) {
-        this.siLoopMode.set(val);
+        this.siPlayer.data.loopMode = val;
+        this.siPlayer.save();
         this.onLoopModeChanged.invoke();
     }
     onLoopModeChanged = new Callbacks<Action>();
@@ -32,13 +36,26 @@ export var playerCore = new class PlayerCore {
     onProgressChanged = new Callbacks<Action>();
 
     get volume() { return this.audio?.volume ?? 1; }
-    set volume(val) { this.audio.volume = val; }
+    set volume(val) {
+        this.audio.volume = val;
+        if (val !== this.siPlayer.data.volume) {
+            this.siPlayer.data.volume = val;
+            this.siPlayer.save();
+        }
+    }
     onVolumeChanged = new Callbacks<Action>();
 
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
     init() {
+        // migration
+        var siLoop = new SettingItem<PlayingLoopMode>('mcloud-loop', 'str', null);
+        if (siLoop.data !== null) {
+            this.loopMode = siLoop.data;
+            siLoop.remove();
+        }
+
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.onProgressChanged.invoke());
         this.audio.addEventListener('canplay', () => this.onProgressChanged.invoke());
@@ -66,6 +83,7 @@ export var playerCore = new class PlayerCore {
             this.next();
         });
         this.audio.addEventListener('volumechange', () => this.onVolumeChanged.invoke());
+        this.audio.volume = this.siPlayer.data.volume;
     }
     prev() { return this.next(-1); }
     next(offset?: number) {
