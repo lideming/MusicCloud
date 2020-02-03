@@ -134,77 +134,13 @@ const UI_1 = require("./UI");
 const Api_1 = require("./Api");
 const viewlib_1 = require("./viewlib");
 const utils_1 = require("./utils");
-const tracklist_1 = require("./tracklist");
 const User_1 = require("./User");
 const ListContentView_1 = require("./ListContentView");
 const Router_1 = require("./Router");
-exports.discussion = new class {
+class CommentsView {
     constructor() {
-        this.view = new utils_1.Lazy(() => new class extends ListContentView_1.ListContentView {
-            createHeader() {
-                return new tracklist_1.ContentHeader({
-                    title: utils_1.I `Discussion`
-                });
-            }
-            appendListView() {
-                super.appendListView();
-                this.useLoadingIndicator(new viewlib_1.LoadingIndicator({
-                    state: 'normal',
-                    content: '(This feature is a work in progress)'
-                }));
-            }
-        });
-    }
-    init() {
-        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Discussion` });
-        Router_1.router.addRoute({
-            path: ['discussion'],
-            sidebarItem: () => this.sidebarItem,
-            contentView: () => this.view.value
-        });
-        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
-    }
-};
-exports.notes = new class {
-    constructor() {
-        this.lazyView = new utils_1.Lazy(() => new class extends ListContentView_1.ListContentView {
-            createHeader() {
-                return new tracklist_1.ContentHeader({
-                    title: utils_1.I `Notes`
-                });
-            }
-            appendHeader() {
-                super.appendHeader();
-                this.dom.appendView(this.editorNew = new CommentEditor());
-                this.editorNew.dom.classList.add('comment-editor-new');
-                this.editorNew.onsubmit = (editor) => {
-                    var content = editor.content;
-                    editor.content = '';
-                    if (content == '')
-                        return;
-                    exports.notes.post(content);
-                };
-            }
-            appendListView() {
-                super.appendListView();
-                if (!exports.notes.state)
-                    exports.notes.fetch();
-            }
-        });
+        this.lazyView = new utils_1.Lazy(() => this.createContentView());
         this.state = false;
-    }
-    init() {
-        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Notes` }).bindContentView(() => this.view);
-        Router_1.router.addRoute({
-            path: ['notes'],
-            sidebarItem: () => this.sidebarItem,
-            contentView: () => this.lazyView.value
-        });
-        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
-        User_1.user.onSwitchedUser.add(() => {
-            if (this.state && exports.notes.state !== 'waiting')
-                this.fetch();
-        });
     }
     get view() { return this.lazyView.value; }
     fetch() {
@@ -215,7 +151,7 @@ exports.notes = new class {
             try {
                 yield User_1.user.waitLogin(true);
                 this.state = 'fetching';
-                var resp = yield Api_1.api.getJson('my/notes?reverse=1');
+                var resp = yield Api_1.api.getJson(this.endpoint + '?reverse=1');
                 this.view.useLoadingIndicator(null);
             }
             catch (error) {
@@ -231,13 +167,14 @@ exports.notes = new class {
     }
     addItem(c) {
         const comm = new CommentViewItem(c);
-        comm.onremove = () => {
-            this.ioAction(() => Api_1.api.postJson({
-                method: 'DELETE',
-                path: 'my/notes/' + comm.comment.id,
-                obj: undefined
-            }));
-        };
+        if (c.uid === User_1.user.info.id)
+            comm.onremove = () => {
+                this.ioAction(() => Api_1.api.postJson({
+                    method: 'DELETE',
+                    path: this.endpoint + '/' + comm.comment.id,
+                    obj: undefined
+                }));
+            };
         return this.view.listView.add(comm);
     }
     ioAction(func) {
@@ -254,11 +191,90 @@ exports.notes = new class {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.ioAction(() => Api_1.api.postJson({
                 method: 'POST',
-                path: 'my/notes/new',
+                path: this.endpoint + '/new',
                 obj: {
                     content: content
                 }
             }));
+        });
+    }
+    createContentView() {
+        var _a;
+        var view = new CommentsContentView(this);
+        view.title = (_a = this.title, (_a !== null && _a !== void 0 ? _a : utils_1.I `Comments`));
+        return view;
+    }
+}
+class CommentsContentView extends ListContentView_1.ListContentView {
+    constructor(comments) {
+        super();
+        this.comments = comments;
+    }
+    appendHeader() {
+        super.appendHeader();
+        this.dom.appendView(this.editorNew = new CommentEditor());
+        this.editorNew.dom.classList.add('comment-editor-new');
+        this.editorNew.onsubmit = (editor) => {
+            var content = editor.content;
+            editor.content = '';
+            if (content == '')
+                return;
+            this.comments.post(content);
+        };
+    }
+    appendListView() {
+        super.appendListView();
+        if (!this.comments.state)
+            this.comments.fetch();
+    }
+}
+exports.discussion = new class extends CommentsView {
+    constructor() {
+        super(...arguments);
+        this.endpoint = 'discussion';
+    }
+    init() {
+        this.title = utils_1.I `Discussion`;
+        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Discussion` });
+        Router_1.router.addRoute({
+            path: ['discussion'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.lazyView.value
+        });
+        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+    }
+};
+exports.notes = new class extends CommentsView {
+    constructor() {
+        super(...arguments);
+        this.endpoint = 'my/notes';
+    }
+    init() {
+        this.title = utils_1.I `Notes`;
+        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Notes` }).bindContentView(() => this.view);
+        Router_1.router.addRoute({
+            path: ['notes'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.lazyView.value
+        });
+        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+        User_1.user.onSwitchedUser.add(() => {
+            if (this.state && exports.notes.state !== 'waiting')
+                this.fetch();
+        });
+    }
+};
+exports.comments = new class {
+    init() {
+        Router_1.router.addRoute({
+            path: ['track-comments'],
+            onNav: ({ remaining }) => {
+                var id = parseInt(remaining[0]);
+                UI_1.ui.sidebarList.setActive(null);
+                var comments = new CommentsView();
+                comments.endpoint = "tracks/" + id + "/comments";
+                UI_1.ui.content.setCurrent(comments.view);
+            }
         });
     }
 };
@@ -286,6 +302,7 @@ class CommentViewItem extends viewlib_1.ListViewItem {
             tag: 'div.item.comment.no-transform',
             child: [
                 { tag: 'div.username', _key: 'domusername' },
+                { tag: 'div.date', _key: 'domdate' },
                 { tag: 'div.content', _key: 'domcontent' }
             ]
         };
@@ -293,6 +310,10 @@ class CommentViewItem extends viewlib_1.ListViewItem {
     updateDom() {
         this.domusername.textContent = this.comment.username;
         this.domcontent.textContent = this.comment.content;
+        var date = new Date(this.comment.date);
+        var now = new Date();
+        var sameday = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+        this.domdate.textContent = sameday ? date.toLocaleTimeString() : date.toLocaleString();
     }
 }
 class CommentEditor extends viewlib_1.View {
@@ -320,7 +341,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":8,"./User":10,"./utils":13,"./viewlib":14}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -492,7 +513,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Track ID", "歌曲 ID"],
     ["Name", "名称"],
     ["Artist", "艺术家"],
-    ["Discussion", "讨论区"],
+    ["Discussion", "灌水区"],
     ["Notes", "便签"],
     ["Submit", "提交"],
     ["Submitting", "提交中"],
@@ -2187,6 +2208,7 @@ var app = window['app'] = {
         Uploads_1.uploads.init();
         Discussion_1.discussion.init();
         Discussion_1.notes.init();
+        Discussion_1.comments.init();
         exports.listIndex.init();
         Router_1.router.init();
     }
@@ -2213,6 +2235,7 @@ const User_1 = require("./User");
 const Api_1 = require("./Api");
 const main_1 = require("./main");
 const PlayerCore_1 = require("./PlayerCore");
+const Router_1 = require("./Router");
 /** A track binding with list */
 class Track {
     constructor(init) {
@@ -2547,7 +2570,11 @@ class TrackViewItem extends viewlib_1.ListViewItem {
         this.onContextMenu = (item, ev) => {
             ev.preventDefault();
             var m = new viewlib_1.ContextMenu();
-            m.add(new viewlib_1.MenuItem({ text: utils_1.I `Comments` }));
+            m.add(new viewlib_1.MenuItem({
+                text: utils_1.I `Comments`, onclick: () => {
+                    Router_1.router.nav(['track-comments', item.track.id.toString()]);
+                }
+            }));
             if (this.track.url)
                 m.add(new viewlib_1.MenuLinkItem({
                     text: utils_1.I `Download`,
@@ -2643,7 +2670,7 @@ class ContentHeader extends viewlib_1.View {
 }
 exports.ContentHeader = ContentHeader;
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./User":10,"./main":11,"./utils":13,"./viewlib":14}],13:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./Router":7,"./User":10,"./main":11,"./utils":13,"./viewlib":14}],13:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {

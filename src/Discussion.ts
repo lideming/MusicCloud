@@ -10,71 +10,10 @@ import { ListContentView } from "./ListContentView";
 import { Api } from "./apidef";
 import { router } from "./Router";
 
-
-export var discussion = new class {
-    init() {
-        this.sidebarItem = new SidebarItem({ text: I`Discussion` });
-        router.addRoute({
-            path: ['discussion'],
-            sidebarItem: () => this.sidebarItem,
-            contentView: () => this.view.value
-        });
-        ui.sidebarList.addFeatureItem(this.sidebarItem);
-    }
-    sidebarItem: SidebarItem;
-    view = new Lazy(() => new class extends ListContentView {
-        protected createHeader() {
-            return new ContentHeader({
-                title: I`Discussion`
-            });
-        }
-        protected appendListView() {
-            super.appendListView();
-            this.useLoadingIndicator(new LoadingIndicator({
-                state: 'normal',
-                content: '(This feature is a work in progress)'
-            }));
-        }
-    });
-};
-
-export var notes = new class {
-    init() {
-        this.sidebarItem = new SidebarItem({ text: I`Notes` }).bindContentView(() => this.view);
-        router.addRoute({
-            path: ['notes'],
-            sidebarItem: () => this.sidebarItem,
-            contentView: () => this.lazyView.value
-        });
-        ui.sidebarList.addFeatureItem(this.sidebarItem);
-        user.onSwitchedUser.add(() => {
-            if (this.state && notes.state !== 'waiting') this.fetch();
-        });
-    }
-    sidebarItem: SidebarItem;
-    lazyView = new Lazy(() => new class extends ListContentView {
-        editorNew: CommentEditor;
-        protected createHeader() {
-            return new ContentHeader({
-                title: I`Notes`
-            });
-        }
-        protected appendHeader() {
-            super.appendHeader();
-            this.dom.appendView(this.editorNew = new CommentEditor());
-            this.editorNew.dom.classList.add('comment-editor-new');
-            this.editorNew.onsubmit = (editor) => {
-                var content = editor.content;
-                editor.content = '';
-                if (content == '') return;
-                notes.post(content);
-            };
-        }
-        protected appendListView() {
-            super.appendListView();
-            if (!notes.state) notes.fetch();
-        }
-    });
+class CommentsView {
+    endpoint: string;
+    title: string;
+    lazyView = new Lazy(() => this.createContentView());
     get view() { return this.lazyView.value; }
     state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
     async fetch() {
@@ -84,7 +23,7 @@ export var notes = new class {
         try {
             await user.waitLogin(true);
             this.state = 'fetching';
-            var resp = await api.getJson('my/notes?reverse=1') as Api.CommentList;
+            var resp = await api.getJson(this.endpoint + '?reverse=1') as Api.CommentList;
             this.view.useLoadingIndicator(null);
         } catch (error) {
             this.state = 'error';
@@ -98,10 +37,10 @@ export var notes = new class {
     }
     private addItem(c: Api.Comment): void {
         const comm = new CommentViewItem(c);
-        comm.onremove = () => {
+        if (c.uid === user.info.id) comm.onremove = () => {
             this.ioAction(() => api.postJson({
                 method: 'DELETE',
-                path: 'my/notes/' + comm.comment.id,
+                path: this.endpoint + '/' + comm.comment.id,
                 obj: undefined
             }));
         };
@@ -118,11 +57,88 @@ export var notes = new class {
     async post(content: string) {
         await this.ioAction(() => api.postJson({
             method: 'POST',
-            path: 'my/notes/new',
+            path: this.endpoint + '/new',
             obj: {
                 content: content
             }
         }));
+    }
+    createContentView() {
+        var view = new CommentsContentView(this);
+        view.title = this.title ?? I`Comments`;
+        return view;
+    }
+}
+
+class CommentsContentView extends ListContentView {
+    comments: CommentsView;
+    editorNew: CommentEditor;
+    constructor(comments: CommentsView) {
+        super();
+        this.comments = comments;
+    }
+    protected appendHeader() {
+        super.appendHeader();
+        this.dom.appendView(this.editorNew = new CommentEditor());
+        this.editorNew.dom.classList.add('comment-editor-new');
+        this.editorNew.onsubmit = (editor) => {
+            var content = editor.content;
+            editor.content = '';
+            if (content == '') return;
+            this.comments.post(content);
+        };
+    }
+    protected appendListView() {
+        super.appendListView();
+        if (!this.comments.state) this.comments.fetch();
+    }
+}
+
+export var discussion = new class extends CommentsView {
+    endpoint = 'discussion';
+    init() {
+        this.title = I`Discussion`;
+        this.sidebarItem = new SidebarItem({ text: I`Discussion` });
+        router.addRoute({
+            path: ['discussion'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.lazyView.value
+        });
+        ui.sidebarList.addFeatureItem(this.sidebarItem);
+    }
+    sidebarItem: SidebarItem;
+};
+
+export var notes = new class extends CommentsView {
+    endpoint = 'my/notes';
+    init() {
+        this.title = I`Notes`;
+        this.sidebarItem = new SidebarItem({ text: I`Notes` }).bindContentView(() => this.view);
+        router.addRoute({
+            path: ['notes'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.lazyView.value
+        });
+        ui.sidebarList.addFeatureItem(this.sidebarItem);
+        user.onSwitchedUser.add(() => {
+            if (this.state && notes.state !== 'waiting') this.fetch();
+        });
+    }
+    sidebarItem: SidebarItem;
+};
+
+export var comments = new class {
+    init() {
+        router.addRoute({
+            path: ['track-comments'],
+            onNav: ({ remaining }) => {
+                var id = parseInt(remaining[0]);
+                ui.sidebarList.setActive(null);
+                var comments = new CommentsView();
+                comments.endpoint = "tracks/" + id + "/comments";
+                ui.content.setCurrent(comments.view);
+            }
+        });
     }
 };
 
@@ -132,6 +148,7 @@ class CommentViewItem extends ListViewItem {
         this.comment = comment;
     }
     domusername: HTMLDivElement;
+    domdate: HTMLDivElement;
     domcontent: HTMLDivElement;
     comment: Api.Comment;
     onremove: Action<CommentViewItem>;
@@ -142,6 +159,7 @@ class CommentViewItem extends ListViewItem {
             tag: 'div.item.comment.no-transform',
             child: [
                 { tag: 'div.username', _key: 'domusername' },
+                { tag: 'div.date', _key: 'domdate' },
                 { tag: 'div.content', _key: 'domcontent' }
             ]
         };
@@ -149,6 +167,10 @@ class CommentViewItem extends ListViewItem {
     updateDom() {
         this.domusername.textContent = this.comment.username;
         this.domcontent.textContent = this.comment.content;
+        var date = new Date(this.comment.date);
+        var now = new Date();
+        var sameday = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+        this.domdate.textContent = sameday ? date.toLocaleTimeString() : date.toLocaleString();
     }
     onContextMenu = (item, ev) => {
         ev.preventDefault();

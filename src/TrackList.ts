@@ -9,6 +9,7 @@ import { api } from "./Api";
 import { listIndex } from "./main";
 import { ContentView } from "./UI";
 import { playerCore, PlayingLoopMode } from "./PlayerCore";
+import { router } from "./Router";
 
 
 /** A track binding with list */
@@ -367,7 +368,11 @@ export class TrackViewItem extends ListViewItem {
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
         ev.preventDefault();
         var m = new ContextMenu();
-        m.add(new MenuItem({ text: I`Comments` }));
+        m.add(new MenuItem({
+            text: I`Comments`, onclick: () => {
+                router.nav(['track-comments', item.track.id.toString()]);
+            }
+        }));
         if (this.track.url) m.add(new MenuLinkItem({
             text: I`Download`,
             link: api.processUrl(this.track.url),

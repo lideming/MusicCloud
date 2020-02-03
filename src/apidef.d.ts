@@ -94,7 +94,7 @@ export namespace Api {
         id: number;
         uid: number;
         username: string;
-        date: number;
+        date: string;
         content: string;
     }
 

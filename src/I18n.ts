@@ -173,7 +173,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Track ID", "歌曲 ID"],
     ["Name", "名称"],
     ["Artist", "艺术家"],
-    ["Discussion", "讨论区"],
+    ["Discussion", "灌水区"],
     ["Notes", "便签"],
     ["Submit", "提交"],
     ["Submitting", "提交中"],

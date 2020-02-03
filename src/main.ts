@@ -18,7 +18,7 @@ import { api } from "./Api";
 import { user } from "./User";
 import { ListIndex } from "./ListIndex";
 import { uploads } from "./Uploads";
-import { discussion, notes } from "./Discussion";
+import { discussion, notes, comments } from "./Discussion";
 import { router } from "./Router";
 
 ui.init();
@@ -34,6 +34,7 @@ var app = window['app'] = {
         uploads.init();
         discussion.init();
         notes.init();
+        comments.init();
         listIndex.init();
         router.init();
     }

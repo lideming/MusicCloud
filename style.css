@@ -665,6 +665,11 @@ html, body {
     color: #777777;
 }
 
+.comment .date {
+    float: right;
+    color: #777777;
+}
+
 .comment .content {
     white-space: pre-wrap;
 }
