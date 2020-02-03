@@ -462,6 +462,8 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Close", "关闭"],
     ["Username", "用户名"],
     ["Password", "密码"],
+    ["Change password", "更改密码"],
+    ["New password", "新密码"],
     ["Confirm password", "确认密码"],
     ["Requesting...", "请求中……"],
     [" (error!)", "（错误！）"],
@@ -469,6 +471,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Logged in with previous working account.", "已登录为之前的用户。"],
     ["Please input the username!", "请输入用户名！"],
     ["Please input the password!", "请输入密码！"],
+    ["Please input the new password!", "请输入新密码！"],
     ["Password confirmation does not match!", "确认密码不相同！"],
     ["Playlist", "播放列表"],
     ["Playlists", "播放列表"],
@@ -505,6 +508,9 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Login to create playlists.", "登录以创建播放列表。"],
     ["Failed to login.", "登录失败。"],
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
+    ["Changing password...", "正在更改密码..."],
+    ["Failed to change password.", "更改密码失败。"],
+    ["Password changed successfully.", "已成功更改密码。"],
     ["Server: ", "服务器："],
     ["Volume", "音量"],
     ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
@@ -1981,6 +1987,32 @@ exports.user = new class User {
             });
         });
     }
+    changePassword(newPasswd) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var toast = viewlib_1.Toast.show(utils_1.I `Changing password...`);
+            try {
+                yield Api_1.api.postJson({
+                    method: 'PUT',
+                    path: 'users/me',
+                    obj: {
+                        id: this.info.id,
+                        username: this.info.username,
+                        passwd: newPasswd
+                    }
+                });
+                this.info.passwd = newPasswd;
+                Api_1.api.defaultBasicAuth = this.getBasicAuth(this.info);
+                this.siLogin.save();
+            }
+            catch (error) {
+                toast.updateWith({ text: utils_1.I `Failed to change password.` + '\n' + error });
+                toast.show(3000);
+                return;
+            }
+            toast.updateWith({ text: utils_1.I `Password changed successfully.` });
+            toast.show(3000);
+        });
+    }
 };
 class LoginDialog extends viewlib_1.Dialog {
     constructor() {
@@ -2071,13 +2103,19 @@ class LoginDialog extends viewlib_1.Dialog {
 class MeDialog extends viewlib_1.Dialog {
     constructor() {
         super();
+        this.btnChangePassword = new viewlib_1.ButtonView({ text: utils_1.I `Change password`, type: 'big' });
         this.btnSwitch = new viewlib_1.ButtonView({ text: utils_1.I `Switch user`, type: 'big' });
         this.btnLogout = new viewlib_1.ButtonView({ text: utils_1.I `Logout`, type: 'big' });
         var username = exports.user.info.username;
         this.title = utils_1.I `User ${username}`;
         this.addContent(new viewlib_1.View({ tag: 'div', textContent: utils_1.I `You've logged in as "${username}".` }));
+        this.addContent(this.btnChangePassword);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);
+        this.btnChangePassword.onclick = () => {
+            new ChangePasswordDialog().show();
+            this.close();
+        };
         this.btnSwitch.onclick = () => {
             exports.user.openUI(true);
             this.close();
@@ -2085,6 +2123,30 @@ class MeDialog extends viewlib_1.Dialog {
         this.btnLogout.onclick = () => {
             exports.user.logout();
             this.close();
+        };
+    }
+}
+class ChangePasswordDialog extends viewlib_1.Dialog {
+    constructor() {
+        super();
+        this.inputPasswd = new viewlib_1.LabeledInput({ label: utils_1.I `New password`, type: 'password' });
+        this.inputPasswd2 = new viewlib_1.LabeledInput({ label: utils_1.I `Confirm password`, type: 'password' });
+        this.status = new viewlib_1.TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
+        this.btnChangePassword = new viewlib_1.ButtonView({ text: utils_1.I `Change password`, type: 'big' });
+        this.title = utils_1.I `Change password`;
+        [this.inputPasswd, this.inputPasswd2, this.status, this.btnChangePassword]
+            .forEach(x => this.addContent(x));
+        this.btnChangePassword.onclick = () => {
+            if (!this.inputPasswd.value) {
+                this.status.text = (utils_1.I `Please input the new password!`);
+            }
+            else if (this.inputPasswd.value !== this.inputPasswd2.value) {
+                this.status.text = (utils_1.I `Password confirmation does not match!`);
+            }
+            else {
+                exports.user.changePassword(this.inputPasswd.value);
+                this.close();
+            }
         };
     }
 }

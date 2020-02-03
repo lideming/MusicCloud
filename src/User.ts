@@ -202,6 +202,30 @@ export var user = new class User {
             obj: trackLocation
         });
     }
+
+    async changePassword(newPasswd: string) {
+        var toast = Toast.show(I`Changing password...`);
+        try {
+            await api.postJson({
+                method: 'PUT',
+                path: 'users/me',
+                obj: {
+                    id: this.info.id,
+                    username: this.info.username,
+                    passwd: newPasswd
+                }
+            });
+            this.info.passwd = newPasswd;
+            api.defaultBasicAuth = this.getBasicAuth(this.info);
+            this.siLogin.save();
+        } catch (error) {
+            toast.updateWith({ text: I`Failed to change password.` + '\n' + error });
+            toast.show(3000);
+            return;
+        }
+        toast.updateWith({ text: I`Password changed successfully.` });
+        toast.show(3000);
+    }
 };
 
 class LoginDialog extends Dialog {
@@ -288,6 +312,7 @@ class LoginDialog extends Dialog {
 }
 
 class MeDialog extends Dialog {
+    btnChangePassword = new ButtonView({ text: I`Change password`, type: 'big' });
     btnSwitch = new ButtonView({ text: I`Switch user`, type: 'big' });
     btnLogout = new ButtonView({ text: I`Logout`, type: 'big' });
     constructor() {
@@ -295,8 +320,13 @@ class MeDialog extends Dialog {
         var username = user.info.username;
         this.title = I`User ${username}`;
         this.addContent(new View({ tag: 'div', textContent: I`You've logged in as "${username}".` }));
+        this.addContent(this.btnChangePassword);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);
+        this.btnChangePassword.onclick = () => {
+            new ChangePasswordDialog().show();
+            this.close();
+        };
         this.btnSwitch.onclick = () => {
             user.openUI(true);
             this.close();
@@ -304,6 +334,29 @@ class MeDialog extends Dialog {
         this.btnLogout.onclick = () => {
             user.logout();
             this.close();
+        };
+    }
+}
+
+class ChangePasswordDialog extends Dialog {
+    inputPasswd = new LabeledInput({ label: I`New password`, type: 'password' });
+    inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
+    status = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
+    btnChangePassword = new ButtonView({ text: I`Change password`, type: 'big' });
+    constructor() {
+        super();
+        this.title = I`Change password`;
+        [this.inputPasswd, this.inputPasswd2, this.status, this.btnChangePassword]
+            .forEach(x => this.addContent(x));
+        this.btnChangePassword.onclick = () => {
+            if (!this.inputPasswd.value) {
+                this.status.text = (I`Please input the new password!`);
+            } else if (this.inputPasswd.value !== this.inputPasswd2.value) {
+                this.status.text = (I`Password confirmation does not match!`);
+            } else {
+                user.changePassword(this.inputPasswd.value);
+                this.close();
+            }
         };
     }
 }
