@@ -295,6 +295,7 @@ class LoginDialog extends Dialog {
                     await user.login(info);
                 }
                 this.viewStatus.text = '';
+                [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => x.value = '');
                 user.closeUI();
             } catch (e) {
                 this.viewStatus.text = e;

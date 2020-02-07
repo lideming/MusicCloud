@@ -2107,6 +2107,7 @@ class LoginDialog extends viewlib_1.Dialog {
                     yield exports.user.login(info);
                 }
                 this.viewStatus.text = '';
+                [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => x.value = '');
                 exports.user.closeUI();
             }
             catch (e) {
