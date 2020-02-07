@@ -470,6 +470,10 @@ html, body {
     z-index: 10000;
 }
 
+.overlay.nobg {
+    background: none;
+}
+
 .overlay.centerchild {
     display: flex;
     align-items: center;

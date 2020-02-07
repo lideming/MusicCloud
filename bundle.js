@@ -788,7 +788,15 @@ class ListIndex {
         }
     }
     addListInfo(listinfo) {
-        this.listView.add(new ListIndexViewItem({ index: this, listInfo: listinfo }));
+        var _a, _b, _c, _d;
+        var item = new ListIndexViewItem({
+            index: this, listInfo: listinfo,
+            playing: listinfo.id === ((_c = (_b = (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.id)
+        });
+        this.listView.add(item);
+        var curContent = UI_1.ui.content.current;
+        if (curContent instanceof tracklist_1.TrackListView && ((_d = curContent.list) === null || _d === void 0 ? void 0 : _d.id) === listinfo.id)
+            UI_1.ui.sidebarList.setActive(item);
     }
     getListInfo(id) {
         var _a;
@@ -1430,7 +1438,7 @@ exports.ui = new class {
         this.trackinfo.init();
         this.playerControl.init();
         this.sidebarLogin.init();
-        viewlib_1.Dialog.defaultParent = this.mainContainer.dom;
+        viewlib_1.Dialog.defaultParent = new viewlib_1.DialogParent(this.mainContainer.dom);
         viewlib_1.ToastsContainer.default.parentDom = this.mainContainer.dom;
         Router_1.router.addRoute({
             path: ['home'],
@@ -3485,6 +3493,10 @@ class Overlay extends View {
         this.toggleClass('centerchild', centerChild);
         return this;
     }
+    setNoBg(nobg) {
+        this.toggleClass('nobg', nobg);
+        return this;
+    }
 }
 exports.Overlay = Overlay;
 class EditableHelper {
@@ -3683,7 +3695,7 @@ class Dialog extends View {
         super.postCreateDom();
         this.addBtn(this.btnTitle);
         this.addBtn(this.btnClose);
-        this.overlay = new Overlay().setCenterChild(true);
+        this.overlay = new Overlay().setCenterChild(true).setNoBg(true);
         this.overlay.dom.appendView(this);
         this.overlay.dom.addEventListener('mousedown', (ev) => {
             if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom) {
@@ -3715,15 +3727,15 @@ class Dialog extends View {
         this.domcontent.appendChild(View.getDOM(view));
     }
     show() {
-        var _a, _b, _c, _d;
+        var _a, _b, _c;
         if (this.shown)
             return;
         this.shown = true;
         (_b = (_a = this)._cancelFadeout) === null || _b === void 0 ? void 0 : _b.call(_a);
         this.ensureDom();
-        (_c = Dialog.defaultParent, (_c !== null && _c !== void 0 ? _c : document.body)).appendView(this.overlay);
+        Dialog.defaultParent.onDialogShowing(this);
         this.dom.focus();
-        (_d = this.autoFocus) === null || _d === void 0 ? void 0 : _d.dom.focus();
+        (_c = this.autoFocus) === null || _c === void 0 ? void 0 : _c.dom.focus();
         this.onShown.invoke();
     }
     close() {
@@ -3732,9 +3744,31 @@ class Dialog extends View {
         this.shown = false;
         this.onClose.invoke();
         this._cancelFadeout = utils_1.utils.fadeout(this.overlay.dom).cancel;
+        Dialog.defaultParent.onDialogClosing(this);
     }
 }
 exports.Dialog = Dialog;
+class DialogParent extends View {
+    constructor(dom) {
+        super((dom !== null && dom !== void 0 ? dom : document.body));
+        this.bgOverlay = new Overlay();
+        this.dialogCount = 0;
+    }
+    onDialogShowing(dialog) {
+        var _a, _b;
+        if (this.dialogCount++ === 0) {
+            (_b = (_a = this)._cancelFadeout) === null || _b === void 0 ? void 0 : _b.call(_a);
+            this.appendView(this.bgOverlay);
+        }
+        this.appendView(dialog.overlay);
+    }
+    onDialogClosing(dialog) {
+        if (--this.dialogCount === 0) {
+            this._cancelFadeout = utils_1.utils.fadeout(this.bgOverlay.dom).cancel;
+        }
+    }
+}
+exports.DialogParent = DialogParent;
 class TabBtn extends View {
     constructor(init) {
         super();

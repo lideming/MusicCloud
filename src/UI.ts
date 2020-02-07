@@ -1,6 +1,6 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent } from "./viewlib";
 
 export class SidebarItem extends ListViewItem {
     text: string;
@@ -44,7 +44,7 @@ export const ui = new class {
         this.trackinfo.init();
         this.playerControl.init();
         this.sidebarLogin.init();
-        Dialog.defaultParent = this.mainContainer.dom;
+        Dialog.defaultParent = new DialogParent(this.mainContainer.dom);
         ToastsContainer.default.parentDom = this.mainContainer.dom;
         router.addRoute({
             path: ['home'],

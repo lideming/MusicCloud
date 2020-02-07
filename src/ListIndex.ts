@@ -2,7 +2,7 @@
 
 import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast } from "./viewlib";
 import { I, utils, BuildDomExpr } from "./utils";
-import { TrackList, TrackViewItem } from "./tracklist";
+import { TrackList, TrackViewItem, TrackListView } from "./tracklist";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";
@@ -106,7 +106,14 @@ export class ListIndex {
         }
     }
     addListInfo(listinfo: Api.TrackListInfo) {
-        this.listView.add(new ListIndexViewItem({ index: this, listInfo: listinfo }));
+        var item = new ListIndexViewItem({
+            index: this, listInfo: listinfo,
+            playing: listinfo.id === playerCore.track?._bind?.list?.id
+        });
+        this.listView.add(item);
+        var curContent = ui.content.current;
+        if (curContent instanceof TrackListView && curContent.list?.id === listinfo.id)
+            ui.sidebarList.setActive(item);
     }
     getListInfo(id: number) {
         return this.getViewItem(id)?.listInfo;
@@ -157,7 +164,7 @@ export class ListIndex {
      */
     async newTracklist() {
         if (!await user.waitLogin(false)) {
-            this._toastLogin = this._toastLogin || new Toast({text: I`Login to create playlists.`});
+            this._toastLogin = this._toastLogin || new Toast({ text: I`Login to create playlists.` });
             this._toastLogin.show(3000);
             return;
         }

@@ -379,6 +379,10 @@ export class Overlay extends View {
         this.toggleClass('centerchild', centerChild);
         return this;
     }
+    setNoBg(nobg: boolean) {
+        this.toggleClass('nobg', nobg);
+        return this;
+    }
 }
 
 export class EditableHelper {
@@ -554,7 +558,7 @@ export class Dialog extends View {
     onClose = new Callbacks<Action>();
     autoFocus: View;
 
-    static defaultParent: HTMLElement;
+    static defaultParent: DialogParent;
 
     constructor() {
         super();
@@ -581,7 +585,7 @@ export class Dialog extends View {
         super.postCreateDom();
         this.addBtn(this.btnTitle);
         this.addBtn(this.btnClose);
-        this.overlay = new Overlay().setCenterChild(true);
+        this.overlay = new Overlay().setCenterChild(true).setNoBg(true);
         this.overlay.dom.appendView(this);
         this.overlay.dom.addEventListener('mousedown', (ev) => {
             if (this.allowClose && ev.button === 0 && ev.target === this.overlay.dom) {
@@ -616,7 +620,7 @@ export class Dialog extends View {
         this.shown = true;
         this._cancelFadeout?.();
         this.ensureDom();
-        (Dialog.defaultParent ?? document.body).appendView(this.overlay);
+        Dialog.defaultParent.onDialogShowing(this);
         this.dom.focus();
         this.autoFocus?.dom.focus();
         this.onShown.invoke();
@@ -627,6 +631,29 @@ export class Dialog extends View {
         this.shown = false;
         this.onClose.invoke();
         this._cancelFadeout = utils.fadeout(this.overlay.dom).cancel;
+        Dialog.defaultParent.onDialogClosing(this);
+    }
+}
+
+export class DialogParent extends View {
+    bgOverlay = new Overlay();
+    dialogCount = 0;
+    _cancelFadeout: Action;
+
+    constructor(dom?: BuildDomExpr) {
+        super(dom ?? document.body);
+    }
+    onDialogShowing(dialog: Dialog) {
+        if (this.dialogCount++ === 0) {
+            this._cancelFadeout?.();
+            this.appendView(this.bgOverlay);
+        }
+        this.appendView(dialog.overlay);
+    }
+    onDialogClosing(dialog: Dialog) {
+        if (--this.dialogCount === 0) {
+            this._cancelFadeout = utils.fadeout(this.bgOverlay.dom).cancel;
+        }
     }
 }
 
