@@ -189,6 +189,8 @@ i18n.add2dArray(JSON.parse(`[
     ["Login to create playlists.", "登录以创建播放列表。"],
     ["Failed to login.", "登录失败。"],
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
+    ["Failed to remove track.", "移除歌曲失败。"],
+    ["Removing of a uploading track is currently not supported.", "目前不支持移除上传中的歌曲。"],
     ["Changing password...", "正在更改密码..."],
     ["Failed to change password.", "更改密码失败。"],
     ["Password changed successfully.", "已成功更改密码。"],

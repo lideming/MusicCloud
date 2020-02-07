@@ -20,7 +20,7 @@ class UploadTrack extends Track {
     }
     _upload: {
         view?: UploadViewItem;
-        state: 'pending' | 'uploading' | 'error' | 'done';
+        state: 'pending' | 'uploading' | 'error' | 'done' | 'cancelled';
         // With prefix "uploads_", these are i18n keys 
     };
 }
@@ -60,6 +60,14 @@ export var uploads = new class extends TrackList {
                 }
             });
         });
+        api.onTrackDeleted.add((deleted) => {
+            var pos = this.tracks.findIndex(x => x.id === deleted.id);
+            if (pos === -1) return;
+            this.tracks.splice(pos, 1);
+            if (this.view.rendered) {
+                this.view.listView.remove(pos);
+            }
+        });
     }
     sidebarItem: ListIndexViewItem;
     view = new class extends TrackListView {
@@ -82,7 +90,35 @@ export var uploads = new class extends TrackList {
             if (!uploads.state) uploads.fetch();
         }
         createViewItem(t: Track) {
-            return new UploadViewItem(t as UploadTrack);
+            const item = new UploadViewItem(t as UploadTrack);
+            item.onRemove = async () => {
+                const track = item.track;
+                if (track._upload.state === 'uploading') {
+                    Toast.show(I`Removing of a uploading track is currently not supported.`);
+                    return;
+                }
+                if (track._upload.state === 'pending') {
+                    track._upload.state = 'cancelled';
+                } else if (track._upload.state === 'error') {
+                    // no-op
+                } else if (track._upload.state === 'done') {
+                    try {
+                        await api.postJson({
+                            method: 'DELETE',
+                            path: 'tracks/' + track.id,
+                            obj: null
+                        });
+                    } catch (error) {
+                        Toast.show(I`Failed to remove track.` + '\n' + error);
+                        return;
+                    }
+                } else {
+                    console.error('Unexpected track._upload.state', track._upload.state);
+                    return;
+                }
+                api.onTrackDeleted.invoke(track);
+            };
+            return item;
         }
     }(this);
     private prependTrack(t: UploadTrack) {

@@ -235,7 +235,11 @@ export class TrackList {
         });
         this.put();
     }
-    remove(track: Track) {
+    updateTrackInfo(track: Track, newInfo: Api.Track) {
+        track.updateFromApiTrack(newInfo);
+        this.listView.get(track._bind.position).updateDom();
+    }
+    remove(track: Track, put?: boolean) {
         var pos = track._bind.position;
         track._bind = null;
         this.tracks.splice(pos, 1);
@@ -246,7 +250,7 @@ export class TrackList {
             this.tracks.forEach((t, i) => t._bind.position = i);
         }
         this.contentView?.updateView();
-        this.put();
+        if (put === undefined || put) this.put();
     }
 }
 

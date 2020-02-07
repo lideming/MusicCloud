@@ -71,8 +71,19 @@ export class ListIndex {
                     const list = this.loadedList[id];
                     list.tracks.forEach(t => {
                         if (t.id === newer.id) {
-                            t.updateFromApiTrack(newer);
-                            list.listView.get(t._bind.position).updateDom();
+                            list.updateTrackInfo(t, newer);
+                        }
+                    });
+                }
+            }
+        });
+        api.onTrackDeleted.add((deleted) => {
+            for (const id in this.loadedList) {
+                if (this.loadedList.hasOwnProperty(id)) {
+                    const list = this.loadedList[id];
+                    list.tracks.forEach(t => {
+                        if (t.id === deleted.id) {
+                            list.remove(t, false);
                         }
                     });
                 }

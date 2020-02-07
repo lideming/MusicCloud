@@ -18,6 +18,7 @@ exports.api = new class {
     constructor() {
         this.debugSleep = main_1.settings.debug ? main_1.settings.apiDebugDelay : 0;
         this.onTrackInfoChanged = new utils_1.Callbacks();
+        this.onTrackDeleted = new utils_1.Callbacks();
     }
     get baseUrl() { return main_1.settings.apiBaseUrl; }
     _fetch(input, init) {
@@ -529,6 +530,8 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Login to create playlists.", "登录以创建播放列表。"],
     ["Failed to login.", "登录失败。"],
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
+    ["Failed to remove track.", "移除歌曲失败。"],
+    ["Removing of a uploading track is currently not supported.", "目前不支持移除上传中的歌曲。"],
     ["Changing password...", "正在更改密码..."],
     ["Failed to change password.", "更改密码失败。"],
     ["Password changed successfully.", "已成功更改密码。"],
@@ -752,8 +755,19 @@ class ListIndex {
                     const list = this.loadedList[id];
                     list.tracks.forEach(t => {
                         if (t.id === newer.id) {
-                            t.updateFromApiTrack(newer);
-                            list.listView.get(t._bind.position).updateDom();
+                            list.updateTrackInfo(t, newer);
+                        }
+                    });
+                }
+            }
+        });
+        Api_1.api.onTrackDeleted.add((deleted) => {
+            for (const id in this.loadedList) {
+                if (this.loadedList.hasOwnProperty(id)) {
+                    const list = this.loadedList[id];
+                    list.tracks.forEach(t => {
+                        if (t.id === deleted.id) {
+                            list.remove(t, false);
                         }
                     });
                 }
@@ -1572,7 +1586,39 @@ exports.uploads = new class extends tracklist_1.TrackList {
                     exports.uploads.fetch();
             }
             createViewItem(t) {
-                return new UploadViewItem(t);
+                const item = new UploadViewItem(t);
+                item.onRemove = () => __awaiter(this, void 0, void 0, function* () {
+                    const track = item.track;
+                    if (track._upload.state === 'uploading') {
+                        viewlib_1.Toast.show(I18n_1.I `Removing of a uploading track is currently not supported.`);
+                        return;
+                    }
+                    if (track._upload.state === 'pending') {
+                        track._upload.state = 'cancelled';
+                    }
+                    else if (track._upload.state === 'error') {
+                        // no-op
+                    }
+                    else if (track._upload.state === 'done') {
+                        try {
+                            yield Api_1.api.postJson({
+                                method: 'DELETE',
+                                path: 'tracks/' + track.id,
+                                obj: null
+                            });
+                        }
+                        catch (error) {
+                            viewlib_1.Toast.show(I18n_1.I `Failed to remove track.` + '\n' + error);
+                            return;
+                        }
+                    }
+                    else {
+                        console.error('Unexpected track._upload.state', track._upload.state);
+                        return;
+                    }
+                    Api_1.api.onTrackDeleted.invoke(track);
+                });
+                return item;
             }
         }(this);
     }
@@ -1606,6 +1652,15 @@ exports.uploads = new class extends tracklist_1.TrackList {
                     (_a = t._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
                 }
             });
+        });
+        Api_1.api.onTrackDeleted.add((deleted) => {
+            var pos = this.tracks.findIndex(x => x.id === deleted.id);
+            if (pos === -1)
+                return;
+            this.tracks.splice(pos, 1);
+            if (this.view.rendered) {
+                this.view.listView.remove(pos);
+            }
         });
     }
     prependTrack(t) {
@@ -2478,7 +2533,11 @@ class TrackList {
         });
         this.put();
     }
-    remove(track) {
+    updateTrackInfo(track, newInfo) {
+        track.updateFromApiTrack(newInfo);
+        this.listView.get(track._bind.position).updateDom();
+    }
+    remove(track, put) {
         var _a;
         var pos = track._bind.position;
         track._bind = null;
@@ -2491,7 +2550,8 @@ class TrackList {
             this.tracks.forEach((t, i) => t._bind.position = i);
         }
         (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
-        this.put();
+        if (put === undefined || put)
+            this.put();
     }
 }
 exports.TrackList = TrackList;
