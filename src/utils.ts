@@ -28,6 +28,17 @@ export var utils = new class Utils {
         return this.strPadLeft(min.toString(), 2, '0') + ':' + this.strPadLeft(sec.toString(), 2, '0');
     }
 
+    fileSizeUnits = ['B', 'KB', 'MB', 'GB'];
+    formatFileSize(size: number) {
+        if (typeof size !== "number" || isNaN(size)) return 'NaN';
+        var unit = 0;
+        while (unit < this.fileSizeUnits.length - 1 && size >= 1024) {
+            unit++;
+            size /= 1024;
+        }
+        return size.toFixed(2) + ' ' + this.fileSizeUnits[unit];
+    }
+
     numLimit(num: number, min: number, max: number) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
             (num > max) ? max : num;

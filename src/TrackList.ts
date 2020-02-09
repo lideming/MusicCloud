@@ -18,6 +18,7 @@ export class Track implements Api.Track {
     name: string;
     artist: string;
     url: string;
+    size: number;
     _bind?: {
         position?: number;
         list?: TrackList;
@@ -29,11 +30,11 @@ export class Track implements Api.Track {
         return `${I`Track ID`}: ${this.id}\r\n${I`Name`}: ${this.name}\r\n${I`Artist`}: ${this.artist}`;
     }
     toApiTrack(): Api.Track {
-        return utils.objectApply<Api.Track>({} as any, this, ['id', 'artist', 'name', 'url']) as any;
+        return utils.objectApply<Api.Track>({} as any, this, ['id', 'artist', 'name', 'url', 'size']) as any;
     }
     updateFromApiTrack(t: Api.Track) {
         if (this.id !== t.id) throw new Error('Bad track id');
-        utils.objectApply(this, t, ['id', 'name', 'artist', 'url']);
+        utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
     }
     startEdit() {
         var dialog = new class extends Dialog {
@@ -378,7 +379,7 @@ export class TrackViewItem extends ListViewItem {
             }
         }));
         if (this.track.url) m.add(new MenuLinkItem({
-            text: I`Download`,
+            text: I`Download` + ' (' + utils.formatFileSize(this.track.size) + ')',
             link: api.processUrl(this.track.url),
             download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
         }));

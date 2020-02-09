@@ -2309,12 +2309,12 @@ class Track {
         return `${utils_1.I `Track ID`}: ${this.id}\r\n${utils_1.I `Name`}: ${this.name}\r\n${utils_1.I `Artist`}: ${this.artist}`;
     }
     toApiTrack() {
-        return utils_1.utils.objectApply({}, this, ['id', 'artist', 'name', 'url']);
+        return utils_1.utils.objectApply({}, this, ['id', 'artist', 'name', 'url', 'size']);
     }
     updateFromApiTrack(t) {
         if (this.id !== t.id)
             throw new Error('Bad track id');
-        utils_1.utils.objectApply(this, t, ['id', 'name', 'artist', 'url']);
+        utils_1.utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
     }
     startEdit() {
         var dialog = new class extends viewlib_1.Dialog {
@@ -2646,7 +2646,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
             }));
             if (this.track.url)
                 m.add(new viewlib_1.MenuLinkItem({
-                    text: utils_1.I `Download`,
+                    text: utils_1.I `Download` + ' (' + utils_1.utils.formatFileSize(this.track.size) + ')',
                     link: Api_1.api.processUrl(this.track.url),
                     download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
                 }));
@@ -2759,7 +2759,10 @@ const _object_assign = Object.assign;
 const _object_hasOwnProperty = Object.prototype.hasOwnProperty;
 /** The name "utils" tells it all. */
 exports.utils = new class Utils {
-    // Time & formatting utils:
+    constructor() {
+        // Time & formatting utils:
+        this.fileSizeUnits = ['B', 'KB', 'MB', 'GB'];
+    }
     strPadLeft(str, len, ch = ' ') {
         while (str.length < len) {
             str = ch + str;
@@ -2773,6 +2776,16 @@ exports.utils = new class Utils {
         var min = Math.floor(sec / 60);
         sec %= 60;
         return this.strPadLeft(min.toString(), 2, '0') + ':' + this.strPadLeft(sec.toString(), 2, '0');
+    }
+    formatFileSize(size) {
+        if (typeof size !== "number" || isNaN(size))
+            return 'NaN';
+        var unit = 0;
+        while (unit < this.fileSizeUnits.length - 1 && size >= 1024) {
+            unit++;
+            size /= 1024;
+        }
+        return size.toFixed(2) + ' ' + this.fileSizeUnits[unit];
     }
     numLimit(num, min, max) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
