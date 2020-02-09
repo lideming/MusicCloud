@@ -6,7 +6,7 @@ import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { ListContentView } from "./ListContentView";
-import { ListView, LoadingIndicator, View, Toast } from "./viewlib";
+import { ListView, LoadingIndicator, View, Toast, MessageBox } from "./viewlib";
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
@@ -102,6 +102,12 @@ export var uploads = new class extends TrackList {
                 } else if (track._upload.state === 'error') {
                     // no-op
                 } else if (track._upload.state === 'done') {
+                    if (await new MessageBox()
+                        .setTitle(I`Warning`)
+                        .addText(I`Are you sure to delete the track permanently?`)
+                        .addResultBtns(['cancel', 'ok'])
+                        .allowCloseWithResult('cancel')
+                        .showAndWaitResult() !== 'ok') return;
                     try {
                         await api.postJson({
                             method: 'DELETE',

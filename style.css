@@ -729,3 +729,7 @@ html, body {
 .btn.btn-down .btn-fill {
     background: hsl(5, 100%, 50%);
 }
+
+.messagebox-text {
+    margin: 5px;
+}

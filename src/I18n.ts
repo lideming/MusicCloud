@@ -197,6 +197,8 @@ i18n.add2dArray(JSON.parse(`[
     ["Server: ", "服务器："],
     ["Volume", "音量"],
     ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
+    ["Warning", "警告"],
+    ["Are you sure to delete the track permanently?", "确定要永久删除此歌曲吗？"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 
@@ -211,4 +213,8 @@ i18n.add2dArray([
     ["loopmode_list-seq", "List-seq", "顺序播放"],
     ["loopmode_list-loop", "List-loop", "列表循环"],
     ["loopmode_track-loop", "Track-loop", "单曲循环"],
+    ["msgbox_no", "No", "是"],
+    ["msgbox_yes", "Yes", "否"],
+    ["msgbox_ok", "OK", "确定"],
+    ["msgbox_cancel", "Cancel", "取消"],
 ]);

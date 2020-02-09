@@ -1,6 +1,7 @@
 // file: viewlib.ts
 
 import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode, Timer } from "./utils";
+import { i18n } from "./I18n";
 
 export type ViewArg = View | HTMLElement;
 
@@ -554,6 +555,7 @@ export class Dialog extends View {
     title = 'Dialog';
     width = '300px';
     allowClose = true;
+    showCloseButton = true;
     onShown = new Callbacks<Action>();
     onClose = new Callbacks<Action>();
     autoFocus: View;
@@ -604,7 +606,7 @@ export class Dialog extends View {
         this.btnTitle.updateWith({ text: this.title });
         this.btnTitle.hidden = !this.title;
         this.dom.style.width = this.width;
-        this.btnClose.hidden = !this.allowClose;
+        this.btnClose.hidden = !(this.allowClose && this.showCloseButton);
     }
     addBtn(btn: TabBtn) {
         this.ensureDom();
@@ -632,6 +634,14 @@ export class Dialog extends View {
         this.onClose.invoke();
         this._cancelFadeout = utils.fadeout(this.overlay.dom).cancel;
         Dialog.defaultParent.onDialogClosing(this);
+    }
+    waitClose(): Promise<void> {
+        return new Promise((resolve) => {
+            var cb = this.onClose.add(() => {
+                this.onClose.remove(cb);
+                resolve();
+            });
+        });
     }
 }
 
@@ -807,5 +817,43 @@ export class Toast extends View {
         var toast = new Toast({ text });
         toast.show(timeout);
         return toast;
+    }
+}
+
+export class MessageBox extends Dialog {
+    allowClose = false;
+    title = 'Message';
+    result: 'none' | 'no' | 'yes' | 'ok' | 'cancel' = 'none';
+    addResultBtns(results: this['result'][]) {
+        for (const r of results) {
+            this.addBtnWithResult(new TabBtn({ text: i18n.get('msgbox_' + r), right: true }), r);
+        }
+        return this;
+    }
+    setTitle(title: string) {
+        this.title = title;
+        if (this.domCreated) this.updateDom();
+        return this;
+    }
+    addText(text: string) {
+        this.addContent(new TextView({ tag: 'div.messagebox-text', textContent: text }));
+        return this;
+    }
+    allowCloseWithResult(result: this['result'], showCloseButton?: boolean) {
+        this.result = result;
+        this.allowClose = true;
+        this.showCloseButton = !!showCloseButton;
+        if (this.domCreated) this.updateDom();
+        return this;
+    }
+    addBtnWithResult(btn: TabBtn, result: this['result']) {
+        btn.onClick.add(() => { this.result = result; this.close(); });
+        this.addBtn(btn);
+        return this;
+    }
+    async showAndWaitResult() {
+        this.show();
+        await this.waitClose();
+        return this.result;
     }
 }

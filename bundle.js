@@ -538,6 +538,8 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Server: ", "服务器："],
     ["Volume", "音量"],
     ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
+    ["Warning", "警告"],
+    ["Are you sure to delete the track permanently?", "确定要永久删除此歌曲吗？"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -551,6 +553,10 @@ exports.i18n.add2dArray([
     ["loopmode_list-seq", "List-seq", "顺序播放"],
     ["loopmode_list-loop", "List-loop", "列表循环"],
     ["loopmode_track-loop", "Track-loop", "单曲循环"],
+    ["msgbox_no", "No", "是"],
+    ["msgbox_yes", "Yes", "否"],
+    ["msgbox_ok", "OK", "确定"],
+    ["msgbox_cancel", "Cancel", "取消"],
 ]);
 
 },{}],4:[function(require,module,exports){
@@ -1600,6 +1606,13 @@ exports.uploads = new class extends tracklist_1.TrackList {
                         // no-op
                     }
                     else if (track._upload.state === 'done') {
+                        if ((yield new viewlib_1.MessageBox()
+                            .setTitle(I18n_1.I `Warning`)
+                            .addText(I18n_1.I `Are you sure to delete the track permanently?`)
+                            .addResultBtns(['cancel', 'ok'])
+                            .allowCloseWithResult('cancel')
+                            .showAndWaitResult()) !== 'ok')
+                            return;
                         try {
                             yield Api_1.api.postJson({
                                 method: 'DELETE',
@@ -3194,6 +3207,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
+const I18n_1 = require("./I18n");
 class View {
     constructor(dom) {
         if (dom)
@@ -3743,6 +3757,7 @@ class Dialog extends View {
         this.title = 'Dialog';
         this.width = '300px';
         this.allowClose = true;
+        this.showCloseButton = true;
         this.onShown = new utils_1.Callbacks();
         this.onClose = new utils_1.Callbacks();
         this.btnClose.onClick.add(() => this.allowClose && this.close());
@@ -3787,7 +3802,7 @@ class Dialog extends View {
         this.btnTitle.updateWith({ text: this.title });
         this.btnTitle.hidden = !this.title;
         this.dom.style.width = this.width;
-        this.btnClose.hidden = !this.allowClose;
+        this.btnClose.hidden = !(this.allowClose && this.showCloseButton);
     }
     addBtn(btn) {
         this.ensureDom();
@@ -3818,6 +3833,14 @@ class Dialog extends View {
         this.onClose.invoke();
         this._cancelFadeout = utils_1.utils.fadeout(this.overlay.dom).cancel;
         Dialog.defaultParent.onDialogClosing(this);
+    }
+    waitClose() {
+        return new Promise((resolve) => {
+            var cb = this.onClose.add(() => {
+                this.onClose.remove(cb);
+                resolve();
+            });
+        });
     }
 }
 exports.Dialog = Dialog;
@@ -3994,5 +4017,50 @@ class Toast extends View {
     }
 }
 exports.Toast = Toast;
+class MessageBox extends Dialog {
+    constructor() {
+        super(...arguments);
+        this.allowClose = false;
+        this.title = 'Message';
+        this.result = 'none';
+    }
+    addResultBtns(results) {
+        for (const r of results) {
+            this.addBtnWithResult(new TabBtn({ text: I18n_1.i18n.get('msgbox_' + r), right: true }), r);
+        }
+        return this;
+    }
+    setTitle(title) {
+        this.title = title;
+        if (this.domCreated)
+            this.updateDom();
+        return this;
+    }
+    addText(text) {
+        this.addContent(new TextView({ tag: 'div.messagebox-text', textContent: text }));
+        return this;
+    }
+    allowCloseWithResult(result, showCloseButton) {
+        this.result = result;
+        this.allowClose = true;
+        this.showCloseButton = !!showCloseButton;
+        if (this.domCreated)
+            this.updateDom();
+        return this;
+    }
+    addBtnWithResult(btn, result) {
+        btn.onClick.add(() => { this.result = result; this.close(); });
+        this.addBtn(btn);
+        return this;
+    }
+    showAndWaitResult() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.show();
+            yield this.waitClose();
+            return this.result;
+        });
+    }
+}
+exports.MessageBox = MessageBox;
 
-},{"./utils":13}]},{},[11]);
+},{"./I18n":3,"./utils":13}]},{},[11]);
