@@ -198,7 +198,7 @@ class CommentEditor extends View {
             _ctx: this,
             tag: 'div.comment-editor',
             child: [
-                { tag: 'textarea.content', _key: 'domcontent' },
+                { tag: 'textarea.input-text.content', _key: 'domcontent' },
                 { tag: 'div.btn.submit', textContent: I`Submit`, _key: 'domsubmit' }
             ]
         };

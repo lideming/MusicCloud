@@ -325,7 +325,7 @@ class CommentEditor extends viewlib_1.View {
             _ctx: this,
             tag: 'div.comment-editor',
             child: [
-                { tag: 'textarea.content', _key: 'domcontent' },
+                { tag: 'textarea.input-text.content', _key: 'domcontent' },
                 { tag: 'div.btn.submit', textContent: utils_1.I `Submit`, _key: 'domsubmit' }
             ]
         };
@@ -1188,6 +1188,24 @@ const Uploads_1 = require("./Uploads");
 /** 常驻 UI 元素操作 */
 exports.ui = new class {
     constructor() {
+        this.theme = new class {
+            constructor() {
+                this.current = 'light';
+                this.timer = new utils_1.Timer(() => utils_1.utils.toggleClass(document.body, 'changing-theme', false));
+                this.siTheme = new utils_1.SettingItem('mcloud-theme', 'str', 'light')
+                    .render((theme) => {
+                    if (this.current === theme)
+                        return;
+                    this.current = theme;
+                    utils_1.utils.toggleClass(document.body, 'changing-theme', true);
+                    utils_1.utils.toggleClass(document.body, 'dark', theme === 'dark');
+                    this.timer.timeout(500);
+                });
+            }
+            set(theme) {
+                this.siTheme.set(theme);
+            }
+        };
         this.lang = new class {
             constructor() {
                 this.availableLangs = ['en', 'zh'];

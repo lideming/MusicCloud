@@ -80,6 +80,21 @@ export const ui = new class {
             }
         });
     }
+    theme = new class {
+        current: 'light' | 'dark' = 'light';
+        timer = new Timer(() => utils.toggleClass(document.body, 'changing-theme', false))
+        siTheme = new SettingItem<this['current']>('mcloud-theme', 'str', 'light')
+            .render((theme) => {
+                if (this.current === theme) return;
+                this.current = theme;
+                utils.toggleClass(document.body, 'changing-theme', true);
+                utils.toggleClass(document.body, 'dark', theme === 'dark');
+                this.timer.timeout(500);
+            });
+        set(theme: this['current']) {
+            this.siTheme.set(theme);
+        }
+    };
     lang = new class {
         availableLangs = ['en', 'zh'];
         siLang = new SettingItem('mcloud-lang', 'str', I18n.detectLanguage(this.availableLangs));

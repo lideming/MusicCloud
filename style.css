@@ -7,9 +7,23 @@ body {
     font-family: sans-serif;
 }
 
+body.dark {
+    background: black;
+    color: #ccc;
+}
+
+.changing-theme, .changing-theme * {
+    transition: background-color .3s, color .3s !important;
+}
+
 ::selection {
     background: hsl(5, 100%, 85%);
 }
+
+.dark ::selection {
+    background: hsl(5, 100%, 30%);
+}
+
 
 html, body {
     height: 100%;
@@ -58,10 +72,18 @@ html, body {
     width: calc(100% - 200px);
 }
 
+.dark #content-outer {
+    background: black;
+}
+
 #sidebar {
     width: 200px;
     background: #f8f8f8;
     border-right: 1px solid #ccc;
+}
+
+.dark #sidebar {
+    background: #080808;
 }
 
 @media only screen and (min-width: 800px) {
@@ -83,6 +105,10 @@ html, body {
     z-index: 1;
     cursor: default;
     line-height: 1.2;
+}
+
+.dark .content-header {
+    background: black;
 }
 
 .content-header .catalog {
@@ -110,6 +136,10 @@ html, body {
     background: #eeeeee
 }
 
+.dark .content-header .title.editable:hover {
+    background: #111111
+}
+
 .content-header .title.editing {
     padding: 0;
 }
@@ -125,6 +155,11 @@ html, body {
     background: #dddddd;
 }
 
+.dark .content-header .title input {
+    color: #ccc;
+    background: #222222;
+}
+
 .tracklist {
     padding: 10px 0;
 }
@@ -133,12 +168,15 @@ html, body {
 
 .item {
     display: block;
-    color: black;
     padding: 10px;
     /* background: #ddd; */
     animation: showing .3s;
     text-decoration: none;
     line-height: 1.2;
+}
+
+a.item {
+    color: inherit;
 }
 
 .clickable, .item {
@@ -148,6 +186,10 @@ html, body {
 
 .item:hover, .dragover {
     background: #eee;
+}
+
+.dark .item:hover, .dark .dragover {
+    background: #111;
 }
 
 .dragover-placeholder {
@@ -173,6 +215,10 @@ html, body {
     background: #ddd;
 }
 
+.dark .item.active {
+    background: #222;
+}
+
 .section-header {
     display: flex;
     color: gray;
@@ -184,6 +230,10 @@ html, body {
 
 #sidebar .section-header {
     background: #f8f8f8;
+}
+
+.dark #sidebar .section-header {
+    background: #080808;
 }
 
 .section-title {
@@ -259,6 +309,10 @@ html, body {
     background: #ddd;
     box-shadow: 0 0px 3px #999;
     z-index: 10001;
+}
+
+.dark #bottombar {
+    background: #222222;
 }
 
 .bottompinned #bottombar {
@@ -375,6 +429,10 @@ html, body {
     background: black;
     display: block;
     animation: fadein .5s 1s backwards;
+}
+
+.dark .loading-indicator.running .loading-indicator-inner::after {
+    background: #ccc;
 }
 
 .loading-indicator.running .loading-indicator-text {
@@ -498,12 +556,20 @@ html, body {
     max-height: 100%;
 }
 
+.dark .dialog {
+    background: black;
+}
+
 .dialog-title, .dialog-content, .dialog-bottom {
     padding: 10px;
 }
 
 .dialog-title {
     background: #f0f0f0;
+}
+
+.dark .dialog-title {
+    background: #101010;
 }
 
 .dialog-content {
@@ -526,6 +592,21 @@ html, body {
     width: 100%;
     padding: 5px;
     margin: 5px 0;
+    border: solid 1px gray;
+}
+
+.dark .input-text {
+    background: black;
+    color: #ccc;
+    border: solid 1px #ccc;
+}
+
+.input-text:focus {
+    border-color: hsl(5, 100%, 60%);
+}
+
+.input-text:active {
+    border-color: hsl(5, 100%, 40%);
 }
 
 .btn {
@@ -580,6 +661,10 @@ html, body {
     color: black;
 }
 
+.dark .tab.active {
+    color: #ccc;
+}
+
 *[hidden] {
     display: none !important;
 }
@@ -604,6 +689,10 @@ html, body {
     animation: showing-top .3s;
 }
 
+.dark .upload-area {
+    background: #111111;
+}
+
 .context-menu {
     position: absolute;
     overflow: hidden;
@@ -613,6 +702,10 @@ html, body {
     max-width: 450px;
     outline: none;
     z-index: 10001;
+}
+
+.dark .context-menu {
+    background: black;
 }
 
 .context-menu .item.dangerous {
@@ -694,6 +787,10 @@ html, body {
     background: white;
     white-space: pre-wrap;
     animation: showing-right .3s;
+}
+
+.dark .toast {
+    background: black;
 }
 
 .btn-progress {
