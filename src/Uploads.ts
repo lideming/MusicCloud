@@ -6,7 +6,7 @@ import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { ListContentView } from "./ListContentView";
-import { ListView, LoadingIndicator, View, Toast, MessageBox } from "./viewlib";
+import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView } from "./viewlib";
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
@@ -73,6 +73,7 @@ export var uploads = new class extends TrackList {
     view = new class extends TrackListView {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;
+        usage: TextView;
 
         protected appendHeader() {
             this.title = I`My Uploads`;
@@ -81,13 +82,24 @@ export var uploads = new class extends TrackList {
             this.dom.appendView(this.uploadArea);
         }
         createHeader() {
-            return new ContentHeader({
+            var header = new ContentHeader({
                 title: this.title
             });
+            header.appendView(this.usage = new TextView({ tag: 'span.uploads-usage' }));
+            return header;
         }
         protected appendListView() {
             super.appendListView();
             if (!uploads.state) uploads.fetch();
+        }
+        updateUsage() {
+            var total = 0;
+            uploads.tracks.forEach(x => total += x.size ?? 0);
+            this.usage.text = total ? `(${utils.formatFileSize(total)})` : '';
+        }
+        updateView() {
+            super.updateView();
+            this.updateUsage();
         }
         createViewItem(t: Track) {
             const item = new UploadViewItem(t as UploadTrack);
@@ -209,6 +221,7 @@ export var uploads = new class extends TrackList {
         }
         track._upload.state = 'done';
         track._upload.view?.updateDom();
+        if (this.view.rendered) this.view.updateUsage();
     }
 };
 

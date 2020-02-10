@@ -1582,14 +1582,25 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 this.dom.appendView(this.uploadArea);
             }
             createHeader() {
-                return new tracklist_1.ContentHeader({
+                var header = new tracklist_1.ContentHeader({
                     title: this.title
                 });
+                header.appendView(this.usage = new viewlib_1.TextView({ tag: 'span.uploads-usage' }));
+                return header;
             }
             appendListView() {
                 super.appendListView();
                 if (!exports.uploads.state)
                     exports.uploads.fetch();
+            }
+            updateUsage() {
+                var total = 0;
+                exports.uploads.tracks.forEach(x => { var _a; return total += (_a = x.size, (_a !== null && _a !== void 0 ? _a : 0)); });
+                this.usage.text = total ? `(${utils_1.utils.formatFileSize(total)})` : '';
+            }
+            updateView() {
+                super.updateView();
+                this.updateUsage();
             }
             createViewItem(t) {
                 const item = new UploadViewItem(t);
@@ -1763,6 +1774,8 @@ exports.uploads = new class extends tracklist_1.TrackList {
             }
             track._upload.state = 'done';
             (_c = track._upload.view) === null || _c === void 0 ? void 0 : _c.updateDom();
+            if (this.view.rendered)
+                this.view.updateUsage();
         });
     }
 };
