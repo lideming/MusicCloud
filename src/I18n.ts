@@ -199,6 +199,9 @@ i18n.add2dArray(JSON.parse(`[
     ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
     ["Warning", "警告"],
     ["Are you sure to delete the track permanently?", "确定要永久删除此歌曲吗？"],
+    ["Question", "询问"],
+    ["Did you mean to upload 1 file?", "是否要上传 1 个文件？"],
+    ["Did you mean to upload {0} files?", "是否要上传 {0} 个文件？"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

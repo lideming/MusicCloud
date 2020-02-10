@@ -1,6 +1,6 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox } from "./viewlib";
 
 export class SidebarItem extends ListViewItem {
     text: string;
@@ -35,6 +35,7 @@ import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
+import { uploads } from "./Uploads";
 
 /** 常驻 UI 元素操作 */
 export const ui = new class {
@@ -58,6 +59,25 @@ export const ui = new class {
         });
         document.addEventListener('drop', (ev) => {
             ev.preventDefault();
+            var files = ev.dataTransfer.files;
+            if (files.length) {
+                new MessageBox().setTitle(I`Question`)
+                    .addText(files.length == 1
+                        ? I`Did you mean to upload 1 file?`
+                        : I`Did you mean to upload ${files.length} files?`)
+                    .addResultBtns(['no', 'yes'])
+                    .allowCloseWithResult('no')
+                    .showAndWaitResult()
+                    .then(r => {
+                        if (r === 'yes') {
+                            if (router.currentStr !== 'uploads') router.nav('uploads');
+                            for (let i = 0; i < files.length; i++) {
+                                const file = files[i];
+                                uploads.uploadFile(file);
+                            }
+                        }
+                    });
+            }
         });
     }
     lang = new class {

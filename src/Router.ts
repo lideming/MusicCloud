@@ -12,6 +12,8 @@ export interface Route {
 
 export var router = new class {
     routes: Route[] = [];
+    current: string[];
+    currentStr: string;
     init() {
         window.addEventListener('popstate', (ev) => {
             this.navByLocation();
@@ -39,6 +41,8 @@ export var router = new class {
             }
         }
         var strPath = path.join('/');
+        this.current = path;
+        this.currentStr = strPath;
         if (pushState === undefined || pushState) {
             window.history.pushState({}, strPath, '#' + strPath);
         }

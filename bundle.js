@@ -540,6 +540,9 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
     ["Warning", "警告"],
     ["Are you sure to delete the track permanently?", "确定要永久删除此歌曲吗？"],
+    ["Question", "询问"],
+    ["Did you mean to upload 1 file?", "是否要上传 1 个文件？"],
+    ["Did you mean to upload {0} files?", "是否要上传 {0} 个文件？"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -1126,6 +1129,8 @@ exports.router = new class {
             }
         }
         var strPath = path.join('/');
+        this.current = path;
+        this.currentStr = strPath;
         if (pushState === undefined || pushState) {
             window.history.pushState({}, strPath, '#' + strPath);
         }
@@ -1179,6 +1184,7 @@ const utils_1 = require("./utils");
 const I18n_1 = require("./I18n");
 const User_1 = require("./User");
 const PlayerCore_1 = require("./PlayerCore");
+const Uploads_1 = require("./Uploads");
 /** 常驻 UI 元素操作 */
 exports.ui = new class {
     constructor() {
@@ -1472,6 +1478,26 @@ exports.ui = new class {
         });
         document.addEventListener('drop', (ev) => {
             ev.preventDefault();
+            var files = ev.dataTransfer.files;
+            if (files.length) {
+                new viewlib_1.MessageBox().setTitle(I18n_1.I `Question`)
+                    .addText(files.length == 1
+                    ? I18n_1.I `Did you mean to upload 1 file?`
+                    : I18n_1.I `Did you mean to upload ${files.length} files?`)
+                    .addResultBtns(['no', 'yes'])
+                    .allowCloseWithResult('no')
+                    .showAndWaitResult()
+                    .then(r => {
+                    if (r === 'yes') {
+                        if (Router_1.router.currentStr !== 'uploads')
+                            Router_1.router.nav('uploads');
+                        for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            Uploads_1.uploads.uploadFile(file);
+                        }
+                    }
+                });
+            }
         });
     }
 }; // ui
@@ -1539,7 +1565,7 @@ class VolumeButton extends ProgressButton {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./User":10,"./utils":13,"./viewlib":14}],9:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./Uploads":9,"./User":10,"./utils":13,"./viewlib":14}],9:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
