@@ -16,6 +16,10 @@ body.dark {
     transition: background-color .3s, color .3s !important;
 }
 
+:focus {
+    outline: none;
+}
+
 ::selection {
     background: hsl(5, 100%, 85%);
 }

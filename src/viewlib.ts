@@ -601,6 +601,24 @@ export class Dialog extends View {
                 ev.preventDefault();
             }
         });
+        this.domheader.addEventListener('mousedown', (ev) => {
+            if (ev.target !== this.domheader && ev.target !== this.btnTitle.dom) return;
+            ev.preventDefault();
+            const { x: sX, y: sY } = this.getOffset();
+            const sPageX = ev.pageX, sPageY = ev.pageY;
+            var mousemove = (ev) => {
+                const rect = this.overlay.dom.getBoundingClientRect();
+                var pageX = utils.numLimit(ev.pageX, rect.left, rect.right);
+                var pageY = utils.numLimit(ev.pageY, rect.top, rect.bottom);;
+                this.setOffset(sX + pageX - sPageX, sY + pageY - sPageY);
+            };
+            var mouseup = (ev) => {
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+            };
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+        });
     }
     updateDom() {
         this.btnTitle.updateWith({ text: this.title });
@@ -616,6 +634,15 @@ export class Dialog extends View {
         this.ensureDom();
         if (replace) utils.clearChildren(this.domcontent);
         this.domcontent.appendChild(View.getDOM(view));
+    }
+    setOffset(x: number, y: number) {
+        this.dom.style.left = x + 'px';
+        this.dom.style.top = y + 'px';
+    }
+    getOffset() {
+        var x = this.dom.style.left ? parseFloat(this.dom.style.left) : 0;
+        var y = this.dom.style.top ? parseFloat(this.dom.style.top) : 0;
+        return { x, y };
     }
     show() {
         if (this.shown) return;

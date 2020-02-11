@@ -272,6 +272,11 @@ class LoginDialog extends Dialog {
         this.inputPasswd2.hidden = true;
     }
 
+    show() {
+        this.setOffset(0, 0);
+        super.show();
+    }
+
     btnClicked() {
         if (this.btn.dom.classList.contains('disabled')) return;
         var precheckErr = [];
