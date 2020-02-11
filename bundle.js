@@ -3993,7 +3993,7 @@ class LabeledInput extends View {
     createDom() {
         return {
             _ctx: this,
-            tag: 'div',
+            tag: 'div.labeled-input',
             child: [
                 { tag: 'div.input-label', _key: 'domlabel' },
                 this.input.dom

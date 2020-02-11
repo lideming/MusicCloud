@@ -601,6 +601,10 @@ a.item {
     border: solid 1px #ccc;
 }
 
+.labeled-input:focus-within .input-label {
+    color: hsl(5, 100%, 60%);
+}
+
 .input-text:focus {
     border-color: hsl(5, 100%, 60%);
 }
