@@ -546,6 +546,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Download", "下载"],
     ["Edit", "编辑"],
     ["Save", "保存"],
+    ["Saving...", "保存中..."],
     ["User {0}", "用户 {0}"],
     ["You've logged in as \\"{0}\\".", "你已登录为 \\"{0}\\"。"],
     ["Switch user", "切换用户"],
@@ -1644,6 +1645,10 @@ exports.uploads = new class extends tracklist_1.TrackList {
         this.canEdit = false;
         this.uploadSemaphore = new utils_1.Semaphore({ maxCount: 2 });
         this.view = new class extends tracklist_1.TrackListView {
+            constructor() {
+                super(...arguments);
+                this.usage = new viewlib_1.TextView({ tag: 'span.uploads-usage' });
+            }
             appendHeader() {
                 this.title = I18n_1.I `My Uploads`;
                 super.appendHeader();
@@ -1654,7 +1659,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 var header = new tracklist_1.ContentHeader({
                     title: this.title
                 });
-                header.appendView(this.usage = new viewlib_1.TextView({ tag: 'span.uploads-usage' }));
+                header.appendView(this.usage);
                 return header;
             }
             appendListView() {
@@ -1681,9 +1686,10 @@ exports.uploads = new class extends tracklist_1.TrackList {
                     }
                     if (track._upload.state === 'pending') {
                         track._upload.state = 'cancelled';
+                        exports.uploads.remove(track);
                     }
                     else if (track._upload.state === 'error') {
-                        // no-op
+                        exports.uploads.remove(track);
                     }
                     else if (track._upload.state === 'done') {
                         if ((yield new viewlib_1.MessageBox()
@@ -1704,12 +1710,12 @@ exports.uploads = new class extends tracklist_1.TrackList {
                             viewlib_1.Toast.show(I18n_1.I `Failed to remove track.` + '\n' + error);
                             return;
                         }
+                        Api_1.api.onTrackDeleted.invoke(track);
                     }
                     else {
                         console.error('Unexpected track._upload.state', track._upload.state);
                         return;
                     }
-                    Api_1.api.onTrackDeleted.invoke(track);
                 });
                 return item;
             }
@@ -1747,13 +1753,9 @@ exports.uploads = new class extends tracklist_1.TrackList {
             });
         });
         Api_1.api.onTrackDeleted.add((deleted) => {
-            var pos = this.tracks.findIndex(x => x.id === deleted.id);
-            if (pos === -1)
-                return;
-            this.tracks.splice(pos, 1);
-            if (this.view.rendered) {
-                this.view.listView.remove(pos);
-            }
+            var track = this.tracks.find(x => x.id === deleted.id);
+            if (track)
+                this.remove(track);
         });
     }
     prependTrack(t) {
@@ -1765,6 +1767,14 @@ exports.uploads = new class extends tracklist_1.TrackList {
         this.tracks.push(t);
         if (this.view.rendered)
             this.view.addItem(t);
+    }
+    remove(track) {
+        var _a;
+        var pos = this.tracks.indexOf(track);
+        if (pos === -1)
+            return;
+        this.tracks.splice(pos, 1);
+        (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.remove();
     }
     fetchImpl() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -1814,6 +1824,8 @@ exports.uploads = new class extends tracklist_1.TrackList {
             this.prependTrack(track);
             yield this.uploadSemaphore.enter();
             try {
+                if (track._upload.state === 'cancelled')
+                    return;
                 track._upload.state = 'uploading';
                 (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
                 var jsonBlob = new Blob([JSON.stringify(apitrack)]);
@@ -1902,11 +1914,13 @@ class UploadArea extends viewlib_1.View {
         this.dom.addEventListener('dragover', (ev) => {
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
                 ev.preventDefault();
+                ev.stopPropagation();
                 ev.dataTransfer.dropEffect = 'copy';
             }
         });
         this.dom.addEventListener('drop', (ev) => {
             ev.preventDefault();
+            ev.stopPropagation();
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
                 this.handleFiles(ev.dataTransfer.files);
             }

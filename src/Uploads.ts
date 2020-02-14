@@ -61,19 +61,15 @@ export var uploads = new class extends TrackList {
             });
         });
         api.onTrackDeleted.add((deleted) => {
-            var pos = this.tracks.findIndex(x => x.id === deleted.id);
-            if (pos === -1) return;
-            this.tracks.splice(pos, 1);
-            if (this.view.rendered) {
-                this.view.listView.remove(pos);
-            }
+            var track = this.tracks.find(x => x.id === deleted.id);
+            if (track) this.remove(track);
         });
     }
     sidebarItem: ListIndexViewItem;
     view = new class extends TrackListView {
         uploadArea: UploadArea;
         listView: ListView<UploadViewItem>;
-        usage: TextView;
+        usage = new TextView({ tag: 'span.uploads-usage' });
 
         protected appendHeader() {
             this.title = I`My Uploads`;
@@ -85,7 +81,7 @@ export var uploads = new class extends TrackList {
             var header = new ContentHeader({
                 title: this.title
             });
-            header.appendView(this.usage = new TextView({ tag: 'span.uploads-usage' }));
+            header.appendView(this.usage);
             return header;
         }
         protected appendListView() {
@@ -111,8 +107,9 @@ export var uploads = new class extends TrackList {
                 }
                 if (track._upload.state === 'pending') {
                     track._upload.state = 'cancelled';
+                    uploads.remove(track);
                 } else if (track._upload.state === 'error') {
-                    // no-op
+                    uploads.remove(track);
                 } else if (track._upload.state === 'done') {
                     if (await new MessageBox()
                         .setTitle(I`Warning`)
@@ -130,11 +127,11 @@ export var uploads = new class extends TrackList {
                         Toast.show(I`Failed to remove track.` + '\n' + error);
                         return;
                     }
+                    api.onTrackDeleted.invoke(track);
                 } else {
                     console.error('Unexpected track._upload.state', track._upload.state);
                     return;
                 }
-                api.onTrackDeleted.invoke(track);
             };
             return item;
         }
@@ -146,6 +143,12 @@ export var uploads = new class extends TrackList {
     private appendTrack(t: UploadTrack) {
         this.tracks.push(t);
         if (this.view.rendered) this.view.addItem(t);
+    }
+    remove(track: UploadTrack) {
+        var pos = this.tracks.indexOf(track);
+        if (pos === -1) return;
+        this.tracks.splice(pos, 1);
+        track._upload.view?.remove();
     }
     async fetchImpl() {
         this.state = 'waiting';
@@ -193,6 +196,8 @@ export var uploads = new class extends TrackList {
 
         await this.uploadSemaphore.enter();
         try {
+            if (track._upload.state === 'cancelled') return;
+
             track._upload.state = 'uploading';
             track._upload.view?.updateDom();
 
@@ -284,11 +289,13 @@ class UploadArea extends View {
         this.dom.addEventListener('dragover', (ev) => {
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
                 ev.preventDefault();
+                ev.stopPropagation();
                 ev.dataTransfer.dropEffect = 'copy';
             }
         });
         this.dom.addEventListener('drop', (ev) => {
             ev.preventDefault();
+            ev.stopPropagation();
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
                 this.handleFiles(ev.dataTransfer.files);
             }
