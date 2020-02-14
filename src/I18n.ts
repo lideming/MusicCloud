@@ -216,8 +216,8 @@ i18n.add2dArray([
     ["loopmode_list-seq", "List-seq", "顺序播放"],
     ["loopmode_list-loop", "List-loop", "列表循环"],
     ["loopmode_track-loop", "Track-loop", "单曲循环"],
-    ["msgbox_no", "No", "是"],
-    ["msgbox_yes", "Yes", "否"],
+    ["msgbox_no", "No", "否"],
+    ["msgbox_yes", "Yes", "是"],
     ["msgbox_ok", "OK", "确定"],
     ["msgbox_cancel", "Cancel", "取消"],
 ]);
