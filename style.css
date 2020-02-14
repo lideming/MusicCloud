@@ -772,6 +772,7 @@ a.item {
 }
 
 .comment .username {
+    float: left;
     color: #777777;
 }
 
@@ -781,6 +782,7 @@ a.item {
 }
 
 .comment .content {
+    clear: both;
     white-space: pre-wrap;
 }
 
