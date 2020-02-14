@@ -2,7 +2,7 @@
 
 import { ui, SidebarItem } from "./UI";
 import { api } from "./Api";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View } from "./viewlib";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView } from "./viewlib";
 import { I, Lazy, Action, BuildDomExpr } from "./utils";
 import { ContentHeader } from "./tracklist";
 import { user } from "./User";
@@ -30,12 +30,35 @@ class CommentsView {
             li.error(error, () => this.fetch());
             throw error;
         }
-        this.view.listView.clear();
-        resp.comments.forEach(c => this.addItem(c));
+        var commentDict = {} as { [id: number]: Api.Comment; };
+        resp.comments.forEach(c => {
+            commentDict[c.id] = c;
+        });
+        var viewDict = {} as { [id: number]: CommentViewItem; };
+        var removingViews = [] as CommentViewItem[];
+        this.view.listView.forEach(x => {
+            if (commentDict[x.comment.id]) {
+                viewDict[x.comment.id] = x;
+            } else {
+                removingViews.push(x);
+            }
+        });
+        removingViews.forEach(x => x.remove());
+        var viewPos = 0;
+        resp.comments.forEach(c => {
+            var commView = viewDict[c.id];
+            if (commView) {
+                viewPos = commView.position + 1;
+                commView.comment = c;
+                commView.updateDom();
+            } else {
+                this.addItem(c, viewPos);
+            }
+        });
         this.view.updateView();
         this.state = 'fetched';
     }
-    private addItem(c: Api.Comment): void {
+    private addItem(c: Api.Comment, pos?: number): void {
         const comm = new CommentViewItem(c);
         if (c.uid === user.info.id) comm.onremove = () => {
             this.ioAction(() => api.postJson({
@@ -44,7 +67,7 @@ class CommentsView {
                 obj: undefined
             }));
         };
-        return this.view.listView.add(comm);
+        return this.view.listView.add(comm, pos);
     }
     private async ioAction(func: () => Promise<void>) {
         var li = new LoadingIndicator({ content: I`Submitting` });
@@ -73,6 +96,7 @@ class CommentsView {
 class CommentsContentView extends ListContentView {
     comments: CommentsView;
     editorNew: CommentEditor;
+    listView: ListView<CommentViewItem>;
     constructor(comments: CommentsView) {
         super();
         this.comments = comments;

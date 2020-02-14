@@ -260,6 +260,7 @@ export class ListView<T extends ListViewItem = ListViewItem> extends View implem
     }
     map<TRet>(func: (lvi: T) => TRet) { return utils.arrayMap(this, func); }
     find(func: (lvi: T, idx: number) => any) { return utils.arrayFind(this, func); }
+    forEach(func: (lvi: T, idx: number) => void) { return utils.arrayForeach(this, func); }
     private _ensureItem(item: T | number) {
         if (typeof item === 'number') item = this.get(item);
         else if (!item) throw new Error('item is null or undefined.');

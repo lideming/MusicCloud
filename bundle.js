@@ -160,13 +160,38 @@ class CommentsView {
                 li.error(error, () => this.fetch());
                 throw error;
             }
-            this.view.listView.clear();
-            resp.comments.forEach(c => this.addItem(c));
+            var commentDict = {};
+            resp.comments.forEach(c => {
+                commentDict[c.id] = c;
+            });
+            var viewDict = {};
+            var removingViews = [];
+            this.view.listView.forEach(x => {
+                if (commentDict[x.comment.id]) {
+                    viewDict[x.comment.id] = x;
+                }
+                else {
+                    removingViews.push(x);
+                }
+            });
+            removingViews.forEach(x => x.remove());
+            var viewPos = 0;
+            resp.comments.forEach(c => {
+                var commView = viewDict[c.id];
+                if (commView) {
+                    viewPos = commView.position + 1;
+                    commView.comment = c;
+                    commView.updateDom();
+                }
+                else {
+                    this.addItem(c, viewPos);
+                }
+            });
             this.view.updateView();
             this.state = 'fetched';
         });
     }
-    addItem(c) {
+    addItem(c, pos) {
         const comm = new CommentViewItem(c);
         if (c.uid === User_1.user.info.id)
             comm.onremove = () => {
@@ -176,7 +201,7 @@ class CommentsView {
                     obj: undefined
                 }));
             };
-        return this.view.listView.add(comm);
+        return this.view.listView.add(comm, pos);
     }
     ioAction(func) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -3518,6 +3543,7 @@ class ListView extends View {
     }
     map(func) { return utils_1.utils.arrayMap(this, func); }
     find(func) { return utils_1.utils.arrayFind(this, func); }
+    forEach(func) { return utils_1.utils.arrayForeach(this, func); }
     _ensureItem(item) {
         if (typeof item === 'number')
             item = this.get(item);
