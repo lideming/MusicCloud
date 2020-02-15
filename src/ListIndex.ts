@@ -24,7 +24,7 @@ export class ListIndex {
             user.setListids(this.listView.map(l => l.listInfo.id));
         };
         this.listView.onDragover = (arg) => {
-            var src = arg.source;
+            const src = arg.source;
             if (src instanceof TrackViewItem) {
                 arg.accept = true;
                 arg.event.dataTransfer.dropEffect = 'copy';
@@ -32,7 +32,7 @@ export class ListIndex {
                     var listinfo = arg.target.listInfo;
                     var list = this.getList(listinfo.id);
                     if (list.fetching) list.fetching.then(r => {
-                        list.addTrack((src as TrackViewItem).track.toApiTrack());
+                        list.addTrack(src.track.toApiTrack(), arg.event.altKey ? undefined : 0);
                         return list.put();
                     }).catch(err => {
                         console.error('error adding track:', err);

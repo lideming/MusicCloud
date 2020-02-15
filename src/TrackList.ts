@@ -126,7 +126,7 @@ export class TrackList {
         }
         return this;
     }
-    addTrack(t: Api.Track) {
+    addTrack(t: Api.Track, pos?: number) {
         var track: Track = new Track({
             ...t,
             _bind: {
@@ -135,7 +135,8 @@ export class TrackList {
             }
         });
         this.tracks.push(track);
-        if (this.contentView) this.contentView.addItem(track);
+        if (this.contentView) this.contentView.addItem(track, pos);
+        if (pos !== undefined) this.updateTracksFromListView();
         return track;
     }
     loadEmpty() {

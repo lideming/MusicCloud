@@ -738,7 +738,7 @@ class ListIndex {
             User_1.user.setListids(this.listView.map(l => l.listInfo.id));
         };
         this.listView.onDragover = (arg) => {
-            var src = arg.source;
+            const src = arg.source;
             if (src instanceof tracklist_1.TrackViewItem) {
                 arg.accept = true;
                 arg.event.dataTransfer.dropEffect = 'copy';
@@ -747,7 +747,7 @@ class ListIndex {
                     var list = this.getList(listinfo.id);
                     if (list.fetching)
                         list.fetching.then(r => {
-                            list.addTrack(src.track.toApiTrack());
+                            list.addTrack(src.track.toApiTrack(), arg.event.altKey ? undefined : 0);
                             return list.put();
                         }).catch(err => {
                             console.error('error adding track:', err);
@@ -2511,14 +2511,16 @@ class TrackList {
         }
         return this;
     }
-    addTrack(t) {
+    addTrack(t, pos) {
         var track = new Track(Object.assign(Object.assign({}, t), { _bind: {
                 list: this,
                 position: this.tracks.length
             } }));
         this.tracks.push(track);
         if (this.contentView)
-            this.contentView.addItem(track);
+            this.contentView.addItem(track, pos);
+        if (pos !== undefined)
+            this.updateTracksFromListView();
         return track;
     }
     loadEmpty() {
