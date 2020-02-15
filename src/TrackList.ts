@@ -32,6 +32,9 @@ export class Track implements Api.Track {
     toApiTrack(): Api.Track {
         return utils.objectApply<Api.Track>({} as any, this, ['id', 'artist', 'name', 'url', 'size']) as any;
     }
+    getExtensionName() {
+        return /\.([\w\-_]{1,6})$/.exec(this.url)[1];
+    }
     updateFromApiTrack(t: Api.Track) {
         if (this.id !== t.id) throw new Error('Bad track id');
         utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
@@ -379,11 +382,16 @@ export class TrackViewItem extends ListViewItem {
                 router.nav(['track-comments', item.track.id.toString()]);
             }
         }));
-        if (this.track.url) m.add(new MenuLinkItem({
-            text: I`Download` + ' (' + utils.formatFileSize(this.track.size) + ')',
-            link: api.processUrl(this.track.url),
-            download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
-        }));
+        if (this.track.url) {
+            var ext = this.track.getExtensionName();
+            ext = ext ? (ext.toUpperCase() + ', ') : '';
+            var fileSize = utils.formatFileSize(this.track.size);
+            m.add(new MenuLinkItem({
+                text: I`Download` + ' (' + ext + fileSize + ')',
+                link: api.processUrl(this.track.url),
+                download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
+            }));
+        }
         m.add(new MenuItem({
             text: I`Edit`,
             onclick: () => this.track.startEdit()

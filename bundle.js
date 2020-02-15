@@ -2424,6 +2424,9 @@ class Track {
     toApiTrack() {
         return utils_1.utils.objectApply({}, this, ['id', 'artist', 'name', 'url', 'size']);
     }
+    getExtensionName() {
+        return /\.([\w\-_]{1,6})$/.exec(this.url)[1];
+    }
     updateFromApiTrack(t) {
         if (this.id !== t.id)
             throw new Error('Bad track id');
@@ -2759,12 +2762,16 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                     Router_1.router.nav(['track-comments', item.track.id.toString()]);
                 }
             }));
-            if (this.track.url)
+            if (this.track.url) {
+                var ext = this.track.getExtensionName();
+                ext = ext ? (ext.toUpperCase() + ', ') : '';
+                var fileSize = utils_1.utils.formatFileSize(this.track.size);
                 m.add(new viewlib_1.MenuLinkItem({
-                    text: utils_1.I `Download` + ' (' + utils_1.utils.formatFileSize(this.track.size) + ')',
+                    text: utils_1.I `Download` + ' (' + ext + fileSize + ')',
                     link: Api_1.api.processUrl(this.track.url),
                     download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
                 }));
+            }
             m.add(new viewlib_1.MenuItem({
                 text: utils_1.I `Edit`,
                 onclick: () => this.track.startEdit()
