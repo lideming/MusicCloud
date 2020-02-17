@@ -187,6 +187,20 @@ export var utils = new class Utils {
     }
 };
 
+Array.prototype.remove = function(item) {
+    utils.arrayRemove(this, item);
+}
+
+declare global {
+    interface Array<T> {
+        /**
+         * (Extension method) remove the specified item from array.
+         * @param item The item to be removed from array
+         */
+        remove(item: T): void;
+    }
+}
+
 export class Timer {
     callback: () => void;
     cancelFunc: () => void;
@@ -394,7 +408,7 @@ export class Callbacks<T extends CallableFunction> {
         return callback;
     }
     remove(callback: T) {
-        utils.arrayRemove(this.list, callback);
+        this.list.remove(callback);
     }
 }
 

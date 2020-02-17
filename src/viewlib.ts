@@ -76,7 +76,7 @@ export var dragManager = new class DragManager {
     }
 };
 
-export abstract class ListViewItem extends View {
+export abstract class ListViewItem extends View implements ISelectable {
     _listView: ListView;
     _position: number;
     get listview() { return this._listView; }
@@ -89,6 +89,17 @@ export abstract class ListViewItem extends View {
 
     dragging?: boolean;
 
+
+    private _selected: boolean;
+    public get selected(): boolean { return this._selected; }
+    public set selected(v: boolean) {
+        this._selected = v;
+        this.domCreated && this.updateDom();
+        this.onSelectedChanged.invoke();
+    }
+    onSelectedChanged = new Callbacks();
+
+
     remove() {
         if (!this._listView) return;
         this._listView.remove(this);
@@ -96,7 +107,8 @@ export abstract class ListViewItem extends View {
 
     protected postCreateDom() {
         super.postCreateDom();
-        this.dom.addEventListener('click', () => {
+        this.dom.addEventListener('click', (ev) => {
+            if (this._listView?.selectionHelper.handleItemClicked(this, ev)) return;
             this._listView?.onItemClicked?.(this);
         });
         this.dom.addEventListener('contextmenu', (ev) => {
@@ -203,6 +215,9 @@ export class ListView<T extends ListViewItem = ListViewItem> extends View implem
      * Allow user to drag an item and change its position.
      */
     moveByDragging = false;
+
+    selectionHelper = new SelectionHelper<T>();
+
     onItemMoved: (item: T, from: number) => void;
     /** 
      * When an item from another list is dragover or drop
@@ -270,6 +285,37 @@ export class ListView<T extends ListViewItem = ListViewItem> extends View implem
     ReplaceChild(dom: ViewArg) {
         this.clear();
         this.dom.appendChild(View.getDOM(dom));
+    }
+}
+
+export interface ISelectable {
+    selected: boolean;
+}
+
+export class SelectionHelper<TItem extends ISelectable> {
+    enabled: boolean;
+    onEnabledChanged = new Callbacks();
+
+    selectedItems = [] as TItem[];
+    onSelectedItemsChanged = new Callbacks<(action: 'add' | 'remove', item: TItem) => void>();
+
+    /** Returns true if it's handled by the helper. */
+    handleItemClicked(item: TItem, ev: MouseEvent): boolean {
+        if (!this.enabled) return false;
+        this.toggleItemSelection(item);
+        return true;
+    }
+
+    toggleItemSelection(item: TItem) {
+        if (item.selected) {
+            item.selected = false;
+            this.selectedItems.remove(item);
+            this.onSelectedItemsChanged.invoke('remove', item);
+        } else {
+            item.selected = true;
+            this.selectedItems.push(item);
+            this.onSelectedItemsChanged.invoke('add', item);
+        }
     }
 }
 
@@ -797,7 +843,7 @@ export class ToastsContainer extends View {
         this.toasts.push(toast);
     }
     removeToast(toast: Toast) {
-        utils.arrayRemove(this.toasts, toast);
+        this.toasts.remove(toast);
         if (this.toasts.length === 0)
             this.remove();
     }
