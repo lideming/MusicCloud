@@ -60,7 +60,7 @@ export var user = new class User {
         return info.username + ':' + info.passwd;
     }
     async login(info: Api.UserInfo) {
-        this.setState('logging');
+        if (this.state !== 'logged') this.setState('logging');
         // try GET `api/users/me` using the new info
         var promise = (async () => {
             try {
@@ -69,7 +69,7 @@ export var user = new class User {
                     basicAuth: this.getBasicAuth(info)
                 });
             } catch (err) {
-                this.setState('error');
+                if (this.state !== 'logged') this.setState('error');
                 if (err.message == 'user_not_found')
                     throw new Error(I`Username or password is not correct.`);
                 throw err;
@@ -311,8 +311,7 @@ class LoginDialog extends Dialog {
             } catch (e) {
                 this.viewStatus.text = e;
                 // fallback to previous login info
-                if (user.info.username) {
-                    await user.login(user.info);
+                if (user.state === 'logged' && user.info.username) {
                     this.viewStatus.text += '\r\n' + I`Logged in with previous working account.`;
                 }
             } finally {

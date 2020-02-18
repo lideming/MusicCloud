@@ -2028,7 +2028,8 @@ exports.user = new class User {
     }
     login(info) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.setState('logging');
+            if (this.state !== 'logged')
+                this.setState('logging');
             // try GET `api/users/me` using the new info
             var promise = (() => __awaiter(this, void 0, void 0, function* () {
                 try {
@@ -2038,7 +2039,8 @@ exports.user = new class User {
                     });
                 }
                 catch (err) {
-                    this.setState('error');
+                    if (this.state !== 'logged')
+                        this.setState('error');
                     if (err.message == 'user_not_found')
                         throw new Error(utils_1.I `Username or password is not correct.`);
                     throw err;
@@ -2301,8 +2303,7 @@ class LoginDialog extends viewlib_1.Dialog {
             catch (e) {
                 this.viewStatus.text = e;
                 // fallback to previous login info
-                if (exports.user.info.username) {
-                    yield exports.user.login(exports.user.info);
+                if (exports.user.state === 'logged' && exports.user.info.username) {
                     this.viewStatus.text += '\r\n' + utils_1.I `Logged in with previous working account.`;
                 }
             }
