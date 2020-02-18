@@ -65,7 +65,7 @@ export var user = new class User {
         var promise = (async () => {
             try {
                 // thanks to the keyword `var` of JavaScript.
-                var resp = await api.getJson('users/me', {
+                var resp = await api.get('users/me', {
                     basicAuth: this.getBasicAuth(info)
                 });
             } catch (err) {
@@ -86,8 +86,7 @@ export var user = new class User {
     async register(info: Api.UserInfo) {
         this.setState('logging');
         var promise = (async () => {
-            var resp = await api.postJson({
-                method: 'POST',
+            var resp = await api.post({
                 path: 'users/new',
                 obj: info
             });
@@ -141,9 +140,8 @@ export var user = new class User {
             username: this.info.username,
             listids: listids
         };
-        await api.postJson({
+        await api.put({
             path: 'users/me',
-            method: 'PUT',
             obj
         });
     }
@@ -196,14 +194,13 @@ export var user = new class User {
     }
     async getPlaying(): Promise<Api.TrackLocation> {
         await this.waitLogin(true);
-        var result: Api.TrackLocation = await api.getJson('my/playing');
+        var result: Api.TrackLocation = await api.get('my/playing');
         return result;
     }
 
     async postPlaying(trackLocation: Api.TrackLocation): Promise<void> {
         await this.waitLogin(true);
-        await api.postJson({
-            method: 'POST',
+        await api.post({
             path: 'my/playing',
             obj: trackLocation
         });
@@ -212,8 +209,7 @@ export var user = new class User {
     async changePassword(newPasswd: string) {
         var toast = Toast.show(I`Changing password...`);
         try {
-            await api.postJson({
-                method: 'PUT',
+            await api.put({
                 path: 'users/me',
                 obj: {
                     id: this.info.id,

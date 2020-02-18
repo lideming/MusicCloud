@@ -159,10 +159,8 @@ export class ListIndex {
         if (id < 0) {
             id = await this.getList(id).getRealId();
         }
-        await api.postJson({
-            method: 'DELETE',
-            path: 'my/lists/' + id,
-            obj: null
+        await api.delete({
+            path: 'my/lists/' + id
         });
         this.getViewItem(id)?.remove();
     }

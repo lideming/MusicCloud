@@ -28,7 +28,7 @@ export var api = new class {
         if (basicAuth) headers['Authorization'] = 'Basic ' + utils.base64EncodeUtf8(basicAuth);
         return headers;
     }
-    async getJson(path: string, options?: { status?: false | number, basicAuth?: string; }): Promise<any> {
+    async get(path: string, options?: { status?: false | number, basicAuth?: string; }): Promise<any> {
         options = options || {};
         var resp = await this._fetch(this.baseUrl + path, {
             headers: { ...this.getHeaders(options) }
@@ -36,18 +36,15 @@ export var api = new class {
         await this.checkResp(options, resp);
         return await resp.json();
     }
-    async postJson(arg: {
-        path: string, obj: any,
-        mode?: 'json' | 'raw',
-        method?: 'POST' | 'PUT' | 'DELETE',
-        basicAuth?: string,
-        headers?: Record<string, string>,
-        status?: number;
-    }) {
+    async post(arg:
+        { method?: 'POST' | 'PUT' | 'DELETE'; }
+        & PostOptions & PostBodyOptions
+    ) {
         var body = arg.obj;
-        if (arg.mode === undefined) arg.mode = 'json';
+        if (arg.mode === undefined) arg.mode = body !== undefined ? 'json' : 'empty';
         if (arg.mode === 'json') body = body !== undefined ? JSON.stringify(body) : undefined;
         else if (arg.mode === 'raw') void 0; // noop
+        else if (arg.mode === 'empty') body = null;
         else throw new Error('Unknown arg.mode');
 
         var headers = this.getHeaders(arg);
@@ -66,6 +63,12 @@ export var api = new class {
             return await resp.json();
         return null;
     }
+    put(arg: PostOptions & PostBodyOptions) {
+        return this.post({ ...arg, method: 'PUT' });
+    }
+    delete(arg: PostOptions) {
+        return this.post({ ...arg, method: 'DELETE' });
+    }
     private async checkResp(options: { status?: number | false; }, resp: Response) {
         if (options.status !== false &&
             ((options.status !== undefined && resp.status != options.status)
@@ -82,13 +85,13 @@ export var api = new class {
         }
     }
     async getListAsync(id: number): Promise<Api.TrackListGet> {
-        return await this.getJson('lists/' + id);
+        return await this.get('lists/' + id);
     }
     async getListIndexAsync(): Promise<Api.TrackListIndex> {
-        return await this.getJson('lists/index');
+        return await this.get('lists/index');
     }
     async putListAsync(list: Api.TrackListPut, creating: boolean = false): Promise<Api.TrackListPutResult> {
-        return await this.postJson({
+        return await this.post({
             path: 'lists/' + list.id,
             method: creating ? 'POST' : 'PUT',
             obj: list,
@@ -99,3 +102,19 @@ export var api = new class {
         return this.baseUrl + url;
     }
 };
+
+export interface PostOptions {
+    path: string;
+    basicAuth?: string;
+    headers?: Record<string, string>;
+    status?: number;
+}
+
+export type PostBodyOptions =
+    {
+        mode?: 'json' | 'raw';
+        obj: any,
+    } | {
+        mode?: 'empty';
+        obj?: undefined;
+    };

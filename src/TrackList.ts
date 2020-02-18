@@ -69,8 +69,8 @@ export class Track implements Api.Track {
             async save() {
                 this.btnSave.updateWith({ clickable: false, text: I`Saving...` });
                 try {
-                    var newinfo = await api.postJson({
-                        method: 'PUT', path: 'tracks/' + this.trackId,
+                    var newinfo = await api.put({
+                        path: 'tracks/' + this.trackId,
                         obj: {
                             id: this.trackId,
                             name: this.inputName.value,
@@ -161,9 +161,8 @@ export class TrackList {
             name: this.name,
             trackids: this.tracks.map(t => t.id)
         };
-        var resp: Api.TrackListPutResult = await api.postJson({
+        var resp: Api.TrackListPutResult = await api.post({
             path: 'users/me/lists/new',
-            method: 'POST',
             obj: obj
         });
         this.apiid = resp.id;
@@ -184,9 +183,8 @@ export class TrackList {
                 name: this.name,
                 trackids: this.tracks.map(t => t.id)
             };
-            var resp: Api.TrackListPutResult = await api.postJson({
+            var resp: Api.TrackListPutResult = await api.put({
                 path: 'lists/' + this.apiid,
-                method: 'PUT',
                 obj: obj
             });
         } catch (error) {

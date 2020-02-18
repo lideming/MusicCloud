@@ -27,7 +27,7 @@ class CommentsView {
         try {
             await user.waitLogin(true);
             this.state = 'fetching';
-            var resp = await api.getJson(this.endpoint + '?reverse=1') as Api.CommentList;
+            var resp = await api.get(this.endpoint + '?reverse=1') as Api.CommentList;
             this.view.useLoadingIndicator(null);
         } catch (error) {
             this.state = 'error';
@@ -65,10 +65,8 @@ class CommentsView {
     private addItem(c: Api.Comment, pos?: number): void {
         const comm = new CommentViewItem(c);
         if (c.uid === user.info.id || user.isAdmin) comm.onremove = () => {
-            this.ioAction(() => api.postJson({
-                method: 'DELETE',
-                path: this.endpoint + '/' + comm.comment.id,
-                obj: undefined
+            this.ioAction(() => api.delete({
+                path: this.endpoint + '/' + comm.comment.id
             }));
         };
         return this.view.listView.add(comm, pos);
@@ -82,8 +80,7 @@ class CommentsView {
         });
     }
     async post(content: string) {
-        await this.ioAction(() => api.postJson({
-            method: 'POST',
+        await this.ioAction(() => api.post({
             path: this.endpoint + '/new',
             obj: {
                 content: content

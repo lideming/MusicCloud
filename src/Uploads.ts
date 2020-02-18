@@ -118,10 +118,8 @@ export var uploads = new class extends TrackList {
                         .allowCloseWithResult('cancel')
                         .showAndWaitResult() !== 'ok') return;
                     try {
-                        await api.postJson({
-                            method: 'DELETE',
-                            path: 'tracks/' + track.id,
-                            obj: null
+                        await api.delete({
+                            path: 'tracks/' + track.id
                         });
                     } catch (error) {
                         Toast.show(I`Failed to remove track.` + '\n' + error);
@@ -159,7 +157,7 @@ export var uploads = new class extends TrackList {
             await user.waitLogin(true);
             this.state = 'fetching';
             li.reset();
-            var fetched = ((await api.getJson('my/uploads'))['tracks'] as any[])
+            var fetched = ((await api.get('my/uploads'))['tracks'] as any[])
                 .reverse()
                 .map(t => {
                     t._upload = { state: 'done' };
@@ -206,9 +204,8 @@ export var uploads = new class extends TrackList {
                 BlockFormat.encodeBlock(jsonBlob),
                 BlockFormat.encodeBlock(file)
             ]);
-            var resp = await api.postJson({
+            var resp = await api.post({
                 path: 'tracks/newfile',
-                method: 'POST',
                 mode: 'raw',
                 obj: finalBlob,
                 headers: { 'Content-Type': 'application/x-mcloud-upload' }

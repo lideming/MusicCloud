@@ -37,7 +37,7 @@ exports.api = new class {
             headers['Authorization'] = 'Basic ' + utils_1.utils.base64EncodeUtf8(basicAuth);
         return headers;
     }
-    getJson(path, options) {
+    get(path, options) {
         return __awaiter(this, void 0, void 0, function* () {
             options = options || {};
             var resp = yield this._fetch(this.baseUrl + path, {
@@ -47,16 +47,18 @@ exports.api = new class {
             return yield resp.json();
         });
     }
-    postJson(arg) {
+    post(arg) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
             var body = arg.obj;
             if (arg.mode === undefined)
-                arg.mode = 'json';
+                arg.mode = body !== undefined ? 'json' : 'empty';
             if (arg.mode === 'json')
                 body = body !== undefined ? JSON.stringify(body) : undefined;
             else if (arg.mode === 'raw')
                 void 0; // noop
+            else if (arg.mode === 'empty')
+                body = null;
             else
                 throw new Error('Unknown arg.mode');
             var headers = this.getHeaders(arg);
@@ -74,6 +76,12 @@ exports.api = new class {
                 return yield resp.json();
             return null;
         });
+    }
+    put(arg) {
+        return this.post(Object.assign(Object.assign({}, arg), { method: 'PUT' }));
+    }
+    delete(arg) {
+        return this.post(Object.assign(Object.assign({}, arg), { method: 'DELETE' }));
     }
     checkResp(options, resp) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -94,17 +102,17 @@ exports.api = new class {
     }
     getListAsync(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.getJson('lists/' + id);
+            return yield this.get('lists/' + id);
         });
     }
     getListIndexAsync() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.getJson('lists/index');
+            return yield this.get('lists/index');
         });
     }
     putListAsync(list, creating = false) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.postJson({
+            return yield this.post({
                 path: 'lists/' + list.id,
                 method: creating ? 'POST' : 'PUT',
                 obj: list,
@@ -156,7 +164,7 @@ class CommentsView {
             try {
                 yield User_1.user.waitLogin(true);
                 this.state = 'fetching';
-                var resp = yield Api_1.api.getJson(this.endpoint + '?reverse=1');
+                var resp = yield Api_1.api.get(this.endpoint + '?reverse=1');
                 this.view.useLoadingIndicator(null);
             }
             catch (error) {
@@ -199,10 +207,8 @@ class CommentsView {
         const comm = new CommentViewItem(c);
         if (c.uid === User_1.user.info.id || User_1.user.isAdmin)
             comm.onremove = () => {
-                this.ioAction(() => Api_1.api.postJson({
-                    method: 'DELETE',
-                    path: this.endpoint + '/' + comm.comment.id,
-                    obj: undefined
+                this.ioAction(() => Api_1.api.delete({
+                    path: this.endpoint + '/' + comm.comment.id
                 }));
             };
         return this.view.listView.add(comm, pos);
@@ -219,8 +225,7 @@ class CommentsView {
     }
     post(content) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.ioAction(() => Api_1.api.postJson({
-                method: 'POST',
+            yield this.ioAction(() => Api_1.api.post({
                 path: this.endpoint + '/new',
                 obj: {
                     content: content
@@ -892,10 +897,8 @@ class ListIndex {
             if (id < 0) {
                 id = yield this.getList(id).getRealId();
             }
-            yield Api_1.api.postJson({
-                method: 'DELETE',
-                path: 'my/lists/' + id,
-                obj: null
+            yield Api_1.api.delete({
+                path: 'my/lists/' + id
             });
             (_a = this.getViewItem(id)) === null || _a === void 0 ? void 0 : _a.remove();
         });
@@ -1709,10 +1712,8 @@ exports.uploads = new class extends tracklist_1.TrackList {
                             .showAndWaitResult()) !== 'ok')
                             return;
                         try {
-                            yield Api_1.api.postJson({
-                                method: 'DELETE',
-                                path: 'tracks/' + track.id,
-                                obj: null
+                            yield Api_1.api.delete({
+                                path: 'tracks/' + track.id
                             });
                         }
                         catch (error) {
@@ -1795,7 +1796,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 yield User_1.user.waitLogin(true);
                 this.state = 'fetching';
                 li.reset();
-                var fetched = (yield Api_1.api.getJson('my/uploads'))['tracks']
+                var fetched = (yield Api_1.api.get('my/uploads'))['tracks']
                     .reverse()
                     .map(t => {
                     t._upload = { state: 'done' };
@@ -1842,9 +1843,8 @@ exports.uploads = new class extends tracklist_1.TrackList {
                     BlockFormat.encodeBlock(jsonBlob),
                     BlockFormat.encodeBlock(file)
                 ]);
-                var resp = yield Api_1.api.postJson({
+                var resp = yield Api_1.api.post({
                     path: 'tracks/newfile',
-                    method: 'POST',
                     mode: 'raw',
                     obj: finalBlob,
                     headers: { 'Content-Type': 'application/x-mcloud-upload' }
@@ -2034,7 +2034,7 @@ exports.user = new class User {
             var promise = (() => __awaiter(this, void 0, void 0, function* () {
                 try {
                     // thanks to the keyword `var` of JavaScript.
-                    var resp = yield Api_1.api.getJson('users/me', {
+                    var resp = yield Api_1.api.get('users/me', {
                         basicAuth: this.getBasicAuth(info)
                     });
                 }
@@ -2060,8 +2060,7 @@ exports.user = new class User {
         return __awaiter(this, void 0, void 0, function* () {
             this.setState('logging');
             var promise = (() => __awaiter(this, void 0, void 0, function* () {
-                var resp = yield Api_1.api.postJson({
-                    method: 'POST',
+                var resp = yield Api_1.api.post({
                     path: 'users/new',
                     obj: info
                 });
@@ -2119,9 +2118,8 @@ exports.user = new class User {
                 username: this.info.username,
                 listids: listids
             };
-            yield Api_1.api.postJson({
+            yield Api_1.api.put({
                 path: 'users/me',
-                method: 'PUT',
                 obj
             });
         });
@@ -2183,15 +2181,14 @@ exports.user = new class User {
     getPlaying() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.waitLogin(true);
-            var result = yield Api_1.api.getJson('my/playing');
+            var result = yield Api_1.api.get('my/playing');
             return result;
         });
     }
     postPlaying(trackLocation) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.waitLogin(true);
-            yield Api_1.api.postJson({
-                method: 'POST',
+            yield Api_1.api.post({
                 path: 'my/playing',
                 obj: trackLocation
             });
@@ -2201,8 +2198,7 @@ exports.user = new class User {
         return __awaiter(this, void 0, void 0, function* () {
             var toast = viewlib_1.Toast.show(utils_1.I `Changing password...`);
             try {
-                yield Api_1.api.postJson({
-                    method: 'PUT',
+                yield Api_1.api.put({
                     path: 'users/me',
                     obj: {
                         id: this.info.id,
@@ -2478,8 +2474,8 @@ class Track {
                 return __awaiter(this, void 0, void 0, function* () {
                     this.btnSave.updateWith({ clickable: false, text: utils_1.I `Saving...` });
                     try {
-                        var newinfo = yield Api_1.api.postJson({
-                            method: 'PUT', path: 'tracks/' + this.trackId,
+                        var newinfo = yield Api_1.api.put({
+                            path: 'tracks/' + this.trackId,
                             obj: {
                                 id: this.trackId,
                                 name: this.inputName.value,
@@ -2566,9 +2562,8 @@ class TrackList {
                 name: this.name,
                 trackids: this.tracks.map(t => t.id)
             };
-            var resp = yield Api_1.api.postJson({
+            var resp = yield Api_1.api.post({
                 path: 'users/me/lists/new',
-                method: 'POST',
                 obj: obj
             });
             this.apiid = resp.id;
@@ -2597,9 +2592,8 @@ class TrackList {
                     name: this.name,
                     trackids: this.tracks.map(t => t.id)
                 };
-                var resp = yield Api_1.api.postJson({
+                var resp = yield Api_1.api.put({
                     path: 'lists/' + this.apiid,
-                    method: 'PUT',
                     obj: obj
                 });
             }
