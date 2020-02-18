@@ -47,20 +47,19 @@ export class View {
         utils.toggleClass(this.dom, clsName, force);
     }
     appendView(view: View) { return this.dom.appendView(view); }
-    static getDOM(view: HTMLElement | View): HTMLElement {
-        if (!view) throw new Error('view is undefined or null');
-        if (view instanceof View) return view.dom;
-        if (view instanceof HTMLElement) return view;
-        console.error('getDOM(): unknown type: ', view);
-        throw new Error('Cannot get DOM: unknown type');
-    }
+    getDOM() { return this.dom; }
 }
 
 declare global {
     interface Node {
         appendView(view: View);
     }
+    interface HTMLElement {
+        getDOM(): HTMLElement;
+    }
 }
+
+HTMLElement.prototype.getDOM = function () { return this; };
 
 Node.prototype.appendView = function (this: Node, view: View) {
     this.appendChild(view.dom);
@@ -300,15 +299,9 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
         utils.clearChildren(this.dom);
         this.items = [];
     }
-    // private _ensureItem(item: T | number) {
-    //     if (typeof item === 'number') item = this.get(item);
-    //     else if (!item) throw new Error('item is null or undefined.');
-    //     else if (item._listView !== this) throw new Error('the item is not in this listview.');
-    //     return item;
-    // }
     ReplaceChild(dom: ViewArg) {
         this.clear();
-        this.dom.appendChild(View.getDOM(dom));
+        this.dom.appendChild(dom.getDOM());
     }
 }
 
@@ -378,7 +371,7 @@ export class Section extends View {
         var dom = this.dom;
         var firstChild = dom.firstChild;
         while (dom.lastChild !== firstChild) dom.removeChild(dom.lastChild);
-        dom.appendChild(View.getDOM(view));
+        dom.appendChild(view.getDOM());
     }
     addAction(arg: SectionActionOptions) {
         this.titleDom.parentElement.appendChild(utils.buildDOM({
@@ -704,7 +697,7 @@ export class Dialog extends View {
     addContent(view: ViewArg, replace?: boolean) {
         this.ensureDom();
         if (replace) utils.clearChildren(this.domcontent);
-        this.domcontent.appendChild(View.getDOM(view));
+        this.domcontent.appendChild(view.getDOM());
     }
     setOffset(x: number, y: number) {
         this.dom.style.left = x + 'px';

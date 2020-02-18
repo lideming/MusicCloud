@@ -170,6 +170,17 @@ html, body {
     background: #222222;
 }
 
+.content-header .actions {
+    float: right;
+    margin: 5px;
+}
+
+.content-header .actions .action {
+    display: inline-block;
+    vertical-align: middle;
+    color: gray;
+}
+
 .tracklist {
     padding: 10px 0;
 }

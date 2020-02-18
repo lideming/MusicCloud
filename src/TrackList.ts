@@ -1,7 +1,7 @@
 // file: TrackList.ts
 
 import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr } from "./utils";
-import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast } from "./viewlib";
+import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -202,7 +202,7 @@ export class TrackList {
             this.loadFromGetResult(obj);
             this.setLoadIndicator(null);
         } catch (err) {
-            this.loadIndicator.error(err, () => this.fetchImpl());
+            this.loadIndicator.error(err, () => this.fetch(true));
             throw err;
         }
     }
@@ -276,6 +276,12 @@ export class TrackListView extends ListContentView {
             titleEditable: !!this.list.rename,
             onTitleEdit: (newName) => this.list.rename(newName)
         });
+    }
+    protected appendHeader() {
+        super.appendHeader();
+        this.refreshBtn.onclick = () => {
+            this.list.fetch(true);
+        };
     }
     onShow() {
         super.onShow();
@@ -410,6 +416,7 @@ export class ContentHeader extends View {
     title: string;
     titleEditable = false;
     domctx: { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } = {};
+    actions = new ContainerView({ tag: 'div.actions' });
     onTitleEdit: (title: string) => void;
     constructor(init?: Partial<ContentHeader>) {
         super();
@@ -435,6 +442,7 @@ export class ContentHeader extends View {
                         this.updateDom();
                     }
                 },
+                this.actions.dom
             ]
         });
     }
@@ -445,5 +453,20 @@ export class ContentHeader extends View {
         utils.toggleClass(this.domctx.title, 'editable', !!this.titleEditable);
         if (this.titleEditable) this.domctx.title.title = I`Click to edit`;
         else this.domctx.title.removeAttribute('title');
+    }
+}
+
+export class ActionBtn extends TextView {
+    onclick: Action;
+    constructor(init?: Partial<ActionBtn>) {
+        super();
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        return { tag: 'span.action.clickable.no-selection' };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.addEventListener('click', () => this.onclick?.());
     }
 }

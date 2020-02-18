@@ -1,7 +1,7 @@
 // file: ListContentView.ts
 
-import { ListViewItem, ListView, LoadingIndicator } from "./viewlib";
-import { ContentHeader } from "./tracklist";
+import { ListViewItem, ListView, LoadingIndicator, View } from "./viewlib";
+import { ContentHeader, ActionBtn } from "./tracklist";
 import { utils, I } from "./utils";
 import { ContentView } from "./UI";
 
@@ -40,7 +40,10 @@ class DataBackedListView<T extends DataBackedListViewItem, TData> extends ListVi
 
 export class ListContentView implements ContentView {
     dom: HTMLElement;
+
     header: ContentHeader;
+    refreshBtn: ActionBtn;
+
     listView: ListView<ListViewItem>;
     loadingIndicator: LoadingIndicator;
     emptyIndicator: LoadingIndicator;
@@ -62,6 +65,7 @@ export class ListContentView implements ContentView {
 
     protected appendHeader() {
         this.header = this.createHeader();
+        this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: I`Refresh` }));
         this.dom.appendView(this.header);
     }
 

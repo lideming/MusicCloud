@@ -203,6 +203,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Question", "询问"],
     ["Did you mean to upload 1 file?", "是否要上传 1 个文件？"],
     ["Did you mean to upload {0} files?", "是否要上传 {0} 个文件？"],
+    ["Refresh", "刷新"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

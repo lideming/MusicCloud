@@ -17,6 +17,10 @@ class CommentsView {
     get view() { return this.lazyView.value; }
     state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
     async fetch() {
+        if (this.state === 'fetching' || this.state === 'waiting') {
+            console.warn('another fetch task is running.');
+            return;
+        }
         this.state = 'waiting';
         var li = new LoadingIndicator();
         this.view.useLoadingIndicator(li);
@@ -110,6 +114,9 @@ class CommentsContentView extends ListContentView {
             editor.content = '';
             if (content == '') return;
             this.comments.post(content);
+        };
+        this.refreshBtn.onclick = () => {
+            this.comments.fetch();
         };
     }
     protected appendListView() {

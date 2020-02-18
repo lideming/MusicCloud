@@ -146,6 +146,10 @@ class CommentsView {
     get view() { return this.lazyView.value; }
     fetch() {
         return __awaiter(this, void 0, void 0, function* () {
+            if (this.state === 'fetching' || this.state === 'waiting') {
+                console.warn('another fetch task is running.');
+                return;
+            }
             this.state = 'waiting';
             var li = new viewlib_1.LoadingIndicator();
             this.view.useLoadingIndicator(li);
@@ -246,6 +250,9 @@ class CommentsContentView extends ListContentView_1.ListContentView {
             if (content == '')
                 return;
             this.comments.post(content);
+        };
+        this.refreshBtn.onclick = () => {
+            this.comments.fetch();
         };
     }
     appendListView() {
@@ -569,6 +576,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Question", "询问"],
     ["Did you mean to upload 1 file?", "是否要上传 1 个文件？"],
     ["Did you mean to upload {0} files?", "是否要上传 {0} 个文件？"],
+    ["Refresh", "刷新"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -648,6 +656,7 @@ class ListContentView {
     }
     appendHeader() {
         this.header = this.createHeader();
+        this.header.actions.addView(this.refreshBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Refresh` }));
         this.dom.appendView(this.header);
     }
     appendListView() {
@@ -2609,7 +2618,7 @@ class TrackList {
                 this.setLoadIndicator(null);
             }
             catch (err) {
-                this.loadIndicator.error(err, () => this.fetchImpl());
+                this.loadIndicator.error(err, () => this.fetch(true));
                 throw err;
             }
         });
@@ -2697,6 +2706,12 @@ class TrackListView extends ListContentView_1.ListContentView {
             titleEditable: !!this.list.rename,
             onTitleEdit: (newName) => this.list.rename(newName)
         });
+    }
+    appendHeader() {
+        super.appendHeader();
+        this.refreshBtn.onclick = () => {
+            this.list.fetch(true);
+        };
     }
     onShow() {
         super.onShow();
@@ -2826,6 +2841,7 @@ class ContentHeader extends viewlib_1.View {
         super();
         this.titleEditable = false;
         this.domctx = {};
+        this.actions = new viewlib_1.ContainerView({ tag: 'div.actions' });
         if (init)
             utils_1.utils.objectApply(this, init);
     }
@@ -2851,6 +2867,7 @@ class ContentHeader extends viewlib_1.View {
                         this.updateDom();
                     })
                 },
+                this.actions.dom
             ]
         });
     }
@@ -2866,6 +2883,20 @@ class ContentHeader extends viewlib_1.View {
     }
 }
 exports.ContentHeader = ContentHeader;
+class ActionBtn extends viewlib_1.TextView {
+    constructor(init) {
+        super();
+        utils_1.utils.objectApply(this, init);
+    }
+    createDom() {
+        return { tag: 'span.action.clickable.no-selection' };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.addEventListener('click', () => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a); });
+    }
+}
+exports.ActionBtn = ActionBtn;
 
 },{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./Router":7,"./User":10,"./main":11,"./utils":13,"./viewlib":14}],13:[function(require,module,exports){
 "use strict";
@@ -3364,18 +3395,10 @@ class View {
         utils_1.utils.toggleClass(this.dom, clsName, force);
     }
     appendView(view) { return this.dom.appendView(view); }
-    static getDOM(view) {
-        if (!view)
-            throw new Error('view is undefined or null');
-        if (view instanceof View)
-            return view.dom;
-        if (view instanceof HTMLElement)
-            return view;
-        console.error('getDOM(): unknown type: ', view);
-        throw new Error('Cannot get DOM: unknown type');
-    }
+    getDOM() { return this.dom; }
 }
 exports.View = View;
+HTMLElement.prototype.getDOM = function () { return this; };
 Node.prototype.appendView = function (view) {
     this.appendChild(view.dom);
 };
@@ -3612,15 +3635,9 @@ class ListView extends ContainerView {
         utils_1.utils.clearChildren(this.dom);
         this.items = [];
     }
-    // private _ensureItem(item: T | number) {
-    //     if (typeof item === 'number') item = this.get(item);
-    //     else if (!item) throw new Error('item is null or undefined.');
-    //     else if (item._listView !== this) throw new Error('the item is not in this listview.');
-    //     return item;
-    // }
     ReplaceChild(dom) {
         this.clear();
-        this.dom.appendChild(View.getDOM(dom));
+        this.dom.appendChild(dom.getDOM());
     }
 }
 exports.ListView = ListView;
@@ -3687,7 +3704,7 @@ class Section extends View {
         var firstChild = dom.firstChild;
         while (dom.lastChild !== firstChild)
             dom.removeChild(dom.lastChild);
-        dom.appendChild(View.getDOM(view));
+        dom.appendChild(view.getDOM());
     }
     addAction(arg) {
         this.titleDom.parentElement.appendChild(utils_1.utils.buildDOM({
@@ -4011,7 +4028,7 @@ class Dialog extends View {
         this.ensureDom();
         if (replace)
             utils_1.utils.clearChildren(this.domcontent);
-        this.domcontent.appendChild(View.getDOM(view));
+        this.domcontent.appendChild(view.getDOM());
     }
     setOffset(x, y) {
         this.dom.style.left = x + 'px';
