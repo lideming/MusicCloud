@@ -18,6 +18,10 @@ export var user = new class User {
     });
     loginDialog: LoginDialog;
     get info() { return this.siLogin.data; }
+
+    role?: Api.UserInfo['role'];
+    get isAdmin() { return this.role === 'admin'; }
+
     state: 'none' | 'logging' | 'error' | 'logged';
     onSwitchedUser = new Callbacks<Action>();
     loggingin: Promise<void>;
@@ -105,6 +109,7 @@ export var user = new class User {
         this.info.id = info.id;
         this.info.username = info.username;
         this.info.passwd = info.passwd;
+        this.role = info.role;
         this.siLogin.save();
 
         var servermsg = info['servermsg'];
@@ -121,6 +126,7 @@ export var user = new class User {
     }
     logout() {
         utils.objectApply(this.info, { id: -1, username: null, passwd: null });
+        this.role = null;
         this.siLogin.save();
         api.defaultBasicAuth = undefined;
         ui.content.setCurrent(null);
@@ -325,7 +331,9 @@ class MeDialog extends Dialog {
         super();
         var username = user.info.username;
         this.title = I`User ${username}`;
-        this.addContent(new View({ tag: 'div', textContent: I`You've logged in as "${username}".` }));
+        this.addContent(new View({ tag: 'p', textContent: I`You've logged in as "${username}".` }));
+        if (user.isAdmin)
+            this.addContent(new View({ tag: 'p', textContent: I`You are admin.` }));
         this.addContent(this.btnChangePassword);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);

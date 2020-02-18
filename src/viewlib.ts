@@ -9,6 +9,11 @@ export class View {
     constructor(dom?: BuildDomExpr) {
         if (dom) this._dom = utils.buildDOM(dom) as HTMLElement;
     }
+
+    public parentView?: ContainerView<View>;
+    public _position?: number;
+    get position() { return this._position; }
+
     protected _dom: HTMLElement;
     public get domCreated() { return !!this._dom; }
     public get dom() {
@@ -61,6 +66,54 @@ Node.prototype.appendView = function (this: Node, view: View) {
     this.appendChild(view.dom);
 };
 
+export class ContainerView<T extends View> extends View {
+    items: T[] = [];
+    appendView(view: T) {
+        this.addView(view);
+    }
+    addView(view: T, pos?: number) {
+        const items = this.items;
+        if (view.parentView) throw new Error('the view is already in a container view');
+        view.parentView = this;
+        if (pos === undefined) {
+            view._position = items.length;
+            items.push(view);
+            this.dom.appendChild(view.dom);
+        } else {
+            items.splice(pos, 0, view);
+            this.dom.insertBefore(view.dom, items[pos + 1]?.dom);
+            for (let i = pos; i < items.length; i++) {
+                items[i]._position = i;
+            }
+        }
+    }
+    removeView(view: T | number) {
+        view = this._ensureItem(view);
+        view.dom.remove();
+        this.items.splice(view._position, 1);
+        var pos = view._position;
+        view.parentView = view._position = null;
+        for (let i = pos; i < this.items.length; i++) {
+            this.items[i]._position = i;
+        }
+    }
+    protected _ensureItem(item: T | number) {
+        if (typeof item === 'number') item = this.items[item];
+        else if (!item) throw new Error('item is null or undefined.');
+        else if (item.parentView !== this) throw new Error('the item is not in this listview.');
+        return item;
+    }
+
+    [Symbol.iterator]() { return this.items[Symbol.iterator](); }
+    get length() { return this.items.length; }
+    get(idx: number) {
+        return this.items[idx];
+    }
+    map<TRet>(func: (lvi: T) => TRet) { return utils.arrayMap(this, func); }
+    find(func: (lvi: T, idx: number) => any) { return utils.arrayFind(this, func); }
+    forEach(func: (lvi: T, idx: number) => void) { return utils.arrayForeach(this, func); }
+}
+
 /** DragManager is used to help exchange information between views */
 export var dragManager = new class DragManager {
     /** The item being dragged */
@@ -77,10 +130,8 @@ export var dragManager = new class DragManager {
 };
 
 export abstract class ListViewItem extends View implements ISelectable {
-    _listView: ListView;
     _position: number;
-    get listview() { return this._listView; }
-    get position() { return this._position; }
+    get listview() { return this.parentView as ListView; }
 
     get dragData() { return this.dom.textContent; }
 
@@ -101,21 +152,21 @@ export abstract class ListViewItem extends View implements ISelectable {
 
 
     remove() {
-        if (!this._listView) return;
-        this._listView.remove(this);
+        if (!this.listview) return;
+        this.listview.remove(this);
     }
 
     protected postCreateDom() {
         super.postCreateDom();
         this.dom.addEventListener('click', (ev) => {
-            if (this._listView?.selectionHelper.handleItemClicked(this, ev)) return;
-            this._listView?.onItemClicked?.(this);
+            if (this.listview?.selectionHelper.handleItemClicked(this, ev)) return;
+            this.listview?.onItemClicked?.(this);
         });
         this.dom.addEventListener('contextmenu', (ev) => {
-            (this.onContextMenu ?? this._listView?.onContextMenu)?.(this, ev);
+            (this.onContextMenu ?? this.listview?.onContextMenu)?.(this, ev);
         });
         this.dom.addEventListener('dragstart', (ev) => {
-            if (!(this.dragging ?? this._listView?.dragging)) return;
+            if (!(this.dragging ?? this.listview?.dragging)) return;
             dragManager.start(this);
             ev.dataTransfer.setData('text/plain', this.dragData);
             this.dom.style.opacity = '.5';
@@ -150,7 +201,7 @@ export abstract class ListViewItem extends View implements ISelectable {
                 event: ev, drop: drop,
                 accept: false
             };
-            if (this._listView?.moveByDragging && item.listview === this.listview) {
+            if (this.listview?.moveByDragging && item.listview === this.listview) {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
@@ -204,8 +255,8 @@ interface DragArg<T> {
     accept: boolean | 'move' | 'move-after', event: DragEvent;
 }
 
-export class ListView<T extends ListViewItem = ListViewItem> extends View implements Iterable<T> {
-    private items: Array<T> = [];
+export class ListView<T extends ListViewItem = ListViewItem> extends ContainerView<T> implements Iterable<T> {
+    // private items: Array<T> = [];
     onItemClicked: (item: T) => void;
     /**
      * Allow user to drag an item.
@@ -228,30 +279,11 @@ export class ListView<T extends ListViewItem = ListViewItem> extends View implem
         super(container);
     }
     add(item: T, pos?: number) {
-        if (item._listView) throw new Error('the item is already in a listview');
-        item._listView = this;
-        if (pos === undefined || pos >= this.items.length) {
-            this.dom.appendChild(item.dom);
-            item._position = this.items.length;
-            this.items.push(item);
-        } else {
-            this.dom.insertBefore(item.dom, this.get(pos).dom);
-            this.items.splice(pos, 0, item);
-            for (let i = pos; i < this.items.length; i++) {
-                this.items[i]._position = i;
-            }
-        }
+        this.addView(item, pos);
         if (this.dragging) item.dom.draggable = true;
     }
     remove(item: T | number) {
-        item = this._ensureItem(item);
-        item.dom.remove();
-        this.items.splice(item._position, 1);
-        var pos = item.position;
-        item._listView = item._position = null;
-        for (let i = pos; i < this.items.length; i++) {
-            this.items[i]._position = i;
-        }
+        this.removeView(item);
     }
     move(item: T | number, newpos: number) {
         item = this._ensureItem(item);
@@ -268,20 +300,12 @@ export class ListView<T extends ListViewItem = ListViewItem> extends View implem
         utils.clearChildren(this.dom);
         this.items = [];
     }
-    [Symbol.iterator]() { return this.items[Symbol.iterator](); }
-    get length() { return this.items.length; }
-    get(idx: number) {
-        return this.items[idx];
-    }
-    map<TRet>(func: (lvi: T) => TRet) { return utils.arrayMap(this, func); }
-    find(func: (lvi: T, idx: number) => any) { return utils.arrayFind(this, func); }
-    forEach(func: (lvi: T, idx: number) => void) { return utils.arrayForeach(this, func); }
-    private _ensureItem(item: T | number) {
-        if (typeof item === 'number') item = this.get(item);
-        else if (!item) throw new Error('item is null or undefined.');
-        else if (item._listView !== this) throw new Error('the item is not in this listview.');
-        return item;
-    }
+    // private _ensureItem(item: T | number) {
+    //     if (typeof item === 'number') item = this.get(item);
+    //     else if (!item) throw new Error('item is null or undefined.');
+    //     else if (item._listView !== this) throw new Error('the item is not in this listview.');
+    //     return item;
+    // }
     ReplaceChild(dom: ViewArg) {
         this.clear();
         this.dom.appendChild(View.getDOM(dom));
@@ -489,8 +513,8 @@ export class MenuItem extends ListViewItem {
         return {
             tag: 'div.item.no-selection',
             onclick: (ev) => {
-                if (this._listView instanceof ContextMenu) {
-                    if (!this._listView.keepOpen) this._listView.close();
+                if (this.parentView instanceof ContextMenu) {
+                    if (!this.parentView.keepOpen) this.parentView.close();
                 }
                 this.onclick?.(ev);
             }

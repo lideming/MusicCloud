@@ -78,6 +78,9 @@ export namespace Api {
 
         /** When GET me */
         playing?: Api.TrackLocation;
+
+        /** When GET me */
+        role?: 'admin' | 'user';
     }
 
     interface Error {

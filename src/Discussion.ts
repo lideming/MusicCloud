@@ -52,7 +52,7 @@ class CommentsView {
                 commView.comment = c;
                 commView.updateDom();
             } else {
-                this.addItem(c, viewPos);
+                this.addItem(c, viewPos++);
             }
         });
         this.view.updateView();
@@ -60,7 +60,7 @@ class CommentsView {
     }
     private addItem(c: Api.Comment, pos?: number): void {
         const comm = new CommentViewItem(c);
-        if (c.uid === user.info.id) comm.onremove = () => {
+        if (c.uid === user.info.id || user.isAdmin) comm.onremove = () => {
             this.ioAction(() => api.postJson({
                 method: 'DELETE',
                 path: this.endpoint + '/' + comm.comment.id,

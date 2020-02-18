@@ -33,7 +33,7 @@ export class Track implements Api.Track {
         return utils.objectApply<Api.Track>({} as any, this, ['id', 'artist', 'name', 'url', 'size']) as any;
     }
     getExtensionName() {
-        return /\.([\w\-_]{1,6})$/.exec(this.url)[1];
+        return /\.([\w\-_]{1,6})$/.exec(this.url)?.[1];
     }
     updateFromApiTrack(t: Api.Track) {
         if (this.id !== t.id) throw new Error('Bad track id');

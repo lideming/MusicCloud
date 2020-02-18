@@ -184,7 +184,7 @@ class CommentsView {
                     commView.updateDom();
                 }
                 else {
-                    this.addItem(c, viewPos);
+                    this.addItem(c, viewPos++);
                 }
             });
             this.view.updateView();
@@ -193,7 +193,7 @@ class CommentsView {
     }
     addItem(c, pos) {
         const comm = new CommentViewItem(c);
-        if (c.uid === User_1.user.info.id)
+        if (c.uid === User_1.user.info.id || User_1.user.isAdmin)
             comm.onremove = () => {
                 this.ioAction(() => Api_1.api.postJson({
                     method: 'DELETE',
@@ -1979,6 +1979,7 @@ exports.user = new class User {
         this.onSwitchedUser = new utils_1.Callbacks();
     }
     get info() { return this.siLogin.data; }
+    get isAdmin() { return this.role === 'admin'; }
     setState(state) {
         this.state = state;
         UI_1.ui.sidebarLogin.update();
@@ -2075,6 +2076,7 @@ exports.user = new class User {
             this.info.id = info.id;
             this.info.username = info.username;
             this.info.passwd = info.passwd;
+            this.role = info.role;
             this.siLogin.save();
             var servermsg = info['servermsg'];
             if (servermsg)
@@ -2090,6 +2092,7 @@ exports.user = new class User {
     }
     logout() {
         utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null });
+        this.role = null;
         this.siLogin.save();
         Api_1.api.defaultBasicAuth = undefined;
         UI_1.ui.content.setCurrent(null);
@@ -2309,7 +2312,9 @@ class MeDialog extends viewlib_1.Dialog {
         this.btnLogout = new viewlib_1.ButtonView({ text: utils_1.I `Logout`, type: 'big' });
         var username = exports.user.info.username;
         this.title = utils_1.I `User ${username}`;
-        this.addContent(new viewlib_1.View({ tag: 'div', textContent: utils_1.I `You've logged in as "${username}".` }));
+        this.addContent(new viewlib_1.View({ tag: 'p', textContent: utils_1.I `You've logged in as "${username}".` }));
+        if (exports.user.isAdmin)
+            this.addContent(new viewlib_1.View({ tag: 'p', textContent: utils_1.I `You are admin.` }));
         this.addContent(this.btnChangePassword);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);
@@ -2425,7 +2430,8 @@ class Track {
         return utils_1.utils.objectApply({}, this, ['id', 'artist', 'name', 'url', 'size']);
     }
     getExtensionName() {
-        return /\.([\w\-_]{1,6})$/.exec(this.url)[1];
+        var _a;
+        return (_a = /\.([\w\-_]{1,6})$/.exec(this.url)) === null || _a === void 0 ? void 0 : _a[1];
     }
     updateFromApiTrack(t) {
         if (this.id !== t.id)
@@ -3044,6 +3050,9 @@ exports.utils = new class Utils {
         return a % b;
     }
 };
+Array.prototype.remove = function (item) {
+    exports.utils.arrayRemove(this, item);
+};
 class Timer {
     constructor(callback) {
         this.callback = callback;
@@ -3237,7 +3246,7 @@ class Callbacks {
         return callback;
     }
     remove(callback) {
-        exports.utils.arrayRemove(this.list, callback);
+        this.list.remove(callback);
     }
 }
 exports.Callbacks = Callbacks;
@@ -3322,6 +3331,7 @@ class View {
         if (dom)
             this._dom = utils_1.utils.buildDOM(dom);
     }
+    get position() { return this._position; }
     get domCreated() { return !!this._dom; }
     get dom() {
         this.ensureDom();
@@ -3369,6 +3379,62 @@ exports.View = View;
 Node.prototype.appendView = function (view) {
     this.appendChild(view.dom);
 };
+class ContainerView extends View {
+    constructor() {
+        super(...arguments);
+        this.items = [];
+    }
+    appendView(view) {
+        this.addView(view);
+    }
+    addView(view, pos) {
+        var _a;
+        const items = this.items;
+        if (view.parentView)
+            throw new Error('the view is already in a container view');
+        view.parentView = this;
+        if (pos === undefined) {
+            view._position = items.length;
+            items.push(view);
+            this.dom.appendChild(view.dom);
+        }
+        else {
+            items.splice(pos, 0, view);
+            this.dom.insertBefore(view.dom, (_a = items[pos + 1]) === null || _a === void 0 ? void 0 : _a.dom);
+            for (let i = pos; i < items.length; i++) {
+                items[i]._position = i;
+            }
+        }
+    }
+    removeView(view) {
+        view = this._ensureItem(view);
+        view.dom.remove();
+        this.items.splice(view._position, 1);
+        var pos = view._position;
+        view.parentView = view._position = null;
+        for (let i = pos; i < this.items.length; i++) {
+            this.items[i]._position = i;
+        }
+    }
+    _ensureItem(item) {
+        if (typeof item === 'number')
+            item = this.items[item];
+        else if (!item)
+            throw new Error('item is null or undefined.');
+        else if (item.parentView !== this)
+            throw new Error('the item is not in this listview.');
+        return item;
+    }
+    [Symbol.iterator]() { return this.items[Symbol.iterator](); }
+    get length() { return this.items.length; }
+    get(idx) {
+        return this.items[idx];
+    }
+    map(func) { return utils_1.utils.arrayMap(this, func); }
+    find(func) { return utils_1.utils.arrayFind(this, func); }
+    forEach(func) { return utils_1.utils.arrayForeach(this, func); }
+}
+exports.ContainerView = ContainerView;
 /** DragManager is used to help exchange information between views */
 exports.dragManager = new class DragManager {
     get currentItem() { return this._currentItem; }
@@ -3385,30 +3451,38 @@ exports.dragManager = new class DragManager {
 class ListViewItem extends View {
     constructor() {
         super(...arguments);
+        this.onSelectedChanged = new utils_1.Callbacks();
         // https://stackoverflow.com/questions/7110353
         this.enterctr = 0;
     }
-    get listview() { return this._listView; }
-    get position() { return this._position; }
+    get listview() { return this.parentView; }
     get dragData() { return this.dom.textContent; }
+    get selected() { return this._selected; }
+    set selected(v) {
+        this._selected = v;
+        this.domCreated && this.updateDom();
+        this.onSelectedChanged.invoke();
+    }
     remove() {
-        if (!this._listView)
+        if (!this.listview)
             return;
-        this._listView.remove(this);
+        this.listview.remove(this);
     }
     postCreateDom() {
         super.postCreateDom();
-        this.dom.addEventListener('click', () => {
-            var _a, _b, _c;
-            (_c = (_a = this._listView) === null || _a === void 0 ? void 0 : (_b = _a).onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
+        this.dom.addEventListener('click', (ev) => {
+            var _a, _b, _c, _d;
+            if ((_a = this.listview) === null || _a === void 0 ? void 0 : _a.selectionHelper.handleItemClicked(this, ev))
+                return;
+            (_d = (_b = this.listview) === null || _b === void 0 ? void 0 : (_c = _b).onItemClicked) === null || _d === void 0 ? void 0 : _d.call(_c, this);
         });
         this.dom.addEventListener('contextmenu', (ev) => {
             var _a, _b, _c;
-            (_c = (_a = this.onContextMenu, (_a !== null && _a !== void 0 ? _a : (_b = this._listView) === null || _b === void 0 ? void 0 : _b.onContextMenu))) === null || _c === void 0 ? void 0 : _c(this, ev);
+            (_c = (_a = this.onContextMenu, (_a !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onContextMenu))) === null || _c === void 0 ? void 0 : _c(this, ev);
         });
         this.dom.addEventListener('dragstart', (ev) => {
             var _a, _b;
-            if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this._listView) === null || _b === void 0 ? void 0 : _b.dragging)))
+            if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.dragging)))
                 return;
             exports.dragManager.start(this);
             ev.dataTransfer.setData('text/plain', this.dragData);
@@ -3442,7 +3516,7 @@ class ListViewItem extends View {
                 event: ev, drop: drop,
                 accept: false
             };
-            if (((_a = this._listView) === null || _a === void 0 ? void 0 : _a.moveByDragging) && item.listview === this.listview) {
+            if (((_a = this.listview) === null || _a === void 0 ? void 0 : _a.moveByDragging) && item.listview === this.listview) {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
@@ -3501,10 +3575,9 @@ class ListViewItem extends View {
     ;
 }
 exports.ListViewItem = ListViewItem;
-class ListView extends View {
+class ListView extends ContainerView {
     constructor(container) {
         super(container);
-        this.items = [];
         /**
          * Allow user to drag an item.
          */
@@ -3513,35 +3586,15 @@ class ListView extends View {
          * Allow user to drag an item and change its position.
          */
         this.moveByDragging = false;
+        this.selectionHelper = new SelectionHelper();
     }
     add(item, pos) {
-        if (item._listView)
-            throw new Error('the item is already in a listview');
-        item._listView = this;
-        if (pos === undefined || pos >= this.items.length) {
-            this.dom.appendChild(item.dom);
-            item._position = this.items.length;
-            this.items.push(item);
-        }
-        else {
-            this.dom.insertBefore(item.dom, this.get(pos).dom);
-            this.items.splice(pos, 0, item);
-            for (let i = pos; i < this.items.length; i++) {
-                this.items[i]._position = i;
-            }
-        }
+        this.addView(item, pos);
         if (this.dragging)
             item.dom.draggable = true;
     }
     remove(item) {
-        item = this._ensureItem(item);
-        item.dom.remove();
-        this.items.splice(item._position, 1);
-        var pos = item.position;
-        item._listView = item._position = null;
-        for (let i = pos; i < this.items.length; i++) {
-            this.items[i]._position = i;
-        }
+        this.removeView(item);
     }
     move(item, newpos) {
         item = this._ensureItem(item);
@@ -3559,29 +3612,45 @@ class ListView extends View {
         utils_1.utils.clearChildren(this.dom);
         this.items = [];
     }
-    [Symbol.iterator]() { return this.items[Symbol.iterator](); }
-    get length() { return this.items.length; }
-    get(idx) {
-        return this.items[idx];
-    }
-    map(func) { return utils_1.utils.arrayMap(this, func); }
-    find(func) { return utils_1.utils.arrayFind(this, func); }
-    forEach(func) { return utils_1.utils.arrayForeach(this, func); }
-    _ensureItem(item) {
-        if (typeof item === 'number')
-            item = this.get(item);
-        else if (!item)
-            throw new Error('item is null or undefined.');
-        else if (item._listView !== this)
-            throw new Error('the item is not in this listview.');
-        return item;
-    }
+    // private _ensureItem(item: T | number) {
+    //     if (typeof item === 'number') item = this.get(item);
+    //     else if (!item) throw new Error('item is null or undefined.');
+    //     else if (item._listView !== this) throw new Error('the item is not in this listview.');
+    //     return item;
+    // }
     ReplaceChild(dom) {
         this.clear();
         this.dom.appendChild(View.getDOM(dom));
     }
 }
 exports.ListView = ListView;
+class SelectionHelper {
+    constructor() {
+        this.onEnabledChanged = new utils_1.Callbacks();
+        this.selectedItems = [];
+        this.onSelectedItemsChanged = new utils_1.Callbacks();
+    }
+    /** Returns true if it's handled by the helper. */
+    handleItemClicked(item, ev) {
+        if (!this.enabled)
+            return false;
+        this.toggleItemSelection(item);
+        return true;
+    }
+    toggleItemSelection(item) {
+        if (item.selected) {
+            item.selected = false;
+            this.selectedItems.remove(item);
+            this.onSelectedItemsChanged.invoke('remove', item);
+        }
+        else {
+            item.selected = true;
+            this.selectedItems.push(item);
+            this.onSelectedItemsChanged.invoke('add', item);
+        }
+    }
+}
+exports.SelectionHelper = SelectionHelper;
 class Section extends View {
     constructor(arg) {
         super();
@@ -3751,9 +3820,9 @@ class MenuItem extends ListViewItem {
             tag: 'div.item.no-selection',
             onclick: (ev) => {
                 var _a, _b;
-                if (this._listView instanceof ContextMenu) {
-                    if (!this._listView.keepOpen)
-                        this._listView.close();
+                if (this.parentView instanceof ContextMenu) {
+                    if (!this.parentView.keepOpen)
+                        this.parentView.close();
                 }
                 (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev);
             }
@@ -4102,7 +4171,7 @@ class ToastsContainer extends View {
         this.toasts.push(toast);
     }
     removeToast(toast) {
-        utils_1.utils.arrayRemove(this.toasts, toast);
+        this.toasts.remove(toast);
         if (this.toasts.length === 0)
             this.remove();
     }
