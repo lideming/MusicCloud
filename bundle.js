@@ -3612,12 +3612,13 @@ class ListViewItem extends View {
             }
             exports.dragManager.startArray(arr);
             ev.dataTransfer.setData('text/plain', arr.map(x => x.dragData).join('\r\n'));
-            this.dom.style.opacity = '.5';
+            arr.forEach(x => x.dom.style.opacity = '.5');
         });
         this.dom.addEventListener('dragend', (ev) => {
+            var arr = exports.dragManager.currentArray;
             exports.dragManager.end();
             ev.preventDefault();
-            this.dom.style.opacity = null;
+            arr.forEach(x => x.dom.style.opacity = '');
         });
         this.dom.addEventListener('dragover', (ev) => {
             this.dragHandler(ev, 'dragover');
