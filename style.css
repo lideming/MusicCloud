@@ -172,13 +172,14 @@ html, body {
 
 .content-header .actions {
     float: right;
-    margin: 5px;
+    vertical-align: middle;
 }
 
 .content-header .actions .action {
     display: inline-block;
     vertical-align: middle;
     color: gray;
+    margin: 5px;
 }
 
 .tracklist {
@@ -306,6 +307,10 @@ a.item {
 
 .trackitem.uploads-item.state-done .uploads-state {
     color: #66bb6a;
+}
+
+.trackitem.selected {
+    background: hsla(5, 100%, 50%, .3);
 }
 
 /* .trackitem .artist::before,  */

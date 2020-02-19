@@ -263,6 +263,7 @@ export class TrackListView extends ListContentView {
     curPlaying = new ItemActiveHelper<TrackViewItem>({
         funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
     });
+    canMultiSelect = true;
     constructor(list: TrackList) {
         super();
         this.list = list;
@@ -297,6 +298,7 @@ export class TrackListView extends ListContentView {
         lv.dragging = true;
         if (this.list.canEdit) lv.moveByDragging = true;
         lv.onItemMoved = () => this.list.updateTracksFromListView();
+        lv.onItemClicked = (item) => playerCore.playTrack(item.track);
         this.list.tracks.forEach(t => this.addItem(t));
         this.updateItems();
         if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);
@@ -363,7 +365,6 @@ export class TrackViewItem extends ListViewItem {
                 { tag: 'span.name', _key: 'domname' },
                 { tag: 'span.artist', _key: 'domartist' },
             ],
-            onclick: () => { playerCore.playTrack(track); },
             draggable: true,
             _item: this
         };
@@ -377,6 +378,7 @@ export class TrackViewItem extends ListViewItem {
             this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
         }
         this.dompos.hidden = this.noPos && !this.playing;
+        this.toggleClass('selected', !!this.selected);
     }
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
         ev.preventDefault();

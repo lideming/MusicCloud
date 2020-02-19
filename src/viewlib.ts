@@ -138,6 +138,7 @@ export abstract class ListViewItem extends View implements ISelectable {
     onContextMenu: ListView['onContextMenu'];
 
     dragging?: boolean;
+    get selectionHelper() { return this.listview.selectionHelper; }
 
 
     private _selected: boolean;
@@ -282,6 +283,8 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
         if (this.dragging) item.dom.draggable = true;
     }
     remove(item: T | number) {
+        item = this._ensureItem(item);
+        if (item.selected) this.selectionHelper.toggleItemSelection(item);
         this.removeView(item);
     }
     move(item: T | number, newpos: number) {
@@ -296,8 +299,8 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
     }
     /** Remove all items and all DOM children */
     clear() {
+        this.removeAll();
         utils.clearChildren(this.dom);
-        this.items = [];
     }
     ReplaceChild(dom: ViewArg) {
         this.clear();
@@ -310,7 +313,15 @@ export interface ISelectable {
 }
 
 export class SelectionHelper<TItem extends ISelectable> {
-    enabled: boolean;
+    _enabled: boolean;
+    get enabled() { return this._enabled; }
+    set enabled(val) {
+        if (val == !!this._enabled) return;
+        this._enabled = val;
+        while (this.selectedItems.length)
+            this.toggleItemSelection(this.selectedItems[0]);
+        this.onEnabledChanged.invoke();
+    }
     onEnabledChanged = new Callbacks();
 
     selectedItems = [] as TItem[];

@@ -43,12 +43,22 @@ export class ListContentView implements ContentView {
 
     header: ContentHeader;
     refreshBtn: ActionBtn;
+    selectBtn: ActionBtn;
 
     listView: ListView<ListViewItem>;
     loadingIndicator: LoadingIndicator;
     emptyIndicator: LoadingIndicator;
 
     get rendered() { return !!this.listView; }
+
+
+    private _canMultiSelect: boolean;
+    public get canMultiSelect(): boolean { return this._canMultiSelect; }
+    public set canMultiSelect(v: boolean) {
+        this._canMultiSelect = v;
+        if (this.selectBtn) this.selectBtn.hidden = !this.canMultiSelect;
+    }
+
 
     ensureRendered() {
         if (!this.listView) {
@@ -66,6 +76,12 @@ export class ListContentView implements ContentView {
     protected appendHeader() {
         this.header = this.createHeader();
         this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: I`Refresh` }));
+        this.header.actions.addView(this.selectBtn = new ActionBtn({ text: I`Select` }));
+        this.selectBtn.hidden = !this.canMultiSelect;
+        this.selectBtn.onclick = () => {
+            this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
+            this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
+        };
         this.dom.appendView(this.header);
     }
 

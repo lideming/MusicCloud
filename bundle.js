@@ -649,6 +649,12 @@ class DataBackedListView extends viewlib_1.ListView {
 }
 class ListContentView {
     get rendered() { return !!this.listView; }
+    get canMultiSelect() { return this._canMultiSelect; }
+    set canMultiSelect(v) {
+        this._canMultiSelect = v;
+        if (this.selectBtn)
+            this.selectBtn.hidden = !this.canMultiSelect;
+    }
     ensureRendered() {
         if (!this.listView) {
             this.dom = this.dom || utils_1.utils.buildDOM({ tag: 'div' });
@@ -662,6 +668,12 @@ class ListContentView {
     appendHeader() {
         this.header = this.createHeader();
         this.header.actions.addView(this.refreshBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Refresh` }));
+        this.header.actions.addView(this.selectBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Select` }));
+        this.selectBtn.hidden = !this.canMultiSelect;
+        this.selectBtn.onclick = () => {
+            this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
+            this.selectBtn.text = this.listView.selectionHelper.enabled ? utils_1.I `Cancel` : utils_1.I `Select`;
+        };
         this.dom.appendView(this.header);
     }
     appendListView() {
@@ -2689,6 +2701,7 @@ class TrackListView extends ListContentView_1.ListContentView {
         this.curPlaying = new utils_1.ItemActiveHelper({
             funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
         });
+        this.canMultiSelect = true;
         this.trackChanged = () => {
             this.updateCurPlaying();
         };
@@ -2725,6 +2738,7 @@ class TrackListView extends ListContentView_1.ListContentView {
         if (this.list.canEdit)
             lv.moveByDragging = true;
         lv.onItemMoved = () => this.list.updateTracksFromListView();
+        lv.onItemClicked = (item) => PlayerCore_1.playerCore.playTrack(item.track);
         this.list.tracks.forEach(t => this.addItem(t));
         this.updateItems();
         if (this.list.loadIndicator)
@@ -2813,7 +2827,6 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                 { tag: 'span.name', _key: 'domname' },
                 { tag: 'span.artist', _key: 'domartist' },
             ],
-            onclick: () => { PlayerCore_1.playerCore.playTrack(track); },
             draggable: true,
             _item: this
         };
@@ -2828,6 +2841,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
             this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
         }
         this.dompos.hidden = this.noPos && !this.playing;
+        this.toggleClass('selected', !!this.selected);
     }
 }
 exports.TrackViewItem = TrackViewItem;
@@ -3475,6 +3489,7 @@ class ListViewItem extends View {
     }
     get listview() { return this.parentView; }
     get dragData() { return this.dom.textContent; }
+    get selectionHelper() { return this.listview.selectionHelper; }
     get selected() { return this._selected; }
     set selected(v) {
         this._selected = v;
@@ -3612,6 +3627,9 @@ class ListView extends ContainerView {
             item.dom.draggable = true;
     }
     remove(item) {
+        item = this._ensureItem(item);
+        if (item.selected)
+            this.selectionHelper.toggleItemSelection(item);
         this.removeView(item);
     }
     move(item, newpos) {
@@ -3627,8 +3645,8 @@ class ListView extends ContainerView {
     }
     /** Remove all items and all DOM children */
     clear() {
+        this.removeAll();
         utils_1.utils.clearChildren(this.dom);
-        this.items = [];
     }
     ReplaceChild(dom) {
         this.clear();
@@ -3641,6 +3659,15 @@ class SelectionHelper {
         this.onEnabledChanged = new utils_1.Callbacks();
         this.selectedItems = [];
         this.onSelectedItemsChanged = new utils_1.Callbacks();
+    }
+    get enabled() { return this._enabled; }
+    set enabled(val) {
+        if (val == !!this._enabled)
+            return;
+        this._enabled = val;
+        while (this.selectedItems.length)
+            this.toggleItemSelection(this.selectedItems[0]);
+        this.onEnabledChanged.invoke();
     }
     /** Returns true if it's handled by the helper. */
     handleItemClicked(item, ev) {
