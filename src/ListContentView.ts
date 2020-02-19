@@ -57,6 +57,7 @@ export class ListContentView implements ContentView {
     public set canMultiSelect(v: boolean) {
         this._canMultiSelect = v;
         if (this.selectBtn) this.selectBtn.hidden = !this.canMultiSelect;
+        if (this.listView) this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
     }
 
 
@@ -77,16 +78,19 @@ export class ListContentView implements ContentView {
         this.header = this.createHeader();
         this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: I`Refresh` }));
         this.header.actions.addView(this.selectBtn = new ActionBtn({ text: I`Select` }));
-        this.selectBtn.hidden = !this.canMultiSelect;
         this.selectBtn.onclick = () => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
-            this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
         };
         this.dom.appendView(this.header);
     }
 
     protected appendListView() {
         this.listView = new ListView({ tag: 'div' });
+        this.listView.selectionHelper.onEnabledChanged.add(() => {
+            this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
+            this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
+        })();
+        this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
         this.dom.appendView(this.listView);
     }
 

@@ -117,12 +117,21 @@ export class ContainerView<T extends View> extends View {
 export var dragManager = new class DragManager {
     /** The item being dragged */
     _currentItem: any;
-    get currentItem() { return this._currentItem; };
+    _currentArray: any[];
+    get currentItem() { return this._currentItem ?? this._currentArray?.[0] ?? null; };
+    get currentArray() {
+        if (this._currentItem) return [this._currentItem];
+        return this._currentArray;
+    }
     start(item: any) {
         this._currentItem = item;
         console.log('drag start', item);
     }
-    end(item: any) {
+    startArray(arr: any[]) {
+        this._currentArray = arr;
+        console.log('drag start array', arr);
+    }
+    end() {
         this._currentItem = null;
         console.log('drag end');
     }
@@ -131,6 +140,7 @@ export var dragManager = new class DragManager {
 export abstract class ListViewItem extends View implements ISelectable {
     _position: number;
     get listview() { return this.parentView as ListView; }
+    get selectionHelper() { return this.listview.selectionHelper; }
 
     get dragData() { return this.dom.textContent; }
 
@@ -138,8 +148,6 @@ export abstract class ListViewItem extends View implements ISelectable {
     onContextMenu: ListView['onContextMenu'];
 
     dragging?: boolean;
-    get selectionHelper() { return this.listview.selectionHelper; }
-
 
     private _selected: boolean;
     public get selected(): boolean { return this._selected; }
@@ -167,12 +175,19 @@ export abstract class ListViewItem extends View implements ISelectable {
         });
         this.dom.addEventListener('dragstart', (ev) => {
             if (!(this.dragging ?? this.listview?.dragging)) return;
-            dragManager.start(this);
-            ev.dataTransfer.setData('text/plain', this.dragData);
+            var arr: ListViewItem[] = [];
+            if (this.selected) {
+                arr = [...this.selectionHelper.selectedItems];
+                arr.sort((a, b) => a.position - b.position); // remove this line to get a new feature!
+            } else {
+                arr = [this];
+            }
+            dragManager.startArray(arr);
+            ev.dataTransfer.setData('text/plain', arr.map(x => x.dragData).join('\r\n'));
             this.dom.style.opacity = '.5';
         });
         this.dom.addEventListener('dragend', (ev) => {
-            dragManager.end(this);
+            dragManager.end();
             ev.preventDefault();
             this.dom.style.opacity = null;
         });
@@ -194,10 +209,12 @@ export abstract class ListViewItem extends View implements ISelectable {
     private dragoverPlaceholder: HTMLElement;
     dragHandler(ev: DragEvent, type: string) {
         var item = dragManager.currentItem;
+        var items = dragManager.currentArray;
         var drop = type === 'drop';
         if (item instanceof ListViewItem) {
             var arg: DragArg<ListViewItem> = {
                 source: item, target: this,
+                sourceItems: items,
                 event: ev, drop: drop,
                 accept: false
             };
@@ -205,11 +222,16 @@ export abstract class ListViewItem extends View implements ISelectable {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
-                    arg.accept = item !== this ? 'move' : true;
+                    arg.accept = (items.indexOf(this) === -1) ? 'move' : true;
                     if (arg.accept === 'move' && this.position > item.position) arg.accept = 'move-after';
                 } else {
-                    if (item !== this) {
-                        this.listview.move(item, this.position);
+                    if (items.indexOf(this) === -1) {
+                        if (this.position >= item.position) items = [...items].reverse();
+                        for (const it of items) {
+                            if (it !== this) {
+                                this.listview.move(it, this.position);
+                            }
+                        }
                     }
                 }
             }
@@ -252,6 +274,7 @@ export abstract class ListViewItem extends View implements ISelectable {
 
 interface DragArg<T> {
     source: ListViewItem, target: T, drop: boolean,
+    sourceItems: ListViewItem[],
     accept: boolean | 'move' | 'move-after', event: DragEvent;
 }
 
@@ -277,19 +300,20 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
     onContextMenu: (item: ListViewItem, ev: MouseEvent) => void;
     constructor(container?: BuildDomExpr) {
         super(container);
+        this.selectionHelper.itemProvider = this.get.bind(this);
     }
     add(item: T, pos?: number) {
         this.addView(item, pos);
         if (this.dragging) item.dom.draggable = true;
     }
-    remove(item: T | number) {
+    remove(item: T | number, keepSelected?: boolean) {
         item = this._ensureItem(item);
-        if (item.selected) this.selectionHelper.toggleItemSelection(item);
+        if (!keepSelected && item.selected) this.selectionHelper.toggleItemSelection(item);
         this.removeView(item);
     }
     move(item: T | number, newpos: number) {
         item = this._ensureItem(item);
-        this.remove(item);
+        this.remove(item, true);
         this.add(item, newpos);
         this.onItemMoved(item, item.position);
     }
@@ -310,6 +334,7 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
 
 export interface ISelectable {
     selected: boolean;
+    position: number;
 }
 
 export class SelectionHelper<TItem extends ISelectable> {
@@ -319,22 +344,44 @@ export class SelectionHelper<TItem extends ISelectable> {
         if (val == !!this._enabled) return;
         this._enabled = val;
         while (this.selectedItems.length)
-            this.toggleItemSelection(this.selectedItems[0]);
+            this.toggleItemSelection(this.selectedItems[0], false);
+        this.lastToggledItem = null;
         this.onEnabledChanged.invoke();
     }
     onEnabledChanged = new Callbacks();
 
+    itemProvider: (pos: number) => TItem;
+
+    ctrlForceSelect = false;
+
     selectedItems = [] as TItem[];
     onSelectedItemsChanged = new Callbacks<(action: 'add' | 'remove', item: TItem) => void>();
 
+    /** For shift-click */
+    lastToggledItem: TItem;
+
     /** Returns true if it's handled by the helper. */
     handleItemClicked(item: TItem, ev: MouseEvent): boolean {
-        if (!this.enabled) return false;
-        this.toggleItemSelection(item);
+        if (!this.enabled) {
+            if (!this.ctrlForceSelect || !ev.ctrlKey) return false;
+            this.enabled = true;
+        }
+        if (ev.shiftKey && this.lastToggledItem) {
+            var toSelect = !!this.lastToggledItem.selected;
+            var start = item.position, end = this.lastToggledItem.position;
+            if (start > end) [start, end] = [end, start];
+            for (let i = start; i <= end; i++) {
+                this.toggleItemSelection(this.itemProvider(i), toSelect);
+            }
+            this.lastToggledItem = item;
+        } else {
+            this.toggleItemSelection(item);
+        }
         return true;
     }
 
-    toggleItemSelection(item: TItem) {
+    toggleItemSelection(item: TItem, force?: boolean) {
+        if (force !== undefined && force === !!item.selected) return;
         if (item.selected) {
             item.selected = false;
             this.selectedItems.remove(item);
@@ -344,6 +391,7 @@ export class SelectionHelper<TItem extends ISelectable> {
             this.selectedItems.push(item);
             this.onSelectedItemsChanged.invoke('add', item);
         }
+        this.lastToggledItem = item;
     }
 }
 

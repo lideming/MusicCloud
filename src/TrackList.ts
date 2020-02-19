@@ -139,7 +139,7 @@ export class TrackList {
         });
         this.tracks.push(track);
         if (this.contentView) this.contentView.addItem(track, pos);
-        if (pos !== undefined) this.updateTracksFromListView();
+        if (pos !== undefined) this.updateTracksState();
         return track;
     }
     loadEmpty() {
@@ -172,12 +172,26 @@ export class TrackList {
         await this.postToUser();
         return this.apiid;
     }
-    async put() {
+    put() {
+        if (this.putDelaying) return this.putDelaying;
+        this.putDelaying = this.putCore();
+    }
+    putDelaying: Promise<void> = null;
+    putInProgress: Promise<void> = null;
+    private async putCore() {
         try {
+            if (this.putInProgress) await this.putInProgress;
+            await utils.sleepAsync(10);
             await user.waitLogin(true);
             if (this.fetching) await this.fetching;
             if (this.posting) await this.posting;
             if (this.apiid === undefined) throw new Error('cannot put: no apiid');
+        } catch (error) {
+            this.putDelaying = null;
+            console.error(error);
+        }
+        try {
+            [this.putInProgress, this.putDelaying] = [this.putDelaying, null];
             var obj: Api.TrackListPut = {
                 id: this.apiid,
                 name: this.name,
@@ -191,6 +205,8 @@ export class TrackList {
             console.error('list put() failed', this, error);
             Toast.show(I`Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
             throw error;
+        } finally {
+            this.putInProgress = null;
         }
     }
     async fetchImpl() {
@@ -231,13 +247,22 @@ export class TrackList {
         return null;
     }
     updateTracksFromListView() {
-        this.tracks = this.listView.map(lvi => {
-            lvi.track._bind.position = lvi.position;
-            lvi.updateDom();
-            return lvi.track;
-        });
+        this.updateTracksState();
         this.put();
     }
+    private updateTracksState() {
+        if (this.listView) {
+            // if the listview exists, update `this.tracks` as well as the DOM.
+            this.tracks = this.listView.map(lvi => {
+                lvi.track._bind.position = lvi.position;
+                lvi.updateDom();
+                return lvi.track;
+            });
+        } else {
+            this.tracks.forEach((t, i) => t._bind.position = i);
+        }
+    }
+
     updateTrackInfo(track: Track, newInfo: Api.Track) {
         track.updateFromApiTrack(newInfo);
         this.listView.get(track._bind.position).updateDom();
@@ -246,12 +271,8 @@ export class TrackList {
         var pos = track._bind.position;
         track._bind = null;
         this.tracks.splice(pos, 1);
-        if (this.listView) {
-            this.listView.remove(pos);
-            this.updateTracksFromListView();
-        } else {
-            this.tracks.forEach((t, i) => t._bind.position = i);
-        }
+        if (this.listView) this.listView.remove(pos);
+        this.updateTracksState();
         this.contentView?.updateView();
         if (put === undefined || put) this.put();
     }

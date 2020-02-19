@@ -32,7 +32,9 @@ export class ListIndex {
                     var listinfo = arg.target.listInfo;
                     var list = this.getList(listinfo.id);
                     if (list.fetching) list.fetching.then(r => {
-                        list.addTrack(src.track.toApiTrack(), arg.event.altKey ? undefined : 0);
+                        for (const item of arg.sourceItems as TrackViewItem[]) {
+                            list.addTrack(item.track.toApiTrack(), arg.event.altKey ? undefined : 0);
+                        }
                         return list.put();
                     }).catch(err => {
                         console.error('error adding track:', err);

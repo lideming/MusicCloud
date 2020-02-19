@@ -230,7 +230,7 @@ export var uploads = new class extends TrackList {
 
 class UploadViewItem extends TrackViewItem {
     track: UploadTrack;
-    noPos = true;
+    // noPos = true;
     domstate: HTMLElement;
     _lastUploadState: string;
     constructor(track: UploadTrack) {

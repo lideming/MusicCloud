@@ -582,6 +582,8 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Did you mean to upload 1 file?", "是否要上传 1 个文件？"],
     ["Did you mean to upload {0} files?", "是否要上传 {0} 个文件？"],
     ["Refresh", "刷新"],
+    ["Select", "选择"],
+    ["Cancel", "取消"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -654,6 +656,8 @@ class ListContentView {
         this._canMultiSelect = v;
         if (this.selectBtn)
             this.selectBtn.hidden = !this.canMultiSelect;
+        if (this.listView)
+            this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
     }
     ensureRendered() {
         if (!this.listView) {
@@ -669,15 +673,18 @@ class ListContentView {
         this.header = this.createHeader();
         this.header.actions.addView(this.refreshBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Refresh` }));
         this.header.actions.addView(this.selectBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Select` }));
-        this.selectBtn.hidden = !this.canMultiSelect;
         this.selectBtn.onclick = () => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
-            this.selectBtn.text = this.listView.selectionHelper.enabled ? utils_1.I `Cancel` : utils_1.I `Select`;
         };
         this.dom.appendView(this.header);
     }
     appendListView() {
         this.listView = new viewlib_1.ListView({ tag: 'div' });
+        this.listView.selectionHelper.onEnabledChanged.add(() => {
+            this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
+            this.selectBtn.text = this.listView.selectionHelper.enabled ? utils_1.I `Cancel` : utils_1.I `Select`;
+        })();
+        this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
         this.dom.appendView(this.listView);
     }
     onShow() {
@@ -773,7 +780,9 @@ class ListIndex {
                     var list = this.getList(listinfo.id);
                     if (list.fetching)
                         list.fetching.then(r => {
-                            list.addTrack(src.track.toApiTrack(), arg.event.altKey ? undefined : 0);
+                            for (const item of arg.sourceItems) {
+                                list.addTrack(item.track.toApiTrack(), arg.event.altKey ? undefined : 0);
+                            }
                             return list.put();
                         }).catch(err => {
                             console.error('error adding track:', err);
@@ -1884,7 +1893,6 @@ exports.uploads = new class extends tracklist_1.TrackList {
 class UploadViewItem extends tracklist_1.TrackViewItem {
     constructor(track) {
         super(track);
-        this.noPos = true;
         track._upload.view = this;
     }
     postCreateDom() {
@@ -2516,6 +2524,8 @@ class TrackList {
     constructor() {
         this.tracks = [];
         this.canEdit = true;
+        this.putDelaying = null;
+        this.putInProgress = null;
     }
     setLoadIndicator(li) {
         this.loadIndicator = li;
@@ -2547,7 +2557,7 @@ class TrackList {
         if (this.contentView)
             this.contentView.addItem(track, pos);
         if (pos !== undefined)
-            this.updateTracksFromListView();
+            this.updateTracksState();
         return track;
     }
     loadEmpty() {
@@ -2590,8 +2600,16 @@ class TrackList {
         });
     }
     put() {
+        if (this.putDelaying)
+            return this.putDelaying;
+        this.putDelaying = this.putCore();
+    }
+    putCore() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                if (this.putInProgress)
+                    yield this.putInProgress;
+                yield utils_1.utils.sleepAsync(10);
                 yield User_1.user.waitLogin(true);
                 if (this.fetching)
                     yield this.fetching;
@@ -2599,6 +2617,13 @@ class TrackList {
                     yield this.posting;
                 if (this.apiid === undefined)
                     throw new Error('cannot put: no apiid');
+            }
+            catch (error) {
+                this.putDelaying = null;
+                console.error(error);
+            }
+            try {
+                [this.putInProgress, this.putDelaying] = [this.putDelaying, null];
                 var obj = {
                     id: this.apiid,
                     name: this.name,
@@ -2613,6 +2638,9 @@ class TrackList {
                 console.error('list put() failed', this, error);
                 viewlib_1.Toast.show(utils_1.I `Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
                 throw error;
+            }
+            finally {
+                this.putInProgress = null;
             }
         });
     }
@@ -2666,12 +2694,21 @@ class TrackList {
         return null;
     }
     updateTracksFromListView() {
-        this.tracks = this.listView.map(lvi => {
-            lvi.track._bind.position = lvi.position;
-            lvi.updateDom();
-            return lvi.track;
-        });
+        this.updateTracksState();
         this.put();
+    }
+    updateTracksState() {
+        if (this.listView) {
+            // if the listview exists, update `this.tracks` as well as the DOM.
+            this.tracks = this.listView.map(lvi => {
+                lvi.track._bind.position = lvi.position;
+                lvi.updateDom();
+                return lvi.track;
+            });
+        }
+        else {
+            this.tracks.forEach((t, i) => t._bind.position = i);
+        }
     }
     updateTrackInfo(track, newInfo) {
         track.updateFromApiTrack(newInfo);
@@ -2682,13 +2719,9 @@ class TrackList {
         var pos = track._bind.position;
         track._bind = null;
         this.tracks.splice(pos, 1);
-        if (this.listView) {
+        if (this.listView)
             this.listView.remove(pos);
-            this.updateTracksFromListView();
-        }
-        else {
-            this.tracks.forEach((t, i) => t._bind.position = i);
-        }
+        this.updateTracksState();
         (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
         if (put === undefined || put)
             this.put();
@@ -3469,13 +3502,22 @@ class ContainerView extends View {
 exports.ContainerView = ContainerView;
 /** DragManager is used to help exchange information between views */
 exports.dragManager = new class DragManager {
-    get currentItem() { return this._currentItem; }
+    get currentItem() { var _a, _b, _c; return _c = (_a = this._currentItem, (_a !== null && _a !== void 0 ? _a : (_b = this._currentArray) === null || _b === void 0 ? void 0 : _b[0])), (_c !== null && _c !== void 0 ? _c : null); }
     ;
+    get currentArray() {
+        if (this._currentItem)
+            return [this._currentItem];
+        return this._currentArray;
+    }
     start(item) {
         this._currentItem = item;
         console.log('drag start', item);
     }
-    end(item) {
+    startArray(arr) {
+        this._currentArray = arr;
+        console.log('drag start array', arr);
+    }
+    end() {
         this._currentItem = null;
         console.log('drag end');
     }
@@ -3488,8 +3530,8 @@ class ListViewItem extends View {
         this.enterctr = 0;
     }
     get listview() { return this.parentView; }
-    get dragData() { return this.dom.textContent; }
     get selectionHelper() { return this.listview.selectionHelper; }
+    get dragData() { return this.dom.textContent; }
     get selected() { return this._selected; }
     set selected(v) {
         this._selected = v;
@@ -3517,12 +3559,20 @@ class ListViewItem extends View {
             var _a, _b;
             if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.dragging)))
                 return;
-            exports.dragManager.start(this);
-            ev.dataTransfer.setData('text/plain', this.dragData);
+            var arr = [];
+            if (this.selected) {
+                arr = [...this.selectionHelper.selectedItems];
+                arr.sort((a, b) => a.position - b.position); // remove this line to get a new feature!
+            }
+            else {
+                arr = [this];
+            }
+            exports.dragManager.startArray(arr);
+            ev.dataTransfer.setData('text/plain', arr.map(x => x.dragData).join('\r\n'));
             this.dom.style.opacity = '.5';
         });
         this.dom.addEventListener('dragend', (ev) => {
-            exports.dragManager.end(this);
+            exports.dragManager.end();
             ev.preventDefault();
             this.dom.style.opacity = null;
         });
@@ -3542,10 +3592,12 @@ class ListViewItem extends View {
     dragHandler(ev, type) {
         var _a, _b, _c, _d, _e;
         var item = exports.dragManager.currentItem;
+        var items = exports.dragManager.currentArray;
         var drop = type === 'drop';
         if (item instanceof ListViewItem) {
             var arg = {
                 source: item, target: this,
+                sourceItems: items,
                 event: ev, drop: drop,
                 accept: false
             };
@@ -3553,13 +3605,19 @@ class ListViewItem extends View {
                 ev.preventDefault();
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
-                    arg.accept = item !== this ? 'move' : true;
+                    arg.accept = (items.indexOf(this) === -1) ? 'move' : true;
                     if (arg.accept === 'move' && this.position > item.position)
                         arg.accept = 'move-after';
                 }
                 else {
-                    if (item !== this) {
-                        this.listview.move(item, this.position);
+                    if (items.indexOf(this) === -1) {
+                        if (this.position >= item.position)
+                            items = [...items].reverse();
+                        for (const it of items) {
+                            if (it !== this) {
+                                this.listview.move(it, this.position);
+                            }
+                        }
                     }
                 }
             }
@@ -3620,21 +3678,22 @@ class ListView extends ContainerView {
          */
         this.moveByDragging = false;
         this.selectionHelper = new SelectionHelper();
+        this.selectionHelper.itemProvider = this.get.bind(this);
     }
     add(item, pos) {
         this.addView(item, pos);
         if (this.dragging)
             item.dom.draggable = true;
     }
-    remove(item) {
+    remove(item, keepSelected) {
         item = this._ensureItem(item);
-        if (item.selected)
+        if (!keepSelected && item.selected)
             this.selectionHelper.toggleItemSelection(item);
         this.removeView(item);
     }
     move(item, newpos) {
         item = this._ensureItem(item);
-        this.remove(item);
+        this.remove(item, true);
         this.add(item, newpos);
         this.onItemMoved(item, item.position);
     }
@@ -3657,6 +3716,7 @@ exports.ListView = ListView;
 class SelectionHelper {
     constructor() {
         this.onEnabledChanged = new utils_1.Callbacks();
+        this.ctrlForceSelect = false;
         this.selectedItems = [];
         this.onSelectedItemsChanged = new utils_1.Callbacks();
     }
@@ -3666,17 +3726,35 @@ class SelectionHelper {
             return;
         this._enabled = val;
         while (this.selectedItems.length)
-            this.toggleItemSelection(this.selectedItems[0]);
+            this.toggleItemSelection(this.selectedItems[0], false);
+        this.lastToggledItem = null;
         this.onEnabledChanged.invoke();
     }
     /** Returns true if it's handled by the helper. */
     handleItemClicked(item, ev) {
-        if (!this.enabled)
-            return false;
-        this.toggleItemSelection(item);
+        if (!this.enabled) {
+            if (!this.ctrlForceSelect || !ev.ctrlKey)
+                return false;
+            this.enabled = true;
+        }
+        if (ev.shiftKey && this.lastToggledItem) {
+            var toSelect = !!this.lastToggledItem.selected;
+            var start = item.position, end = this.lastToggledItem.position;
+            if (start > end)
+                [start, end] = [end, start];
+            for (let i = start; i <= end; i++) {
+                this.toggleItemSelection(this.itemProvider(i), toSelect);
+            }
+            this.lastToggledItem = item;
+        }
+        else {
+            this.toggleItemSelection(item);
+        }
         return true;
     }
-    toggleItemSelection(item) {
+    toggleItemSelection(item, force) {
+        if (force !== undefined && force === !!item.selected)
+            return;
         if (item.selected) {
             item.selected = false;
             this.selectedItems.remove(item);
@@ -3687,6 +3765,7 @@ class SelectionHelper {
             this.selectedItems.push(item);
             this.onSelectedItemsChanged.invoke('add', item);
         }
+        this.lastToggledItem = item;
     }
 }
 exports.SelectionHelper = SelectionHelper;
