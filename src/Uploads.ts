@@ -1,6 +1,6 @@
 // file: Uploads.ts
 
-import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader } from "./tracklist";
+import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader, ActionBtn } from "./tracklist";
 import { Semaphore, ItemActiveHelper, utils } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
@@ -76,6 +76,23 @@ export var uploads = new class extends TrackList {
             super.appendHeader();
             this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
             this.dom.appendView(this.uploadArea);
+
+            this.trackActionHandler.onTrackRemove = (items: UploadViewItem[]) => {
+                if (items.length == 1) {
+                    this.removeTrack(items[0]);
+                } else {
+                    new MessageBox()
+                    .setTitle(I`Warning`)
+                    .addText(I`Are you sure to delete ${items.length} tracks permanently?`)
+                    .addResultBtns(['cancel', 'ok'])
+                    .allowCloseWithResult('cancel')
+                    .showAndWaitResult()
+                    .then(r => {
+                        if (r !== 'ok') return;
+                        items.forEach(x => this.removeTrack(x, true));
+                    });
+                }
+            };
         }
         createHeader() {
             var header = new ContentHeader({
@@ -99,39 +116,40 @@ export var uploads = new class extends TrackList {
         }
         createViewItem(t: Track) {
             const item = new UploadViewItem(t as UploadTrack);
-            item.onRemove = async () => {
-                const track = item.track;
-                if (track._upload.state === 'uploading') {
-                    Toast.show(I`Removing of a uploading track is currently not supported.`);
-                    return;
-                }
-                if (track._upload.state === 'pending') {
-                    track._upload.state = 'cancelled';
-                    uploads.remove(track);
-                } else if (track._upload.state === 'error') {
-                    uploads.remove(track);
-                } else if (track._upload.state === 'done') {
-                    if (await new MessageBox()
-                        .setTitle(I`Warning`)
-                        .addText(I`Are you sure to delete the track permanently?`)
-                        .addResultBtns(['cancel', 'ok'])
-                        .allowCloseWithResult('cancel')
-                        .showAndWaitResult() !== 'ok') return;
-                    try {
-                        await api.delete({
-                            path: 'tracks/' + track.id
-                        });
-                    } catch (error) {
-                        Toast.show(I`Failed to remove track.` + '\n' + error);
-                        return;
-                    }
-                    api.onTrackDeleted.invoke(track);
-                } else {
-                    console.error('Unexpected track._upload.state', track._upload.state);
-                    return;
-                }
-            };
+            item.actionHandler = this.trackActionHandler;
             return item;
+        }
+        async removeTrack(item: UploadViewItem, noPrompt?: boolean) {
+            const track = item.track;
+            if (track._upload.state === 'uploading') {
+                Toast.show(I`Removing of a uploading track is currently not supported.`);
+                return;
+            }
+            if (track._upload.state === 'pending') {
+                track._upload.state = 'cancelled';
+                uploads.remove(track);
+            } else if (track._upload.state === 'error') {
+                uploads.remove(track);
+            } else if (track._upload.state === 'done') {
+                if (!noPrompt && await new MessageBox()
+                    .setTitle(I`Warning`)
+                    .addText(I`Are you sure to delete the track permanently?`)
+                    .addResultBtns(['cancel', 'ok'])
+                    .allowCloseWithResult('cancel')
+                    .showAndWaitResult() !== 'ok') return;
+                try {
+                    await api.delete({
+                        path: 'tracks/' + track.id
+                    });
+                } catch (error) {
+                    Toast.show(I`Failed to remove track.` + '\n' + error);
+                    return;
+                }
+                api.onTrackDeleted.invoke(track);
+            } else {
+                console.error('Unexpected track._upload.state', track._upload.state);
+                return;
+            }
         }
     }(this);
     private prependTrack(t: UploadTrack) {

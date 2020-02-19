@@ -547,6 +547,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["or drag files to this zone...", "或拖放文件到此处..."],
     ["Comments", "评论"],
     ["Remove", "移除"],
+    ["Remove {0} tracks","移除 {0} 首歌曲"],
     ["List ID", "列表 ID"],
     ["Track ID", "歌曲 ID"],
     ["Name", "名称"],
@@ -578,11 +579,13 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
     ["Warning", "警告"],
     ["Are you sure to delete the track permanently?", "确定要永久删除此歌曲吗？"],
+    ["Are you sure to delete {0} tracks permanently?", "确定要永久删除 {0} 首歌曲吗？"],
     ["Question", "询问"],
     ["Did you mean to upload 1 file?", "是否要上传 1 个文件？"],
     ["Did you mean to upload {0} files?", "是否要上传 {0} 个文件？"],
     ["Refresh", "刷新"],
     ["Select", "选择"],
+    ["Select all", "全选"],
     ["Cancel", "取消"],
     ["Music Cloud", "Music Cloud"]
 ]`));
@@ -672,9 +675,13 @@ class ListContentView {
     appendHeader() {
         this.header = this.createHeader();
         this.header.actions.addView(this.refreshBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Refresh` }));
+        this.header.actions.addView(this.selectAllBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Select all` }));
         this.header.actions.addView(this.selectBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Select` }));
         this.selectBtn.onclick = () => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
+        };
+        this.selectAllBtn.onclick = () => {
+            this.listView.forEach(x => this.listView.selectionHelper.toggleItemSelection(x, true));
         };
         this.dom.appendView(this.header);
     }
@@ -683,6 +690,7 @@ class ListContentView {
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
             this.selectBtn.text = this.listView.selectionHelper.enabled ? utils_1.I `Cancel` : utils_1.I `Select`;
+            this.selectAllBtn.hidden = !this.listView.selectionHelper.enabled;
         })();
         this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
         this.dom.appendView(this.listView);
@@ -1687,6 +1695,24 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 super.appendHeader();
                 this.uploadArea = new UploadArea({ onfile: (file) => exports.uploads.uploadFile(file) });
                 this.dom.appendView(this.uploadArea);
+                this.trackActionHandler.onTrackRemove = (items) => {
+                    if (items.length == 1) {
+                        this.removeTrack(items[0]);
+                    }
+                    else {
+                        new viewlib_1.MessageBox()
+                            .setTitle(I18n_1.I `Warning`)
+                            .addText(I18n_1.I `Are you sure to delete ${items.length} tracks permanently?`)
+                            .addResultBtns(['cancel', 'ok'])
+                            .allowCloseWithResult('cancel')
+                            .showAndWaitResult()
+                            .then(r => {
+                            if (r !== 'ok')
+                                return;
+                            items.forEach(x => this.removeTrack(x, true));
+                        });
+                    }
+                };
             }
             createHeader() {
                 var header = new tracklist_1.ContentHeader({
@@ -1711,7 +1737,11 @@ exports.uploads = new class extends tracklist_1.TrackList {
             }
             createViewItem(t) {
                 const item = new UploadViewItem(t);
-                item.onRemove = () => __awaiter(this, void 0, void 0, function* () {
+                item.actionHandler = this.trackActionHandler;
+                return item;
+            }
+            removeTrack(item, noPrompt) {
+                return __awaiter(this, void 0, void 0, function* () {
                     const track = item.track;
                     if (track._upload.state === 'uploading') {
                         viewlib_1.Toast.show(I18n_1.I `Removing of a uploading track is currently not supported.`);
@@ -1725,7 +1755,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
                         exports.uploads.remove(track);
                     }
                     else if (track._upload.state === 'done') {
-                        if ((yield new viewlib_1.MessageBox()
+                        if (!noPrompt && (yield new viewlib_1.MessageBox()
                             .setTitle(I18n_1.I `Warning`)
                             .addText(I18n_1.I `Are you sure to delete the track permanently?`)
                             .addResultBtns(['cancel', 'ok'])
@@ -1748,7 +1778,6 @@ exports.uploads = new class extends tracklist_1.TrackList {
                         return;
                     }
                 });
-                return item;
             }
         }(this);
     }
@@ -2735,10 +2764,14 @@ class TrackListView extends ListContentView_1.ListContentView {
             funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
         });
         this.canMultiSelect = true;
+        this.trackActionHandler = {};
         this.trackChanged = () => {
             this.updateCurPlaying();
         };
         this.list = list;
+        if (this.list.canEdit) {
+            this.trackActionHandler.onTrackRemove = (items) => items.forEach(x => this.list.remove(x.track));
+        }
     }
     createHeader() {
         return new ContentHeader({
@@ -2790,9 +2823,7 @@ class TrackListView extends ListContentView_1.ListContentView {
     }
     createViewItem(t) {
         var view = new TrackViewItem(t);
-        if (this.list.canEdit) {
-            view.onRemove = (item) => this.list.remove(item.track);
-        }
+        view.actionHandler = this.trackActionHandler;
         return view;
     }
     updateCurPlaying(item) {
@@ -2839,12 +2870,24 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                 text: utils_1.I `Edit`,
                 onclick: () => this.track.startEdit()
             }));
-            if (this.onRemove)
+            if (this.actionHandler.onTrackRemove)
                 m.add(new viewlib_1.MenuItem({
                     text: utils_1.I `Remove`, cls: 'dangerous',
-                    onclick: () => { var _a, _b; return (_b = (_a = this).onRemove) === null || _b === void 0 ? void 0 : _b.call(_a, this); }
+                    onclick: () => { var _a, _b; return (_b = (_a = this.actionHandler).onTrackRemove) === null || _b === void 0 ? void 0 : _b.call(_a, [this]); }
                 }));
-            m.add(new viewlib_1.MenuInfoItem({ text: utils_1.I `Track ID` + ': ' + this.track.id }));
+            if (this.actionHandler.onTrackRemove && this.selected && this.selectionHelper.count > 1)
+                m.add(new viewlib_1.MenuItem({
+                    text: utils_1.I `Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
+                    onclick: () => {
+                        var _a, _b;
+                        (_b = (_a = this.actionHandler).onTrackRemove) === null || _b === void 0 ? void 0 : _b.call(_a, [...this.selectionHelper.selectedItems]);
+                    }
+                }));
+            m.add(new viewlib_1.MenuInfoItem({
+                text: utils_1.I `Track ID` + ': ' +
+                    (!this.selected ? this.track.id
+                        : this.selectionHelper.selectedItems.map(x => x.track.id).join(', '))
+            }));
             m.show({ ev: ev });
         };
         this.track = item;
@@ -3730,6 +3773,7 @@ class SelectionHelper {
         this.lastToggledItem = null;
         this.onEnabledChanged.invoke();
     }
+    get count() { return this.selectedItems.length; }
     /** Returns true if it's handled by the helper. */
     handleItemClicked(item, ev) {
         if (!this.enabled) {
@@ -3766,6 +3810,8 @@ class SelectionHelper {
             this.onSelectedItemsChanged.invoke('add', item);
         }
         this.lastToggledItem = item;
+        if (this.count === 0 && this.ctrlForceSelect)
+            this.enabled = false;
     }
 }
 exports.SelectionHelper = SelectionHelper;

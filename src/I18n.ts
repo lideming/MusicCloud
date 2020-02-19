@@ -169,6 +169,7 @@ i18n.add2dArray(JSON.parse(`[
     ["or drag files to this zone...", "或拖放文件到此处..."],
     ["Comments", "评论"],
     ["Remove", "移除"],
+    ["Remove {0} tracks","移除 {0} 首歌曲"],
     ["List ID", "列表 ID"],
     ["Track ID", "歌曲 ID"],
     ["Name", "名称"],
@@ -200,11 +201,13 @@ i18n.add2dArray(JSON.parse(`[
     ["(Scroll whell or drag to adjust volume)", "（滚动滚轮或拖动调整音量）"],
     ["Warning", "警告"],
     ["Are you sure to delete the track permanently?", "确定要永久删除此歌曲吗？"],
+    ["Are you sure to delete {0} tracks permanently?", "确定要永久删除 {0} 首歌曲吗？"],
     ["Question", "询问"],
     ["Did you mean to upload 1 file?", "是否要上传 1 个文件？"],
     ["Did you mean to upload {0} files?", "是否要上传 {0} 个文件？"],
     ["Refresh", "刷新"],
     ["Select", "选择"],
+    ["Select all", "全选"],
     ["Cancel", "取消"],
     ["Music Cloud", "Music Cloud"]
 ]`));

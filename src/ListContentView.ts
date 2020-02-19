@@ -43,6 +43,7 @@ export class ListContentView implements ContentView {
 
     header: ContentHeader;
     refreshBtn: ActionBtn;
+    selectAllBtn: ActionBtn;
     selectBtn: ActionBtn;
 
     listView: ListView<ListViewItem>;
@@ -77,9 +78,13 @@ export class ListContentView implements ContentView {
     protected appendHeader() {
         this.header = this.createHeader();
         this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: I`Refresh` }));
+        this.header.actions.addView(this.selectAllBtn = new ActionBtn({ text: I`Select all` }));
         this.header.actions.addView(this.selectBtn = new ActionBtn({ text: I`Select` }));
         this.selectBtn.onclick = () => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
+        };
+        this.selectAllBtn.onclick = () => {
+            this.listView.forEach(x => this.listView.selectionHelper.toggleItemSelection(x, true));
         };
         this.dom.appendView(this.header);
     }
@@ -89,6 +94,7 @@ export class ListContentView implements ContentView {
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
             this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
+            this.selectAllBtn.hidden = !this.listView.selectionHelper.enabled;
         })();
         this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
         this.dom.appendView(this.listView);

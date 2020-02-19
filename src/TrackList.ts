@@ -285,9 +285,14 @@ export class TrackListView extends ListContentView {
         funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
     });
     canMultiSelect = true;
+    trackActionHandler: TrackActionHandler<TrackViewItem> = {};
     constructor(list: TrackList) {
         super();
         this.list = list;
+        if (this.list.canEdit) {
+            this.trackActionHandler.onTrackRemove = (items) =>
+                items.forEach(x => this.list.remove(x.track));
+        }
     }
     createHeader() {
         return new ContentHeader({
@@ -337,9 +342,7 @@ export class TrackListView extends ListContentView {
     }
     protected createViewItem(t: Track) {
         var view = new TrackViewItem(t);
-        if (this.list.canEdit) {
-            view.onRemove = (item) => this.list.remove(item.track);
-        }
+        view.actionHandler = this.trackActionHandler;
         return view;
     }
     protected updateCurPlaying(item?: TrackViewItem) {
@@ -364,8 +367,7 @@ export class TrackListView extends ListContentView {
 export class TrackViewItem extends ListViewItem {
     track: Track;
     dom: HTMLDivElement;
-    /** When undefined, the item is not removable */
-    onRemove?: Action<TrackViewItem>;
+    actionHandler: TrackActionHandler<this>;
     noPos: boolean;
     playing: boolean;
     private dompos: HTMLElement;
@@ -423,13 +425,29 @@ export class TrackViewItem extends ListViewItem {
             text: I`Edit`,
             onclick: () => this.track.startEdit()
         }));
-        if (this.onRemove) m.add(new MenuItem({
+        if (this.actionHandler.onTrackRemove) m.add(new MenuItem({
             text: I`Remove`, cls: 'dangerous',
-            onclick: () => this.onRemove?.(this)
+            onclick: () => this.actionHandler.onTrackRemove?.([this])
         }));
-        m.add(new MenuInfoItem({ text: I`Track ID` + ': ' + this.track.id }));
+        if (this.actionHandler.onTrackRemove && this.selected && this.selectionHelper.count > 1)
+            m.add(new MenuItem({
+                text: I`Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
+                onclick: () => {
+                    this.actionHandler.onTrackRemove?.([...this.selectionHelper.selectedItems]);
+                }
+            }));
+        m.add(new MenuInfoItem({
+            text: I`Track ID` + ': ' +
+                (!this.selected ? this.track.id
+                    : this.selectionHelper.selectedItems.map(x => x.track.id).join(', '))
+        }));
         m.show({ ev: ev });
     };
+}
+
+export interface TrackActionHandler<T> {
+    /** When undefined, the item is not removable */
+    onTrackRemove?(arr: T[]);
 }
 
 export class ContentHeader extends View {

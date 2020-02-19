@@ -139,7 +139,7 @@ export var dragManager = new class DragManager {
 
 export abstract class ListViewItem extends View implements ISelectable {
     _position: number;
-    get listview() { return this.parentView as ListView; }
+    get listview() { return this.parentView as ListView<this>; }
     get selectionHelper() { return this.listview.selectionHelper; }
 
     get dragData() { return this.dom.textContent; }
@@ -356,6 +356,7 @@ export class SelectionHelper<TItem extends ISelectable> {
 
     selectedItems = [] as TItem[];
     onSelectedItemsChanged = new Callbacks<(action: 'add' | 'remove', item: TItem) => void>();
+    get count() { return this.selectedItems.length; }
 
     /** For shift-click */
     lastToggledItem: TItem;
@@ -392,6 +393,7 @@ export class SelectionHelper<TItem extends ISelectable> {
             this.onSelectedItemsChanged.invoke('add', item);
         }
         this.lastToggledItem = item;
+        if (this.count === 0 && this.ctrlForceSelect) this.enabled = false;
     }
 }
 
