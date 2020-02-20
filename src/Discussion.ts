@@ -3,7 +3,7 @@
 import { ui, SidebarItem } from "./UI";
 import { api } from "./Api";
 import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView } from "./viewlib";
-import { I, Lazy, Action, BuildDomExpr } from "./utils";
+import { I, Lazy, Action, BuildDomExpr, utils } from "./utils";
 import { ContentHeader } from "./tracklist";
 import { user } from "./User";
 import { ListContentView } from "./ListContentView";
@@ -175,9 +175,6 @@ class CommentViewItem extends ListViewItem {
         super();
         this.comment = comment;
     }
-    domusername: HTMLDivElement;
-    domdate: HTMLDivElement;
-    domcontent: HTMLDivElement;
     comment: Api.Comment;
     onremove: Action<CommentViewItem>;
     onedit: Action<CommentViewItem>;
@@ -186,19 +183,11 @@ class CommentViewItem extends ListViewItem {
             _ctx: this,
             tag: 'div.item.comment.no-transform',
             child: [
-                { tag: 'div.username', _key: 'domusername' },
-                { tag: 'div.date', _key: 'domdate' },
-                { tag: 'div.content', _key: 'domcontent' }
+                { tag: 'div.username', text: () => this.comment.username },
+                { tag: 'div.date', text: () => utils.formatDateTime(new Date(this.comment.date)) },
+                { tag: 'div.content', text: () => this.comment.content }
             ]
         };
-    }
-    updateDom() {
-        this.domusername.textContent = this.comment.username;
-        this.domcontent.textContent = this.comment.content;
-        var date = new Date(this.comment.date);
-        var now = new Date();
-        var sameday = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
-        this.domdate.textContent = sameday ? date.toLocaleTimeString() : date.toLocaleString();
     }
     onContextMenu = (item, ev) => {
         ev.preventDefault();

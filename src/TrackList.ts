@@ -1,6 +1,6 @@
 // file: TrackList.ts
 
-import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr } from "./utils";
+import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr, BuildDOMCtx } from "./utils";
 import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
@@ -370,9 +370,6 @@ export class TrackViewItem extends ListViewItem {
     actionHandler: TrackActionHandler<this>;
     noPos: boolean;
     playing: boolean;
-    private dompos: HTMLElement;
-    private domname: HTMLElement;
-    private domartist: HTMLElement;
     constructor(item: Track) {
         super();
         this.track = item;
@@ -381,26 +378,27 @@ export class TrackViewItem extends ListViewItem {
     createDom(): BuildDomExpr {
         var track = this.track;
         return {
-            _ctx: this,
             tag: 'div.item.trackitem.no-selection',
             child: [
-                { tag: 'span.pos', textContent: '', _key: 'dompos' },
-                { tag: 'span.name', _key: 'domname' },
-                { tag: 'span.artist', _key: 'domartist' },
+                {
+                    tag: 'span.pos', update: (dompos) => {
+                        if (this.playing) {
+                            dompos.textContent = '🎵';
+                        } else if (!this.noPos) {
+                            dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+                        }
+                        dompos.hidden = this.noPos && !this.playing;
+                    }
+                },
+                { tag: 'span.name', text: () => this.track.name },
+                { tag: 'span.artist', text: () => this.track.artist },
             ],
             draggable: true,
             _item: this
         };
     }
     updateDom() {
-        this.domname.textContent = this.track.name;
-        this.domartist.textContent = this.track.artist;
-        if (this.playing) {
-            this.dompos.textContent = '🎵';
-        } else if (!this.noPos) {
-            this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
-        }
-        this.dompos.hidden = this.noPos && !this.playing;
+        super.updateDom();
         this.toggleClass('selected', !!this.selected);
     }
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
@@ -454,25 +452,31 @@ export class ContentHeader extends View {
     catalog: string;
     title: string;
     titleEditable = false;
-    domctx: { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } = {};
+    get domdict(): { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } {
+        return this.domctx.dict;
+    }
     actions = new ContainerView({ tag: 'div.actions' });
     onTitleEdit: (title: string) => void;
     constructor(init?: Partial<ContentHeader>) {
         super();
         if (init) utils.objectApply(this, init);
     }
-    createDom() {
+    createDom(): BuildDomExpr {
         var editHelper: EditableHelper;
-        return utils.buildDOM({
-            _ctx: this.domctx,
+        return {
             tag: 'div.content-header',
             child: [
-                { tag: 'span.catalog', textContent: this.catalog, _key: 'catalog' },
+                { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
                 {
-                    tag: 'span.title', textContent: this.title, _key: 'title',
+                    tag: 'span.title', text: () => this.title, _key: 'title',
+                    update: (domdict) => {
+                        utils.toggleClass(domdict, 'editable', !!this.titleEditable);
+                        if (this.titleEditable) domdict.title = I`Click to edit`;
+                        else domdict.removeAttribute('title');
+                    },
                     onclick: async (ev) => {
                         if (!this.titleEditable) return;
-                        editHelper = editHelper || new EditableHelper(this.domctx.title);
+                        editHelper = editHelper || new EditableHelper(this.domdict.title);
                         if (editHelper.editing) return;
                         var newName = await editHelper.startEditAsync();
                         if (newName !== editHelper.beforeEdit && newName != '') {
@@ -483,15 +487,7 @@ export class ContentHeader extends View {
                 },
                 this.actions.dom
             ]
-        });
-    }
-    updateDom() {
-        this.domctx.catalog.textContent = this.catalog;
-        this.domctx.catalog.style.display = this.catalog ? '' : 'none';
-        this.domctx.title.textContent = this.title;
-        utils.toggleClass(this.domctx.title, 'editable', !!this.titleEditable);
-        if (this.titleEditable) this.domctx.title.title = I`Click to edit`;
-        else this.domctx.title.removeAttribute('title');
+        };
     }
 }
 

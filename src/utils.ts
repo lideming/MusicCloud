@@ -39,6 +39,12 @@ export var utils = new class Utils {
         return size.toFixed(2) + ' ' + this.fileSizeUnits[unit];
     }
 
+    formatDateTime(date: Date) {
+        var now = new Date();
+        var sameday = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+        return sameday ? date.toLocaleTimeString() : date.toLocaleString();
+    }
+
     numLimit(num: number, min: number, max: number) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
             (num > max) ? max : num;
@@ -187,9 +193,9 @@ export var utils = new class Utils {
     }
 };
 
-Array.prototype.remove = function(item) {
+Array.prototype.remove = function (item) {
     utils.arrayRemove(this, item);
-}
+};
 
 declare global {
     interface Array<T> {
@@ -232,6 +238,8 @@ export type Action<T = void> = (arg: T) => void;
 export type Func<TRet> = () => TRet;
 export type AsyncFunc<T> = Func<Promise<T>>;
 
+export type FuncOrVal<T> = T | Func<T>;
+
 
 // BuildDOM types & implementation:
 export type BuildDomExpr = string | BuildDomNode | HTMLElement | Node;
@@ -243,14 +251,67 @@ export type BuildDomReturn = HTMLElement | Text | Node;
 export interface BuildDomNode {
     tag?: BuildDomTag;
     child?: BuildDomExpr[] | BuildDomExpr;
+    text?: FuncOrVal<string>;
+    hidden?: FuncOrVal<boolean>;
+    update?: Action<HTMLElement>;
     _ctx?: BuildDOMCtx | {};
     _key?: string;
     [key: string]: any;
 }
 
-class BuildDOMCtx {
-    [name: string]: HTMLElement;
+export class BuildDOMCtx {
+    dict: Record<string, HTMLElement>;
+    actions: BuildDOMUpdateAction[];
+    constructor(dict?: BuildDOMCtx['dict'] | {}) {
+        this.dict = dict ?? {};
+    }
+    static EnsureCtx(ctxOrDict: BuildDOMCtx | {}, origctx: BuildDOMCtx): BuildDOMCtx {
+        var ctx: BuildDOMCtx;
+        if (ctxOrDict instanceof BuildDOMCtx) ctx = ctxOrDict;
+        else ctx = new BuildDOMCtx(ctxOrDict);
+        if (origctx) {
+            if (!origctx.actions) origctx.actions = [];
+            ctx.actions = origctx.actions;
+        }
+        return ctx;
+    }
+    setDict(key: string, node: HTMLElement) {
+        if (!this.dict) this.dict = {};
+        this.dict[key] = node;
+    }
+    addUpdateAction(action: BuildDOMUpdateAction) {
+        if (!this.actions) this.actions = [];
+        this.actions.push(action);
+        // BuildDOMCtx.executeAction(action);
+    }
+    update() {
+        if (!this.actions) return;
+        for (const a of this.actions) {
+            BuildDOMCtx.executeAction(a);
+        }
+    }
+    static executeAction(a: BuildDOMUpdateAction) {
+        switch (a[0]) {
+            case 'text':
+                a[1].textContent = a[2]();
+                break;
+            case 'hidden':
+                a[1].hidden = a[2]();
+                break;
+            case 'update':
+                a[2](a[1]);
+                break;
+            default:
+                console.warn('unknown action', a);
+                break;
+        }
+    }
 }
+
+type BuildDOMUpdateAction =
+    ['text', Node, Func<string>]
+    | ['hidden', HTMLElement, Func<boolean>]
+    | ['update', HTMLElement, Action<HTMLElement>];
 
 utils.buildDOM = (() => {
     var createElementFromTag = function (tag: BuildDomTag): HTMLElement {
@@ -277,7 +338,7 @@ utils.buildDOM = (() => {
         if (typeof (obj) === 'string') { return document.createTextNode(obj); }
         if (Node && obj instanceof Node) return obj as Node;
         var node = createElementFromTag((obj as BuildDomNode).tag);
-        if (obj['_ctx']) ctx = obj['_ctx'];
+        if (obj['_ctx']) ctx = BuildDOMCtx.EnsureCtx(obj['_ctx'], ctx);
         for (var key in obj) {
             if (obj.hasOwnProperty(key)) {
                 var val = obj[key];
@@ -290,7 +351,17 @@ utils.buildDOM = (() => {
                         node.appendChild(buildDomCore(val, ttl, ctx));
                     }
                 } else if (key === '_key') {
-                    if (ctx) ctx[val] = node;
+                    ctx.setDict(val, node);
+                } else if (key === 'text') {
+                    if (typeof val === 'function') {
+                        ctx.addUpdateAction(['text', node, val]);
+                    } else {
+                        node.textContent = val;
+                    }
+                } else if (key === 'hidden' && typeof val === 'function') {
+                    ctx.addUpdateAction(['hidden', node, val]);
+                } else if (key === 'update' && typeof val === 'function') {
+                    ctx.addUpdateAction(['update', node, val]);
                 } else {
                     node[key] = val;
                 }

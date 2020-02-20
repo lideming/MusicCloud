@@ -339,19 +339,11 @@ class CommentViewItem extends viewlib_1.ListViewItem {
             _ctx: this,
             tag: 'div.item.comment.no-transform',
             child: [
-                { tag: 'div.username', _key: 'domusername' },
-                { tag: 'div.date', _key: 'domdate' },
-                { tag: 'div.content', _key: 'domcontent' }
+                { tag: 'div.username', text: () => this.comment.username },
+                { tag: 'div.date', text: () => utils_1.utils.formatDateTime(new Date(this.comment.date)) },
+                { tag: 'div.content', text: () => this.comment.content }
             ]
         };
-    }
-    updateDom() {
-        this.domusername.textContent = this.comment.username;
-        this.domcontent.textContent = this.comment.content;
-        var date = new Date(this.comment.date);
-        var now = new Date();
-        var sameday = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
-        this.domdate.textContent = sameday ? date.toLocaleTimeString() : date.toLocaleString();
     }
 }
 class CommentEditor extends viewlib_1.View {
@@ -988,21 +980,20 @@ class ListIndexViewItem extends UI_1.SidebarItem {
     }
     createDom() {
         return {
-            _ctx: this,
             tag: 'div.item.no-selection',
             style: 'display: flex',
             child: [
-                { tag: 'span.name.flex-1', _key: 'domname' },
-                { tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;', _key: 'domstate' }
+                { tag: 'span.name.flex-1', text: () => { var _a, _b; return _b = (_a = this.listInfo) === null || _a === void 0 ? void 0 : _a.name, (_b !== null && _b !== void 0 ? _b : this.text); } },
+                {
+                    tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;',
+                    update: (dom) => {
+                        dom.textContent = this.playing ? "🎵" : "";
+                        dom.hidden = !dom.textContent;
+                    },
+                }
             ],
             onclick: (ev) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev); }
         };
-    }
-    updateDom() {
-        var _a, _b;
-        this.domname.textContent = (_b = (_a = this.listInfo) === null || _a === void 0 ? void 0 : _a.name, (_b !== null && _b !== void 0 ? _b : this.text));
-        this.domstate.textContent = this.playing ? "🎵" : "";
-        this.domstate.hidden = !this.domstate.textContent;
     }
 }
 exports.ListIndexViewItem = ListIndexViewItem;
@@ -1262,11 +1253,9 @@ class SidebarItem extends viewlib_1.ListViewItem {
     createDom() {
         return {
             tag: 'div.item.no-selection',
+            text: () => this.text,
             onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
         };
-    }
-    updateDom() {
-        this.dom.textContent = this.text;
     }
     bindContentView(viewFunc) {
         var view;
@@ -1293,14 +1282,18 @@ exports.ui = new class {
             constructor() {
                 this.current = 'light';
                 this.timer = new utils_1.Timer(() => utils_1.utils.toggleClass(document.body, 'changing-theme', false));
+                this.rendered = false;
                 this.siTheme = new utils_1.SettingItem('mcloud-theme', 'str', 'light')
                     .render((theme) => {
-                    if (this.current === theme)
-                        return;
-                    this.current = theme;
-                    utils_1.utils.toggleClass(document.body, 'changing-theme', true);
-                    utils_1.utils.toggleClass(document.body, 'dark', theme === 'dark');
-                    this.timer.timeout(500);
+                    if (this.current !== theme) {
+                        this.current = theme;
+                        if (this.rendered)
+                            utils_1.utils.toggleClass(document.body, 'changing-theme', true);
+                        utils_1.utils.toggleClass(document.body, 'dark', theme === 'dark');
+                        if (this.rendered)
+                            this.timer.timeout(500);
+                    }
+                    this.rendered = true;
                 });
             }
             set(theme) {
@@ -2947,27 +2940,28 @@ class TrackViewItem extends viewlib_1.ListViewItem {
     createDom() {
         var track = this.track;
         return {
-            _ctx: this,
             tag: 'div.item.trackitem.no-selection',
             child: [
-                { tag: 'span.pos', textContent: '', _key: 'dompos' },
-                { tag: 'span.name', _key: 'domname' },
-                { tag: 'span.artist', _key: 'domartist' },
+                {
+                    tag: 'span.pos', update: (dompos) => {
+                        if (this.playing) {
+                            dompos.textContent = '🎵';
+                        }
+                        else if (!this.noPos) {
+                            dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+                        }
+                        dompos.hidden = this.noPos && !this.playing;
+                    }
+                },
+                { tag: 'span.name', text: () => this.track.name },
+                { tag: 'span.artist', text: () => this.track.artist },
             ],
             draggable: true,
             _item: this
         };
     }
     updateDom() {
-        this.domname.textContent = this.track.name;
-        this.domartist.textContent = this.track.artist;
-        if (this.playing) {
-            this.dompos.textContent = '🎵';
-        }
-        else if (!this.noPos) {
-            this.dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
-        }
-        this.dompos.hidden = this.noPos && !this.playing;
+        super.updateDom();
         this.toggleClass('selected', !!this.selected);
     }
 }
@@ -2976,24 +2970,32 @@ class ContentHeader extends viewlib_1.View {
     constructor(init) {
         super();
         this.titleEditable = false;
-        this.domctx = {};
         this.actions = new viewlib_1.ContainerView({ tag: 'div.actions' });
         if (init)
             utils_1.utils.objectApply(this, init);
     }
+    get domdict() {
+        return this.domctx.dict;
+    }
     createDom() {
         var editHelper;
-        return utils_1.utils.buildDOM({
-            _ctx: this.domctx,
+        return {
             tag: 'div.content-header',
             child: [
-                { tag: 'span.catalog', textContent: this.catalog, _key: 'catalog' },
+                { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
                 {
-                    tag: 'span.title', textContent: this.title, _key: 'title',
+                    tag: 'span.title', text: () => this.title, _key: 'title',
+                    update: (domdict) => {
+                        utils_1.utils.toggleClass(domdict, 'editable', !!this.titleEditable);
+                        if (this.titleEditable)
+                            domdict.title = utils_1.I `Click to edit`;
+                        else
+                            domdict.removeAttribute('title');
+                    },
                     onclick: (ev) => __awaiter(this, void 0, void 0, function* () {
                         if (!this.titleEditable)
                             return;
-                        editHelper = editHelper || new viewlib_1.EditableHelper(this.domctx.title);
+                        editHelper = editHelper || new viewlib_1.EditableHelper(this.domdict.title);
                         if (editHelper.editing)
                             return;
                         var newName = yield editHelper.startEditAsync();
@@ -3005,17 +3007,7 @@ class ContentHeader extends viewlib_1.View {
                 },
                 this.actions.dom
             ]
-        });
-    }
-    updateDom() {
-        this.domctx.catalog.textContent = this.catalog;
-        this.domctx.catalog.style.display = this.catalog ? '' : 'none';
-        this.domctx.title.textContent = this.title;
-        utils_1.utils.toggleClass(this.domctx.title, 'editable', !!this.titleEditable);
-        if (this.titleEditable)
-            this.domctx.title.title = utils_1.I `Click to edit`;
-        else
-            this.domctx.title.removeAttribute('title');
+        };
     }
 }
 exports.ContentHeader = ContentHeader;
@@ -3081,6 +3073,11 @@ exports.utils = new class Utils {
             size /= 1024;
         }
         return size.toFixed(2) + ' ' + this.fileSizeUnits[unit];
+    }
+    formatDateTime(date) {
+        var now = new Date();
+        var sameday = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+        return sameday ? date.toLocaleTimeString() : date.toLocaleString();
     }
     numLimit(num, min, max) {
         return (num < min || typeof num != 'number' || isNaN(num)) ? min :
@@ -3244,7 +3241,58 @@ class Timer {
 exports.Timer = Timer;
 exports.utils.Timer = Timer;
 class BuildDOMCtx {
+    constructor(dict) {
+        this.dict = (dict !== null && dict !== void 0 ? dict : {});
+    }
+    static EnsureCtx(ctxOrDict, origctx) {
+        var ctx;
+        if (ctxOrDict instanceof BuildDOMCtx)
+            ctx = ctxOrDict;
+        else
+            ctx = new BuildDOMCtx(ctxOrDict);
+        if (origctx) {
+            if (!origctx.actions)
+                origctx.actions = [];
+            ctx.actions = origctx.actions;
+        }
+        return ctx;
+    }
+    setDict(key, node) {
+        if (!this.dict)
+            this.dict = {};
+        this.dict[key] = node;
+    }
+    addUpdateAction(action) {
+        if (!this.actions)
+            this.actions = [];
+        this.actions.push(action);
+        // BuildDOMCtx.executeAction(action);
+    }
+    update() {
+        if (!this.actions)
+            return;
+        for (const a of this.actions) {
+            BuildDOMCtx.executeAction(a);
+        }
+    }
+    static executeAction(a) {
+        switch (a[0]) {
+            case 'text':
+                a[1].textContent = a[2]();
+                break;
+            case 'hidden':
+                a[1].hidden = a[2]();
+                break;
+            case 'update':
+                a[2](a[1]);
+                break;
+            default:
+                console.warn('unknown action', a);
+                break;
+        }
+    }
 }
+exports.BuildDOMCtx = BuildDOMCtx;
 exports.utils.buildDOM = (() => {
     var createElementFromTag = function (tag) {
         var reg = /[#\.^]?[\w\-]+/y;
@@ -3277,7 +3325,7 @@ exports.utils.buildDOM = (() => {
             return obj;
         var node = createElementFromTag(obj.tag);
         if (obj['_ctx'])
-            ctx = obj['_ctx'];
+            ctx = BuildDOMCtx.EnsureCtx(obj['_ctx'], ctx);
         for (var key in obj) {
             if (obj.hasOwnProperty(key)) {
                 var val = obj[key];
@@ -3292,8 +3340,21 @@ exports.utils.buildDOM = (() => {
                     }
                 }
                 else if (key === '_key') {
-                    if (ctx)
-                        ctx[val] = node;
+                    ctx.setDict(val, node);
+                }
+                else if (key === 'text') {
+                    if (typeof val === 'function') {
+                        ctx.addUpdateAction(['text', node, val]);
+                    }
+                    else {
+                        node.textContent = val;
+                    }
+                }
+                else if (key === 'hidden' && typeof val === 'function') {
+                    ctx.addUpdateAction(['hidden', node, val]);
+                }
+                else if (key === 'update' && typeof val === 'function') {
+                    ctx.addUpdateAction(['update', node, val]);
                 }
                 else {
                     node[key] = val;
@@ -3495,6 +3556,7 @@ const utils_1 = require("./utils");
 const I18n_1 = require("./I18n");
 class View {
     constructor(dom) {
+        this.domctx = new utils_1.BuildDOMCtx();
         if (dom)
             this._dom = utils_1.utils.buildDOM(dom);
     }
@@ -3508,7 +3570,8 @@ class View {
     set hidden(val) { this.dom.hidden = val; }
     ensureDom() {
         if (!this._dom) {
-            this._dom = utils_1.utils.buildDOM(this.createDom());
+            var r = this.createDom();
+            this._dom = utils_1.utils.buildDOM(r, this.domctx);
             this.postCreateDom();
             this.updateDom();
         }
@@ -3521,6 +3584,7 @@ class View {
     }
     /** Will be called when the dom is created, after postCreateDom() */
     updateDom() {
+        this.domctx.update();
     }
     /** Assign key-values and call `updateDom()` */
     updateWith(kv) {
@@ -3574,6 +3638,10 @@ class ContainerView extends View {
         for (let i = pos; i < this.items.length; i++) {
             this.items[i]._position = i;
         }
+    }
+    removeAllView() {
+        while (this.length)
+            this.removeView(this.length - 1);
     }
     _ensureItem(item) {
         if (typeof item === 'number')
@@ -4146,6 +4214,7 @@ exports.ContextMenu = ContextMenu;
 class Dialog extends View {
     constructor() {
         super();
+        this.content = new ContainerView({ tag: 'div.dialog-content' });
         this.shown = false;
         this.btnTitle = new TabBtn({ active: true, clickable: false });
         this.btnClose = new TabBtn({ text: utils_1.I `Close`, right: true });
@@ -4170,7 +4239,7 @@ class Dialog extends View {
                         { tag: 'div', style: 'clear: both;' }
                     ]
                 },
-                { tag: 'div.dialog-content', _key: 'domcontent' }
+                this.content.dom
             ]
         };
     }
@@ -4226,8 +4295,8 @@ class Dialog extends View {
     addContent(view, replace) {
         this.ensureDom();
         if (replace)
-            utils_1.utils.clearChildren(this.domcontent);
-        this.domcontent.appendChild(view.getDOM());
+            this.content.removeAllView();
+        this.content.appendView(view instanceof View ? view : new View(view));
     }
     setOffset(x, y) {
         this.dom.style.left = x + 'px';
@@ -4319,7 +4388,7 @@ class TabBtn extends View {
 exports.TabBtn = TabBtn;
 class InputView extends View {
     createDom() {
-        return { tag: 'input.input-text', _key: 'dominput' };
+        return { tag: 'input.input-text' };
     }
 }
 exports.InputView = InputView;
@@ -4366,13 +4435,13 @@ class LabeledInput extends View {
             _ctx: this,
             tag: 'div.labeled-input',
             child: [
-                { tag: 'div.input-label', _key: 'domlabel' },
+                { tag: 'div.input-label', text: () => this.label },
                 this.input.dom
             ]
         };
     }
     updateDom() {
-        this.domlabel.textContent = this.label;
+        super.updateDom();
         this.dominput.type = this.type;
     }
 }

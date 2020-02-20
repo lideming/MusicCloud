@@ -1,6 +1,6 @@
 // file: viewlib.ts
 
-import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode, Timer } from "./utils";
+import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode, Timer, BuildDOMCtx } from "./utils";
 import { i18n } from "./I18n";
 
 export type ViewArg = View | HTMLElement;
@@ -14,6 +14,7 @@ export class View {
     public _position?: number;
     get position() { return this._position; }
 
+    domctx = new BuildDOMCtx();
     protected _dom: HTMLElement;
     public get domCreated() { return !!this._dom; }
     public get dom() {
@@ -24,7 +25,8 @@ export class View {
     public set hidden(val: boolean) { this.dom.hidden = val; }
     public ensureDom() {
         if (!this._dom) {
-            this._dom = utils.buildDOM(this.createDom()) as HTMLElement;
+            var r = this.createDom();
+            this._dom = utils.buildDOM(r, this.domctx) as HTMLElement;
             this.postCreateDom();
             this.updateDom();
         }
@@ -37,6 +39,7 @@ export class View {
     }
     /** Will be called when the dom is created, after postCreateDom() */
     public updateDom() {
+        this.domctx.update();
     }
     /** Assign key-values and call `updateDom()` */
     updateWith(kv: Partial<this>) {
@@ -68,7 +71,7 @@ Node.prototype.appendView = function (this: Node, view: View) {
 export class ContainerView<T extends View> extends View {
     items: T[] = [];
     appendView(view: T) {
-        this.addView(view);
+        this.addView(view as any);
     }
     addView(view: T, pos?: number) {
         const items = this.items;
@@ -95,6 +98,9 @@ export class ContainerView<T extends View> extends View {
         for (let i = pos; i < this.items.length; i++) {
             this.items[i]._position = i;
         }
+    }
+    removeAllView() {
+        while (this.length) this.removeView(this.length - 1);
     }
     protected _ensureItem(item: T | number) {
         if (typeof item === 'number') item = this.items[item];
@@ -672,7 +678,7 @@ export class ContextMenu extends ListView {
 export class Dialog extends View {
     overlay: Overlay;
     domheader: HTMLElement;
-    domcontent: HTMLElement;
+    content = new ContainerView({ tag: 'div.dialog-content' });
     shown = false;
 
     btnTitle = new TabBtn({ active: true, clickable: false });
@@ -705,7 +711,7 @@ export class Dialog extends View {
                         { tag: 'div', style: 'clear: both;' }
                     ]
                 },
-                { tag: 'div.dialog-content', _key: 'domcontent' }
+                this.content.dom
             ]
         };
     }
@@ -758,8 +764,8 @@ export class Dialog extends View {
     }
     addContent(view: ViewArg, replace?: boolean) {
         this.ensureDom();
-        if (replace) utils.clearChildren(this.domcontent);
-        this.domcontent.appendChild(view.getDOM());
+        if (replace) this.content.removeAllView();
+        this.content.appendView(view instanceof View ? view : new View(view));
     }
     setOffset(x: number, y: number) {
         this.dom.style.left = x + 'px';
@@ -851,7 +857,7 @@ export class TabBtn extends View {
 
 export class InputView extends View {
     createDom() {
-        return { tag: 'input.input-text', _key: 'dominput' };
+        return { tag: 'input.input-text' };
     }
 }
 
@@ -887,7 +893,6 @@ export class LabeledInput extends View {
     label: string;
     type = 'text';
     input = new InputView();
-    domlabel: HTMLElement;
     get dominput(): HTMLInputElement { return this.input.dom as any; }
     get value() { return this.dominput.value; }
     set value(val) { this.dominput.value = val; }
@@ -902,13 +907,13 @@ export class LabeledInput extends View {
             _ctx: this,
             tag: 'div.labeled-input',
             child: [
-                { tag: 'div.input-label', _key: 'domlabel' },
+                { tag: 'div.input-label', text: () => this.label },
                 this.input.dom
             ]
         };
     }
     updateDom() {
-        this.domlabel.textContent = this.label;
+        super.updateDom();
         this.dominput.type = this.type;
     }
 }

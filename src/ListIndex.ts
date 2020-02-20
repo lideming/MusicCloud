@@ -1,7 +1,7 @@
 // file: ListIndex.ts
 
 import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast } from "./viewlib";
-import { I, utils, BuildDomExpr } from "./utils";
+import { I, utils, BuildDomExpr, BuildDOMCtx } from "./utils";
 import { TrackList, TrackViewItem, TrackListView } from "./tracklist";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -200,28 +200,26 @@ export class ListIndexViewItem extends SidebarItem {
     index: ListIndex;
     listInfo: Api.TrackListInfo;
     playing = false;
-    domname: HTMLSpanElement;
-    domstate: HTMLSpanElement;
     constructor(init: Partial<ListIndexViewItem>) {
         super({});
         utils.objectApply(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
-            _ctx: this,
             tag: 'div.item.no-selection',
             style: 'display: flex',
             child: [
-                { tag: 'span.name.flex-1', _key: 'domname' },
-                { tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;', _key: 'domstate' }
+                { tag: 'span.name.flex-1', text: () => this.listInfo?.name ?? this.text },
+                {
+                    tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;',
+                    update: (dom) => {
+                        dom.textContent = this.playing ? "🎵" : "";
+                        dom.hidden = !dom.textContent;
+                    },
+                }
             ],
             onclick: (ev) => this.onclick?.(ev)
         };
-    }
-    updateDom() {
-        this.domname.textContent = this.listInfo?.name ?? this.text;
-        this.domstate.textContent = this.playing ? "🎵" : "";
-        this.domstate.hidden = !this.domstate.textContent;
     }
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
         var m = new ContextMenu();

@@ -12,11 +12,9 @@ export class SidebarItem extends ListViewItem {
     protected createDom(): BuildDomExpr {
         return {
             tag: 'div.item.no-selection',
+            text: () => this.text,
             onclick: (e) => this.onclick?.(e)
         };
-    }
-    updateDom() {
-        this.dom.textContent = this.text;
     }
     bindContentView(viewFunc: Func<ContentView>) {
         var view: ContentView;
@@ -82,14 +80,17 @@ export const ui = new class {
     }
     theme = new class {
         current: 'light' | 'dark' = 'light';
-        timer = new Timer(() => utils.toggleClass(document.body, 'changing-theme', false))
+        timer = new Timer(() => utils.toggleClass(document.body, 'changing-theme', false));
+        private rendered = false;
         siTheme = new SettingItem<this['current']>('mcloud-theme', 'str', 'light')
             .render((theme) => {
-                if (this.current === theme) return;
-                this.current = theme;
-                utils.toggleClass(document.body, 'changing-theme', true);
-                utils.toggleClass(document.body, 'dark', theme === 'dark');
-                this.timer.timeout(500);
+                if (this.current !== theme) {
+                    this.current = theme;
+                    if (this.rendered) utils.toggleClass(document.body, 'changing-theme', true);
+                    utils.toggleClass(document.body, 'dark', theme === 'dark');
+                    if (this.rendered) this.timer.timeout(500);
+                }
+                this.rendered = true;
             });
         set(theme: this['current']) {
             this.siTheme.set(theme);
