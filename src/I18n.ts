@@ -209,6 +209,9 @@ i18n.add2dArray(JSON.parse(`[
     ["Select", "选择"],
     ["Select all", "全选"],
     ["Cancel", "取消"],
+    ["Settings", "设置"],
+    ["Switch to light theme", "切换到亮色主题"],
+    ["Switch to dark theme", "切换到暗色主题"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

@@ -9,6 +9,7 @@ import { api } from "./Api";
 import { playerCore } from "./PlayerCore";
 import { uploads } from "./Uploads";
 import { TrackList, Track } from "./TrackList";
+import { settingsUI } from "./SettingsUI";
 
 export var user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
@@ -272,6 +273,14 @@ class LoginDialog extends Dialog {
             this.tabCreate.updateWith({ active: this.isRegistering });
         };
         this.inputPasswd2.hidden = true;
+
+        this.addBtn(new TabBtn({
+            text: I`Settings`, right: true,
+            onclick: () => {
+                settingsUI.openUI();
+                this.close();
+            }
+        }));
     }
 
     show() {
@@ -344,6 +353,13 @@ class MeDialog extends Dialog {
             user.logout();
             this.close();
         };
+        this.addBtn(new TabBtn({
+            text: I`Settings`, right: true,
+            onclick: () => {
+                settingsUI.openUI();
+                this.close();
+            }
+        }));
     }
 }
 

@@ -126,7 +126,7 @@ exports.api = new class {
     }
 };
 
-},{"./main":11,"./utils":13}],2:[function(require,module,exports){
+},{"./main":12,"./utils":14}],2:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -379,7 +379,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":8,"./User":10,"./utils":13,"./viewlib":14}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":9,"./User":11,"./utils":14,"./viewlib":15}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -587,6 +587,9 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Select", "选择"],
     ["Select all", "全选"],
     ["Cancel", "取消"],
+    ["Settings", "设置"],
+    ["Switch to light theme", "切换到亮色主题"],
+    ["Switch to dark theme", "切换到暗色主题"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -746,7 +749,7 @@ class ListContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./tracklist":12,"./utils":13,"./viewlib":14}],5:[function(require,module,exports){
+},{"./tracklist":13,"./utils":14,"./viewlib":15}],5:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1004,7 +1007,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":6,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":6,"./Router":7,"./UI":9,"./User":11,"./tracklist":13,"./utils":14,"./viewlib":15}],6:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1155,7 +1158,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./utils":13}],7:[function(require,module,exports){
+},{"./Api":1,"./utils":14}],7:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1215,7 +1218,36 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":8}],8:[function(require,module,exports){
+},{"./UI":9}],8:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const viewlib_1 = require("./viewlib");
+const I18n_1 = require("./I18n");
+const UI_1 = require("./UI");
+exports.settingsUI = new class {
+    openUI() {
+        new SettingsDialog().show();
+    }
+};
+class SettingsDialog extends viewlib_1.Dialog {
+    constructor() {
+        super();
+        this.title = I18n_1.I `Settings`;
+        this.btnSwitchTheme = new viewlib_1.ButtonView({ type: 'big' });
+        this.addContent(this.btnSwitchTheme);
+        this.btnSwitchTheme.onclick = () => {
+            UI_1.ui.theme.set((UI_1.ui.theme.current == 'light') ? 'dark' : 'light');
+            this.updateDom();
+        };
+    }
+    updateDom() {
+        super.updateDom();
+        this.btnSwitchTheme.text = (UI_1.ui.theme.current == 'light') ?
+            I18n_1.I `Switch to dark theme` : I18n_1.I `Switch to light theme`;
+    }
+}
+
+},{"./I18n":3,"./UI":9,"./viewlib":15}],9:[function(require,module,exports){
 "use strict";
 // file: UI.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1650,7 +1682,7 @@ class VolumeButton extends ProgressButton {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./Uploads":9,"./User":10,"./utils":13,"./viewlib":14}],9:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./Uploads":10,"./User":11,"./utils":14,"./viewlib":15}],10:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2007,7 +2039,7 @@ var BlockFormat = {
     }
 };
 
-},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./User":10,"./tracklist":12,"./utils":13,"./viewlib":14}],10:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":9,"./User":11,"./tracklist":13,"./utils":14,"./viewlib":15}],11:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2027,6 +2059,7 @@ const UI_1 = require("./UI");
 const Api_1 = require("./Api");
 const PlayerCore_1 = require("./PlayerCore");
 const Uploads_1 = require("./Uploads");
+const SettingsUI_1 = require("./SettingsUI");
 exports.user = new class User {
     constructor() {
         this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
@@ -2310,6 +2343,13 @@ class LoginDialog extends viewlib_1.Dialog {
             this.tabCreate.updateWith({ active: this.isRegistering });
         };
         this.inputPasswd2.hidden = true;
+        this.addBtn(new viewlib_1.TabBtn({
+            text: utils_1.I `Settings`, right: true,
+            onclick: () => {
+                SettingsUI_1.settingsUI.openUI();
+                this.close();
+            }
+        }));
     }
     show() {
         this.setOffset(0, 0);
@@ -2385,6 +2425,13 @@ class MeDialog extends viewlib_1.Dialog {
             exports.user.logout();
             this.close();
         };
+        this.addBtn(new viewlib_1.TabBtn({
+            text: utils_1.I `Settings`, right: true,
+            onclick: () => {
+                SettingsUI_1.settingsUI.openUI();
+                this.close();
+            }
+        }));
     }
 }
 class ChangePasswordDialog extends viewlib_1.Dialog {
@@ -2412,7 +2459,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./Api":1,"./PlayerCore":6,"./UI":8,"./Uploads":9,"./main":11,"./utils":13,"./viewlib":14}],11:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":6,"./SettingsUI":8,"./UI":9,"./Uploads":10,"./main":12,"./utils":14,"./viewlib":15}],12:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -2434,10 +2481,12 @@ const ListIndex_1 = require("./ListIndex");
 const Uploads_1 = require("./Uploads");
 const Discussion_1 = require("./Discussion");
 const Router_1 = require("./Router");
+const SettingsUI_1 = require("./SettingsUI");
 UI_1.ui.init();
 PlayerCore_1.playerCore.init();
 exports.listIndex = new ListIndex_1.ListIndex();
 var app = window['app'] = {
+    settings: exports.settings, settingsUI: SettingsUI_1.settingsUI,
     ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
     Toast: viewlib_1.Toast, ToastsContainer: viewlib_1.ToastsContainer,
     init() {
@@ -2452,7 +2501,7 @@ var app = window['app'] = {
 };
 app.init();
 
-},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":8,"./Uploads":9,"./User":10,"./viewlib":14}],12:[function(require,module,exports){
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./SettingsUI":8,"./UI":9,"./Uploads":10,"./User":11,"./viewlib":15}],13:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2983,7 +3032,7 @@ class ActionBtn extends viewlib_1.TextView {
 }
 exports.ActionBtn = ActionBtn;
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./Router":7,"./User":10,"./main":11,"./utils":13,"./viewlib":14}],13:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./Router":7,"./User":11,"./main":12,"./utils":14,"./viewlib":15}],14:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3427,7 +3476,7 @@ class Semaphore {
 }
 exports.Semaphore = Semaphore;
 
-},{"./I18n":3}],14:[function(require,module,exports){
+},{"./I18n":3}],15:[function(require,module,exports){
 "use strict";
 // file: viewlib.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4251,7 +4300,11 @@ class TabBtn extends View {
         return {
             tag: 'span.tab.no-selection',
             tabIndex: 0,
-            onclick: () => this.onClick.invoke()
+            onclick: () => {
+                var _a, _b;
+                (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a);
+                this.onClick.invoke();
+            }
         };
     }
     updateDom() {
@@ -4436,4 +4489,4 @@ class MessageBox extends Dialog {
 }
 exports.MessageBox = MessageBox;
 
-},{"./I18n":3,"./utils":13}]},{},[11]);
+},{"./I18n":3,"./utils":14}]},{},[12]);

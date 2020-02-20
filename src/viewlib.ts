@@ -825,6 +825,7 @@ export class TabBtn extends View {
     clickable = true;
     active = false;
     right = false;
+    onclick: Action;
     onClick = new Callbacks<Action>();
     constructor(init?: Partial<TabBtn>) {
         super();
@@ -834,7 +835,10 @@ export class TabBtn extends View {
         return {
             tag: 'span.tab.no-selection',
             tabIndex: 0,
-            onclick: () => this.onClick.invoke()
+            onclick: () => {
+                this.onclick?.();
+                this.onClick.invoke();
+            }
         };
     }
     updateDom() {
