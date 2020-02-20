@@ -1113,7 +1113,7 @@ exports.playerCore = new class PlayerCore {
         this.track = track;
         this.onTrackChanged.invoke();
         if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url))
-            this.loadUrl(track ? Api_1.api.processUrl(track.url) : null);
+            this.loadUrl(null);
         this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
     }
     playTrack(track, forceStart) {
@@ -1124,6 +1124,8 @@ exports.playerCore = new class PlayerCore {
         this.play();
     }
     play() {
+        if (this.track && !this.audio.src)
+            this.loadUrl(Api_1.api.processUrl(this.track.url));
         this.audio.play();
     }
     pause() {
