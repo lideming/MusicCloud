@@ -94,6 +94,7 @@ html, body {
 
 .dark #sidebar {
     background: #080808;
+    border-right-color: #333;
 }
 
 @media only screen and (min-width: 800px) {
@@ -313,6 +314,14 @@ a.item {
     background: hsla(5, 100%, 50%, .3);
 }
 
+.trackitem.selected:hover {
+    background: hsla(5, 100%, 30%, .3);
+}
+
+.dark .trackitem.selected:hover {
+    background: hsla(5, 100%, 60%, .3);
+}
+
 /* .trackitem .artist::before,  */
 
 #bottombar-trackinfo .artist::before {
@@ -345,6 +354,10 @@ a.item {
     box-sizing: content-box;
     box-shadow: none;
     border-top: 1px solid #ccc;
+}
+
+.dark.bottompinned #bottombar {
+    border-top-color: #333;
 }
 
 #bottombar.show {
@@ -541,6 +554,10 @@ a.item {
 
 #sidebar-login, #sidebar-features {
     border-bottom: 1px solid #ccc;
+}
+
+.dark #sidebar-login, .dark #sidebar-features {
+    border-bottom-color: #333;
 }
 
 .overlay {
