@@ -212,6 +212,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Settings", "设置"],
     ["Switch to light theme", "切换到亮色主题"],
     ["Switch to dark theme", "切换到暗色主题"],
+    ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

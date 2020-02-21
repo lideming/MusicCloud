@@ -582,6 +582,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Settings", "设置"],
     ["Switch to light theme", "切换到亮色主题"],
     ["Switch to dark theme", "切换到暗色主题"],
+    ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 exports.i18n.add2dArray([
@@ -1232,6 +1233,18 @@ class SettingsDialog extends viewlib_1.Dialog {
             UI_1.ui.theme.set((UI_1.ui.theme.current == 'light') ? 'dark' : 'light');
             this.updateDom();
         };
+        this.addContent(new viewlib_1.View({
+            tag: 'div',
+            style: 'margin: 5px 0;',
+            child: [
+                { tag: 'span', text: 'MusicCloud' },
+                {
+                    tag: 'a', style: 'float: right; color: inherit;',
+                    text: I18n_1.I `Source code`, href: 'https://github.com/lideming/MusicCloud',
+                    target: '_blank'
+                },
+            ]
+        }));
     }
     updateDom() {
         super.updateDom();
