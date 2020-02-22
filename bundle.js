@@ -172,33 +172,16 @@ class CommentsView {
                 li.error(error, () => this.fetch());
                 throw error;
             }
-            var commentDict = {};
-            resp.comments.forEach(c => {
-                commentDict[c.id] = c;
-            });
-            var viewDict = {};
-            var removingViews = [];
-            this.view.listView.forEach(x => {
-                if (commentDict[x.comment.id]) {
-                    viewDict[x.comment.id] = x;
+            const thiz = this;
+            new class extends utils_1.DataUpdatingHelper {
+                constructor() {
+                    super(...arguments);
+                    this.items = thiz.view.listView;
                 }
-                else {
-                    removingViews.push(x);
-                }
-            });
-            removingViews.forEach(x => x.remove());
-            var viewPos = 0;
-            resp.comments.forEach(c => {
-                var commView = viewDict[c.id];
-                if (commView) {
-                    viewPos = commView.position + 1;
-                    commView.comment = c;
-                    commView.updateDom();
-                }
-                else {
-                    this.addItem(c, viewPos++);
-                }
-            });
+                addItem(c, pos) { thiz.addItem(c, pos); }
+                updateItem(view, c) { view.comment = c; }
+                removeItem(view) { view.remove(); }
+            }().update(resp.comments);
             this.view.updateView();
             this.state = 'fetched';
         });
@@ -334,6 +317,7 @@ class CommentViewItem extends viewlib_1.ListViewItem {
         };
         this.comment = comment;
     }
+    get id() { return this.comment.id; }
     createDom() {
         return {
             _ctx: this,
@@ -1858,15 +1842,10 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 this.remove(track);
         });
     }
-    prependTrack(t) {
-        this.tracks.unshift(t);
+    insertTrack(t, pos = 0) {
+        this.tracks.splice(pos, 0, t);
         if (this.view.rendered)
-            this.view.addItem(t, 0);
-    }
-    appendTrack(t) {
-        this.tracks.push(t);
-        if (this.view.rendered)
-            this.view.addItem(t);
+            this.view.addItem(t, pos);
     }
     remove(track) {
         var _a;
@@ -1887,7 +1866,6 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 this.state = 'fetching';
                 li.reset();
                 var fetched = (yield Api_1.api.get('my/uploads'))['tracks']
-                    .reverse()
                     .map(t => {
                     t._upload = { state: 'done' };
                     return new UploadTrack(t);
@@ -1898,16 +1876,19 @@ exports.uploads = new class extends tracklist_1.TrackList {
                 li.error(error, () => this.fetchImpl());
                 return;
             }
-            this.tracks = this.tracks.filter(t => {
-                var _a;
-                if (t._upload.state == 'done') {
-                    (_a = t._upload.view) === null || _a === void 0 ? void 0 : _a.remove();
-                    return false;
+            const thiz = this;
+            var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
+            const firstPos = doneTracks.length ? this.tracks.indexOf(doneTracks[0]) : 0;
+            new class extends utils_1.DataUpdatingHelper {
+                constructor() {
+                    super(...arguments);
+                    this.items = doneTracks;
                 }
-                return true;
-            });
+                addItem(data, pos) { thiz.insertTrack(data, firstPos); }
+                updateItem(item, data) { item.updateFromApiTrack(data); }
+                removeItem(item) { var _a; (_a = item._upload.view) === null || _a === void 0 ? void 0 : _a.remove(); }
+            }().update(fetched);
             this.view.useLoadingIndicator(null);
-            fetched.forEach(t => this.appendTrack(t));
             this.view.updateView();
         });
     }
@@ -1921,7 +1902,7 @@ exports.uploads = new class extends tracklist_1.TrackList {
             var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { _upload: {
                     state: 'pending'
                 } }));
-            this.prependTrack(track);
+            this.insertTrack(track);
             yield this.uploadSemaphore.enter();
             try {
                 if (track._upload.state === 'cancelled')
@@ -2626,15 +2607,27 @@ class TrackList {
     loadFromGetResult(obj) {
         var _a;
         this.loadInfo(obj);
-        this.tracks.forEach(t => t._bind = null);
-        this.tracks = [];
-        (_a = this.listView) === null || _a === void 0 ? void 0 : _a.removeAll();
-        for (const t of obj.tracks) {
-            this.addTrack(t);
-        }
+        const thiz = this;
+        new class extends utils_1.DataUpdatingHelper {
+            constructor() {
+                super(...arguments);
+                this.items = thiz.tracks;
+            }
+            addItem(data, pos) { thiz.addTrack_NoUpdating(data, pos); }
+            updateItem(item, data) { item.updateFromApiTrack(data); }
+            removeItem(item) { thiz.remove_NoUpdating(item); }
+        }().update(obj.tracks);
+        this.updateTracksState();
+        (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
         return this;
     }
     addTrack(t, pos) {
+        var track = this.addTrack_NoUpdating(t, pos);
+        if (pos !== undefined && pos !== this.tracks.length - 1)
+            this.updateTracksState();
+        return track;
+    }
+    addTrack_NoUpdating(t, pos) {
         var track = new Track(Object.assign(Object.assign({}, t), { _bind: {
                 list: this,
                 position: this.tracks.length
@@ -2642,8 +2635,6 @@ class TrackList {
         this.tracks.push(track);
         if (this.contentView)
             this.contentView.addItem(track, pos);
-        if (pos !== undefined)
-            this.updateTracksState();
         return track;
     }
     loadEmpty() {
@@ -2802,15 +2793,18 @@ class TrackList {
     }
     remove(track, put) {
         var _a;
+        this.remove_NoUpdating(track);
+        this.updateTracksState();
+        (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
+        if (put === undefined || put)
+            this.put();
+    }
+    remove_NoUpdating(track) {
         var pos = track._bind.position;
         track._bind = null;
         this.tracks.splice(pos, 1);
         if (this.listView)
             this.listView.remove(pos);
-        this.updateTracksState();
-        (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
-        if (put === undefined || put)
-            this.put();
     }
 }
 exports.TrackList = TrackList;
@@ -3551,6 +3545,45 @@ class Semaphore {
     }
 }
 exports.Semaphore = Semaphore;
+class DataUpdatingHelper {
+    update(newData) {
+        const oldData = this.items;
+        var dataDict = {};
+        for (const n of newData) {
+            dataDict[this.dataSelectId(n)] = n;
+        }
+        var itemDict = {};
+        var removed = [];
+        for (const d of oldData) {
+            const id = this.selectId(d);
+            if (dataDict[id] !== undefined) {
+                itemDict[id] = d;
+            }
+            else {
+                removed.push(d);
+            }
+        }
+        for (let i = removed.length - 1; i >= 0; i--)
+            this.removeItem(removed[i]);
+        var pos = 0;
+        for (const n of newData) {
+            const d = itemDict[this.dataSelectId(n)];
+            if (d !== undefined) {
+                this.updateItem(d, n);
+            }
+            else {
+                this.addItem(n, pos);
+            }
+            pos++;
+        }
+    }
+    selectId(obj) { return obj.id; }
+    dataSelectId(obj) { return obj.id; }
+    addItem(obj, pos) { }
+    updateItem(old, data) { }
+    removeItem(obj) { }
+}
+exports.DataUpdatingHelper = DataUpdatingHelper;
 
 },{"./I18n":3}],15:[function(require,module,exports){
 "use strict";

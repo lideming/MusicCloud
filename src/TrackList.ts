@@ -1,6 +1,6 @@
 // file: TrackList.ts
 
-import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr, BuildDOMCtx } from "./utils";
+import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr, BuildDOMCtx, DataUpdatingHelper } from "./utils";
 import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
@@ -121,15 +121,23 @@ export class TrackList {
     }
     loadFromGetResult(obj: Api.TrackListGet) {
         this.loadInfo(obj);
-        this.tracks.forEach(t => t._bind = null);
-        this.tracks = [];
-        this.listView?.removeAll();
-        for (const t of obj.tracks) {
-            this.addTrack(t);
-        }
+        const thiz = this;
+        new class extends DataUpdatingHelper<Track, Api.Track>{
+            items = thiz.tracks;
+            addItem(data: Api.Track, pos: number) { thiz.addTrack_NoUpdating(data, pos); }
+            updateItem(item: Track, data: Api.Track) { item.updateFromApiTrack(data); }
+            removeItem(item: Track) { thiz.remove_NoUpdating(item); }
+        }().update(obj.tracks);
+        this.updateTracksState();
+        this.contentView?.updateView();
         return this;
     }
     addTrack(t: Api.Track, pos?: number) {
+        var track: Track = this.addTrack_NoUpdating(t, pos);
+        if (pos !== undefined && pos !== this.tracks.length - 1) this.updateTracksState();
+        return track;
+    }
+    private addTrack_NoUpdating(t: Api.Track, pos: number) {
         var track: Track = new Track({
             ...t,
             _bind: {
@@ -138,10 +146,11 @@ export class TrackList {
             }
         });
         this.tracks.push(track);
-        if (this.contentView) this.contentView.addItem(track, pos);
-        if (pos !== undefined) this.updateTracksState();
+        if (this.contentView)
+            this.contentView.addItem(track, pos);
         return track;
     }
+
     loadEmpty() {
         this.contentView?.updateView();
         return this.fetching = Promise.resolve();
@@ -268,13 +277,18 @@ export class TrackList {
         this.listView.get(track._bind.position).updateDom();
     }
     remove(track: Track, put?: boolean) {
-        var pos = track._bind.position;
-        track._bind = null;
-        this.tracks.splice(pos, 1);
-        if (this.listView) this.listView.remove(pos);
+        this.remove_NoUpdating(track);
         this.updateTracksState();
         this.contentView?.updateView();
         if (put === undefined || put) this.put();
+    }
+
+    private remove_NoUpdating(track: Track) {
+        var pos = track._bind.position;
+        track._bind = null;
+        this.tracks.splice(pos, 1);
+        if (this.listView)
+            this.listView.remove(pos);
     }
 }
 

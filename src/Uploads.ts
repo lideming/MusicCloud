@@ -1,7 +1,7 @@
 // file: Uploads.ts
 
 import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader, ActionBtn } from "./tracklist";
-import { Semaphore, ItemActiveHelper, utils } from "./utils";
+import { Semaphore, ItemActiveHelper, utils, DataUpdatingHelper } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -152,13 +152,9 @@ export var uploads = new class extends TrackList {
             }
         }
     }(this);
-    private prependTrack(t: UploadTrack) {
-        this.tracks.unshift(t);
-        if (this.view.rendered) this.view.addItem(t, 0);
-    }
-    private appendTrack(t: UploadTrack) {
-        this.tracks.push(t);
-        if (this.view.rendered) this.view.addItem(t);
+    private insertTrack(t: UploadTrack, pos = 0) {
+        this.tracks.splice(pos, 0, t);
+        if (this.view.rendered) this.view.addItem(t, pos);
     }
     remove(track: UploadTrack) {
         var pos = this.tracks.indexOf(track);
@@ -176,7 +172,6 @@ export var uploads = new class extends TrackList {
             this.state = 'fetching';
             li.reset();
             var fetched = ((await api.get('my/uploads'))['tracks'] as any[])
-                .reverse()
                 .map(t => {
                     t._upload = { state: 'done' };
                     return new UploadTrack(t);
@@ -186,15 +181,16 @@ export var uploads = new class extends TrackList {
             li.error(error, () => this.fetchImpl());
             return;
         }
-        this.tracks = this.tracks.filter(t => {
-            if (t._upload.state == 'done') {
-                t._upload.view?.remove();
-                return false;
-            }
-            return true;
-        });
+        const thiz = this;
+        var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
+        const firstPos = doneTracks.length ? this.tracks.indexOf(doneTracks[0]) : 0;
+        new class extends DataUpdatingHelper<UploadTrack, UploadTrack>{
+            items = doneTracks;
+            addItem(data: UploadTrack, pos: number) { thiz.insertTrack(data, firstPos); }
+            updateItem(item: UploadTrack, data: UploadTrack) { item.updateFromApiTrack(data); }
+            removeItem(item: UploadTrack) { item._upload.view?.remove(); }
+        }().update(fetched);
         this.view.useLoadingIndicator(null);
-        fetched.forEach(t => this.appendTrack(t));
         this.view.updateView();
     }
     async uploadFile(file: File) {
@@ -208,7 +204,7 @@ export var uploads = new class extends TrackList {
                 state: 'pending'
             }
         });
-        this.prependTrack(track);
+        this.insertTrack(track);
 
         await this.uploadSemaphore.enter();
         try {

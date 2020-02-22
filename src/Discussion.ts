@@ -3,7 +3,7 @@
 import { ui, SidebarItem } from "./UI";
 import { api } from "./Api";
 import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView } from "./viewlib";
-import { I, Lazy, Action, BuildDomExpr, utils } from "./utils";
+import { I, Lazy, Action, BuildDomExpr, utils, DataUpdatingHelper } from "./utils";
 import { ContentHeader } from "./tracklist";
 import { user } from "./User";
 import { ListContentView } from "./ListContentView";
@@ -34,31 +34,13 @@ class CommentsView {
             li.error(error, () => this.fetch());
             throw error;
         }
-        var commentDict = {} as { [id: number]: Api.Comment; };
-        resp.comments.forEach(c => {
-            commentDict[c.id] = c;
-        });
-        var viewDict = {} as { [id: number]: CommentViewItem; };
-        var removingViews = [] as CommentViewItem[];
-        this.view.listView.forEach(x => {
-            if (commentDict[x.comment.id]) {
-                viewDict[x.comment.id] = x;
-            } else {
-                removingViews.push(x);
-            }
-        });
-        removingViews.forEach(x => x.remove());
-        var viewPos = 0;
-        resp.comments.forEach(c => {
-            var commView = viewDict[c.id];
-            if (commView) {
-                viewPos = commView.position + 1;
-                commView.comment = c;
-                commView.updateDom();
-            } else {
-                this.addItem(c, viewPos++);
-            }
-        });
+        const thiz = this;
+        new class extends DataUpdatingHelper<CommentViewItem, Api.Comment>{
+            items = thiz.view.listView;
+            addItem(c: Api.Comment, pos: number) { thiz.addItem(c, pos); }
+            updateItem(view: CommentViewItem, c: Api.Comment) { view.comment = c; }
+            removeItem(view: CommentViewItem) { view.remove(); }
+        }().update(resp.comments);
         this.view.updateView();
         this.state = 'fetched';
     }
@@ -176,6 +158,7 @@ class CommentViewItem extends ListViewItem {
         this.comment = comment;
     }
     comment: Api.Comment;
+    get id() { return this.comment.id; }
     onremove: Action<CommentViewItem>;
     onedit: Action<CommentViewItem>;
     createDom(): BuildDomExpr {

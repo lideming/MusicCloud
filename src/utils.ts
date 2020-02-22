@@ -535,3 +535,45 @@ export class Semaphore {
         }
     }
 }
+
+export interface IId {
+    id: keyof any;
+}
+
+export class DataUpdatingHelper<T extends IId, TData extends IId = T> {
+    items: Iterable<T>;
+    update(newData: Iterable<TData>) {
+        const oldData = this.items;
+        var dataDict: Record<keyof any, TData> = {};
+        for (const n of newData) {
+            dataDict[this.dataSelectId(n)] = n;
+        }
+        var itemDict: Record<any, T> = {};
+        var removed: T[] = [];
+        for (const d of oldData) {
+            const id = this.selectId(d);
+            if (dataDict[id] !== undefined) {
+                itemDict[id] = d;
+            } else {
+                removed.push(d);
+            }
+        }
+        for (let i = removed.length - 1; i >= 0; i--)
+            this.removeItem(removed[i]);
+        var pos = 0;
+        for (const n of newData) {
+            const d = itemDict[this.dataSelectId(n)];
+            if (d !== undefined) {
+                this.updateItem(d, n);
+            } else {
+                this.addItem(n, pos);
+            }
+            pos++;
+        }
+    }
+    protected selectId(obj: T): any { return obj.id; }
+    protected dataSelectId(obj: TData): any { return obj.id; }
+    addItem(obj: TData, pos: number) { }
+    updateItem(old: T, data: TData) { }
+    removeItem(obj: T) { }
+}
