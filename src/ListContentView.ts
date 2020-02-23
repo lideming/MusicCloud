@@ -108,8 +108,10 @@ export class ListContentView implements ContentView {
 
     useLoadingIndicator(li: LoadingIndicator) {
         if (li !== this.loadingIndicator) {
-            if (this.loadingIndicator && this.rendered) this.loadingIndicator.dom.remove();
-            if (li && this.rendered) this.insertLoadingIndicator(li);
+            if (this.rendered) {
+                if (this.loadingIndicator) this.loadingIndicator.dom.remove();
+                if (li) this.insertLoadingIndicator(li);
+            }
             this.loadingIndicator = li;
         }
         this.updateView();

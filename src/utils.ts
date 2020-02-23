@@ -116,11 +116,15 @@ export var utils = new class Utils {
         var end = () => {
             if (!end) return; // use a random variable as flag ;)
             end = null;
+            element.removeEventListener('transitionend', onTransitionend);
             element.classList.remove('fading-out');
             element.remove();
             cb && cb();
         };
-        element.addEventListener('transitionend', end);
+        var onTransitionend = function (e: TransitionEvent) {
+            if (e.eventPhase === Event.AT_TARGET) end();
+        };
+        element.addEventListener('transitionend', onTransitionend);
         setTimeout(end, 350); // failsafe
         return {
             get finished() { return !end; },

@@ -448,7 +448,7 @@ a.item {
     text-align: center;
     white-space: pre-wrap;
     cursor: default;
-    animation: fadein .3s;
+    animation: loading-fadein .3s;
 }
 
 .loading-indicator-text {
@@ -481,6 +481,22 @@ a.item {
 
 .loading-indicator.error {
     color: red;
+}
+
+.loading-indicator.fading-out {
+    transition: max-height;
+    animation: loading-fadein .3s reverse;
+}
+
+@keyframes loading-fadein {
+    0% {
+        opacity: 0;
+        max-height: 0;
+    }
+    100% {
+        opacity: 1;
+        max-height: 200px;
+    }
 }
 
 @keyframes fadein {
