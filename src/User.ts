@@ -15,7 +15,8 @@ export var user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
         id: -1,
         username: null as string,
-        passwd: null as string
+        passwd: null as string,
+        token: null as string
     });
     loginDialog: LoginDialog;
     get info() { return this.siLogin.data; }
@@ -58,17 +59,26 @@ export var user = new class User {
         this.loginDialog?.close();
     }
     getBasicAuth(info: Api.UserInfo) {
-        return info.username + ':' + info.passwd;
+        return 'Basic ' + utils.base64EncodeUtf8(info.username + ':' + info.passwd);
+    }
+    getBearerAuth(token: string) {
+        return 'Bearer ' + token;
     }
     async login(info: Api.UserInfo) {
         if (this.state !== 'logged') this.setState('logging');
         // try GET `api/users/me` using the new info
         var promise = (async () => {
+            var token = info.token;
             try {
                 // thanks to the keyword `var` of JavaScript.
-                var resp = await api.get('users/me', {
-                    basicAuth: this.getBasicAuth(info)
-                });
+                var resp = token ?
+                    await api.get('users/me', {
+                        auth: this.getBearerAuth(token)
+                    }) as Api.UserInfo
+                    : await api.post({
+                        path: 'users/me/login',
+                        auth: this.getBasicAuth(info)
+                    }) as Api.UserInfo;
             } catch (err) {
                 if (this.state !== 'logged') this.setState('error');
                 if (err.message == 'user_not_found')
@@ -77,8 +87,6 @@ export var user = new class User {
             } finally {
                 this.pendingInfo = null;
             }
-            // fill the passwd because the server won't return it
-            resp.passwd = info.passwd;
             await this.handleLoginResult(resp);
         })();
         this.loggingin = promise;
@@ -96,8 +104,6 @@ export var user = new class User {
                 if (resp.error == 'dup_user') throw new Error(I`A user with the same username exists`);
                 throw new Error(resp.error);
             }
-            // fill the passwd because the server won't return it
-            resp.passwd = info.passwd;
             await this.handleLoginResult(resp);
         })();
         this.loggingin = promise;
@@ -108,14 +114,15 @@ export var user = new class User {
         var switchingUser = this.info.username != info.username;
         this.info.id = info.id;
         this.info.username = info.username;
-        this.info.passwd = info.passwd;
+        this.info.passwd = null;
+        if (info.token) this.info.token = info.token;
         this.role = info.role;
         this.siLogin.save();
 
         var servermsg = info['servermsg'];
         if (servermsg) Toast.show(I`Server: ` + servermsg, 3000);
 
-        api.defaultBasicAuth = this.getBasicAuth(this.info);
+        api.defaultAuth = this.getBearerAuth(this.info.token);
         ui.sidebarLogin.update();
         listIndex.setIndex(info as any);
         this.setState('logged');
@@ -128,7 +135,7 @@ export var user = new class User {
         utils.objectApply(this.info, { id: -1, username: null, passwd: null });
         this.role = null;
         this.siLogin.save();
-        api.defaultBasicAuth = undefined;
+        api.defaultAuth = undefined;
         ui.content.setCurrent(null);
         listIndex.setIndex(null);
         this.setState('none');
@@ -219,7 +226,7 @@ export var user = new class User {
                 }
             });
             this.info.passwd = newPasswd;
-            api.defaultBasicAuth = this.getBasicAuth(this.info);
+            api.defaultAuth = this.getBasicAuth(this.info);
             this.siLogin.save();
         } catch (error) {
             toast.updateWith({ text: I`Failed to change password.` + '\n' + error });

@@ -81,6 +81,9 @@ export namespace Api {
 
         /** When GET me */
         role?: 'admin' | 'user';
+
+        /** When GET me/login */
+        token?: string;
     }
 
     interface Error {

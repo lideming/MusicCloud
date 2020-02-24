@@ -9,7 +9,7 @@ import { Api } from "./apidef";
 export var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;
-    defaultBasicAuth: string;
+    defaultAuth: string;
 
     onTrackInfoChanged = new Callbacks<Action<Api.Track>>();
     onTrackDeleted = new Callbacks<Action<Api.Track>>();
@@ -21,14 +21,14 @@ export var api = new class {
             ...init
         });
     }
-    getHeaders(arg: { basicAuth?: string; }) {
+    getHeaders(arg: FetchOptions) {
         arg = arg || {};
         var headers = {};
-        var basicAuth = arg.basicAuth ?? this.defaultBasicAuth;
-        if (basicAuth) headers['Authorization'] = 'Basic ' + utils.base64EncodeUtf8(basicAuth);
+        var auth = arg.auth ?? this.defaultAuth;
+        if (auth) headers['Authorization'] = auth;
         return headers;
     }
-    async get(path: string, options?: { status?: false | number, basicAuth?: string; }): Promise<any> {
+    async get(path: string, options?: FetchOptions): Promise<any> {
         options = options || {};
         var resp = await this._fetch(this.baseUrl + path, {
             headers: { ...this.getHeaders(options) }
@@ -103,11 +103,14 @@ export var api = new class {
     }
 };
 
-export interface PostOptions {
+export interface PostOptions extends FetchOptions {
     path: string;
-    basicAuth?: string;
     headers?: Record<string, string>;
+}
+
+export interface FetchOptions {
     status?: number;
+    auth?: string;
 }
 
 export type PostBodyOptions =

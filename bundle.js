@@ -32,9 +32,9 @@ exports.api = new class {
         var _a;
         arg = arg || {};
         var headers = {};
-        var basicAuth = (_a = arg.basicAuth, (_a !== null && _a !== void 0 ? _a : this.defaultBasicAuth));
-        if (basicAuth)
-            headers['Authorization'] = 'Basic ' + utils_1.utils.base64EncodeUtf8(basicAuth);
+        var auth = (_a = arg.auth, (_a !== null && _a !== void 0 ? _a : this.defaultAuth));
+        if (auth)
+            headers['Authorization'] = auth;
         return headers;
     }
     get(path, options) {
@@ -2056,7 +2056,8 @@ exports.user = new class User {
         this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
             id: -1,
             username: null,
-            passwd: null
+            passwd: null,
+            token: null
         });
         this.onSwitchedUser = new utils_1.Callbacks();
     }
@@ -2097,7 +2098,10 @@ exports.user = new class User {
         (_a = this.loginDialog) === null || _a === void 0 ? void 0 : _a.close();
     }
     getBasicAuth(info) {
-        return info.username + ':' + info.passwd;
+        return 'Basic ' + utils_1.utils.base64EncodeUtf8(info.username + ':' + info.passwd);
+    }
+    getBearerAuth(token) {
+        return 'Bearer ' + token;
     }
     login(info) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2105,11 +2109,17 @@ exports.user = new class User {
                 this.setState('logging');
             // try GET `api/users/me` using the new info
             var promise = (() => __awaiter(this, void 0, void 0, function* () {
+                var token = info.token;
                 try {
                     // thanks to the keyword `var` of JavaScript.
-                    var resp = yield Api_1.api.get('users/me', {
-                        basicAuth: this.getBasicAuth(info)
-                    });
+                    var resp = token ?
+                        yield Api_1.api.get('users/me', {
+                            auth: this.getBearerAuth(token)
+                        })
+                        : yield Api_1.api.post({
+                            path: 'users/me/login',
+                            auth: this.getBasicAuth(info)
+                        });
                 }
                 catch (err) {
                     if (this.state !== 'logged')
@@ -2121,8 +2131,6 @@ exports.user = new class User {
                 finally {
                     this.pendingInfo = null;
                 }
-                // fill the passwd because the server won't return it
-                resp.passwd = info.passwd;
                 yield this.handleLoginResult(resp);
             }))();
             this.loggingin = promise;
@@ -2143,8 +2151,6 @@ exports.user = new class User {
                         throw new Error(utils_1.I `A user with the same username exists`);
                     throw new Error(resp.error);
                 }
-                // fill the passwd because the server won't return it
-                resp.passwd = info.passwd;
                 yield this.handleLoginResult(resp);
             }))();
             this.loggingin = promise;
@@ -2158,13 +2164,15 @@ exports.user = new class User {
             var switchingUser = this.info.username != info.username;
             this.info.id = info.id;
             this.info.username = info.username;
-            this.info.passwd = info.passwd;
+            this.info.passwd = null;
+            if (info.token)
+                this.info.token = info.token;
             this.role = info.role;
             this.siLogin.save();
             var servermsg = info['servermsg'];
             if (servermsg)
                 viewlib_1.Toast.show(utils_1.I `Server: ` + servermsg, 3000);
-            Api_1.api.defaultBasicAuth = this.getBasicAuth(this.info);
+            Api_1.api.defaultAuth = this.getBearerAuth(this.info.token);
             UI_1.ui.sidebarLogin.update();
             main_1.listIndex.setIndex(info);
             this.setState('logged');
@@ -2177,7 +2185,7 @@ exports.user = new class User {
         utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null });
         this.role = null;
         this.siLogin.save();
-        Api_1.api.defaultBasicAuth = undefined;
+        Api_1.api.defaultAuth = undefined;
         UI_1.ui.content.setCurrent(null);
         main_1.listIndex.setIndex(null);
         this.setState('none');
@@ -2280,7 +2288,7 @@ exports.user = new class User {
                     }
                 });
                 this.info.passwd = newPasswd;
-                Api_1.api.defaultBasicAuth = this.getBasicAuth(this.info);
+                Api_1.api.defaultAuth = this.getBasicAuth(this.info);
                 this.siLogin.save();
             }
             catch (error) {
