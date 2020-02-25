@@ -131,8 +131,19 @@ export var user = new class User {
 
         this.tryRestorePlaying(info.playing);
     }
-    logout() {
-        utils.objectApply(this.info, { id: -1, username: null, passwd: null });
+    async logout() {
+        if (this.info.token) {
+            var toast = Toast.show(I`Logging out...`);
+            try {
+                await api.post({ path: 'users/me/logout' });
+                toast.close();
+            } catch (error) {
+                toast.text = I`Failed to logout.` + '\n' + error;
+                toast.show(5000);
+                return;
+            }
+        }
+        utils.objectApply(this.info, { id: -1, username: null, passwd: null, token: null });
         this.role = null;
         this.siLogin.save();
         api.defaultAuth = undefined;

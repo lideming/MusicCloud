@@ -540,12 +540,14 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["You've logged in as \\"{0}\\".", "你已登录为 \\"{0}\\"。"],
     ["Switch user", "切换用户"],
     ["Logout", "注销"],
+    ["Logging out...", "正在注销..."],
     ["Failed to create playlist \\"{0}\\".", "创建播放列表 \\"{0}\\" 失败。"],
     ["Failed to sync playlist \\"{0}\\".", "同步播放列表 \\"{0}\\" 失败。"],
     ["Login to create playlists.", "登录以创建播放列表。"],
     ["Failed to login.", "登录失败。"],
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
     ["Failed to remove track.", "移除歌曲失败。"],
+    ["Failed to logout.", "注销失败。"],
     ["Removing of a uploading track is currently not supported.", "目前不支持移除上传中的歌曲。"],
     ["Changing password...", "正在更改密码..."],
     ["Failed to change password.", "更改密码失败。"],
@@ -2182,15 +2184,29 @@ exports.user = new class User {
         });
     }
     logout() {
-        utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null });
-        this.role = null;
-        this.siLogin.save();
-        Api_1.api.defaultAuth = undefined;
-        UI_1.ui.content.setCurrent(null);
-        main_1.listIndex.setIndex(null);
-        this.setState('none');
-        this.loggingin = null;
-        this.onSwitchedUser.invoke();
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.info.token) {
+                var toast = viewlib_1.Toast.show(utils_1.I `Logging out...`);
+                try {
+                    yield Api_1.api.post({ path: 'users/me/logout' });
+                    toast.close();
+                }
+                catch (error) {
+                    toast.text = utils_1.I `Failed to logout.` + '\n' + error;
+                    toast.show(5000);
+                    return;
+                }
+            }
+            utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null, token: null });
+            this.role = null;
+            this.siLogin.save();
+            Api_1.api.defaultAuth = undefined;
+            UI_1.ui.content.setCurrent(null);
+            main_1.listIndex.setIndex(null);
+            this.setState('none');
+            this.loggingin = null;
+            this.onSwitchedUser.invoke();
+        });
     }
     setListids(listids) {
         return __awaiter(this, void 0, void 0, function* () {
