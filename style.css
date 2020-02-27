@@ -2,6 +2,10 @@
     box-sizing: border-box;
 }
 
+html {
+    touch-action: manipulation;
+}
+
 body {
     margin: 0;
     font-family: sans-serif;
@@ -90,6 +94,7 @@ html, body {
     width: 200px;
     background: #f8f8f8;
     border-right: 1px solid #ccc;
+    touch-action: pan-y pinch-zoom;
 }
 
 .dark #sidebar {
@@ -185,6 +190,7 @@ html, body {
 
 .tracklist {
     padding: 10px 0;
+    touch-action: pan-y pinch-zoom;
 }
 
 /* listview item */
