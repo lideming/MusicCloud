@@ -21,7 +21,7 @@ export var utils = new class Utils {
     }
 
     formatTime(sec: number) {
-        if (isNaN(sec)) return '--:--';
+        if (typeof sec !== 'number' || isNaN(sec)) return '--:--';
         var sec = Math.floor(sec);
         var min = Math.floor(sec / 60);
         sec %= 60;

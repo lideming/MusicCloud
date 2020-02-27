@@ -175,7 +175,10 @@ export const ui = new class {
                 playerCore.loopMode = next;
             });
             playerCore.onLoopModeChanged.add(() => this.setLoopMode(playerCore.loopMode))();
-            playerCore.onStateChanged.add(() => this.setState(playerCore.state))();
+            playerCore.onStateChanged.add(() => {
+                this.setState(playerCore.state);
+                this.setProg(playerCore.currentTime, playerCore.duration);
+            })();
             playerCore.onProgressChanged.add(() => this.setProg(playerCore.currentTime, playerCore.duration));
             this.onProgressSeeking((percent) => {
                 playerCore.currentTime = percent * playerCore.duration;

@@ -30,9 +30,9 @@ export var playerCore = new class PlayerCore {
     }
     onStateChanged = new Callbacks<Action>();
 
-    get currentTime() { return this.audio.currentTime; }
+    get currentTime() { return this.audio?.currentTime; }
     set currentTime(val) { this.audio.currentTime = val; }
-    get duration() { return this.audio.duration; }
+    get duration() { return this.audio?.duration; }
     onProgressChanged = new Callbacks<Action>();
 
     get volume() { return this.audio?.volume ?? 1; }

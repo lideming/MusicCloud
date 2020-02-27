@@ -1018,9 +1018,9 @@ exports.playerCore = new class PlayerCore {
         this._state = val;
         this.onStateChanged.invoke();
     }
-    get currentTime() { return this.audio.currentTime; }
+    get currentTime() { var _a; return (_a = this.audio) === null || _a === void 0 ? void 0 : _a.currentTime; }
     set currentTime(val) { this.audio.currentTime = val; }
-    get duration() { return this.audio.duration; }
+    get duration() { var _a; return (_a = this.audio) === null || _a === void 0 ? void 0 : _a.duration; }
     get volume() { var _a, _b; return _b = (_a = this.audio) === null || _a === void 0 ? void 0 : _a.volume, (_b !== null && _b !== void 0 ? _b : 1); }
     set volume(val) {
         this.audio.volume = val;
@@ -1387,7 +1387,10 @@ exports.ui = new class {
                     PlayerCore_1.playerCore.loopMode = next;
                 });
                 PlayerCore_1.playerCore.onLoopModeChanged.add(() => this.setLoopMode(PlayerCore_1.playerCore.loopMode))();
-                PlayerCore_1.playerCore.onStateChanged.add(() => this.setState(PlayerCore_1.playerCore.state))();
+                PlayerCore_1.playerCore.onStateChanged.add(() => {
+                    this.setState(PlayerCore_1.playerCore.state);
+                    this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration);
+                })();
                 PlayerCore_1.playerCore.onProgressChanged.add(() => this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration));
                 this.onProgressSeeking((percent) => {
                     PlayerCore_1.playerCore.currentTime = percent * PlayerCore_1.playerCore.duration;
@@ -3090,7 +3093,7 @@ exports.utils = new class Utils {
         return str;
     }
     formatTime(sec) {
-        if (isNaN(sec))
+        if (typeof sec !== 'number' || isNaN(sec))
             return '--:--';
         var sec = Math.floor(sec);
         var min = Math.floor(sec / 60);
