@@ -4,7 +4,6 @@ import { ui, SidebarItem } from "./UI";
 import { api } from "./Api";
 import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView } from "./viewlib";
 import { I, Lazy, Action, BuildDomExpr, utils, DataUpdatingHelper } from "./utils";
-import { ContentHeader } from "./tracklist";
 import { user } from "./User";
 import { ListContentView } from "./ListContentView";
 import { Api } from "./apidef";

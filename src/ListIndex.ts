@@ -2,7 +2,7 @@
 
 import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast } from "./viewlib";
 import { I, utils, BuildDomExpr, BuildDOMCtx } from "./utils";
-import { TrackList, TrackViewItem, TrackListView } from "./tracklist";
+import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";

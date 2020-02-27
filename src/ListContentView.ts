@@ -1,7 +1,7 @@
 // file: ListContentView.ts
 
 import { ListViewItem, ListView, LoadingIndicator, View } from "./viewlib";
-import { ContentHeader, ActionBtn } from "./tracklist";
+import { ContentHeader, ActionBtn } from "./TrackList";
 import { utils, I } from "./utils";
 import { ContentView } from "./UI";
 

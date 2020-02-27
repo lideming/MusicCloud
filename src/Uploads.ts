@@ -1,6 +1,6 @@
 // file: Uploads.ts
 
-import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader, ActionBtn } from "./tracklist";
+import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader, ActionBtn } from "./TrackList";
 import { Semaphore, ItemActiveHelper, utils, DataUpdatingHelper } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";

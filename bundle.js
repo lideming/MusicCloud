@@ -126,7 +126,7 @@ exports.api = new class {
     }
 };
 
-},{"./main":12,"./utils":14}],2:[function(require,module,exports){
+},{"./main":13,"./utils":14}],2:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -355,7 +355,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":9,"./User":11,"./utils":14,"./viewlib":15}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":10,"./User":12,"./utils":14,"./viewlib":15}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -602,7 +602,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
-const tracklist_1 = require("./tracklist");
+const TrackList_1 = require("./TrackList");
 const utils_1 = require("./utils");
 class DataBackedListViewItem extends viewlib_1.ListViewItem {
     constructor(data) {
@@ -652,13 +652,13 @@ class ListContentView {
         }
     }
     createHeader() {
-        return new tracklist_1.ContentHeader({ title: this.title });
+        return new TrackList_1.ContentHeader({ title: this.title });
     }
     appendHeader() {
         this.header = this.createHeader();
-        this.header.actions.addView(this.refreshBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Refresh` }));
-        this.header.actions.addView(this.selectAllBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Select all` }));
-        this.header.actions.addView(this.selectBtn = new tracklist_1.ActionBtn({ text: utils_1.I `Select` }));
+        this.header.actions.addView(this.refreshBtn = new TrackList_1.ActionBtn({ text: utils_1.I `Refresh` }));
+        this.header.actions.addView(this.selectAllBtn = new TrackList_1.ActionBtn({ text: utils_1.I `Select all` }));
+        this.header.actions.addView(this.selectBtn = new TrackList_1.ActionBtn({ text: utils_1.I `Select` }));
         this.selectBtn.onclick = () => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
         };
@@ -730,7 +730,7 @@ class ListContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./tracklist":13,"./utils":14,"./viewlib":15}],5:[function(require,module,exports){
+},{"./TrackList":9,"./utils":14,"./viewlib":15}],5:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -745,7 +745,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const utils_1 = require("./utils");
-const tracklist_1 = require("./tracklist");
+const TrackList_1 = require("./TrackList");
 const User_1 = require("./User");
 const Router_1 = require("./Router");
 const UI_1 = require("./UI");
@@ -764,7 +764,7 @@ class ListIndex {
         };
         this.listView.onDragover = (arg) => {
             const src = arg.source;
-            if (src instanceof tracklist_1.TrackViewItem) {
+            if (src instanceof TrackList_1.TrackViewItem) {
                 arg.accept = true;
                 arg.event.dataTransfer.dropEffect = 'copy';
                 if (arg.drop) {
@@ -871,7 +871,7 @@ class ListIndex {
         });
         this.listView.add(item);
         var curContent = UI_1.ui.content.current;
-        if (curContent instanceof tracklist_1.TrackListView && ((_d = curContent.list) === null || _d === void 0 ? void 0 : _d.id) === listinfo.id)
+        if (curContent instanceof TrackList_1.TrackListView && ((_d = curContent.list) === null || _d === void 0 ? void 0 : _d.id) === listinfo.id)
             UI_1.ui.sidebarList.setActive(item);
     }
     getListInfo(id) {
@@ -881,7 +881,7 @@ class ListIndex {
     getList(id) {
         var list = this.loadedList[id];
         if (!list) {
-            list = new tracklist_1.TrackList();
+            list = new TrackList_1.TrackList();
             list.loadInfo(this.getListInfo(id));
             if (list.apiid) {
                 list.fetch();
@@ -987,7 +987,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":6,"./Router":7,"./UI":9,"./User":11,"./tracklist":13,"./utils":14,"./viewlib":15}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":6,"./Router":7,"./TrackList":9,"./UI":10,"./User":12,"./utils":14,"./viewlib":15}],6:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1200,7 +1200,7 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":9}],8:[function(require,module,exports){
+},{"./UI":10}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -1241,1291 +1241,7 @@ class SettingsDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./I18n":3,"./UI":9,"./viewlib":15}],9:[function(require,module,exports){
-"use strict";
-// file: UI.ts
-Object.defineProperty(exports, "__esModule", { value: true });
-const viewlib_1 = require("./viewlib");
-class SidebarItem extends viewlib_1.ListViewItem {
-    constructor(init) {
-        super();
-        utils_1.utils.objectApply(this, init);
-    }
-    createDom() {
-        return {
-            tag: 'div.item.no-selection',
-            text: () => this.text,
-            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
-        };
-    }
-    bindContentView(viewFunc) {
-        var view;
-        this.onclick = () => {
-            if (!view)
-                view = viewFunc();
-            exports.ui.content.setCurrent(view);
-            exports.ui.sidebarList.setActive(this);
-        };
-        return this;
-    }
-}
-exports.SidebarItem = SidebarItem;
-const Router_1 = require("./Router");
-const utils_1 = require("./utils");
-const I18n_1 = require("./I18n");
-const User_1 = require("./User");
-const PlayerCore_1 = require("./PlayerCore");
-const Uploads_1 = require("./Uploads");
-/** 常驻 UI 元素操作 */
-exports.ui = new class {
-    constructor() {
-        this.theme = new class {
-            constructor() {
-                this.current = 'light';
-                this.timer = new utils_1.Timer(() => utils_1.utils.toggleClass(document.body, 'changing-theme', false));
-                this.rendered = false;
-                this.siTheme = new utils_1.SettingItem('mcloud-theme', 'str', 'light')
-                    .render((theme) => {
-                    if (this.current !== theme) {
-                        this.current = theme;
-                        if (this.rendered)
-                            utils_1.utils.toggleClass(document.body, 'changing-theme', true);
-                        utils_1.utils.toggleClass(document.body, 'dark', theme === 'dark');
-                        if (this.rendered)
-                            this.timer.timeout(500);
-                    }
-                    this.rendered = true;
-                });
-            }
-            set(theme) {
-                this.siTheme.set(theme);
-            }
-        };
-        this.lang = new class {
-            constructor() {
-                this.availableLangs = ['en', 'zh'];
-                this.siLang = new utils_1.SettingItem('mcloud-lang', 'str', I18n_1.I18n.detectLanguage(this.availableLangs));
-            }
-            init() {
-                this.siLang.render((lang) => {
-                    I18n_1.i18n.curLang = lang;
-                    document.body.lang = lang;
-                });
-                console.log(`Current language: '${I18n_1.i18n.curLang}' - '${I18n_1.I `English`}'`);
-                I18n_1.i18n.renderElements(document.querySelectorAll('.i18ne'));
-            }
-            setLang(lang) {
-                this.siLang.set(lang);
-                window.location.reload();
-            }
-        };
-        this.bottomBar = new class {
-            constructor() {
-                this.container = document.getElementById("bottombar");
-                this.btnPin = document.getElementById('btnPin');
-                this.pinned = true;
-                this.hideTimer = new utils_1.utils.Timer(() => { this.toggle(false); });
-                this.shown = false;
-                this.inTransition = false;
-            }
-            setPinned(val) {
-                val = (val !== null && val !== void 0 ? val : !this.pinned);
-                this.pinned = val;
-                utils_1.utils.toggleClass(document.body, 'bottompinned', val);
-                this.btnPin.textContent = val ? I18n_1.I `Unpin` : I18n_1.I `Pin`;
-                if (val)
-                    this.toggle(true);
-            }
-            toggle(state, hideTimeout) {
-                this.shown = utils_1.utils.toggleClass(this.container, 'show', state);
-                if (!this.pinned && hideTimeout)
-                    this.hideTimer.timeout(hideTimeout);
-            }
-            init() {
-                var bar = this.container;
-                bar.addEventListener('transitionstart', (e) => {
-                    if (e.target === bar && e.propertyName == 'transform')
-                        this.inTransition = true;
-                });
-                bar.addEventListener('transitionend', (e) => {
-                    if (e.target === bar && e.propertyName == 'transform')
-                        this.inTransition = false;
-                });
-                bar.addEventListener('transitioncancel', (e) => {
-                    if (e.target === bar && e.propertyName == 'transform')
-                        this.inTransition = false;
-                });
-                bar.addEventListener('mouseenter', () => {
-                    this.hideTimer.tryCancel();
-                    this.toggle(true);
-                });
-                bar.addEventListener('mouseleave', () => {
-                    this.hideTimer.tryCancel();
-                    if (!this.pinned)
-                        this.hideTimer.timeout(200);
-                });
-                this.siPin = new utils_1.SettingItem('mcloud-bottompin', 'bool', false)
-                    .render(x => this.setPinned(x))
-                    .bindToBtn(this.btnPin, ['', '']);
-                // this.btnPin.addEventListener('click', () => this.setPinned());
-            }
-        };
-        this.playerControl = new class {
-            constructor() {
-                this.progbar = document.getElementById('progressbar');
-                this.fill = document.getElementById('progressbar-fill');
-                this.labelCur = document.getElementById('progressbar-label-cur');
-                this.labelTotal = document.getElementById('progressbar-label-total');
-                this.btnPlay = new viewlib_1.TextView(document.getElementById('btn-play'));
-                this.btnLoop = new viewlib_1.TextView(document.getElementById('btn-loop'));
-            }
-            init() {
-                this.setState('none');
-                this.btnLoop.dom.addEventListener('click', () => {
-                    var modes = PlayerCore_1.playingLoopModes;
-                    var next = modes[(modes.indexOf(PlayerCore_1.playerCore.loopMode) + 1) % modes.length];
-                    PlayerCore_1.playerCore.loopMode = next;
-                });
-                PlayerCore_1.playerCore.onLoopModeChanged.add(() => this.setLoopMode(PlayerCore_1.playerCore.loopMode))();
-                PlayerCore_1.playerCore.onStateChanged.add(() => {
-                    this.setState(PlayerCore_1.playerCore.state);
-                    this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration);
-                })();
-                PlayerCore_1.playerCore.onProgressChanged.add(() => this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration));
-                this.onProgressSeeking((percent) => {
-                    PlayerCore_1.playerCore.currentTime = percent * PlayerCore_1.playerCore.duration;
-                });
-                this.onPlayButtonClicked(() => {
-                    var state = PlayerCore_1.playerCore.state;
-                    if (state === 'paused')
-                        PlayerCore_1.playerCore.play();
-                    else
-                        PlayerCore_1.playerCore.pause();
-                });
-                this.btnVolume = new VolumeButton(document.getElementById('btn-volume'));
-                this.btnVolume.text = I18n_1.I `Volume`;
-                this.btnVolume.bindToPlayer();
-            }
-            setState(state) {
-                var btn = this.btnPlay;
-                if (state === 'none') {
-                    btn.text = I18n_1.I `Play`;
-                    btn.toggleClass('disabled', true);
-                }
-                else if (state === 'paused') {
-                    btn.text = I18n_1.I `Play`;
-                    btn.toggleClass('disabled', false);
-                }
-                else if (state === 'playing') {
-                    btn.text = I18n_1.I `Pause`;
-                    btn.toggleClass('disabled', false);
-                }
-                else if (state === 'stalled') {
-                    btn.text = I18n_1.I `Pause...`;
-                    btn.toggleClass('disabled', false);
-                }
-                else {
-                    throw new Error("invalid state value: " + state);
-                }
-                this.state = state;
-            }
-            setProg(cur, total) {
-                var prog = cur / total;
-                prog = utils_1.utils.numLimit(prog, 0, 1);
-                this.fill.style.width = (prog * 100) + '%';
-                this.labelCur.textContent = utils_1.utils.formatTime(cur);
-                this.labelTotal.textContent = utils_1.utils.formatTime(total);
-            }
-            setLoopMode(str) {
-                this.btnLoop.hidden = false;
-                this.btnLoop.text = I18n_1.i18n.get('loopmode_' + str);
-            }
-            onPlayButtonClicked(cb) {
-                this.btnPlay.dom.addEventListener('click', cb);
-            }
-            onProgressSeeking(cb) {
-                var call = (offsetX) => { cb(utils_1.utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
-                this.progbar.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
-                        if (e.buttons == 1)
-                            call(e.offsetX);
-                    document.addEventListener('mousemove', mousemove);
-                    document.addEventListener('mouseup', mouseup);
-                });
-                var mousemove = (e) => {
-                    call(e.pageX - this.progbar.getBoundingClientRect().left);
-                };
-                var mouseup = () => {
-                    document.removeEventListener('mousemove', mousemove);
-                    document.removeEventListener('mouseup', mouseup);
-                };
-            }
-        };
-        this.trackinfo = new class {
-            constructor() {
-                this.element = document.getElementById('bottombar-trackinfo');
-            }
-            init() {
-                PlayerCore_1.playerCore.onTrackChanged.add(() => this.setTrack(PlayerCore_1.playerCore.track));
-            }
-            setTrack(track) {
-                if (track) {
-                    utils_1.utils.replaceChild(this.element, utils_1.utils.buildDOM({
-                        tag: 'span',
-                        child: [
-                            // 'Now Playing: ',
-                            { tag: 'span.name', textContent: track.name },
-                            { tag: 'span.artist', textContent: track.artist },
-                        ]
-                    }));
-                    exports.ui.bottomBar.toggle(true, 5000);
-                }
-                else {
-                    this.element.textContent = "";
-                }
-            }
-        };
-        this.mainContainer = new class {
-            constructor() {
-                this.dom = document.getElementById('main-container');
-            }
-        };
-        this.sidebarLogin = new class {
-            constructor() {
-                this.container = document.getElementById('sidebar-login');
-                this.loginState = document.getElementById('login-state');
-            }
-            init() {
-                this.loginState.addEventListener('click', (ev) => {
-                    User_1.user.openUI();
-                });
-            }
-            update() {
-                var _a, _b;
-                var text = this.loginState.textContent;
-                var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username, (_b !== null && _b !== void 0 ? _b : User_1.user.info.username));
-                if (username) {
-                    text = username;
-                    if (User_1.user.state == 'logging')
-                        text += I18n_1.I ` (logging in...)`;
-                    if (User_1.user.state == 'error')
-                        text += I18n_1.I ` (error!)`;
-                    if (User_1.user.state == 'none')
-                        text += I18n_1.I ` (not logged in)`;
-                }
-                else {
-                    if (User_1.user.state == 'logging')
-                        text = I18n_1.I `(logging...)`;
-                    else
-                        text = I18n_1.I `Guest (click to login)`;
-                }
-                this.loginState.textContent = text;
-            }
-        };
-        this.sidebarList = new class {
-            constructor() {
-                this.container = document.getElementById('sidebar-list');
-                this.listview = new viewlib_1.ListView(this.container);
-                this.features = document.getElementById('sidebar-features');
-                this.featuresListview = new viewlib_1.ListView(this.features);
-                this.currentActive = new utils_1.ItemActiveHelper();
-            }
-            setActive(item) {
-                this.currentActive.set(item);
-            }
-            addItem(item) {
-                this.listview.add(item);
-            }
-            addFeatureItem(item) {
-                this.featuresListview.add(item);
-            }
-        };
-        this.content = new class {
-            constructor() {
-                this.container = document.getElementById('content-outer');
-                this.current = null;
-            }
-            removeCurrent() {
-                const cur = this.current;
-                this.current = null;
-                if (!cur)
-                    return;
-                cur.contentViewState.scrollTop = this.container.scrollTop;
-                if (cur.onRemove)
-                    cur.onRemove();
-                if (cur.dom)
-                    this.container.removeChild(cur.dom);
-            }
-            setCurrent(arg) {
-                if (arg === this.current)
-                    return;
-                this.removeCurrent();
-                if (arg) {
-                    if (arg.onShow)
-                        arg.onShow();
-                    if (arg.dom)
-                        this.container.appendChild(arg.dom);
-                    if (!arg.contentViewState)
-                        arg.contentViewState = { scrollTop: 0 };
-                    this.container.scrollTop = arg.contentViewState.scrollTop;
-                }
-                this.current = arg;
-            }
-        };
-    }
-    init() {
-        this.lang.init();
-        this.bottomBar.init();
-        this.trackinfo.init();
-        this.playerControl.init();
-        this.sidebarLogin.init();
-        viewlib_1.Dialog.defaultParent = new viewlib_1.DialogParent(this.mainContainer.dom);
-        viewlib_1.ToastsContainer.default.parentDom = this.mainContainer.dom;
-        Router_1.router.addRoute({
-            path: ['home'],
-            onNav: () => {
-                exports.ui.content.setCurrent(null);
-                exports.ui.sidebarList.currentActive.set(null);
-            }
-        });
-        document.addEventListener('dragover', (ev) => {
-            ev.preventDefault();
-        });
-        document.addEventListener('drop', (ev) => {
-            ev.preventDefault();
-            var files = ev.dataTransfer.files;
-            if (files.length) {
-                new viewlib_1.MessageBox().setTitle(I18n_1.I `Question`)
-                    .addText(files.length == 1
-                    ? I18n_1.I `Did you mean to upload 1 file?`
-                    : I18n_1.I `Did you mean to upload ${files.length} files?`)
-                    .addResultBtns(['no', 'yes'])
-                    .allowCloseWithResult('no')
-                    .showAndWaitResult()
-                    .then(r => {
-                    if (r === 'yes') {
-                        if (Router_1.router.currentStr !== 'uploads')
-                            Router_1.router.nav('uploads');
-                        for (let i = 0; i < files.length; i++) {
-                            const file = files[i];
-                            Uploads_1.uploads.uploadFile(file);
-                        }
-                    }
-                });
-            }
-        });
-    }
-    endPreload() {
-        document.getElementById('js-ok').hidden = false;
-        utils_1.utils.fadeout(document.getElementById('preload-overlay'));
-        window['preload'].end();
-    }
-}; // ui
-class ProgressButton extends viewlib_1.View {
-    constructor(dom) {
-        super((dom !== null && dom !== void 0 ? dom : { tag: 'div.btn' }));
-        this.fill = new viewlib_1.View({
-            tag: 'div.btn-fill'
-        });
-        this.textSpan = new viewlib_1.TextView({ tag: 'span.text' });
-        this.dom.classList.add('btn-progress');
-        this.dom.appendView(this.fill);
-        this.dom.appendView(this.textSpan);
-    }
-    get text() { return this.textSpan.text; }
-    set text(val) { this.textSpan.text = val; }
-    get progress() { return this._progress; }
-    set progress(v) {
-        this.fill.dom.style.width = (v * 100) + '%';
-        this._progress = v;
-    }
-}
-class VolumeButton extends ProgressButton {
-    constructor(dom) {
-        super(dom);
-        this.onChanging = new utils_1.Callbacks();
-        this.tip = '\n' + I18n_1.I `(Scroll whell or drag to adjust volume)`;
-        dom.addEventListener('wheel', (ev) => {
-            ev.preventDefault();
-            var delta = Math.sign(ev.deltaY) * -0.1;
-            this.onChanging.invoke(delta);
-        });
-        this.dom.addEventListener('mousedown', (ev) => {
-            if (ev.buttons !== 1)
-                return;
-            ev.preventDefault();
-            var startX = ev.pageX;
-            var mousemove = (ev) => {
-                var deltaX = ev.pageX - startX;
-                startX = ev.pageX;
-                this.onChanging.invoke(deltaX * 0.01);
-            };
-            var mouseup = (ev) => {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
-                this.dom.classList.remove('btn-down');
-                this.fill.dom.style.transition = '';
-            };
-            document.addEventListener('mousemove', mousemove);
-            document.addEventListener('mouseup', mouseup);
-            this.dom.classList.add('btn-down');
-            this.fill.dom.style.transition = 'none';
-        });
-    }
-    bindToPlayer() {
-        PlayerCore_1.playerCore.onVolumeChanged.add(() => {
-            this.progress = PlayerCore_1.playerCore.volume;
-            this.dom.title = I18n_1.I `Volume` + ' ' + Math.floor(this.progress * 100) + '%' + this.tip;
-        })();
-        this.onChanging.add((x) => {
-            var r = utils_1.utils.numLimit(PlayerCore_1.playerCore.volume + x, 0, 1);
-            PlayerCore_1.playerCore.volume = r;
-            this.tip = '';
-        });
-    }
-}
-
-},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./Uploads":10,"./User":11,"./utils":14,"./viewlib":15}],10:[function(require,module,exports){
-"use strict";
-// file: Uploads.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const tracklist_1 = require("./tracklist");
-const utils_1 = require("./utils");
-const ListIndex_1 = require("./ListIndex");
-const User_1 = require("./User");
-const viewlib_1 = require("./viewlib");
-const Router_1 = require("./Router");
-const I18n_1 = require("./I18n");
-const PlayerCore_1 = require("./PlayerCore");
-const UI_1 = require("./UI");
-const Api_1 = require("./Api");
-class UploadTrack extends tracklist_1.Track {
-    constructor(init) {
-        super(init);
-    }
-}
-exports.uploads = new class extends tracklist_1.TrackList {
-    constructor() {
-        super(...arguments);
-        this.tracks = [];
-        this.state = false;
-        this.canEdit = false;
-        this.uploadSemaphore = new utils_1.Semaphore({ maxCount: 2 });
-        this.view = new class extends tracklist_1.TrackListView {
-            constructor() {
-                super(...arguments);
-                this.usage = new viewlib_1.TextView({ tag: 'span.uploads-usage' });
-            }
-            appendHeader() {
-                this.title = I18n_1.I `My Uploads`;
-                super.appendHeader();
-                this.uploadArea = new UploadArea({ onfile: (file) => exports.uploads.uploadFile(file) });
-                this.dom.appendView(this.uploadArea);
-                this.trackActionHandler.onTrackRemove = (items) => {
-                    if (items.length == 1) {
-                        this.removeTrack(items[0]);
-                    }
-                    else {
-                        new viewlib_1.MessageBox()
-                            .setTitle(I18n_1.I `Warning`)
-                            .addText(I18n_1.I `Are you sure to delete ${items.length} tracks permanently?`)
-                            .addResultBtns(['cancel', 'ok'])
-                            .allowCloseWithResult('cancel')
-                            .showAndWaitResult()
-                            .then(r => {
-                            if (r !== 'ok')
-                                return;
-                            items.forEach(x => this.removeTrack(x, true));
-                        });
-                    }
-                };
-            }
-            createHeader() {
-                var header = new tracklist_1.ContentHeader({
-                    title: this.title
-                });
-                header.appendView(this.usage);
-                return header;
-            }
-            appendListView() {
-                super.appendListView();
-                if (!exports.uploads.state)
-                    exports.uploads.fetch();
-            }
-            updateUsage() {
-                var total = 0;
-                exports.uploads.tracks.forEach(x => { var _a; return total += (_a = x.size, (_a !== null && _a !== void 0 ? _a : 0)); });
-                this.usage.text = total ? `(${utils_1.utils.formatFileSize(total)})` : '';
-            }
-            updateView() {
-                super.updateView();
-                this.updateUsage();
-            }
-            createViewItem(t) {
-                const item = new UploadViewItem(t);
-                item.actionHandler = this.trackActionHandler;
-                return item;
-            }
-            removeTrack(item, noPrompt) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const track = item.track;
-                    if (track._upload.state === 'uploading') {
-                        viewlib_1.Toast.show(I18n_1.I `Removing of a uploading track is currently not supported.`);
-                        return;
-                    }
-                    if (track._upload.state === 'pending') {
-                        track._upload.state = 'cancelled';
-                        exports.uploads.remove(track);
-                    }
-                    else if (track._upload.state === 'error') {
-                        exports.uploads.remove(track);
-                    }
-                    else if (track._upload.state === 'done') {
-                        if (!noPrompt && (yield new viewlib_1.MessageBox()
-                            .setTitle(I18n_1.I `Warning`)
-                            .addText(I18n_1.I `Are you sure to delete the track permanently?`)
-                            .addResultBtns(['cancel', 'ok'])
-                            .allowCloseWithResult('cancel')
-                            .showAndWaitResult()) !== 'ok')
-                            return;
-                        try {
-                            yield Api_1.api.delete({
-                                path: 'tracks/' + track.id
-                            });
-                        }
-                        catch (error) {
-                            viewlib_1.Toast.show(I18n_1.I `Failed to remove track.` + '\n' + error);
-                            return;
-                        }
-                        Api_1.api.onTrackDeleted.invoke(track);
-                    }
-                    else {
-                        console.error('Unexpected track._upload.state', track._upload.state);
-                        return;
-                    }
-                });
-            }
-        }(this);
-    }
-    init() {
-        this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: I18n_1.I `My Uploads` });
-        Router_1.router.addRoute({
-            path: ['uploads'],
-            sidebarItem: () => this.sidebarItem,
-            contentView: () => this.view
-        });
-        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
-        User_1.user.onSwitchedUser.add(() => {
-            if (this.state !== false && this.state !== 'waiting') {
-                this.tracks = [];
-                this.state = false;
-                if (this.view.rendered) {
-                    this.view.listView.removeAll();
-                    this.view.updateView();
-                }
-                setTimeout(() => this.fetch(true), 1);
-            }
-        });
-        PlayerCore_1.playerCore.onTrackChanged.add(() => {
-            this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === PlayerCore_1.playerCore.track) });
-        });
-        Api_1.api.onTrackInfoChanged.add((newer) => {
-            this.tracks.forEach(t => {
-                var _a;
-                if (t.id === newer.id) {
-                    t.updateFromApiTrack(newer);
-                    (_a = t._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
-                }
-            });
-        });
-        Api_1.api.onTrackDeleted.add((deleted) => {
-            var track = this.tracks.find(x => x.id === deleted.id);
-            if (track)
-                this.remove(track);
-        });
-    }
-    insertTrack(t, pos = 0) {
-        this.tracks.splice(pos, 0, t);
-        if (this.view.rendered)
-            this.view.addItem(t, pos);
-    }
-    remove(track) {
-        var _a;
-        var pos = this.tracks.indexOf(track);
-        if (pos === -1)
-            return;
-        this.tracks.splice(pos, 1);
-        (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.remove();
-    }
-    fetchImpl() {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.state = 'waiting';
-            var li = new viewlib_1.LoadingIndicator();
-            li.content = I18n_1.I `Logging in`;
-            this.view.useLoadingIndicator(li);
-            try {
-                yield User_1.user.waitLogin(true);
-                this.state = 'fetching';
-                li.reset();
-                var fetched = (yield Api_1.api.get('my/uploads'))['tracks']
-                    .map(t => {
-                    t._upload = { state: 'done' };
-                    return new UploadTrack(t);
-                });
-                this.state = 'fetched';
-            }
-            catch (error) {
-                li.error(error, () => this.fetchImpl());
-                return;
-            }
-            const thiz = this;
-            var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
-            const firstPos = doneTracks.length ? this.tracks.indexOf(doneTracks[0]) : 0;
-            new class extends utils_1.DataUpdatingHelper {
-                constructor() {
-                    super(...arguments);
-                    this.items = doneTracks;
-                }
-                addItem(data, pos) { thiz.insertTrack(data, firstPos); }
-                updateItem(item, data) { item.updateFromApiTrack(data); }
-                removeItem(item) { var _a; (_a = item._upload.view) === null || _a === void 0 ? void 0 : _a.remove(); }
-            }().update(fetched);
-            this.view.useLoadingIndicator(null);
-            this.view.updateView();
-        });
-    }
-    uploadFile(file) {
-        var _a, _b, _c;
-        return __awaiter(this, void 0, void 0, function* () {
-            var apitrack = {
-                id: undefined, url: undefined,
-                artist: 'Unknown', name: file.name
-            };
-            var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { _upload: {
-                    state: 'pending'
-                } }));
-            this.insertTrack(track);
-            yield this.uploadSemaphore.enter();
-            try {
-                if (track._upload.state === 'cancelled')
-                    return;
-                track._upload.state = 'uploading';
-                (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
-                var jsonBlob = new Blob([JSON.stringify(apitrack)]);
-                var finalBlob = new Blob([
-                    BlockFormat.encodeBlock(jsonBlob),
-                    BlockFormat.encodeBlock(file)
-                ]);
-                var resp = yield Api_1.api.post({
-                    path: 'tracks/newfile',
-                    mode: 'raw',
-                    obj: finalBlob,
-                    headers: { 'Content-Type': 'application/x-mcloud-upload' }
-                });
-                track.id = resp.id;
-                track.updateFromApiTrack(resp);
-            }
-            catch (err) {
-                track._upload.state = 'error';
-                (_b = track._upload.view) === null || _b === void 0 ? void 0 : _b.updateDom();
-                viewlib_1.Toast.show(I18n_1.I `Failed to upload file "${file.name}".` + '\n' + err, 3000);
-                console.log('uploads failed: ', file.name, err);
-                throw err;
-            }
-            finally {
-                this.uploadSemaphore.exit();
-            }
-            track._upload.state = 'done';
-            (_c = track._upload.view) === null || _c === void 0 ? void 0 : _c.updateDom();
-            if (this.view.rendered)
-                this.view.updateUsage();
-        });
-    }
-};
-class UploadViewItem extends tracklist_1.TrackViewItem {
-    constructor(track) {
-        super(track);
-        track._upload.view = this;
-    }
-    postCreateDom() {
-        super.postCreateDom();
-        this.dom.classList.add('uploads-item');
-        this.dom.appendChild(this.domstate = utils_1.utils.buildDOM({ tag: 'span.uploads-state' }));
-    }
-    updateDom() {
-        super.updateDom();
-        var newState = this.track._upload.state;
-        if (this._lastUploadState != newState) {
-            if (this._lastUploadState)
-                this.dom.classList.remove('state-' + this._lastUploadState);
-            if (newState)
-                this.dom.classList.add('state-' + newState);
-            this.domstate.textContent = I18n_1.i18n.get('uploads_' + newState);
-            this.dragging = newState == 'done';
-        }
-    }
-}
-class UploadArea extends viewlib_1.View {
-    constructor(init) {
-        super();
-        utils_1.utils.objectApply(this, init);
-    }
-    createDom() {
-        return {
-            _ctx: this,
-            tag: 'div.upload-area.clickable',
-            child: [
-                { tag: 'div.text.no-selection', textContent: I18n_1.I `Click here to select files to upload` },
-                { tag: 'div.text.no-selection', textContent: I18n_1.I `or drag files to this zone...` },
-                {
-                    tag: 'input', type: 'file', _key: 'domfile',
-                    style: 'visibility: collapse; height: 0;',
-                    accept: 'audio/*', multiple: true
-                },
-            ]
-        };
-    }
-    postCreateDom() {
-        this.domfile.addEventListener('change', (ev) => {
-            this.handleFiles(this.domfile.files);
-        });
-        this.dom.addEventListener('click', (ev) => {
-            this.domfile.click();
-        });
-        this.dom.addEventListener('dragover', (ev) => {
-            if (ev.dataTransfer.types.indexOf('Files') >= 0) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                ev.dataTransfer.dropEffect = 'copy';
-            }
-        });
-        this.dom.addEventListener('drop', (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            if (ev.dataTransfer.types.indexOf('Files') >= 0) {
-                this.handleFiles(ev.dataTransfer.files);
-            }
-        });
-    }
-    handleFiles(files) {
-        var _a, _b;
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            console.log('drop file', { name: file.name, size: file.size });
-            (_b = (_a = this).onfile) === null || _b === void 0 ? void 0 : _b.call(_a, file);
-        }
-    }
-}
-var BlockFormat = {
-    encodeBlock(blob) {
-        return new Blob([BlockFormat.encodeLen(blob.size), blob]);
-    },
-    encodeLen(len) {
-        var str = '';
-        for (var i = 0; i < 8; i++) {
-            str = '0123456789aBcDeF'[(len >> (i * 4)) & 0x0f] + str;
-        }
-        str += '\r\n';
-        return str;
-    }
-};
-
-},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./UI":9,"./User":11,"./tracklist":13,"./utils":14,"./viewlib":15}],11:[function(require,module,exports){
-"use strict";
-// file: User.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const utils_1 = require("./utils");
-const main_1 = require("./main");
-const viewlib_1 = require("./viewlib");
-const UI_1 = require("./UI");
-const Api_1 = require("./Api");
-const PlayerCore_1 = require("./PlayerCore");
-const Uploads_1 = require("./Uploads");
-const SettingsUI_1 = require("./SettingsUI");
-exports.user = new class User {
-    constructor() {
-        this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
-            id: -1,
-            username: null,
-            passwd: null,
-            token: null
-        });
-        this.onSwitchedUser = new utils_1.Callbacks();
-    }
-    get info() { return this.siLogin.data; }
-    get isAdmin() { return this.role === 'admin'; }
-    setState(state) {
-        this.state = state;
-        UI_1.ui.sidebarLogin.update();
-    }
-    init() {
-        PlayerCore_1.playerCore.onTrackChanged.add(() => this.playingTrackChanged());
-        if (this.info.username) {
-            this.login(this.info).then(null, (err) => {
-                viewlib_1.Toast.show(utils_1.I `Failed to login.` + '\n' + err, 5000);
-            });
-        }
-        else {
-            this.setState('none');
-            this.openUI();
-        }
-    }
-    initLoginUI() {
-        this.loginDialog = new LoginDialog();
-    }
-    openUI(login) {
-        login = (login !== null && login !== void 0 ? login : this.state !== 'logged');
-        if (login) {
-            if (!this.loginDialog)
-                this.loginDialog = new LoginDialog();
-            this.loginDialog.show();
-        }
-        else {
-            new MeDialog().show();
-        }
-    }
-    closeUI() {
-        var _a;
-        (_a = this.loginDialog) === null || _a === void 0 ? void 0 : _a.close();
-    }
-    getBasicAuth(info) {
-        return 'Basic ' + utils_1.utils.base64EncodeUtf8(info.username + ':' + info.passwd);
-    }
-    getBearerAuth(token) {
-        return 'Bearer ' + token;
-    }
-    login(info) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this.state !== 'logged')
-                this.setState('logging');
-            // try GET `api/users/me` using the new info
-            var promise = (() => __awaiter(this, void 0, void 0, function* () {
-                var token = info.token;
-                try {
-                    // thanks to the keyword `var` of JavaScript.
-                    var resp = token ?
-                        yield Api_1.api.get('users/me', {
-                            auth: this.getBearerAuth(token)
-                        })
-                        : yield Api_1.api.post({
-                            path: 'users/me/login',
-                            auth: this.getBasicAuth(info)
-                        });
-                }
-                catch (err) {
-                    if (this.state !== 'logged')
-                        this.setState('error');
-                    if (err.message == 'user_not_found')
-                        throw new Error(utils_1.I `Username or password is not correct.`);
-                    throw err;
-                }
-                finally {
-                    this.pendingInfo = null;
-                }
-                yield this.handleLoginResult(resp);
-            }))();
-            this.loggingin = promise;
-            yield promise;
-        });
-    }
-    register(info) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.setState('logging');
-            var promise = (() => __awaiter(this, void 0, void 0, function* () {
-                var resp = yield Api_1.api.post({
-                    path: 'users/new',
-                    obj: info
-                });
-                if (resp.error) {
-                    this.setState('error');
-                    if (resp.error == 'dup_user')
-                        throw new Error(utils_1.I `A user with the same username exists`);
-                    throw new Error(resp.error);
-                }
-                yield this.handleLoginResult(resp);
-            }))();
-            this.loggingin = promise;
-            yield promise;
-        });
-    }
-    handleLoginResult(info) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!info.username)
-                throw new Error(utils_1.I `iNTernEL eRRoR`);
-            var switchingUser = this.info.username != info.username;
-            this.info.id = info.id;
-            this.info.username = info.username;
-            this.info.passwd = null;
-            if (info.token)
-                this.info.token = info.token;
-            this.role = info.role;
-            this.siLogin.save();
-            var servermsg = info['servermsg'];
-            if (servermsg)
-                viewlib_1.Toast.show(utils_1.I `Server: ` + servermsg, 3000);
-            Api_1.api.defaultAuth = this.getBearerAuth(this.info.token);
-            UI_1.ui.sidebarLogin.update();
-            main_1.listIndex.setIndex(info);
-            this.setState('logged');
-            this.loggingin = null;
-            this.onSwitchedUser.invoke();
-            this.tryRestorePlaying(info.playing);
-        });
-    }
-    logout() {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this.info.token) {
-                var toast = viewlib_1.Toast.show(utils_1.I `Logging out...`);
-                try {
-                    yield Api_1.api.post({ path: 'users/me/logout' });
-                    toast.close();
-                }
-                catch (error) {
-                    toast.text = utils_1.I `Failed to logout.` + '\n' + error;
-                    toast.show(5000);
-                    return;
-                }
-            }
-            utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null, token: null });
-            this.role = null;
-            this.siLogin.save();
-            Api_1.api.defaultAuth = undefined;
-            UI_1.ui.content.setCurrent(null);
-            main_1.listIndex.setIndex(null);
-            this.setState('none');
-            this.loggingin = null;
-            this.onSwitchedUser.invoke();
-        });
-    }
-    setListids(listids) {
-        return __awaiter(this, void 0, void 0, function* () {
-            var obj = {
-                id: this.info.id,
-                username: this.info.username,
-                listids: listids
-            };
-            yield Api_1.api.put({
-                path: 'users/me',
-                obj
-            });
-        });
-    }
-    /**
-     * Wait until finished logging in. Returns true if sucessfully logged in.
-     */
-    waitLogin(throwOnFail) {
-        return __awaiter(this, void 0, void 0, function* () {
-            do {
-                if (this.state == 'logged')
-                    return true;
-                if (this.state == 'logging') {
-                    try {
-                        yield this.loggingin;
-                        if (this.state != 'logged')
-                            break;
-                        return true;
-                    }
-                    catch (_a) {
-                        break;
-                    }
-                }
-            } while (0);
-            if (throwOnFail)
-                throw new Error('No login');
-            return false;
-        });
-    }
-    playingTrackChanged() {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
-        var track = PlayerCore_1.playerCore.track;
-        if (track && this._ignore_track_once === track) {
-            this._ignore_track_once = null;
-            return;
-        }
-        var tl = {
-            listid: (_d = (_c = (_b = (_a = track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.id, (_d !== null && _d !== void 0 ? _d : 0)),
-            position: (_g = (_f = (_e = track) === null || _e === void 0 ? void 0 : _e._bind) === null || _f === void 0 ? void 0 : _f.position, (_g !== null && _g !== void 0 ? _g : 0)),
-            trackid: (_j = (_h = track) === null || _h === void 0 ? void 0 : _h.id, (_j !== null && _j !== void 0 ? _j : 0))
-        };
-        this.postPlaying(tl)
-            .then(() => console.info("post playing OK"), (err) => console.warn('post playing error', err));
-    }
-    tryRestorePlaying(playing) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            if (playing.trackid) {
-                var list = playing.listid ? main_1.listIndex.getList(playing.listid) : Uploads_1.uploads;
-                yield list.fetch();
-                var track = list.tracks[playing.position];
-                if (((_a = track) === null || _a === void 0 ? void 0 : _a.id) !== playing.trackid)
-                    track = list.tracks.find(x => x.id === playing.trackid);
-                this._ignore_track_once = track;
-                PlayerCore_1.playerCore.setTrack(track);
-            }
-        });
-    }
-    getPlaying() {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.waitLogin(true);
-            var result = yield Api_1.api.get('my/playing');
-            return result;
-        });
-    }
-    postPlaying(trackLocation) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.waitLogin(true);
-            yield Api_1.api.post({
-                path: 'my/playing',
-                obj: trackLocation
-            });
-        });
-    }
-    changePassword(newPasswd) {
-        return __awaiter(this, void 0, void 0, function* () {
-            var toast = viewlib_1.Toast.show(utils_1.I `Changing password...`);
-            try {
-                yield Api_1.api.put({
-                    path: 'users/me',
-                    obj: {
-                        id: this.info.id,
-                        username: this.info.username,
-                        passwd: newPasswd
-                    }
-                });
-                this.info.passwd = newPasswd;
-                Api_1.api.defaultAuth = this.getBasicAuth(this.info);
-                this.siLogin.save();
-            }
-            catch (error) {
-                toast.updateWith({ text: utils_1.I `Failed to change password.` + '\n' + error });
-                toast.show(3000);
-                return;
-            }
-            toast.updateWith({ text: utils_1.I `Password changed successfully.` });
-            toast.show(3000);
-        });
-    }
-};
-class LoginDialog extends viewlib_1.Dialog {
-    constructor() {
-        super();
-        this.tabLogin = new viewlib_1.TabBtn({ text: utils_1.I `Login`, active: true });
-        this.tabCreate = new viewlib_1.TabBtn({ text: utils_1.I `Create account` });
-        this.inputUser = new viewlib_1.LabeledInput({ label: utils_1.I `Username` });
-        this.inputPasswd = new viewlib_1.LabeledInput({ label: utils_1.I `Password`, type: 'password' });
-        this.inputPasswd2 = new viewlib_1.LabeledInput({ label: utils_1.I `Confirm password`, type: 'password' });
-        this.viewStatus = new viewlib_1.TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
-        this.btn = new viewlib_1.ButtonView({ text: utils_1.I `Login`, type: 'big' });
-        this.isRegistering = false;
-        var dig = this;
-        dig.title = '';
-        [this.tabLogin, this.tabCreate].forEach(x => {
-            dig.addBtn(x);
-            x.onClick.add(() => toggle(x));
-        });
-        [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
-        dig.addContent(utils_1.utils.buildDOM({
-            tag: 'div',
-            child: [this.viewStatus.dom, this.btn.dom]
-        }));
-        dig.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 13) { // Enter
-                this.btnClicked();
-                ev.preventDefault();
-            }
-        });
-        dig.autoFocus = this.inputUser.input;
-        this.btn.toggleClass('bigbtn', true);
-        this.btn.dom.addEventListener('click', () => this.btnClicked());
-        var toggle = (btn) => {
-            if (btn.active)
-                return;
-            this.isRegistering = !this.isRegistering;
-            this.inputPasswd2.hidden = !this.isRegistering;
-            this.btn.text = btn.text;
-            this.tabLogin.updateWith({ active: !this.isRegistering });
-            this.tabCreate.updateWith({ active: this.isRegistering });
-        };
-        this.inputPasswd2.hidden = true;
-        this.addBtn(new viewlib_1.TabBtn({
-            text: utils_1.I `Settings`, right: true,
-            onclick: () => {
-                SettingsUI_1.settingsUI.openUI();
-                this.close();
-            }
-        }));
-    }
-    show() {
-        this.setOffset(0, 0);
-        super.show();
-    }
-    btnClicked() {
-        if (this.btn.dom.classList.contains('disabled'))
-            return;
-        var precheckErr = [];
-        if (!this.inputUser.value)
-            precheckErr.push(utils_1.I `Please input the username!`);
-        if (!this.inputPasswd.value)
-            precheckErr.push(utils_1.I `Please input the password!`);
-        else if (this.isRegistering && this.inputPasswd.value !== this.inputPasswd2.value)
-            precheckErr.push(utils_1.I `Password confirmation does not match!`);
-        this.viewStatus.dom.textContent = precheckErr.join('\r\n');
-        if (precheckErr.length) {
-            return;
-        }
-        (() => __awaiter(this, void 0, void 0, function* () {
-            this.viewStatus.text = utils_1.I `Requesting...`;
-            this.btn.updateWith({ disabled: true });
-            var info = { username: this.inputUser.value, passwd: this.inputPasswd.value };
-            try {
-                exports.user.pendingInfo = info;
-                if (this.isRegistering) {
-                    yield exports.user.register(info);
-                }
-                else {
-                    yield exports.user.login(info);
-                }
-                this.viewStatus.text = '';
-                [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => x.value = '');
-                exports.user.closeUI();
-            }
-            catch (e) {
-                this.viewStatus.text = e;
-                // fallback to previous login info
-                if (exports.user.state === 'logged' && exports.user.info.username) {
-                    this.viewStatus.text += '\r\n' + utils_1.I `Logged in with previous working account.`;
-                }
-            }
-            finally {
-                exports.user.pendingInfo = null;
-                this.btn.updateWith({ disabled: false });
-            }
-        }))();
-    }
-}
-class MeDialog extends viewlib_1.Dialog {
-    constructor() {
-        super();
-        this.btnChangePassword = new viewlib_1.ButtonView({ text: utils_1.I `Change password`, type: 'big' });
-        this.btnSwitch = new viewlib_1.ButtonView({ text: utils_1.I `Switch user`, type: 'big' });
-        this.btnLogout = new viewlib_1.ButtonView({ text: utils_1.I `Logout`, type: 'big' });
-        var username = exports.user.info.username;
-        this.title = utils_1.I `User ${username}`;
-        this.addContent(new viewlib_1.View({ tag: 'p', textContent: utils_1.I `You've logged in as "${username}".` }));
-        if (exports.user.isAdmin)
-            this.addContent(new viewlib_1.View({ tag: 'p', textContent: utils_1.I `You are admin.` }));
-        this.addContent(this.btnChangePassword);
-        this.addContent(this.btnSwitch);
-        this.addContent(this.btnLogout);
-        this.btnChangePassword.onclick = () => {
-            new ChangePasswordDialog().show();
-            this.close();
-        };
-        this.btnSwitch.onclick = () => {
-            exports.user.openUI(true);
-            this.close();
-        };
-        this.btnLogout.onclick = () => {
-            exports.user.logout();
-            this.close();
-        };
-        this.addBtn(new viewlib_1.TabBtn({
-            text: utils_1.I `Settings`, right: true,
-            onclick: () => {
-                SettingsUI_1.settingsUI.openUI();
-                this.close();
-            }
-        }));
-    }
-}
-class ChangePasswordDialog extends viewlib_1.Dialog {
-    constructor() {
-        super();
-        this.inputPasswd = new viewlib_1.LabeledInput({ label: utils_1.I `New password`, type: 'password' });
-        this.inputPasswd2 = new viewlib_1.LabeledInput({ label: utils_1.I `Confirm password`, type: 'password' });
-        this.status = new viewlib_1.TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
-        this.btnChangePassword = new viewlib_1.ButtonView({ text: utils_1.I `Change password`, type: 'big' });
-        this.title = utils_1.I `Change password`;
-        [this.inputPasswd, this.inputPasswd2, this.status, this.btnChangePassword]
-            .forEach(x => this.addContent(x));
-        this.btnChangePassword.onclick = () => {
-            if (!this.inputPasswd.value) {
-                this.status.text = (utils_1.I `Please input the new password!`);
-            }
-            else if (this.inputPasswd.value !== this.inputPasswd2.value) {
-                this.status.text = (utils_1.I `Password confirmation does not match!`);
-            }
-            else {
-                exports.user.changePassword(this.inputPasswd.value);
-                this.close();
-            }
-        };
-    }
-}
-
-},{"./Api":1,"./PlayerCore":6,"./SettingsUI":8,"./UI":9,"./Uploads":10,"./main":12,"./utils":14,"./viewlib":15}],12:[function(require,module,exports){
-"use strict";
-// file: main.ts
-// TypeScript 3.7 is required.
-Object.defineProperty(exports, "__esModule", { value: true });
-// Why do we need to use React and Vue.js? ;)
-exports.settings = {
-    apiBaseUrl: 'api/',
-    // apiBaseUrl: 'http://127.0.0.1:50074/api/',
-    // apiBaseUrl: 'http://127.0.0.1:5000/api/',
-    debug: true,
-    apiDebugDelay: 0,
-};
-const viewlib_1 = require("./viewlib");
-const UI_1 = require("./UI");
-const PlayerCore_1 = require("./PlayerCore");
-const Api_1 = require("./Api");
-const User_1 = require("./User");
-const ListIndex_1 = require("./ListIndex");
-const Uploads_1 = require("./Uploads");
-const Discussion_1 = require("./Discussion");
-const Router_1 = require("./Router");
-const SettingsUI_1 = require("./SettingsUI");
-UI_1.ui.init();
-PlayerCore_1.playerCore.init();
-exports.listIndex = new ListIndex_1.ListIndex();
-var app = window['app'] = {
-    settings: exports.settings, settingsUI: SettingsUI_1.settingsUI,
-    ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
-    Toast: viewlib_1.Toast, ToastsContainer: viewlib_1.ToastsContainer,
-    init() {
-        User_1.user.init();
-        Uploads_1.uploads.init();
-        Discussion_1.discussion.init();
-        Discussion_1.notes.init();
-        Discussion_1.comments.init();
-        exports.listIndex.init();
-        Router_1.router.init();
-    }
-};
-app.init();
-UI_1.ui.endPreload();
-
-},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./SettingsUI":8,"./UI":9,"./Uploads":10,"./User":11,"./viewlib":15}],13:[function(require,module,exports){
+},{"./I18n":3,"./UI":10,"./viewlib":15}],9:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3068,7 +1784,1291 @@ class ActionBtn extends viewlib_1.TextView {
 }
 exports.ActionBtn = ActionBtn;
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./Router":7,"./User":11,"./main":12,"./utils":14,"./viewlib":15}],14:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./Router":7,"./User":12,"./main":13,"./utils":14,"./viewlib":15}],10:[function(require,module,exports){
+"use strict";
+// file: UI.ts
+Object.defineProperty(exports, "__esModule", { value: true });
+const viewlib_1 = require("./viewlib");
+class SidebarItem extends viewlib_1.ListViewItem {
+    constructor(init) {
+        super();
+        utils_1.utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.item.no-selection',
+            text: () => this.text,
+            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
+        };
+    }
+    bindContentView(viewFunc) {
+        var view;
+        this.onclick = () => {
+            if (!view)
+                view = viewFunc();
+            exports.ui.content.setCurrent(view);
+            exports.ui.sidebarList.setActive(this);
+        };
+        return this;
+    }
+}
+exports.SidebarItem = SidebarItem;
+const Router_1 = require("./Router");
+const utils_1 = require("./utils");
+const I18n_1 = require("./I18n");
+const User_1 = require("./User");
+const PlayerCore_1 = require("./PlayerCore");
+const Uploads_1 = require("./Uploads");
+/** 常驻 UI 元素操作 */
+exports.ui = new class {
+    constructor() {
+        this.theme = new class {
+            constructor() {
+                this.current = 'light';
+                this.timer = new utils_1.Timer(() => utils_1.utils.toggleClass(document.body, 'changing-theme', false));
+                this.rendered = false;
+                this.siTheme = new utils_1.SettingItem('mcloud-theme', 'str', 'light')
+                    .render((theme) => {
+                    if (this.current !== theme) {
+                        this.current = theme;
+                        if (this.rendered)
+                            utils_1.utils.toggleClass(document.body, 'changing-theme', true);
+                        utils_1.utils.toggleClass(document.body, 'dark', theme === 'dark');
+                        if (this.rendered)
+                            this.timer.timeout(500);
+                    }
+                    this.rendered = true;
+                });
+            }
+            set(theme) {
+                this.siTheme.set(theme);
+            }
+        };
+        this.lang = new class {
+            constructor() {
+                this.availableLangs = ['en', 'zh'];
+                this.siLang = new utils_1.SettingItem('mcloud-lang', 'str', I18n_1.I18n.detectLanguage(this.availableLangs));
+            }
+            init() {
+                this.siLang.render((lang) => {
+                    I18n_1.i18n.curLang = lang;
+                    document.body.lang = lang;
+                });
+                console.log(`Current language: '${I18n_1.i18n.curLang}' - '${I18n_1.I `English`}'`);
+                I18n_1.i18n.renderElements(document.querySelectorAll('.i18ne'));
+            }
+            setLang(lang) {
+                this.siLang.set(lang);
+                window.location.reload();
+            }
+        };
+        this.bottomBar = new class {
+            constructor() {
+                this.container = document.getElementById("bottombar");
+                this.btnPin = document.getElementById('btnPin');
+                this.pinned = true;
+                this.hideTimer = new utils_1.utils.Timer(() => { this.toggle(false); });
+                this.shown = false;
+                this.inTransition = false;
+            }
+            setPinned(val) {
+                val = (val !== null && val !== void 0 ? val : !this.pinned);
+                this.pinned = val;
+                utils_1.utils.toggleClass(document.body, 'bottompinned', val);
+                this.btnPin.textContent = val ? I18n_1.I `Unpin` : I18n_1.I `Pin`;
+                if (val)
+                    this.toggle(true);
+            }
+            toggle(state, hideTimeout) {
+                this.shown = utils_1.utils.toggleClass(this.container, 'show', state);
+                if (!this.pinned && hideTimeout)
+                    this.hideTimer.timeout(hideTimeout);
+            }
+            init() {
+                var bar = this.container;
+                bar.addEventListener('transitionstart', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = true;
+                });
+                bar.addEventListener('transitionend', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = false;
+                });
+                bar.addEventListener('transitioncancel', (e) => {
+                    if (e.target === bar && e.propertyName == 'transform')
+                        this.inTransition = false;
+                });
+                bar.addEventListener('mouseenter', () => {
+                    this.hideTimer.tryCancel();
+                    this.toggle(true);
+                });
+                bar.addEventListener('mouseleave', () => {
+                    this.hideTimer.tryCancel();
+                    if (!this.pinned)
+                        this.hideTimer.timeout(200);
+                });
+                this.siPin = new utils_1.SettingItem('mcloud-bottompin', 'bool', false)
+                    .render(x => this.setPinned(x))
+                    .bindToBtn(this.btnPin, ['', '']);
+                // this.btnPin.addEventListener('click', () => this.setPinned());
+            }
+        };
+        this.playerControl = new class {
+            constructor() {
+                this.progbar = document.getElementById('progressbar');
+                this.fill = document.getElementById('progressbar-fill');
+                this.labelCur = document.getElementById('progressbar-label-cur');
+                this.labelTotal = document.getElementById('progressbar-label-total');
+                this.btnPlay = new viewlib_1.TextView(document.getElementById('btn-play'));
+                this.btnLoop = new viewlib_1.TextView(document.getElementById('btn-loop'));
+            }
+            init() {
+                this.setState('none');
+                this.btnLoop.dom.addEventListener('click', () => {
+                    var modes = PlayerCore_1.playingLoopModes;
+                    var next = modes[(modes.indexOf(PlayerCore_1.playerCore.loopMode) + 1) % modes.length];
+                    PlayerCore_1.playerCore.loopMode = next;
+                });
+                PlayerCore_1.playerCore.onLoopModeChanged.add(() => this.setLoopMode(PlayerCore_1.playerCore.loopMode))();
+                PlayerCore_1.playerCore.onStateChanged.add(() => {
+                    this.setState(PlayerCore_1.playerCore.state);
+                    this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration);
+                })();
+                PlayerCore_1.playerCore.onProgressChanged.add(() => this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration));
+                this.onProgressSeeking((percent) => {
+                    PlayerCore_1.playerCore.currentTime = percent * PlayerCore_1.playerCore.duration;
+                });
+                this.onPlayButtonClicked(() => {
+                    var state = PlayerCore_1.playerCore.state;
+                    if (state === 'paused')
+                        PlayerCore_1.playerCore.play();
+                    else
+                        PlayerCore_1.playerCore.pause();
+                });
+                this.btnVolume = new VolumeButton(document.getElementById('btn-volume'));
+                this.btnVolume.text = I18n_1.I `Volume`;
+                this.btnVolume.bindToPlayer();
+            }
+            setState(state) {
+                var btn = this.btnPlay;
+                if (state === 'none') {
+                    btn.text = I18n_1.I `Play`;
+                    btn.toggleClass('disabled', true);
+                }
+                else if (state === 'paused') {
+                    btn.text = I18n_1.I `Play`;
+                    btn.toggleClass('disabled', false);
+                }
+                else if (state === 'playing') {
+                    btn.text = I18n_1.I `Pause`;
+                    btn.toggleClass('disabled', false);
+                }
+                else if (state === 'stalled') {
+                    btn.text = I18n_1.I `Pause...`;
+                    btn.toggleClass('disabled', false);
+                }
+                else {
+                    throw new Error("invalid state value: " + state);
+                }
+                this.state = state;
+            }
+            setProg(cur, total) {
+                var prog = cur / total;
+                prog = utils_1.utils.numLimit(prog, 0, 1);
+                this.fill.style.width = (prog * 100) + '%';
+                this.labelCur.textContent = utils_1.utils.formatTime(cur);
+                this.labelTotal.textContent = utils_1.utils.formatTime(total);
+            }
+            setLoopMode(str) {
+                this.btnLoop.hidden = false;
+                this.btnLoop.text = I18n_1.i18n.get('loopmode_' + str);
+            }
+            onPlayButtonClicked(cb) {
+                this.btnPlay.dom.addEventListener('click', cb);
+            }
+            onProgressSeeking(cb) {
+                var call = (offsetX) => { cb(utils_1.utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
+                this.progbar.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
+                        if (e.buttons == 1)
+                            call(e.offsetX);
+                    document.addEventListener('mousemove', mousemove);
+                    document.addEventListener('mouseup', mouseup);
+                });
+                var mousemove = (e) => {
+                    call(e.pageX - this.progbar.getBoundingClientRect().left);
+                };
+                var mouseup = () => {
+                    document.removeEventListener('mousemove', mousemove);
+                    document.removeEventListener('mouseup', mouseup);
+                };
+            }
+        };
+        this.trackinfo = new class {
+            constructor() {
+                this.element = document.getElementById('bottombar-trackinfo');
+            }
+            init() {
+                PlayerCore_1.playerCore.onTrackChanged.add(() => this.setTrack(PlayerCore_1.playerCore.track));
+            }
+            setTrack(track) {
+                if (track) {
+                    utils_1.utils.replaceChild(this.element, utils_1.utils.buildDOM({
+                        tag: 'span',
+                        child: [
+                            // 'Now Playing: ',
+                            { tag: 'span.name', textContent: track.name },
+                            { tag: 'span.artist', textContent: track.artist },
+                        ]
+                    }));
+                    exports.ui.bottomBar.toggle(true, 5000);
+                }
+                else {
+                    this.element.textContent = "";
+                }
+            }
+        };
+        this.mainContainer = new class {
+            constructor() {
+                this.dom = document.getElementById('main-container');
+            }
+        };
+        this.sidebarLogin = new class {
+            constructor() {
+                this.container = document.getElementById('sidebar-login');
+                this.loginState = document.getElementById('login-state');
+            }
+            init() {
+                this.loginState.addEventListener('click', (ev) => {
+                    User_1.user.openUI();
+                });
+            }
+            update() {
+                var _a, _b;
+                var text = this.loginState.textContent;
+                var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username, (_b !== null && _b !== void 0 ? _b : User_1.user.info.username));
+                if (username) {
+                    text = username;
+                    if (User_1.user.state == 'logging')
+                        text += I18n_1.I ` (logging in...)`;
+                    if (User_1.user.state == 'error')
+                        text += I18n_1.I ` (error!)`;
+                    if (User_1.user.state == 'none')
+                        text += I18n_1.I ` (not logged in)`;
+                }
+                else {
+                    if (User_1.user.state == 'logging')
+                        text = I18n_1.I `(logging...)`;
+                    else
+                        text = I18n_1.I `Guest (click to login)`;
+                }
+                this.loginState.textContent = text;
+            }
+        };
+        this.sidebarList = new class {
+            constructor() {
+                this.container = document.getElementById('sidebar-list');
+                this.listview = new viewlib_1.ListView(this.container);
+                this.features = document.getElementById('sidebar-features');
+                this.featuresListview = new viewlib_1.ListView(this.features);
+                this.currentActive = new utils_1.ItemActiveHelper();
+            }
+            setActive(item) {
+                this.currentActive.set(item);
+            }
+            addItem(item) {
+                this.listview.add(item);
+            }
+            addFeatureItem(item) {
+                this.featuresListview.add(item);
+            }
+        };
+        this.content = new class {
+            constructor() {
+                this.container = document.getElementById('content-outer');
+                this.current = null;
+            }
+            removeCurrent() {
+                const cur = this.current;
+                this.current = null;
+                if (!cur)
+                    return;
+                cur.contentViewState.scrollTop = this.container.scrollTop;
+                if (cur.onRemove)
+                    cur.onRemove();
+                if (cur.dom)
+                    this.container.removeChild(cur.dom);
+            }
+            setCurrent(arg) {
+                if (arg === this.current)
+                    return;
+                this.removeCurrent();
+                if (arg) {
+                    if (arg.onShow)
+                        arg.onShow();
+                    if (arg.dom)
+                        this.container.appendChild(arg.dom);
+                    if (!arg.contentViewState)
+                        arg.contentViewState = { scrollTop: 0 };
+                    this.container.scrollTop = arg.contentViewState.scrollTop;
+                }
+                this.current = arg;
+            }
+        };
+    }
+    init() {
+        this.lang.init();
+        this.bottomBar.init();
+        this.trackinfo.init();
+        this.playerControl.init();
+        this.sidebarLogin.init();
+        viewlib_1.Dialog.defaultParent = new viewlib_1.DialogParent(this.mainContainer.dom);
+        viewlib_1.ToastsContainer.default.parentDom = this.mainContainer.dom;
+        Router_1.router.addRoute({
+            path: ['home'],
+            onNav: () => {
+                exports.ui.content.setCurrent(null);
+                exports.ui.sidebarList.currentActive.set(null);
+            }
+        });
+        document.addEventListener('dragover', (ev) => {
+            ev.preventDefault();
+        });
+        document.addEventListener('drop', (ev) => {
+            ev.preventDefault();
+            var files = ev.dataTransfer.files;
+            if (files.length) {
+                new viewlib_1.MessageBox().setTitle(I18n_1.I `Question`)
+                    .addText(files.length == 1
+                    ? I18n_1.I `Did you mean to upload 1 file?`
+                    : I18n_1.I `Did you mean to upload ${files.length} files?`)
+                    .addResultBtns(['no', 'yes'])
+                    .allowCloseWithResult('no')
+                    .showAndWaitResult()
+                    .then(r => {
+                    if (r === 'yes') {
+                        if (Router_1.router.currentStr !== 'uploads')
+                            Router_1.router.nav('uploads');
+                        for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            Uploads_1.uploads.uploadFile(file);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    endPreload() {
+        document.getElementById('js-ok').hidden = false;
+        utils_1.utils.fadeout(document.getElementById('preload-overlay'));
+        window['preload'].end();
+    }
+}; // ui
+class ProgressButton extends viewlib_1.View {
+    constructor(dom) {
+        super((dom !== null && dom !== void 0 ? dom : { tag: 'div.btn' }));
+        this.fill = new viewlib_1.View({
+            tag: 'div.btn-fill'
+        });
+        this.textSpan = new viewlib_1.TextView({ tag: 'span.text' });
+        this.dom.classList.add('btn-progress');
+        this.dom.appendView(this.fill);
+        this.dom.appendView(this.textSpan);
+    }
+    get text() { return this.textSpan.text; }
+    set text(val) { this.textSpan.text = val; }
+    get progress() { return this._progress; }
+    set progress(v) {
+        this.fill.dom.style.width = (v * 100) + '%';
+        this._progress = v;
+    }
+}
+class VolumeButton extends ProgressButton {
+    constructor(dom) {
+        super(dom);
+        this.onChanging = new utils_1.Callbacks();
+        this.tip = '\n' + I18n_1.I `(Scroll whell or drag to adjust volume)`;
+        dom.addEventListener('wheel', (ev) => {
+            ev.preventDefault();
+            var delta = Math.sign(ev.deltaY) * -0.1;
+            this.onChanging.invoke(delta);
+        });
+        this.dom.addEventListener('mousedown', (ev) => {
+            if (ev.buttons !== 1)
+                return;
+            ev.preventDefault();
+            var startX = ev.pageX;
+            var mousemove = (ev) => {
+                var deltaX = ev.pageX - startX;
+                startX = ev.pageX;
+                this.onChanging.invoke(deltaX * 0.01);
+            };
+            var mouseup = (ev) => {
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+                this.dom.classList.remove('btn-down');
+                this.fill.dom.style.transition = '';
+            };
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+            this.dom.classList.add('btn-down');
+            this.fill.dom.style.transition = 'none';
+        });
+    }
+    bindToPlayer() {
+        PlayerCore_1.playerCore.onVolumeChanged.add(() => {
+            this.progress = PlayerCore_1.playerCore.volume;
+            this.dom.title = I18n_1.I `Volume` + ' ' + Math.floor(this.progress * 100) + '%' + this.tip;
+        })();
+        this.onChanging.add((x) => {
+            var r = utils_1.utils.numLimit(PlayerCore_1.playerCore.volume + x, 0, 1);
+            PlayerCore_1.playerCore.volume = r;
+            this.tip = '';
+        });
+    }
+}
+
+},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./Uploads":11,"./User":12,"./utils":14,"./viewlib":15}],11:[function(require,module,exports){
+"use strict";
+// file: Uploads.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const TrackList_1 = require("./TrackList");
+const utils_1 = require("./utils");
+const ListIndex_1 = require("./ListIndex");
+const User_1 = require("./User");
+const viewlib_1 = require("./viewlib");
+const Router_1 = require("./Router");
+const I18n_1 = require("./I18n");
+const PlayerCore_1 = require("./PlayerCore");
+const UI_1 = require("./UI");
+const Api_1 = require("./Api");
+class UploadTrack extends TrackList_1.Track {
+    constructor(init) {
+        super(init);
+    }
+}
+exports.uploads = new class extends TrackList_1.TrackList {
+    constructor() {
+        super(...arguments);
+        this.tracks = [];
+        this.state = false;
+        this.canEdit = false;
+        this.uploadSemaphore = new utils_1.Semaphore({ maxCount: 2 });
+        this.view = new class extends TrackList_1.TrackListView {
+            constructor() {
+                super(...arguments);
+                this.usage = new viewlib_1.TextView({ tag: 'span.uploads-usage' });
+            }
+            appendHeader() {
+                this.title = I18n_1.I `My Uploads`;
+                super.appendHeader();
+                this.uploadArea = new UploadArea({ onfile: (file) => exports.uploads.uploadFile(file) });
+                this.dom.appendView(this.uploadArea);
+                this.trackActionHandler.onTrackRemove = (items) => {
+                    if (items.length == 1) {
+                        this.removeTrack(items[0]);
+                    }
+                    else {
+                        new viewlib_1.MessageBox()
+                            .setTitle(I18n_1.I `Warning`)
+                            .addText(I18n_1.I `Are you sure to delete ${items.length} tracks permanently?`)
+                            .addResultBtns(['cancel', 'ok'])
+                            .allowCloseWithResult('cancel')
+                            .showAndWaitResult()
+                            .then(r => {
+                            if (r !== 'ok')
+                                return;
+                            items.forEach(x => this.removeTrack(x, true));
+                        });
+                    }
+                };
+            }
+            createHeader() {
+                var header = new TrackList_1.ContentHeader({
+                    title: this.title
+                });
+                header.appendView(this.usage);
+                return header;
+            }
+            appendListView() {
+                super.appendListView();
+                if (!exports.uploads.state)
+                    exports.uploads.fetch();
+            }
+            updateUsage() {
+                var total = 0;
+                exports.uploads.tracks.forEach(x => { var _a; return total += (_a = x.size, (_a !== null && _a !== void 0 ? _a : 0)); });
+                this.usage.text = total ? `(${utils_1.utils.formatFileSize(total)})` : '';
+            }
+            updateView() {
+                super.updateView();
+                this.updateUsage();
+            }
+            createViewItem(t) {
+                const item = new UploadViewItem(t);
+                item.actionHandler = this.trackActionHandler;
+                return item;
+            }
+            removeTrack(item, noPrompt) {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const track = item.track;
+                    if (track._upload.state === 'uploading') {
+                        viewlib_1.Toast.show(I18n_1.I `Removing of a uploading track is currently not supported.`);
+                        return;
+                    }
+                    if (track._upload.state === 'pending') {
+                        track._upload.state = 'cancelled';
+                        exports.uploads.remove(track);
+                    }
+                    else if (track._upload.state === 'error') {
+                        exports.uploads.remove(track);
+                    }
+                    else if (track._upload.state === 'done') {
+                        if (!noPrompt && (yield new viewlib_1.MessageBox()
+                            .setTitle(I18n_1.I `Warning`)
+                            .addText(I18n_1.I `Are you sure to delete the track permanently?`)
+                            .addResultBtns(['cancel', 'ok'])
+                            .allowCloseWithResult('cancel')
+                            .showAndWaitResult()) !== 'ok')
+                            return;
+                        try {
+                            yield Api_1.api.delete({
+                                path: 'tracks/' + track.id
+                            });
+                        }
+                        catch (error) {
+                            viewlib_1.Toast.show(I18n_1.I `Failed to remove track.` + '\n' + error);
+                            return;
+                        }
+                        Api_1.api.onTrackDeleted.invoke(track);
+                    }
+                    else {
+                        console.error('Unexpected track._upload.state', track._upload.state);
+                        return;
+                    }
+                });
+            }
+        }(this);
+    }
+    init() {
+        this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: I18n_1.I `My Uploads` });
+        Router_1.router.addRoute({
+            path: ['uploads'],
+            sidebarItem: () => this.sidebarItem,
+            contentView: () => this.view
+        });
+        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+        User_1.user.onSwitchedUser.add(() => {
+            if (this.state !== false && this.state !== 'waiting') {
+                this.tracks = [];
+                this.state = false;
+                if (this.view.rendered) {
+                    this.view.listView.removeAll();
+                    this.view.updateView();
+                }
+                setTimeout(() => this.fetch(true), 1);
+            }
+        });
+        PlayerCore_1.playerCore.onTrackChanged.add(() => {
+            this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === PlayerCore_1.playerCore.track) });
+        });
+        Api_1.api.onTrackInfoChanged.add((newer) => {
+            this.tracks.forEach(t => {
+                var _a;
+                if (t.id === newer.id) {
+                    t.updateFromApiTrack(newer);
+                    (_a = t._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+                }
+            });
+        });
+        Api_1.api.onTrackDeleted.add((deleted) => {
+            var track = this.tracks.find(x => x.id === deleted.id);
+            if (track)
+                this.remove(track);
+        });
+    }
+    insertTrack(t, pos = 0) {
+        this.tracks.splice(pos, 0, t);
+        if (this.view.rendered)
+            this.view.addItem(t, pos);
+    }
+    remove(track) {
+        var _a;
+        var pos = this.tracks.indexOf(track);
+        if (pos === -1)
+            return;
+        this.tracks.splice(pos, 1);
+        (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.remove();
+    }
+    fetchImpl() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.state = 'waiting';
+            var li = new viewlib_1.LoadingIndicator();
+            li.content = I18n_1.I `Logging in`;
+            this.view.useLoadingIndicator(li);
+            try {
+                yield User_1.user.waitLogin(true);
+                this.state = 'fetching';
+                li.reset();
+                var fetched = (yield Api_1.api.get('my/uploads'))['tracks']
+                    .map(t => {
+                    t._upload = { state: 'done' };
+                    return new UploadTrack(t);
+                });
+                this.state = 'fetched';
+            }
+            catch (error) {
+                li.error(error, () => this.fetchImpl());
+                return;
+            }
+            const thiz = this;
+            var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
+            const firstPos = doneTracks.length ? this.tracks.indexOf(doneTracks[0]) : 0;
+            new class extends utils_1.DataUpdatingHelper {
+                constructor() {
+                    super(...arguments);
+                    this.items = doneTracks;
+                }
+                addItem(data, pos) { thiz.insertTrack(data, firstPos); }
+                updateItem(item, data) { item.updateFromApiTrack(data); }
+                removeItem(item) { var _a; (_a = item._upload.view) === null || _a === void 0 ? void 0 : _a.remove(); }
+            }().update(fetched);
+            this.view.useLoadingIndicator(null);
+            this.view.updateView();
+        });
+    }
+    uploadFile(file) {
+        var _a, _b, _c;
+        return __awaiter(this, void 0, void 0, function* () {
+            var apitrack = {
+                id: undefined, url: undefined,
+                artist: 'Unknown', name: file.name
+            };
+            var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { _upload: {
+                    state: 'pending'
+                } }));
+            this.insertTrack(track);
+            yield this.uploadSemaphore.enter();
+            try {
+                if (track._upload.state === 'cancelled')
+                    return;
+                track._upload.state = 'uploading';
+                (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+                var jsonBlob = new Blob([JSON.stringify(apitrack)]);
+                var finalBlob = new Blob([
+                    BlockFormat.encodeBlock(jsonBlob),
+                    BlockFormat.encodeBlock(file)
+                ]);
+                var resp = yield Api_1.api.post({
+                    path: 'tracks/newfile',
+                    mode: 'raw',
+                    obj: finalBlob,
+                    headers: { 'Content-Type': 'application/x-mcloud-upload' }
+                });
+                track.id = resp.id;
+                track.updateFromApiTrack(resp);
+            }
+            catch (err) {
+                track._upload.state = 'error';
+                (_b = track._upload.view) === null || _b === void 0 ? void 0 : _b.updateDom();
+                viewlib_1.Toast.show(I18n_1.I `Failed to upload file "${file.name}".` + '\n' + err, 3000);
+                console.log('uploads failed: ', file.name, err);
+                throw err;
+            }
+            finally {
+                this.uploadSemaphore.exit();
+            }
+            track._upload.state = 'done';
+            (_c = track._upload.view) === null || _c === void 0 ? void 0 : _c.updateDom();
+            if (this.view.rendered)
+                this.view.updateUsage();
+        });
+    }
+};
+class UploadViewItem extends TrackList_1.TrackViewItem {
+    constructor(track) {
+        super(track);
+        track._upload.view = this;
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.classList.add('uploads-item');
+        this.dom.appendChild(this.domstate = utils_1.utils.buildDOM({ tag: 'span.uploads-state' }));
+    }
+    updateDom() {
+        super.updateDom();
+        var newState = this.track._upload.state;
+        if (this._lastUploadState != newState) {
+            if (this._lastUploadState)
+                this.dom.classList.remove('state-' + this._lastUploadState);
+            if (newState)
+                this.dom.classList.add('state-' + newState);
+            this.domstate.textContent = I18n_1.i18n.get('uploads_' + newState);
+            this.dragging = newState == 'done';
+        }
+    }
+}
+class UploadArea extends viewlib_1.View {
+    constructor(init) {
+        super();
+        utils_1.utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            _ctx: this,
+            tag: 'div.upload-area.clickable',
+            child: [
+                { tag: 'div.text.no-selection', textContent: I18n_1.I `Click here to select files to upload` },
+                { tag: 'div.text.no-selection', textContent: I18n_1.I `or drag files to this zone...` },
+                {
+                    tag: 'input', type: 'file', _key: 'domfile',
+                    style: 'visibility: collapse; height: 0;',
+                    accept: 'audio/*', multiple: true
+                },
+            ]
+        };
+    }
+    postCreateDom() {
+        this.domfile.addEventListener('change', (ev) => {
+            this.handleFiles(this.domfile.files);
+        });
+        this.dom.addEventListener('click', (ev) => {
+            this.domfile.click();
+        });
+        this.dom.addEventListener('dragover', (ev) => {
+            if (ev.dataTransfer.types.indexOf('Files') >= 0) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                ev.dataTransfer.dropEffect = 'copy';
+            }
+        });
+        this.dom.addEventListener('drop', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (ev.dataTransfer.types.indexOf('Files') >= 0) {
+                this.handleFiles(ev.dataTransfer.files);
+            }
+        });
+    }
+    handleFiles(files) {
+        var _a, _b;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            console.log('drop file', { name: file.name, size: file.size });
+            (_b = (_a = this).onfile) === null || _b === void 0 ? void 0 : _b.call(_a, file);
+        }
+    }
+}
+var BlockFormat = {
+    encodeBlock(blob) {
+        return new Blob([BlockFormat.encodeLen(blob.size), blob]);
+    },
+    encodeLen(len) {
+        var str = '';
+        for (var i = 0; i < 8; i++) {
+            str = '0123456789aBcDeF'[(len >> (i * 4)) & 0x0f] + str;
+        }
+        str += '\r\n';
+        return str;
+    }
+};
+
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./TrackList":9,"./UI":10,"./User":12,"./utils":14,"./viewlib":15}],12:[function(require,module,exports){
+"use strict";
+// file: User.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("./utils");
+const main_1 = require("./main");
+const viewlib_1 = require("./viewlib");
+const UI_1 = require("./UI");
+const Api_1 = require("./Api");
+const PlayerCore_1 = require("./PlayerCore");
+const Uploads_1 = require("./Uploads");
+const SettingsUI_1 = require("./SettingsUI");
+exports.user = new class User {
+    constructor() {
+        this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
+            id: -1,
+            username: null,
+            passwd: null,
+            token: null
+        });
+        this.onSwitchedUser = new utils_1.Callbacks();
+    }
+    get info() { return this.siLogin.data; }
+    get isAdmin() { return this.role === 'admin'; }
+    setState(state) {
+        this.state = state;
+        UI_1.ui.sidebarLogin.update();
+    }
+    init() {
+        PlayerCore_1.playerCore.onTrackChanged.add(() => this.playingTrackChanged());
+        if (this.info.username) {
+            this.login(this.info).then(null, (err) => {
+                viewlib_1.Toast.show(utils_1.I `Failed to login.` + '\n' + err, 5000);
+            });
+        }
+        else {
+            this.setState('none');
+            this.openUI();
+        }
+    }
+    initLoginUI() {
+        this.loginDialog = new LoginDialog();
+    }
+    openUI(login) {
+        login = (login !== null && login !== void 0 ? login : this.state !== 'logged');
+        if (login) {
+            if (!this.loginDialog)
+                this.loginDialog = new LoginDialog();
+            this.loginDialog.show();
+        }
+        else {
+            new MeDialog().show();
+        }
+    }
+    closeUI() {
+        var _a;
+        (_a = this.loginDialog) === null || _a === void 0 ? void 0 : _a.close();
+    }
+    getBasicAuth(info) {
+        return 'Basic ' + utils_1.utils.base64EncodeUtf8(info.username + ':' + info.passwd);
+    }
+    getBearerAuth(token) {
+        return 'Bearer ' + token;
+    }
+    login(info) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.state !== 'logged')
+                this.setState('logging');
+            // try GET `api/users/me` using the new info
+            var promise = (() => __awaiter(this, void 0, void 0, function* () {
+                var token = info.token;
+                try {
+                    // thanks to the keyword `var` of JavaScript.
+                    var resp = token ?
+                        yield Api_1.api.get('users/me', {
+                            auth: this.getBearerAuth(token)
+                        })
+                        : yield Api_1.api.post({
+                            path: 'users/me/login',
+                            auth: this.getBasicAuth(info)
+                        });
+                }
+                catch (err) {
+                    if (this.state !== 'logged')
+                        this.setState('error');
+                    if (err.message == 'user_not_found')
+                        throw new Error(utils_1.I `Username or password is not correct.`);
+                    throw err;
+                }
+                finally {
+                    this.pendingInfo = null;
+                }
+                yield this.handleLoginResult(resp);
+            }))();
+            this.loggingin = promise;
+            yield promise;
+        });
+    }
+    register(info) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.setState('logging');
+            var promise = (() => __awaiter(this, void 0, void 0, function* () {
+                var resp = yield Api_1.api.post({
+                    path: 'users/new',
+                    obj: info
+                });
+                if (resp.error) {
+                    this.setState('error');
+                    if (resp.error == 'dup_user')
+                        throw new Error(utils_1.I `A user with the same username exists`);
+                    throw new Error(resp.error);
+                }
+                yield this.handleLoginResult(resp);
+            }))();
+            this.loggingin = promise;
+            yield promise;
+        });
+    }
+    handleLoginResult(info) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!info.username)
+                throw new Error(utils_1.I `iNTernEL eRRoR`);
+            var switchingUser = this.info.username != info.username;
+            this.info.id = info.id;
+            this.info.username = info.username;
+            this.info.passwd = null;
+            if (info.token)
+                this.info.token = info.token;
+            this.role = info.role;
+            this.siLogin.save();
+            var servermsg = info['servermsg'];
+            if (servermsg)
+                viewlib_1.Toast.show(utils_1.I `Server: ` + servermsg, 3000);
+            Api_1.api.defaultAuth = this.getBearerAuth(this.info.token);
+            UI_1.ui.sidebarLogin.update();
+            main_1.listIndex.setIndex(info);
+            this.setState('logged');
+            this.loggingin = null;
+            this.onSwitchedUser.invoke();
+            this.tryRestorePlaying(info.playing);
+        });
+    }
+    logout() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.info.token) {
+                var toast = viewlib_1.Toast.show(utils_1.I `Logging out...`);
+                try {
+                    yield Api_1.api.post({ path: 'users/me/logout' });
+                    toast.close();
+                }
+                catch (error) {
+                    toast.text = utils_1.I `Failed to logout.` + '\n' + error;
+                    toast.show(5000);
+                    return;
+                }
+            }
+            utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null, token: null });
+            this.role = null;
+            this.siLogin.save();
+            Api_1.api.defaultAuth = undefined;
+            UI_1.ui.content.setCurrent(null);
+            main_1.listIndex.setIndex(null);
+            this.setState('none');
+            this.loggingin = null;
+            this.onSwitchedUser.invoke();
+        });
+    }
+    setListids(listids) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var obj = {
+                id: this.info.id,
+                username: this.info.username,
+                listids: listids
+            };
+            yield Api_1.api.put({
+                path: 'users/me',
+                obj
+            });
+        });
+    }
+    /**
+     * Wait until finished logging in. Returns true if sucessfully logged in.
+     */
+    waitLogin(throwOnFail) {
+        return __awaiter(this, void 0, void 0, function* () {
+            do {
+                if (this.state == 'logged')
+                    return true;
+                if (this.state == 'logging') {
+                    try {
+                        yield this.loggingin;
+                        if (this.state != 'logged')
+                            break;
+                        return true;
+                    }
+                    catch (_a) {
+                        break;
+                    }
+                }
+            } while (0);
+            if (throwOnFail)
+                throw new Error('No login');
+            return false;
+        });
+    }
+    playingTrackChanged() {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        var track = PlayerCore_1.playerCore.track;
+        if (track && this._ignore_track_once === track) {
+            this._ignore_track_once = null;
+            return;
+        }
+        var tl = {
+            listid: (_d = (_c = (_b = (_a = track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.id, (_d !== null && _d !== void 0 ? _d : 0)),
+            position: (_g = (_f = (_e = track) === null || _e === void 0 ? void 0 : _e._bind) === null || _f === void 0 ? void 0 : _f.position, (_g !== null && _g !== void 0 ? _g : 0)),
+            trackid: (_j = (_h = track) === null || _h === void 0 ? void 0 : _h.id, (_j !== null && _j !== void 0 ? _j : 0))
+        };
+        this.postPlaying(tl)
+            .then(() => console.info("post playing OK"), (err) => console.warn('post playing error', err));
+    }
+    tryRestorePlaying(playing) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            if (playing.trackid) {
+                var list = playing.listid ? main_1.listIndex.getList(playing.listid) : Uploads_1.uploads;
+                yield list.fetch();
+                var track = list.tracks[playing.position];
+                if (((_a = track) === null || _a === void 0 ? void 0 : _a.id) !== playing.trackid)
+                    track = list.tracks.find(x => x.id === playing.trackid);
+                this._ignore_track_once = track;
+                PlayerCore_1.playerCore.setTrack(track);
+            }
+        });
+    }
+    getPlaying() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.waitLogin(true);
+            var result = yield Api_1.api.get('my/playing');
+            return result;
+        });
+    }
+    postPlaying(trackLocation) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.waitLogin(true);
+            yield Api_1.api.post({
+                path: 'my/playing',
+                obj: trackLocation
+            });
+        });
+    }
+    changePassword(newPasswd) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var toast = viewlib_1.Toast.show(utils_1.I `Changing password...`);
+            try {
+                yield Api_1.api.put({
+                    path: 'users/me',
+                    obj: {
+                        id: this.info.id,
+                        username: this.info.username,
+                        passwd: newPasswd
+                    }
+                });
+                this.info.passwd = newPasswd;
+                Api_1.api.defaultAuth = this.getBasicAuth(this.info);
+                this.siLogin.save();
+            }
+            catch (error) {
+                toast.updateWith({ text: utils_1.I `Failed to change password.` + '\n' + error });
+                toast.show(3000);
+                return;
+            }
+            toast.updateWith({ text: utils_1.I `Password changed successfully.` });
+            toast.show(3000);
+        });
+    }
+};
+class LoginDialog extends viewlib_1.Dialog {
+    constructor() {
+        super();
+        this.tabLogin = new viewlib_1.TabBtn({ text: utils_1.I `Login`, active: true });
+        this.tabCreate = new viewlib_1.TabBtn({ text: utils_1.I `Create account` });
+        this.inputUser = new viewlib_1.LabeledInput({ label: utils_1.I `Username` });
+        this.inputPasswd = new viewlib_1.LabeledInput({ label: utils_1.I `Password`, type: 'password' });
+        this.inputPasswd2 = new viewlib_1.LabeledInput({ label: utils_1.I `Confirm password`, type: 'password' });
+        this.viewStatus = new viewlib_1.TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
+        this.btn = new viewlib_1.ButtonView({ text: utils_1.I `Login`, type: 'big' });
+        this.isRegistering = false;
+        var dig = this;
+        dig.title = '';
+        [this.tabLogin, this.tabCreate].forEach(x => {
+            dig.addBtn(x);
+            x.onClick.add(() => toggle(x));
+        });
+        [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
+        dig.addContent(utils_1.utils.buildDOM({
+            tag: 'div',
+            child: [this.viewStatus.dom, this.btn.dom]
+        }));
+        dig.dom.addEventListener('keydown', (ev) => {
+            if (ev.keyCode == 13) { // Enter
+                this.btnClicked();
+                ev.preventDefault();
+            }
+        });
+        dig.autoFocus = this.inputUser.input;
+        this.btn.toggleClass('bigbtn', true);
+        this.btn.dom.addEventListener('click', () => this.btnClicked());
+        var toggle = (btn) => {
+            if (btn.active)
+                return;
+            this.isRegistering = !this.isRegistering;
+            this.inputPasswd2.hidden = !this.isRegistering;
+            this.btn.text = btn.text;
+            this.tabLogin.updateWith({ active: !this.isRegistering });
+            this.tabCreate.updateWith({ active: this.isRegistering });
+        };
+        this.inputPasswd2.hidden = true;
+        this.addBtn(new viewlib_1.TabBtn({
+            text: utils_1.I `Settings`, right: true,
+            onclick: () => {
+                SettingsUI_1.settingsUI.openUI();
+                this.close();
+            }
+        }));
+    }
+    show() {
+        this.setOffset(0, 0);
+        super.show();
+    }
+    btnClicked() {
+        if (this.btn.dom.classList.contains('disabled'))
+            return;
+        var precheckErr = [];
+        if (!this.inputUser.value)
+            precheckErr.push(utils_1.I `Please input the username!`);
+        if (!this.inputPasswd.value)
+            precheckErr.push(utils_1.I `Please input the password!`);
+        else if (this.isRegistering && this.inputPasswd.value !== this.inputPasswd2.value)
+            precheckErr.push(utils_1.I `Password confirmation does not match!`);
+        this.viewStatus.dom.textContent = precheckErr.join('\r\n');
+        if (precheckErr.length) {
+            return;
+        }
+        (() => __awaiter(this, void 0, void 0, function* () {
+            this.viewStatus.text = utils_1.I `Requesting...`;
+            this.btn.updateWith({ disabled: true });
+            var info = { username: this.inputUser.value, passwd: this.inputPasswd.value };
+            try {
+                exports.user.pendingInfo = info;
+                if (this.isRegistering) {
+                    yield exports.user.register(info);
+                }
+                else {
+                    yield exports.user.login(info);
+                }
+                this.viewStatus.text = '';
+                [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => x.value = '');
+                exports.user.closeUI();
+            }
+            catch (e) {
+                this.viewStatus.text = e;
+                // fallback to previous login info
+                if (exports.user.state === 'logged' && exports.user.info.username) {
+                    this.viewStatus.text += '\r\n' + utils_1.I `Logged in with previous working account.`;
+                }
+            }
+            finally {
+                exports.user.pendingInfo = null;
+                this.btn.updateWith({ disabled: false });
+            }
+        }))();
+    }
+}
+class MeDialog extends viewlib_1.Dialog {
+    constructor() {
+        super();
+        this.btnChangePassword = new viewlib_1.ButtonView({ text: utils_1.I `Change password`, type: 'big' });
+        this.btnSwitch = new viewlib_1.ButtonView({ text: utils_1.I `Switch user`, type: 'big' });
+        this.btnLogout = new viewlib_1.ButtonView({ text: utils_1.I `Logout`, type: 'big' });
+        var username = exports.user.info.username;
+        this.title = utils_1.I `User ${username}`;
+        this.addContent(new viewlib_1.View({ tag: 'p', textContent: utils_1.I `You've logged in as "${username}".` }));
+        if (exports.user.isAdmin)
+            this.addContent(new viewlib_1.View({ tag: 'p', textContent: utils_1.I `You are admin.` }));
+        this.addContent(this.btnChangePassword);
+        this.addContent(this.btnSwitch);
+        this.addContent(this.btnLogout);
+        this.btnChangePassword.onclick = () => {
+            new ChangePasswordDialog().show();
+            this.close();
+        };
+        this.btnSwitch.onclick = () => {
+            exports.user.openUI(true);
+            this.close();
+        };
+        this.btnLogout.onclick = () => {
+            exports.user.logout();
+            this.close();
+        };
+        this.addBtn(new viewlib_1.TabBtn({
+            text: utils_1.I `Settings`, right: true,
+            onclick: () => {
+                SettingsUI_1.settingsUI.openUI();
+                this.close();
+            }
+        }));
+    }
+}
+class ChangePasswordDialog extends viewlib_1.Dialog {
+    constructor() {
+        super();
+        this.inputPasswd = new viewlib_1.LabeledInput({ label: utils_1.I `New password`, type: 'password' });
+        this.inputPasswd2 = new viewlib_1.LabeledInput({ label: utils_1.I `Confirm password`, type: 'password' });
+        this.status = new viewlib_1.TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
+        this.btnChangePassword = new viewlib_1.ButtonView({ text: utils_1.I `Change password`, type: 'big' });
+        this.title = utils_1.I `Change password`;
+        [this.inputPasswd, this.inputPasswd2, this.status, this.btnChangePassword]
+            .forEach(x => this.addContent(x));
+        this.btnChangePassword.onclick = () => {
+            if (!this.inputPasswd.value) {
+                this.status.text = (utils_1.I `Please input the new password!`);
+            }
+            else if (this.inputPasswd.value !== this.inputPasswd2.value) {
+                this.status.text = (utils_1.I `Password confirmation does not match!`);
+            }
+            else {
+                exports.user.changePassword(this.inputPasswd.value);
+                this.close();
+            }
+        };
+    }
+}
+
+},{"./Api":1,"./PlayerCore":6,"./SettingsUI":8,"./UI":10,"./Uploads":11,"./main":13,"./utils":14,"./viewlib":15}],13:[function(require,module,exports){
+"use strict";
+// file: main.ts
+// TypeScript 3.7 is required.
+Object.defineProperty(exports, "__esModule", { value: true });
+// Why do we need to use React and Vue.js? ;)
+exports.settings = {
+    apiBaseUrl: 'api/',
+    // apiBaseUrl: 'http://127.0.0.1:50074/api/',
+    // apiBaseUrl: 'http://127.0.0.1:5000/api/',
+    debug: true,
+    apiDebugDelay: 0,
+};
+const viewlib_1 = require("./viewlib");
+const UI_1 = require("./UI");
+const PlayerCore_1 = require("./PlayerCore");
+const Api_1 = require("./Api");
+const User_1 = require("./User");
+const ListIndex_1 = require("./ListIndex");
+const Uploads_1 = require("./Uploads");
+const Discussion_1 = require("./Discussion");
+const Router_1 = require("./Router");
+const SettingsUI_1 = require("./SettingsUI");
+UI_1.ui.init();
+PlayerCore_1.playerCore.init();
+exports.listIndex = new ListIndex_1.ListIndex();
+var app = window['app'] = {
+    settings: exports.settings, settingsUI: SettingsUI_1.settingsUI,
+    ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
+    Toast: viewlib_1.Toast, ToastsContainer: viewlib_1.ToastsContainer,
+    init() {
+        User_1.user.init();
+        Uploads_1.uploads.init();
+        Discussion_1.discussion.init();
+        Discussion_1.notes.init();
+        Discussion_1.comments.init();
+        exports.listIndex.init();
+        Router_1.router.init();
+    }
+};
+app.init();
+UI_1.ui.endPreload();
+
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./SettingsUI":8,"./UI":10,"./Uploads":11,"./User":12,"./viewlib":15}],14:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4646,4 +4646,4 @@ class MessageBox extends Dialog {
 }
 exports.MessageBox = MessageBox;
 
-},{"./I18n":3,"./utils":14}]},{},[12]);
+},{"./I18n":3,"./utils":14}]},{},[13]);
