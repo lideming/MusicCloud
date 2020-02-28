@@ -78,6 +78,11 @@ export const ui = new class {
             }
         });
     }
+    endPreload() {
+        document.getElementById('js-ok').hidden=false;
+        utils.fadeout(document.getElementById('preload-overlay'));
+        window['preload'].end();
+    }
     theme = new class {
         current: 'light' | 'dark' = 'light';
         timer = new Timer(() => utils.toggleClass(document.body, 'changing-theme', false));

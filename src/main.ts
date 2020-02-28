@@ -43,3 +43,5 @@ var app = window['app'] = {
 };
 
 app.init();
+
+ui.endPreload();

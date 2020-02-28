@@ -1616,6 +1616,11 @@ exports.ui = new class {
             }
         });
     }
+    endPreload() {
+        document.getElementById('js-ok').hidden = false;
+        utils_1.utils.fadeout(document.getElementById('preload-overlay'));
+        window['preload'].end();
+    }
 }; // ui
 class ProgressButton extends viewlib_1.View {
     constructor(dom) {
@@ -2518,6 +2523,7 @@ var app = window['app'] = {
     }
 };
 app.init();
+UI_1.ui.endPreload();
 
 },{"./Api":1,"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./SettingsUI":8,"./UI":9,"./Uploads":10,"./User":11,"./viewlib":15}],13:[function(require,module,exports){
 "use strict";

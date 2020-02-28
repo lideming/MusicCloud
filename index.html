@@ -8,8 +8,77 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Music Cloud</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="bundle.js" defer></script>
+    <!-- Preload style and script -->
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        #preload-overlay {
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            text-align: center;
+            background: white;
+            color: black;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .dark #preload-overlay {
+            background: black;
+            color: #ccc;
+        }
+
+        #preload-overlay h1 {
+            margin: 10px 5px;
+        }
+
+        #preload-overlay p {
+            margin: 10px 5px;
+        }
+    </style>
+    <script>
+        (function () {
+            var preload = window.preload = {
+                domLoaded: false,
+                cssLoaded: false,
+                jsError: false,
+                cssOnload() {
+                    this.cssLoaded = true;
+                    this.update();
+                },
+                update() {
+                    if (!this.domLoaded) return;
+                    document.getElementById('css-ok').hidden = !preload.cssLoaded;
+                    document.getElementById('js-error').hidden = !preload.jsError;
+                },
+                end() {
+                    window.removeEventListener('error', onerror);
+                    delete window.preload;
+                }
+            };
+            window.addEventListener('DOMContentLoaded', function () {
+                preload.domLoaded = true;
+                preload.update();
+                if (localStorage.getItem('mcloud-theme') === 'dark') {
+                    document.body.classList.add('dark');
+                }
+            });
+            var onerror = function () {
+                preload.jsError = true;
+                preload.update();
+            };
+            window.addEventListener('error', onerror);
+        })();
+    </script>
+    <!-- End of preload style and script -->
+    <link rel="stylesheet" href="style.css" media="print" onload="this.media='all'; preload.cssOnload();">
+    <script src="bundle.js" defer async></script>
 </head>
 
 <body>
@@ -42,6 +111,15 @@
             <div id="btn-loop" class="btn" hidden></div>
             <div id="bottombar-trackinfo" class="flex-1"></div>
             <div class="btn i18ne" id="btnPin">Pin</div>
+        </div>
+    </div>
+    <div id="preload-overlay" lang="en">
+        <h1>MusicCloud</h1>
+        <div style="min-height: 6em;">
+            <p>Loading...</p>
+            <p hidden style="color: gray;" id="css-ok">CSS OK</p>
+            <p hidden style="color: gray;" id="js-ok">JavaScript OK</p>
+            <p hidden style="color: red;" id="js-error">JavaScript Error</p>
         </div>
     </div>
 </body>
