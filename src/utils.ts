@@ -152,6 +152,11 @@ export var utils = new class Utils {
         }
     }
 
+    arrayInsert<T>(array: T[], val: T, pos?: number) {
+        if (pos === undefined) array.push(val);
+        else array.splice(pos, 0, val);
+    }
+
     arrayMap<T, TRet>(arr: Iterable<T>, func: (item: T, idx: number) => TRet) {
         if (arr instanceof Array) return arr.map(func);
         var idx = 0;

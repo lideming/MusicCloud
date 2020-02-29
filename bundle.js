@@ -1562,7 +1562,7 @@ class TrackList {
                 list: this,
                 position: this.tracks.length
             } }));
-        this.tracks.push(track);
+        utils_1.utils.arrayInsert(this.tracks, track, pos);
         if (this.contentView)
             this.contentView.addItem(track, pos);
         return track;
@@ -3474,6 +3474,12 @@ exports.utils = new class Utils {
                 i--;
             }
         }
+    }
+    arrayInsert(array, val, pos) {
+        if (pos === undefined)
+            array.push(val);
+        else
+            array.splice(pos, 0, val);
     }
     arrayMap(arr, func) {
         if (arr instanceof Array)

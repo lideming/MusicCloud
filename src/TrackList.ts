@@ -145,7 +145,7 @@ export class TrackList {
                 position: this.tracks.length
             }
         });
-        this.tracks.push(track);
+        utils.arrayInsert(this.tracks, track, pos);
         if (this.contentView)
             this.contentView.addItem(track, pos);
         return track;
