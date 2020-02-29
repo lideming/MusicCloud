@@ -184,7 +184,8 @@ html, body {
     animation: showing-top .3s;
     z-index: 1;
     cursor: default;
-    line-height: 1.2;
+    font-size: 16px;
+    line-height: 1.25;
 }
 
 .dark .content-header {
@@ -197,6 +198,7 @@ html, body {
 
 .content-header .catalog {
     font-size: 120%;
+    line-height: 1;
     color: gray;
     padding: 5px;
     margin-left: 5px;
@@ -206,6 +208,7 @@ html, body {
     vertical-align: baseline;
     display: inline-block;
     font-size: 120%;
+    line-height: 1;
     min-height: 1em;
     min-width: 50px;
     padding: 5px;
@@ -230,7 +233,7 @@ html, body {
 
 .content-header .title input {
     display: inline-block;
-    line-height: 1.2;
+    line-height: inherit;
     padding: 5px;
     width: 200px;
     font: inherit;
