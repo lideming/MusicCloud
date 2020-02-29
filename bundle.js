@@ -279,6 +279,7 @@ exports.notes = new class extends CommentsView {
     constructor() {
         super(...arguments);
         this.endpoint = 'my/notes';
+        this.eventName = 'note-changed';
     }
     init() {
         this.title = utils_1.I `Notes`;
@@ -1011,6 +1012,7 @@ exports.msgcli = new class {
         this.lastQueryId = 0;
         this.queries = {};
         this.events = {};
+        this.permEvents = {};
     }
     get connected() { var _a; return ((_a = this.ws) === null || _a === void 0 ? void 0 : _a.readyState) === WebSocket.OPEN; }
     init() {
@@ -1021,17 +1023,34 @@ exports.msgcli = new class {
         this.onConnected.add(() => {
             if (User_1.user.state === 'logged')
                 this.login(Api_1.api.defaultAuth);
+            this.listenPermEvents();
         });
         this.connect();
     }
-    connect() {
+    listenPermEvents() {
+        var eventlist = [];
+        for (const key in this.permEvents) {
+            if (this.permEvents.hasOwnProperty(key)) {
+                this.events[key] = this.permEvents[key];
+                eventlist.push(key);
+            }
+        }
+        this.sendQuery({
+            cmd: 'listenEvent',
+            events: eventlist
+        }, null);
+    }
+    getUrl() {
         var match = Api_1.api.baseUrl.match(/^(((https?):)?\/\/([\w\-\.:]))?(\/)?(.*)$/);
         var [_, _, protocol, _, host, pathroot, path] = match;
         protocol = protocol || window.location.protocol;
         host = host || window.location.host;
         protocol = protocol == 'https:' ? 'wss://' : 'ws://';
         path = pathroot ? '/' + path : window.location.pathname + path;
-        this.ws = new WebSocket(protocol + host + path + 'ws');
+        return protocol + host + path + 'ws';
+    }
+    connect() {
+        this.ws = new WebSocket(this.getUrl());
         this.ws.onopen = (ev) => {
             this.onConnected.invoke();
         };
@@ -1135,7 +1154,7 @@ exports.msgcli = new class {
             throw new Error('not connected');
         }
         if (autoRetry) {
-            this.onConnected.add(() => this.listenEvent(evt, callback));
+            this.permEvents[evt] = callback;
         }
     }
 };
@@ -2313,9 +2332,7 @@ exports.ui = new class {
         });
     }
     endPreload() {
-        document.getElementById('js-ok').hidden = false;
         utils_1.utils.fadeout(document.getElementById('preload-overlay'));
-        window['preload'].end();
     }
 }; // ui
 class ProgressButton extends viewlib_1.View {
@@ -3209,6 +3226,7 @@ var app = window['app'] = {
     settings: exports.settings, settingsUI: SettingsUI_1.settingsUI,
     ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes,
     Toast: viewlib_1.Toast, ToastsContainer: viewlib_1.ToastsContainer,
+    msgcli: MessageClient_1.msgcli,
     init() {
         User_1.user.init();
         Uploads_1.uploads.init();
@@ -3221,7 +3239,7 @@ var app = window['app'] = {
     }
 };
 app.init();
-UI_1.ui.endPreload();
+window['preload'].jsOk();
 
 },{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":6,"./PlayerCore":7,"./Router":8,"./SettingsUI":9,"./UI":11,"./Uploads":12,"./User":13,"./viewlib":16}],15:[function(require,module,exports){
 "use strict";

@@ -47,17 +47,25 @@
             var preload = window.preload = {
                 domLoaded: false,
                 cssLoaded: false,
+                jsLoaded: false,
                 jsError: false,
-                cssOnload() {
+                cssOk() {
                     this.cssLoaded = true;
+                    this.update();
+                },
+                jsOk() {
+                    this.jsLoaded = true
                     this.update();
                 },
                 update() {
                     if (!this.domLoaded) return;
                     document.getElementById('css-ok').hidden = !preload.cssLoaded;
+                    document.getElementById('js-ok').hidden = !preload.jsLoaded;
                     document.getElementById('js-error').hidden = !preload.jsError;
+                    if (this.cssLoaded && this.jsLoaded) this.end();
                 },
                 end() {
+                    app.ui.endPreload();
                     window.removeEventListener('error', onerror);
                     delete window.preload;
                 }
@@ -77,7 +85,7 @@
         })();
     </script>
     <!-- End of preload style and script -->
-    <link rel="stylesheet" href="style.css" media="print" onload="this.media='all'; preload.cssOnload();">
+    <link rel="stylesheet" href="style.css" media="print" onload="this.media='all'; preload.cssOk(); this.onload = null;">
     <script src="bundle.js" defer async></script>
 </head>
 

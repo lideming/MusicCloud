@@ -32,6 +32,7 @@ var app = window['app'] = {
     settings, settingsUI,
     ui, api, playerCore, router, listIndex, user, uploads, discussion, notes,
     Toast, ToastsContainer,
+    msgcli,
     init() {
         user.init();
         uploads.init();
@@ -46,4 +47,4 @@ var app = window['app'] = {
 
 app.init();
 
-ui.endPreload();
+window['preload'].jsOk();

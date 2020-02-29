@@ -14,6 +14,7 @@ export const msgcli = new class {
     lastQueryId = 0;
     queries: Record<number, Action<QueryAnswer>> = {};
     events: Record<string, Action> = {};
+    permEvents: Record<string, Action> = {};
 
     init() {
         user.onSwitchedUser.add(() => {
@@ -23,17 +24,34 @@ export const msgcli = new class {
         this.onConnected.add(() => {
             if (user.state === 'logged')
                 this.login(api.defaultAuth);
+            this.listenPermEvents();
         });
         this.connect();
     }
-    connect() {
+    private listenPermEvents() {
+        var eventlist = [];
+        for (const key in this.permEvents) {
+            if (this.permEvents.hasOwnProperty(key)) {
+                this.events[key] = this.permEvents[key];
+                eventlist.push(key);
+            }
+        }
+        this.sendQuery({
+            cmd: 'listenEvent',
+            events: eventlist
+        }, null);
+    }
+    private getUrl() {
         var match = api.baseUrl.match(/^(((https?):)?\/\/([\w\-\.:]))?(\/)?(.*)$/);
         var [_, _, protocol, _, host, pathroot, path] = match;
         protocol = protocol || window.location.protocol;
         host = host || window.location.host;
         protocol = protocol == 'https:' ? 'wss://' : 'ws://';
         path = pathroot ? '/' + path : window.location.pathname + path;
-        this.ws = new WebSocket(protocol + host + path + 'ws');
+        return protocol + host + path + 'ws';
+    }
+    private connect() {
+        this.ws = new WebSocket(this.getUrl());
         this.ws.onopen = (ev) => {
             this.onConnected.invoke();
         };
@@ -85,7 +103,7 @@ export const msgcli = new class {
             }
         };
     }
-    login(token: string) {
+    private login(token: string) {
         this.loginState = 'sent';
         this.sendQueryAsync({
             cmd: 'login',
@@ -131,7 +149,7 @@ export const msgcli = new class {
             throw new Error('not connected');
         }
         if (autoRetry) {
-            this.onConnected.add(() => this.listenEvent(evt, callback));
+            this.permEvents[evt] = callback;
         }
     }
 };
