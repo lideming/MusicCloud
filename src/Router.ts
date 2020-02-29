@@ -1,6 +1,7 @@
 // file: Router.ts
 
 import { ContentView, ui, SidebarItem } from "./UI";
+import { Callbacks } from "./utils";
 
 export interface Route {
     path: string[];
@@ -14,6 +15,7 @@ export var router = new class {
     routes: Route[] = [];
     current: string[];
     currentStr: string;
+    onNavCompleted = new Callbacks<(arg: { path: string[]; }) => void>();
     init() {
         window.addEventListener('popstate', (ev) => {
             this.navByLocation();
@@ -27,6 +29,7 @@ export var router = new class {
     addRoute(arg: Route) {
         this.routes.push(arg);
         if (arg.sidebarItem) arg.sidebarItem().onclick = () => {
+            if (arg.contentView && arg.contentView() === ui.content.current) return;
             this.nav([...arg.path]);
         };
     }
@@ -46,6 +49,7 @@ export var router = new class {
         if (pushState === undefined || pushState) {
             window.history.pushState({}, strPath, '#' + strPath);
         }
+        this.onNavCompleted.invoke({ path });
     }
 };
 

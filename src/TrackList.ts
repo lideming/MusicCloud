@@ -478,7 +478,7 @@ export class ContentHeader extends View {
     createDom(): BuildDomExpr {
         var editHelper: EditableHelper;
         return {
-            tag: 'div.content-header',
+            tag: 'div.content-header.clearfix',
             child: [
                 { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
                 {

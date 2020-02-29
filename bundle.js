@@ -1319,9 +1319,11 @@ window.addEventListener('beforeunload', (ev) => {
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 const UI_1 = require("./UI");
+const utils_1 = require("./utils");
 exports.router = new class {
     constructor() {
         this.routes = [];
+        this.onNavCompleted = new utils_1.Callbacks();
     }
     init() {
         window.addEventListener('popstate', (ev) => {
@@ -1337,6 +1339,8 @@ exports.router = new class {
         this.routes.push(arg);
         if (arg.sidebarItem)
             arg.sidebarItem().onclick = () => {
+                if (arg.contentView && arg.contentView() === UI_1.ui.content.current)
+                    return;
                 this.nav([...arg.path]);
             };
     }
@@ -1360,6 +1364,7 @@ exports.router = new class {
         if (pushState === undefined || pushState) {
             window.history.pushState({}, strPath, '#' + strPath);
         }
+        this.onNavCompleted.invoke({ path });
     }
 };
 function match(path, route) {
@@ -1374,7 +1379,7 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":11}],9:[function(require,module,exports){
+},{"./UI":11,"./utils":15}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -1912,7 +1917,7 @@ class ContentHeader extends viewlib_1.View {
     createDom() {
         var editHelper;
         return {
-            tag: 'div.content-header',
+            tag: 'div.content-header.clearfix',
             child: [
                 { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
                 {
@@ -2208,6 +2213,60 @@ exports.ui = new class {
                 this.dom = document.getElementById('main-container');
             }
         };
+        this.sidebar = new class {
+            constructor() {
+                this.dom = document.getElementById('sidebar');
+                this._float = false;
+                this._hide = false;
+            }
+            get float() { return this._float; }
+            get hide() { return this._hide && this._float; }
+            init() {
+                this.toggleHide(true);
+                this.checkWidth();
+                window.addEventListener('resize', () => this.checkWidth());
+                Router_1.router.onNavCompleted.add(() => {
+                    this.toggleHide(true);
+                });
+            }
+            checkWidth() {
+                var width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+                this.toggleFloat(width < 800);
+            }
+            toggleFloat(float) {
+                if (float !== undefined && !!float == this._float)
+                    return;
+                this._float = utils_1.utils.toggleClass(document.body, 'float-sidebar', float);
+                if (this._float) {
+                    this.btnShow = this.btnShow || new SidebarToggle();
+                    this.dom.parentElement.appendChild(this.btnShow.dom);
+                }
+                else {
+                    this.btnShow.dom.remove();
+                }
+                this.updateOverlay();
+            }
+            toggleHide(hide) {
+                this._hide = utils_1.utils.toggleClass(this.dom, 'hide', hide);
+                this.updateOverlay();
+            }
+            updateOverlay() {
+                var showOverlay = this.float && !this.hide;
+                if (showOverlay != !!this.overlay) {
+                    if (showOverlay) {
+                        this.overlay = new viewlib_1.Overlay({
+                            tag: 'div.overlay', style: 'z-index: 99;',
+                            onclick: () => this.toggleHide(true)
+                        });
+                        exports.ui.mainContainer.dom.appendView(this.overlay);
+                    }
+                    else {
+                        utils_1.utils.fadeout(this.overlay.dom);
+                        this.overlay = null;
+                    }
+                }
+            }
+        };
         this.sidebarLogin = new class {
             constructor() {
                 this.container = document.getElementById('sidebar-login');
@@ -2293,6 +2352,7 @@ exports.ui = new class {
     }
     init() {
         this.lang.init();
+        this.sidebar.init();
         this.bottomBar.init();
         this.trackinfo.init();
         this.playerControl.init();
@@ -2398,6 +2458,16 @@ class VolumeButton extends ProgressButton {
             PlayerCore_1.playerCore.volume = r;
             this.tip = '';
         });
+    }
+}
+class SidebarToggle extends viewlib_1.View {
+    createDom() {
+        return {
+            tag: 'div.sidebar-toggle.clickable.no-selection', text: 'M',
+            onclick: (ev) => {
+                exports.ui.sidebar.toggleHide();
+            }
+        };
     }
 }
 

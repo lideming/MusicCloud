@@ -1,6 +1,6 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay } from "./viewlib";
 
 export class SidebarItem extends ListViewItem {
     text: string;
@@ -39,6 +39,7 @@ import { uploads } from "./Uploads";
 export const ui = new class {
     init() {
         this.lang.init();
+        this.sidebar.init();
         this.bottomBar.init();
         this.trackinfo.init();
         this.playerControl.init();
@@ -266,6 +267,57 @@ export const ui = new class {
     mainContainer = new class {
         dom = document.getElementById('main-container');
     };
+    sidebar = new class {
+        dom = document.getElementById('sidebar');
+        btnShow: SidebarToggle;
+        overlay?: Overlay;
+        _float = false;
+        get float() { return this._float; }
+        _hide = false;
+        get hide() { return this._hide && this._float; }
+        init() {
+            this.toggleHide(true);
+            this.checkWidth();
+            window.addEventListener('resize', () => this.checkWidth());
+            router.onNavCompleted.add(() => {
+                this.toggleHide(true);
+            });
+        }
+        checkWidth() {
+            var width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+            this.toggleFloat(width < 800);
+        }
+        toggleFloat(float?) {
+            if (float !== undefined && !!float == this._float) return;
+            this._float = utils.toggleClass(document.body, 'float-sidebar', float);
+            if (this._float) {
+                this.btnShow = this.btnShow || new SidebarToggle();
+                this.dom.parentElement.appendChild(this.btnShow.dom);
+            } else {
+                this.btnShow.dom.remove();
+            }
+            this.updateOverlay();
+        }
+        toggleHide(hide?) {
+            this._hide = utils.toggleClass(this.dom, 'hide', hide);
+            this.updateOverlay();
+        }
+        updateOverlay() {
+            var showOverlay = this.float && !this.hide;
+            if (showOverlay != !!this.overlay) {
+                if (showOverlay) {
+                    this.overlay = new Overlay({
+                        tag: 'div.overlay', style: 'z-index: 99;',
+                        onclick: () => this.toggleHide(true)
+                    });
+                    ui.mainContainer.dom.appendView(this.overlay);
+                } else {
+                    utils.fadeout(this.overlay.dom);
+                    this.overlay = null;
+                }
+            }
+        }
+    };
     sidebarLogin = new class {
         container = document.getElementById('sidebar-login');
         loginState = document.getElementById('login-state');
@@ -410,5 +462,16 @@ class VolumeButton extends ProgressButton {
             playerCore.volume = r;
             this.tip = '';
         });
+    }
+}
+
+class SidebarToggle extends View {
+    createDom(): BuildDomExpr {
+        return {
+            tag: 'div.sidebar-toggle.clickable.no-selection', text: 'M',
+            onclick: (ev) => {
+                ui.sidebar.toggleHide();
+            }
+        };
     }
 }
