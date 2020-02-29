@@ -16,6 +16,10 @@ body.dark {
     color: #ccc;
 }
 
+.no-transition, .no-transition * {
+    transition: none !important;
+}
+
 .changing-theme, .changing-theme * {
     transition: background-color .3s, color .3s !important;
 }

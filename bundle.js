@@ -2402,7 +2402,10 @@ exports.ui = new class {
         });
     }
     endPreload() {
-        utils_1.utils.fadeout(document.getElementById('preload-overlay'));
+        setTimeout(() => {
+            exports.ui.mainContainer.dom.classList.remove('no-transition');
+            utils_1.utils.fadeout(document.getElementById('preload-overlay'));
+        }, 1);
     }
 }; // ui
 class ProgressButton extends viewlib_1.View {

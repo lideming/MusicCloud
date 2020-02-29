@@ -80,7 +80,10 @@ export const ui = new class {
         });
     }
     endPreload() {
-        utils.fadeout(document.getElementById('preload-overlay'));
+        setTimeout(() => {
+            ui.mainContainer.dom.classList.remove('no-transition');
+            utils.fadeout(document.getElementById('preload-overlay'));
+        }, 1);
     }
     theme = new class {
         current: 'light' | 'dark' = 'light';
