@@ -129,17 +129,22 @@ export var dragManager = new class DragManager {
         if (this._currentItem) return [this._currentItem];
         return this._currentArray;
     }
+    onDragStart = new Callbacks();
+    onDragEnd = new Callbacks();
     start(item: any) {
         this._currentItem = item;
         console.log('drag start', item);
+        this.onDragStart.invoke();
     }
     startArray(arr: any[]) {
         this._currentArray = arr;
         console.log('drag start array', arr);
+        this.onDragStart.invoke();
     }
     end() {
         this._currentItem = null;
         console.log('drag end');
+        this.onDragEnd.invoke();
     }
 };
 

@@ -1,6 +1,6 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, dragManager } from "./viewlib";
 
 export class SidebarItem extends ListViewItem {
     text: string;
@@ -282,6 +282,13 @@ export const ui = new class {
             router.onNavCompleted.add(() => {
                 this.toggleHide(true);
             });
+            dragManager.onDragStart.add(() => {
+                utils.toggleClass(this.dom, 'peek', true);
+            });
+            dragManager.onDragEnd.add(() => {
+                utils.toggleClass(this.dom, 'peek', false);
+            });
+            this.dom.addEventListener('dragover', () => this.toggleHide(false));
         }
         checkWidth() {
             var width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -308,7 +315,8 @@ export const ui = new class {
                 if (showOverlay) {
                     this.overlay = new Overlay({
                         tag: 'div.overlay', style: 'z-index: 99;',
-                        onclick: () => this.toggleHide(true)
+                        onclick: () => this.toggleHide(true),
+                        ondragover: () => this.toggleHide(true)
                     });
                     ui.mainContainer.dom.appendView(this.overlay);
                 } else {
@@ -471,6 +479,9 @@ class SidebarToggle extends View {
             tag: 'div.sidebar-toggle.clickable.no-selection', text: 'M',
             onclick: (ev) => {
                 ui.sidebar.toggleHide();
+            },
+            ondragover: (ev) => {
+                ui.sidebar.toggleHide(false);
             }
         };
     }

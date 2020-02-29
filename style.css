@@ -124,7 +124,7 @@ html, body {
     left: 0;
     top: 0;
     z-index: 100;
-    transition: transform .3s;
+    transition: transform .3s, opacity .3s;
 }
 
 .float-sidebar #content-outer {
@@ -133,6 +133,13 @@ html, body {
 
 .float-sidebar #sidebar.hide {
     transform: translate(-100%, 0);
+    transition: transform .3s, opacity .3s .3s;
+}
+
+.float-sidebar #sidebar.hide.peek {
+    transform: translate(calc(-100% + 50px), 0);
+    opacity: .3;
+    transition: transform .3s, opacity .3s;
 }
 
 .float-sidebar #sidebar-login {
@@ -141,7 +148,9 @@ html, body {
 }
 
 .float-sidebar #login-state {
-    line-height: 30px;
+    display: flex;
+    align-items: center;
+    height: 50px;
 }
 
 .sidebar-toggle {
@@ -255,7 +264,7 @@ html, body {
     display: block;
     padding: 10px;
     /* background: #ddd; */
-    animation: showing .3s;
+    animation: showing .3s backwards;
     text-decoration: none;
     line-height: 1.2;
 }
@@ -880,6 +889,7 @@ a.item {
 
 .comment {
     margin: 10px;
+    overflow-wrap: break-word;
 }
 
 .comment .username {

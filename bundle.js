@@ -2228,6 +2228,13 @@ exports.ui = new class {
                 Router_1.router.onNavCompleted.add(() => {
                     this.toggleHide(true);
                 });
+                viewlib_1.dragManager.onDragStart.add(() => {
+                    utils_1.utils.toggleClass(this.dom, 'peek', true);
+                });
+                viewlib_1.dragManager.onDragEnd.add(() => {
+                    utils_1.utils.toggleClass(this.dom, 'peek', false);
+                });
+                this.dom.addEventListener('dragover', () => this.toggleHide(false));
             }
             checkWidth() {
                 var width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -2256,7 +2263,8 @@ exports.ui = new class {
                     if (showOverlay) {
                         this.overlay = new viewlib_1.Overlay({
                             tag: 'div.overlay', style: 'z-index: 99;',
-                            onclick: () => this.toggleHide(true)
+                            onclick: () => this.toggleHide(true),
+                            ondragover: () => this.toggleHide(true)
                         });
                         exports.ui.mainContainer.dom.appendView(this.overlay);
                     }
@@ -2466,6 +2474,9 @@ class SidebarToggle extends viewlib_1.View {
             tag: 'div.sidebar-toggle.clickable.no-selection', text: 'M',
             onclick: (ev) => {
                 exports.ui.sidebar.toggleHide();
+            },
+            ondragover: (ev) => {
+                exports.ui.sidebar.toggleHide(false);
             }
         };
     }
@@ -3995,6 +4006,10 @@ class ContainerView extends View {
 exports.ContainerView = ContainerView;
 /** DragManager is used to help exchange information between views */
 exports.dragManager = new class DragManager {
+    constructor() {
+        this.onDragStart = new utils_1.Callbacks();
+        this.onDragEnd = new utils_1.Callbacks();
+    }
     get currentItem() { var _a, _b, _c; return _c = (_a = this._currentItem, (_a !== null && _a !== void 0 ? _a : (_b = this._currentArray) === null || _b === void 0 ? void 0 : _b[0])), (_c !== null && _c !== void 0 ? _c : null); }
     ;
     get currentArray() {
@@ -4005,14 +4020,17 @@ exports.dragManager = new class DragManager {
     start(item) {
         this._currentItem = item;
         console.log('drag start', item);
+        this.onDragStart.invoke();
     }
     startArray(arr) {
         this._currentArray = arr;
         console.log('drag start array', arr);
+        this.onDragStart.invoke();
     }
     end() {
         this._currentItem = null;
         console.log('drag end');
+        this.onDragEnd.invoke();
     }
 };
 class ListViewItem extends View {
