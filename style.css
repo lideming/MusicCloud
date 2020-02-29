@@ -41,7 +41,6 @@ body.dark {
 
 html, body {
     height: 100%;
-    height: 100vh;
     overflow: hidden;
 }
 
@@ -73,12 +72,12 @@ html, body {
 }
 
 #main-container {
-    height: calc(100vh - 15px);
+    height: calc(100% - 15px);
     position: relative;
 }
 
 .bottompinned #main-container {
-    height: calc(100vh - 60px);
+    height: calc(100% - 60px);
 }
 
 #sidebar, #content-outer {
