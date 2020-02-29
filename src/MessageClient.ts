@@ -36,6 +36,7 @@ export const msgcli = new class {
                 eventlist.push(key);
             }
         }
+        if (eventlist.length === 0) return;
         this.sendQuery({
             cmd: 'listenEvent',
             events: eventlist
