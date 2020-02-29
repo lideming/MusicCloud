@@ -126,7 +126,7 @@ exports.api = new class {
     }
 };
 
-},{"./main":13,"./utils":14}],2:[function(require,module,exports){
+},{"./main":14,"./utils":15}],2:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -146,13 +146,14 @@ const utils_1 = require("./utils");
 const User_1 = require("./User");
 const ListContentView_1 = require("./ListContentView");
 const Router_1 = require("./Router");
+const MessageClient_1 = require("./MessageClient");
 class CommentsView {
     constructor() {
         this.lazyView = new utils_1.Lazy(() => this.createContentView());
         this.state = false;
     }
     get view() { return this.lazyView.value; }
-    fetch() {
+    fetch(slient) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.state === 'fetching' || this.state === 'waiting') {
                 console.warn('another fetch task is running.');
@@ -160,7 +161,8 @@ class CommentsView {
             }
             this.state = 'waiting';
             var li = new viewlib_1.LoadingIndicator();
-            this.view.useLoadingIndicator(li);
+            if (!slient)
+                this.view.useLoadingIndicator(li);
             try {
                 yield User_1.user.waitLogin(true);
                 this.state = 'fetching';
@@ -170,6 +172,7 @@ class CommentsView {
             catch (error) {
                 this.state = 'error';
                 li.error(error, () => this.fetch());
+                this.view.useLoadingIndicator(li);
                 throw error;
             }
             const thiz = this;
@@ -184,6 +187,12 @@ class CommentsView {
             }().update(resp.comments);
             this.view.updateView();
             this.state = 'fetched';
+            if (this.eventName && !this.eventRegistered) {
+                MessageClient_1.msgcli.listenEvent(this.eventName, () => {
+                    this.fetch(true);
+                }, true);
+                this.eventRegistered = true;
+            }
         });
     }
     addItem(c, pos) {
@@ -253,6 +262,7 @@ exports.discussion = new class extends CommentsView {
     constructor() {
         super(...arguments);
         this.endpoint = 'discussion';
+        this.eventName = 'diss-changed';
     }
     init() {
         this.title = utils_1.I `Discussion`;
@@ -355,7 +365,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./Router":7,"./UI":10,"./User":12,"./utils":14,"./viewlib":15}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./MessageClient":6,"./Router":8,"./UI":11,"./User":13,"./utils":15,"./viewlib":16}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -730,7 +740,7 @@ class ListContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./TrackList":9,"./utils":14,"./viewlib":15}],5:[function(require,module,exports){
+},{"./TrackList":10,"./utils":15,"./viewlib":16}],5:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -987,7 +997,150 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":6,"./Router":7,"./TrackList":9,"./UI":10,"./User":12,"./utils":14,"./viewlib":15}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":7,"./Router":8,"./TrackList":10,"./UI":11,"./User":13,"./utils":15,"./viewlib":16}],6:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const User_1 = require("./User");
+const Api_1 = require("./Api");
+const utils_1 = require("./utils");
+exports.msgcli = new class {
+    constructor() {
+        this.loginState = '';
+        this.onConnected = new utils_1.Callbacks();
+        this.onLogin = new utils_1.Callbacks();
+        this.lastQueryId = 0;
+        this.queries = {};
+        this.events = {};
+    }
+    get connected() { var _a; return ((_a = this.ws) === null || _a === void 0 ? void 0 : _a.readyState) === WebSocket.OPEN; }
+    init() {
+        User_1.user.onSwitchedUser.add(() => {
+            if (this.connected)
+                this.login(Api_1.api.defaultAuth);
+        });
+        this.onConnected.add(() => {
+            if (User_1.user.state === 'logged')
+                this.login(Api_1.api.defaultAuth);
+        });
+        this.connect();
+    }
+    connect() {
+        var match = Api_1.api.baseUrl.match(/^(((https?):)?\/\/([\w\-\.:]))?(\/)?(.*)$/);
+        var [_, _, protocol, _, host, pathroot, path] = match;
+        protocol = protocol || window.location.protocol;
+        host = host || window.location.host;
+        protocol = protocol == 'https:' ? 'wss://' : 'ws://';
+        path = pathroot ? '/' + path : window.location.pathname + path;
+        this.ws = new WebSocket(protocol + host + path + 'ws');
+        this.ws.onopen = (ev) => {
+            this.onConnected.invoke();
+        };
+        this.ws.onclose = (ev) => {
+            console.warn('ws close', { code: ev.code, reason: ev.reason });
+            this.ws = null;
+            this.loginState = '';
+            this.events = {};
+            var queries = this.queries;
+            for (const key in queries) {
+                if (queries.hasOwnProperty(key)) {
+                    try {
+                        queries[key]({
+                            queryId: +key,
+                            resp: 'wsclose'
+                        });
+                    }
+                    catch (error) {
+                        console.error(error);
+                    }
+                }
+            }
+            this.queries = {};
+            setTimeout(() => {
+                this.connect();
+            }, 10000);
+        };
+        this.ws.onmessage = (ev) => {
+            // console.debug('ws msg', ev.data);
+            if (typeof ev.data === 'string') {
+                var json = JSON.parse(ev.data);
+                if (json.resp && json.queryId) {
+                    console.debug('ws query answer', json);
+                    if (this.queries[json.queryId]) {
+                        this.queries[json.queryId](json);
+                        delete this.queries[json.queryId];
+                    }
+                }
+                else if (json.cmd === 'event') {
+                    var evt = json.event;
+                    if (this.events[evt]) {
+                        this.events[evt]();
+                    }
+                    else {
+                        console.debug('ws unknown event', json);
+                    }
+                }
+                else {
+                    console.debug('ws unknown json', json);
+                }
+            }
+            else {
+                console.debug('ws unknwon data', ev.data);
+            }
+        };
+    }
+    login(token) {
+        this.loginState = 'sent';
+        this.sendQueryAsync({
+            cmd: 'login',
+            token
+        }).then(a => {
+            if (a.resp === 'ok') {
+                console.log('ws login ok');
+                this.loginState = 'done';
+                this.onLogin.invoke();
+            }
+            else {
+                console.log('ws login result: ', a.resp);
+                this.loginState = '';
+            }
+        });
+    }
+    sendQuery(obj, callback) {
+        if (!this.connected)
+            throw new Error('not connected');
+        var queryId = ++this.lastQueryId;
+        obj = Object.assign({ queryId }, obj);
+        console.log('ws send', obj);
+        this.ws.send(JSON.stringify(obj));
+        if (callback) {
+            this.queries[queryId] = callback;
+        }
+    }
+    sendQueryAsync(obj) {
+        return new Promise(resolve => {
+            this.sendQuery(obj, resolve);
+        });
+    }
+    listenEvent(evt, callback, autoRetry) {
+        if (this.events[evt])
+            throw new Error('the event is already registered: ' + evt);
+        if (this.connected) {
+            this.sendQuery({
+                cmd: 'listenEvent',
+                events: [evt]
+            }, null);
+            this.events[evt] = callback;
+        }
+        else if (!autoRetry) {
+            throw new Error('not connected');
+        }
+        if (autoRetry) {
+            this.onConnected.add(() => this.listenEvent(evt, callback));
+        }
+    }
+};
+
+},{"./Api":1,"./User":13,"./utils":15}],7:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1140,7 +1293,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./utils":14}],7:[function(require,module,exports){
+},{"./Api":1,"./utils":15}],8:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1200,7 +1353,7 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":10}],8:[function(require,module,exports){
+},{"./UI":11}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -1241,7 +1394,7 @@ class SettingsDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./I18n":3,"./UI":10,"./viewlib":15}],9:[function(require,module,exports){
+},{"./I18n":3,"./UI":11,"./viewlib":16}],10:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1784,7 +1937,7 @@ class ActionBtn extends viewlib_1.TextView {
 }
 exports.ActionBtn = ActionBtn;
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":6,"./Router":7,"./User":12,"./main":13,"./utils":14,"./viewlib":15}],10:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":7,"./Router":8,"./User":13,"./main":14,"./utils":15,"./viewlib":16}],11:[function(require,module,exports){
 "use strict";
 // file: UI.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2229,7 +2382,7 @@ class VolumeButton extends ProgressButton {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":6,"./Router":7,"./Uploads":11,"./User":12,"./utils":14,"./viewlib":15}],11:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":7,"./Router":8,"./Uploads":12,"./User":13,"./utils":15,"./viewlib":16}],12:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2583,7 +2736,7 @@ var BlockFormat = {
     }
 };
 
-},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./TrackList":9,"./UI":10,"./User":12,"./utils":14,"./viewlib":15}],12:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":7,"./Router":8,"./TrackList":10,"./UI":11,"./User":13,"./utils":15,"./viewlib":16}],13:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3025,7 +3178,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./Api":1,"./PlayerCore":6,"./SettingsUI":8,"./UI":10,"./Uploads":11,"./main":13,"./utils":14,"./viewlib":15}],13:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":7,"./SettingsUI":9,"./UI":11,"./Uploads":12,"./main":14,"./utils":15,"./viewlib":16}],14:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -3048,6 +3201,7 @@ const Uploads_1 = require("./Uploads");
 const Discussion_1 = require("./Discussion");
 const Router_1 = require("./Router");
 const SettingsUI_1 = require("./SettingsUI");
+const MessageClient_1 = require("./MessageClient");
 UI_1.ui.init();
 PlayerCore_1.playerCore.init();
 exports.listIndex = new ListIndex_1.ListIndex();
@@ -3062,13 +3216,14 @@ var app = window['app'] = {
         Discussion_1.notes.init();
         Discussion_1.comments.init();
         exports.listIndex.init();
+        MessageClient_1.msgcli.init();
         Router_1.router.init();
     }
 };
 app.init();
 UI_1.ui.endPreload();
 
-},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./PlayerCore":6,"./Router":7,"./SettingsUI":8,"./UI":10,"./Uploads":11,"./User":12,"./viewlib":15}],14:[function(require,module,exports){
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":6,"./PlayerCore":7,"./Router":8,"./SettingsUI":9,"./UI":11,"./Uploads":12,"./User":13,"./viewlib":16}],15:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3625,7 +3780,7 @@ class DataUpdatingHelper {
 }
 exports.DataUpdatingHelper = DataUpdatingHelper;
 
-},{"./I18n":3}],15:[function(require,module,exports){
+},{"./I18n":3}],16:[function(require,module,exports){
 "use strict";
 // file: viewlib.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4646,4 +4801,4 @@ class MessageBox extends Dialog {
 }
 exports.MessageBox = MessageBox;
 
-},{"./I18n":3,"./utils":14}]},{},[13]);
+},{"./I18n":3,"./utils":15}]},{},[14]);

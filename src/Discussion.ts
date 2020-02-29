@@ -8,21 +8,24 @@ import { user } from "./User";
 import { ListContentView } from "./ListContentView";
 import { Api } from "./apidef";
 import { router } from "./Router";
+import { msgcli } from "./MessageClient";
 
 class CommentsView {
     endpoint: string;
+    eventName: string;
+    eventRegistered: boolean;
     title: string;
     lazyView = new Lazy(() => this.createContentView());
     get view() { return this.lazyView.value; }
     state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
-    async fetch() {
+    async fetch(slient?: boolean) {
         if (this.state === 'fetching' || this.state === 'waiting') {
             console.warn('another fetch task is running.');
             return;
         }
         this.state = 'waiting';
         var li = new LoadingIndicator();
-        this.view.useLoadingIndicator(li);
+        if (!slient) this.view.useLoadingIndicator(li);
         try {
             await user.waitLogin(true);
             this.state = 'fetching';
@@ -31,6 +34,7 @@ class CommentsView {
         } catch (error) {
             this.state = 'error';
             li.error(error, () => this.fetch());
+            this.view.useLoadingIndicator(li);
             throw error;
         }
         const thiz = this;
@@ -42,6 +46,12 @@ class CommentsView {
         }().update(resp.comments);
         this.view.updateView();
         this.state = 'fetched';
+        if (this.eventName && !this.eventRegistered) {
+            msgcli.listenEvent(this.eventName, () => {
+                this.fetch(true);
+            }, true);
+            this.eventRegistered = true;
+        }
     }
     private addItem(c: Api.Comment, pos?: number): void {
         const comm = new CommentViewItem(c);
@@ -105,6 +115,7 @@ class CommentsContentView extends ListContentView {
 
 export var discussion = new class extends CommentsView {
     endpoint = 'discussion';
+    eventName = 'diss-changed'
     init() {
         this.title = I`Discussion`;
         this.sidebarItem = new SidebarItem({ text: I`Discussion` });

@@ -21,6 +21,7 @@ import { uploads } from "./Uploads";
 import { discussion, notes, comments } from "./Discussion";
 import { router } from "./Router";
 import { settingsUI } from "./SettingsUI";
+import { msgcli } from "./MessageClient"
 
 ui.init();
 playerCore.init();
@@ -38,6 +39,7 @@ var app = window['app'] = {
         notes.init();
         comments.init();
         listIndex.init();
+        msgcli.init();
         router.init();
     }
 };
