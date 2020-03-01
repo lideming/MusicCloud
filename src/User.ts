@@ -119,8 +119,8 @@ export var user = new class User {
         this.role = info.role;
         this.siLogin.save();
 
-        var servermsg = info['servermsg'];
-        if (servermsg) Toast.show(I`Server: ` + servermsg, 3000);
+        if (info.servermsg) Toast.show(I`Server: ` + info.servermsg, 3000);
+        api.storageUrlBase = info.storageUrlBase || '';
 
         api.defaultAuth = this.getBearerAuth(this.info.token);
         ui.sidebarLogin.update();

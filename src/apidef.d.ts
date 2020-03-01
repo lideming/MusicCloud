@@ -82,6 +82,9 @@ export namespace Api {
         /** When GET me */
         role?: 'admin' | 'user';
 
+        /** When GET me */
+        storageUrlBase?: string;
+
         /** When GET me/login */
         token?: string;
     }

@@ -16,6 +16,7 @@ const utils_1 = require("./utils");
 /** API 操作 */
 exports.api = new class {
     constructor() {
+        this.storageUrlBase = '';
         this.debugSleep = main_1.settings.debug ? main_1.settings.apiDebugDelay : 0;
         this.onTrackInfoChanged = new utils_1.Callbacks();
         this.onTrackDeleted = new utils_1.Callbacks();
@@ -122,6 +123,8 @@ exports.api = new class {
     processUrl(url) {
         if (url.match('^(https?:/)?/'))
             return url;
+        if (this.storageUrlBase && url.startsWith('storage/'))
+            return this.storageUrlBase + url.substr(8);
         return this.baseUrl + url;
     }
 };
@@ -2978,9 +2981,9 @@ exports.user = new class User {
                 this.info.token = info.token;
             this.role = info.role;
             this.siLogin.save();
-            var servermsg = info['servermsg'];
-            if (servermsg)
-                viewlib_1.Toast.show(utils_1.I `Server: ` + servermsg, 3000);
+            if (info.servermsg)
+                viewlib_1.Toast.show(utils_1.I `Server: ` + info.servermsg, 3000);
+            Api_1.api.storageUrlBase = info.storageUrlBase || '';
             Api_1.api.defaultAuth = this.getBearerAuth(this.info.token);
             UI_1.ui.sidebarLogin.update();
             main_1.listIndex.setIndex(info);

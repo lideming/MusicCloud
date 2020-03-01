@@ -8,6 +8,7 @@ import { Api } from "./apidef";
 /** API 操作 */
 export var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
+    storageUrlBase = '';
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;
     defaultAuth: string;
 
@@ -99,6 +100,8 @@ export var api = new class {
     }
     processUrl(url: string) {
         if (url.match('^(https?:/)?/')) return url;
+        if (this.storageUrlBase && url.startsWith('storage/'))
+            return this.storageUrlBase + url.substr(8);
         return this.baseUrl + url;
     }
 };
