@@ -243,11 +243,13 @@ export class TrackList {
     getNextTrack(track: Track, loopMode: PlayingLoopMode, offset?: number): Track {
         offset = offset ?? 1;
         var bind = track._bind;
+        var position = bind.position;
         if (bind?.list !== this) return null;
+        position = position ?? this.listView.find(x => x.track.id === track.id).position;
         if (loopMode == 'list-seq') {
-            return this.tracks[bind.position + offset] ?? null;
+            return this.tracks[position + offset] ?? null;
         } else if (loopMode == 'list-loop') {
-            return this.tracks[utils.mod(bind.position + offset, this.tracks.length)] ?? null;
+            return this.tracks[utils.mod(position + offset, this.tracks.length)] ?? null;
         } else if (loopMode == 'track-loop') {
             return track;
         } else {
@@ -362,7 +364,7 @@ export class TrackListView extends ListContentView {
     protected updateCurPlaying(item?: TrackViewItem) {
         var playing = playerCore.track;
         if (item === undefined) {
-            item = (playing?._bind?.list === this.list) ? this.listView.get(playing._bind.position) :
+            item = (playing?._bind?.list === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
                 playing ? this.listView.find(x => x.track.id === playing.id) : null;
             this.curPlaying.set(item);
         } else if (playing) {
@@ -399,7 +401,8 @@ export class TrackViewItem extends ListViewItem {
                         if (this.playing) {
                             dompos.textContent = '🎵';
                         } else if (!this.noPos) {
-                            dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+                            dompos.textContent = this.track._bind.position !== undefined
+                                ? (this.track._bind.position + 1).toString() : '';
                         }
                         dompos.hidden = this.noPos && !this.playing;
                     }

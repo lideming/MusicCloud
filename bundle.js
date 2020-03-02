@@ -1688,13 +1688,15 @@ class TrackList {
         var _a, _b, _c;
         offset = (offset !== null && offset !== void 0 ? offset : 1);
         var bind = track._bind;
+        var position = bind.position;
         if (((_a = bind) === null || _a === void 0 ? void 0 : _a.list) !== this)
             return null;
+        position = (position !== null && position !== void 0 ? position : this.listView.find(x => x.track.id === track.id).position);
         if (loopMode == 'list-seq') {
-            return _b = this.tracks[bind.position + offset], (_b !== null && _b !== void 0 ? _b : null);
+            return _b = this.tracks[position + offset], (_b !== null && _b !== void 0 ? _b : null);
         }
         else if (loopMode == 'list-loop') {
-            return _c = this.tracks[utils_1.utils.mod(bind.position + offset, this.tracks.length)], (_c !== null && _c !== void 0 ? _c : null);
+            return _c = this.tracks[utils_1.utils.mod(position + offset, this.tracks.length)], (_c !== null && _c !== void 0 ? _c : null);
         }
         else if (loopMode == 'track-loop') {
             return track;
@@ -1815,7 +1817,7 @@ class TrackListView extends ListContentView_1.ListContentView {
         var _a, _b, _c;
         var playing = PlayerCore_1.playerCore.track;
         if (item === undefined) {
-            item = (((_b = (_a = playing) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list) ? this.listView.get(playing._bind.position) :
+            item = (((_b = (_a = playing) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
                 playing ? this.listView.find(x => x.track.id === playing.id) : null;
             this.curPlaying.set(item);
         }
@@ -1889,7 +1891,8 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                             dompos.textContent = '🎵';
                         }
                         else if (!this.noPos) {
-                            dompos.textContent = this.track._bind ? (this.track._bind.position + 1).toString() : '';
+                            dompos.textContent = this.track._bind.position !== undefined
+                                ? (this.track._bind.position + 1).toString() : '';
                         }
                         dompos.hidden = this.noPos && !this.playing;
                     }
@@ -2515,6 +2518,9 @@ const Api_1 = require("./Api");
 class UploadTrack extends TrackList_1.Track {
     constructor(init) {
         super(init);
+        this._bind = {
+            list: exports.uploads
+        };
     }
     setState(state) {
         var _a;
@@ -2767,12 +2773,23 @@ exports.uploads = new class extends TrackList_1.TrackList {
             }
             else if (uploadReq.mode === 'put-url') {
                 console.info('uploading to url', uploadReq);
-                const uploadResp = yield fetch(uploadReq.url, {
-                    method: uploadReq.method,
-                    body: file
+                const xhr = new XMLHttpRequest();
+                const whenXhrComplete = new Promise((resolve, reject) => {
+                    xhr.onload = ev => resolve();
+                    xhr.onerror = ev => reject("XHR error");
                 });
-                if (!uploadResp.ok)
-                    throw new Error("HTTP status " + uploadResp.status);
+                xhr.upload.onprogress = (ev) => {
+                    var _a;
+                    if (ev.lengthComputable) {
+                        track._upload.progress = ev.loaded / ev.total;
+                        (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+                    }
+                };
+                xhr.open(uploadReq.method, uploadReq.url);
+                xhr.send(file);
+                yield whenXhrComplete;
+                if (xhr.status < 200 || xhr.status >= 300)
+                    throw new Error("HTTP status " + xhr.status);
                 console.info('posting result to api');
                 track.setState('processing');
                 respTrack = (yield Api_1.api.post({
@@ -2811,7 +2828,12 @@ class UploadViewItem extends TrackList_1.TrackViewItem {
                 this.dom.classList.remove('state-' + this._lastUploadState);
             if (newState)
                 this.dom.classList.add('state-' + newState);
-            this.domstate.textContent = I18n_1.i18n.get('uploads_' + newState);
+            if (this.track._upload.state === 'uploading' && this.track._upload.progress !== undefined) {
+                this.domstate.textContent = (this.track._upload.progress * 100).toFixed(0) + '%';
+            }
+            else {
+                this.domstate.textContent = I18n_1.i18n.get('uploads_' + newState);
+            }
             this.dragging = newState == 'done';
         }
     }

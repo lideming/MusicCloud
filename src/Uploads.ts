@@ -17,6 +17,9 @@ import { api } from "./Api";
 class UploadTrack extends Track {
     constructor(init: Partial<UploadTrack>) {
         super(init);
+        this._bind = {
+            list: uploads
+        };
     }
     setState(state: UploadTrack['_upload']['state']) {
         this._upload.state = state;
@@ -24,6 +27,7 @@ class UploadTrack extends Track {
     }
     _upload: {
         view?: UploadViewItem;
+        progress?: number;
         state: 'pending' | 'uploading' | 'processing' | 'error' | 'done' | 'cancelled';
         // With prefix "uploads_", these are i18n keys 
     };
@@ -254,11 +258,23 @@ export var uploads = new class extends TrackList {
         } else if (uploadReq.mode === 'put-url') {
             console.info('uploading to url', uploadReq);
 
-            const uploadResp = await fetch(uploadReq.url, {
-                method: uploadReq.method,
-                body: file
+            const xhr = new XMLHttpRequest();
+            const whenXhrComplete = new Promise((resolve, reject) => {
+                xhr.onload = ev => resolve();
+                xhr.onerror = ev => reject("XHR error");
             });
-            if (!uploadResp.ok) throw new Error("HTTP status " + uploadResp.status);
+            xhr.upload.onprogress = (ev) => {
+                if (ev.lengthComputable) {
+                    track._upload.progress = ev.loaded / ev.total;
+                    track._upload.view?.updateDom();
+                }
+            };
+
+            xhr.open(uploadReq.method, uploadReq.url);
+            xhr.send(file);
+            await whenXhrComplete;
+
+            if (xhr.status < 200 || xhr.status >= 300) throw new Error("HTTP status " + xhr.status);
 
             console.info('posting result to api');
             track.setState('processing');
@@ -300,7 +316,11 @@ class UploadViewItem extends TrackViewItem {
         if (this._lastUploadState != newState) {
             if (this._lastUploadState) this.dom.classList.remove('state-' + this._lastUploadState);
             if (newState) this.dom.classList.add('state-' + newState);
-            this.domstate.textContent = i18n.get('uploads_' + newState);
+            if (this.track._upload.state === 'uploading' && this.track._upload.progress !== undefined) {
+                this.domstate.textContent = (this.track._upload.progress * 100).toFixed(0) + '%';
+            } else {
+                this.domstate.textContent = i18n.get('uploads_' + newState);
+            }
             this.dragging = newState == 'done';
         }
     }
