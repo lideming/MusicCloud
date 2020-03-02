@@ -18,9 +18,13 @@ class UploadTrack extends Track {
     constructor(init: Partial<UploadTrack>) {
         super(init);
     }
+    setState(state: UploadTrack['_upload']['state']) {
+        this._upload.state = state;
+        this._upload.view?.updateDom();
+    }
     _upload: {
         view?: UploadViewItem;
-        state: 'pending' | 'uploading' | 'error' | 'done' | 'cancelled';
+        state: 'pending' | 'uploading' | 'processing' | 'error' | 'done' | 'cancelled';
         // With prefix "uploads_", these are i18n keys 
     };
 }
@@ -82,15 +86,15 @@ export var uploads = new class extends TrackList {
                     this.removeTrack(items[0]);
                 } else {
                     new MessageBox()
-                    .setTitle(I`Warning`)
-                    .addText(I`Are you sure to delete ${items.length} tracks permanently?`)
-                    .addResultBtns(['cancel', 'ok'])
-                    .allowCloseWithResult('cancel')
-                    .showAndWaitResult()
-                    .then(r => {
-                        if (r !== 'ok') return;
-                        items.forEach(x => this.removeTrack(x, true));
-                    });
+                        .setTitle(I`Warning`)
+                        .addText(I`Are you sure to delete ${items.length} tracks permanently?`)
+                        .addResultBtns(['cancel', 'ok'])
+                        .allowCloseWithResult('cancel')
+                        .showAndWaitResult()
+                        .then(r => {
+                            if (r !== 'ok') return;
+                            items.forEach(x => this.removeTrack(x, true));
+                        });
                 }
             };
         }
@@ -210,34 +214,68 @@ export var uploads = new class extends TrackList {
         try {
             if (track._upload.state === 'cancelled') return;
 
-            track._upload.state = 'uploading';
-            track._upload.view?.updateDom();
-
-            var jsonBlob = new Blob([JSON.stringify(apitrack)]);
-            var finalBlob = new Blob([
-                BlockFormat.encodeBlock(jsonBlob),
-                BlockFormat.encodeBlock(file)
-            ]);
-            var resp = await api.post({
-                path: 'tracks/newfile',
-                mode: 'raw',
-                obj: finalBlob,
-                headers: { 'Content-Type': 'application/x-mcloud-upload' }
-            }) as Api.Track;
-            track.id = resp.id;
-            track.updateFromApiTrack(resp);
+            await this.uploadCore(apitrack, track, file);
         } catch (err) {
-            track._upload.state = 'error';
-            track._upload.view?.updateDom();
+            track.setState('error');
             Toast.show(I`Failed to upload file "${file.name}".` + '\n' + err, 3000);
             console.log('uploads failed: ', file.name, err);
             throw err;
         } finally {
             this.uploadSemaphore.exit();
         }
-        track._upload.state = 'done';
-        track._upload.view?.updateDom();
         if (this.view.rendered) this.view.updateUsage();
+    }
+
+    private async uploadCore(apitrack: Api.Track, track: UploadTrack, file: File) {
+        track.setState('uploading');
+
+        const uploadReq = await api.post({
+            path: 'tracks/uploadrequest',
+            obj: {
+                filename: file.name,
+                size: file.size
+            } as Api.UploadRequest
+        }) as Api.UploadParameters;
+
+        var respTrack: Api.Track;
+
+        if (uploadReq.mode === 'direct') {
+            const jsonBlob = new Blob([JSON.stringify(apitrack)]);
+            const finalBlob = new Blob([
+                BlockFormat.encodeBlock(jsonBlob),
+                BlockFormat.encodeBlock(file)
+            ]);
+            respTrack = await api.post({
+                path: 'tracks/newfile',
+                mode: 'raw',
+                obj: finalBlob,
+                headers: { 'Content-Type': 'application/x-mcloud-upload' }
+            }) as Api.Track;
+        } else if (uploadReq.mode === 'put-url') {
+            console.info('uploading to url', uploadReq);
+
+            const uploadResp = await fetch(uploadReq.url, {
+                method: uploadReq.method,
+                body: file
+            });
+            if (!uploadResp.ok) throw new Error("HTTP status " + uploadResp.status);
+
+            console.info('posting result to api');
+            track.setState('processing');
+            respTrack = await api.post({
+                path: 'tracks/uploadresult',
+                obj: {
+                    url: uploadReq.url,
+                    filename: file.name,
+                    tag: uploadReq.tag
+                } as Api.UploadResult
+            }) as Api.Track;
+        } else {
+            throw new Error("Unknown upload mode");
+        }
+        track.id = respTrack.id;
+        track.updateFromApiTrack(respTrack);
+        track.setState('done');
     }
 };
 

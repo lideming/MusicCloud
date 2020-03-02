@@ -222,6 +222,7 @@ i18n.add2dArray([
     ["_key_", "en", "zh"],
     ["uploads_pending", "Pending", "队列中"],
     ["uploads_uploading", "Uploading", "上传中"],
+    ["uploads_processing", "Processing", "处理中"],
     ["uploads_error", "Error", "错误"],
     ["uploads_done", "Done", "完成"],
     ["prev_track", "Prev", "上一首"],

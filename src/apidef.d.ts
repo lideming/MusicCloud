@@ -114,4 +114,29 @@ export namespace Api {
         position: number;
         trackid: number;
     }
+
+    // POST {api}/tracks/uploadrequest
+    // request:
+    interface UploadRequest {
+        filename: string;
+        size: number;
+    }
+    // response:
+    type UploadParameters = {
+        mode: 'direct';
+    } | {
+        mode: 'put-url';
+        url: string;
+        method: 'POST' | 'PUT';
+        tag: string;
+    };
+
+    // POST {api}/tracks/uploadresult
+    // request:
+    interface UploadResult {
+        url: string;
+        filename: string;
+        tag: string;
+    }
+    // response: Api.Track
 }

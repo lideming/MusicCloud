@@ -589,6 +589,7 @@ exports.i18n.add2dArray([
     ["_key_", "en", "zh"],
     ["uploads_pending", "Pending", "队列中"],
     ["uploads_uploading", "Uploading", "上传中"],
+    ["uploads_processing", "Processing", "处理中"],
     ["uploads_error", "Error", "错误"],
     ["uploads_done", "Done", "完成"],
     ["prev_track", "Prev", "上一首"],
@@ -2515,6 +2516,11 @@ class UploadTrack extends TrackList_1.Track {
     constructor(init) {
         super(init);
     }
+    setState(state) {
+        var _a;
+        this._upload.state = state;
+        (_a = this._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+    }
 }
 exports.uploads = new class extends TrackList_1.TrackList {
     constructor() {
@@ -2707,7 +2713,6 @@ exports.uploads = new class extends TrackList_1.TrackList {
         });
     }
     uploadFile(file) {
-        var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
             var apitrack = {
                 id: undefined, url: undefined,
@@ -2721,25 +2726,10 @@ exports.uploads = new class extends TrackList_1.TrackList {
             try {
                 if (track._upload.state === 'cancelled')
                     return;
-                track._upload.state = 'uploading';
-                (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
-                var jsonBlob = new Blob([JSON.stringify(apitrack)]);
-                var finalBlob = new Blob([
-                    BlockFormat.encodeBlock(jsonBlob),
-                    BlockFormat.encodeBlock(file)
-                ]);
-                var resp = yield Api_1.api.post({
-                    path: 'tracks/newfile',
-                    mode: 'raw',
-                    obj: finalBlob,
-                    headers: { 'Content-Type': 'application/x-mcloud-upload' }
-                });
-                track.id = resp.id;
-                track.updateFromApiTrack(resp);
+                yield this.uploadCore(apitrack, track, file);
             }
             catch (err) {
-                track._upload.state = 'error';
-                (_b = track._upload.view) === null || _b === void 0 ? void 0 : _b.updateDom();
+                track.setState('error');
                 viewlib_1.Toast.show(I18n_1.I `Failed to upload file "${file.name}".` + '\n' + err, 3000);
                 console.log('uploads failed: ', file.name, err);
                 throw err;
@@ -2747,10 +2737,59 @@ exports.uploads = new class extends TrackList_1.TrackList {
             finally {
                 this.uploadSemaphore.exit();
             }
-            track._upload.state = 'done';
-            (_c = track._upload.view) === null || _c === void 0 ? void 0 : _c.updateDom();
             if (this.view.rendered)
                 this.view.updateUsage();
+        });
+    }
+    uploadCore(apitrack, track, file) {
+        return __awaiter(this, void 0, void 0, function* () {
+            track.setState('uploading');
+            const uploadReq = yield Api_1.api.post({
+                path: 'tracks/uploadrequest',
+                obj: {
+                    filename: file.name,
+                    size: file.size
+                }
+            });
+            var respTrack;
+            if (uploadReq.mode === 'direct') {
+                const jsonBlob = new Blob([JSON.stringify(apitrack)]);
+                const finalBlob = new Blob([
+                    BlockFormat.encodeBlock(jsonBlob),
+                    BlockFormat.encodeBlock(file)
+                ]);
+                respTrack = (yield Api_1.api.post({
+                    path: 'tracks/newfile',
+                    mode: 'raw',
+                    obj: finalBlob,
+                    headers: { 'Content-Type': 'application/x-mcloud-upload' }
+                }));
+            }
+            else if (uploadReq.mode === 'put-url') {
+                console.info('uploading to url', uploadReq);
+                const uploadResp = yield fetch(uploadReq.url, {
+                    method: uploadReq.method,
+                    body: file
+                });
+                if (!uploadResp.ok)
+                    throw new Error("HTTP status " + uploadResp.status);
+                console.info('posting result to api');
+                track.setState('processing');
+                respTrack = (yield Api_1.api.post({
+                    path: 'tracks/uploadresult',
+                    obj: {
+                        url: uploadReq.url,
+                        filename: file.name,
+                        tag: uploadReq.tag
+                    }
+                }));
+            }
+            else {
+                throw new Error("Unknown upload mode");
+            }
+            track.id = respTrack.id;
+            track.updateFromApiTrack(respTrack);
+            track.setState('done');
         });
     }
 };
