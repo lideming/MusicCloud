@@ -1289,12 +1289,23 @@ exports.playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
+    loadBlob(blob, play) {
+        var reader = new FileReader();
+        reader.onload = (ev) => {
+            this.audio.src = reader.result;
+            this.audio.load();
+            if (play)
+                this.play();
+        };
+        reader.readAsDataURL(blob);
+    }
     setTrack(track) {
-        var _a, _b;
+        var _a, _b, _c, _d;
         var oldTrack = this.track;
         this.track = track;
         this.onTrackChanged.invoke();
-        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url))
+        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url)
+            || (((_c = track) === null || _c === void 0 ? void 0 : _c.blob) && track.blob !== ((_d = oldTrack) === null || _d === void 0 ? void 0 : _d.blob)))
             this.loadUrl(null);
         this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
     }
@@ -1306,8 +1317,14 @@ exports.playerCore = new class PlayerCore {
         this.play();
     }
     play() {
-        if (this.track && !this.audio.src)
-            this.loadUrl(Api_1.api.processUrl(this.track.url));
+        if (this.track && !this.audio.readyState)
+            if (this.track.blob) {
+                this.loadBlob(this.track.blob, true);
+                return;
+            }
+            else {
+                this.loadUrl(Api_1.api.processUrl(this.track.url));
+            }
         this.audio.play();
     }
     pause() {
@@ -1838,17 +1855,16 @@ class TrackListView extends ListContentView_1.ListContentView {
         return view;
     }
     updateCurPlaying(item) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         var playing = PlayerCore_1.playerCore.track;
         if (item === undefined) {
-            item = (((_b = (_a = playing) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
-                playing ? this.listView.find(x => x.track.id === playing.id) : null;
+            item = (((_b = (_a = playing) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) : (_c = (playing && this.listView.find(x => x.track === playing)), (_c !== null && _c !== void 0 ? _c : this.listView.find(x => x.track.id === playing.id)));
             this.curPlaying.set(item);
         }
         else if (playing) {
             var track = item.track;
-            if ((((_c = playing._bind) === null || _c === void 0 ? void 0 : _c.list) === this.list && track === playing)
-                || (track.id === playing.id)) {
+            if ((((_d = playing._bind) === null || _d === void 0 ? void 0 : _d.list) === this.list && track === playing)
+                || (!this.curPlaying && track.id === playing.id)) {
                 this.curPlaying.set(item);
             }
         }
@@ -2748,7 +2764,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 id: undefined, url: undefined,
                 artist: 'Unknown', name: file.name
             };
-            var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { _upload: {
+            var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { blob: file, _upload: {
                     state: 'pending'
                 } }));
             this.insertTrack(track);
@@ -4164,8 +4180,10 @@ class ListViewItem extends View {
         });
         this.dom.addEventListener('dragstart', (ev) => {
             var _a, _b;
-            if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.dragging)))
+            if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.dragging))) {
+                ev.preventDefault();
                 return;
+            }
             var arr = [];
             if (this.selected) {
                 arr = [...this.selectionHelper.selectedItems];

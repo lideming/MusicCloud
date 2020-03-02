@@ -185,7 +185,10 @@ export abstract class ListViewItem extends View implements ISelectable {
             (this.onContextMenu ?? this.listview?.onContextMenu)?.(this, ev);
         });
         this.dom.addEventListener('dragstart', (ev) => {
-            if (!(this.dragging ?? this.listview?.dragging)) return;
+            if (!(this.dragging ?? this.listview?.dragging)) {
+                ev.preventDefault();
+                return;
+            }
             var arr: ListViewItem[] = [];
             if (this.selected) {
                 arr = [...this.selectionHelper.selectedItems];

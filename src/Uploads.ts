@@ -30,6 +30,8 @@ class UploadTrack extends Track {
         progress?: number;
         state: 'pending' | 'uploading' | 'processing' | 'error' | 'done' | 'cancelled';
         // With prefix "uploads_", these are i18n keys 
+
+        file?: File;
     };
 }
 
@@ -208,6 +210,7 @@ export var uploads = new class extends TrackList {
         };
         var track = new UploadTrack({
             ...apitrack,
+            blob: file,
             _upload: {
                 state: 'pending'
             }

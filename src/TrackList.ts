@@ -19,6 +19,7 @@ export class Track implements Api.Track {
     artist: string;
     url: string;
     size: number;
+    blob?: Blob;
     _bind?: {
         position?: number;
         list?: TrackList;
@@ -365,12 +366,13 @@ export class TrackListView extends ListContentView {
         var playing = playerCore.track;
         if (item === undefined) {
             item = (playing?._bind?.list === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
-                playing ? this.listView.find(x => x.track.id === playing.id) : null;
+                (playing && this.listView.find(x => x.track === playing))
+                ?? this.listView.find(x => x.track.id === playing.id);
             this.curPlaying.set(item);
         } else if (playing) {
             var track = item.track;
             if ((playing._bind?.list === this.list && track === playing)
-                || (track.id === playing.id)) {
+                || (!this.curPlaying && track.id === playing.id)) {
                 this.curPlaying.set(item);
             }
         }

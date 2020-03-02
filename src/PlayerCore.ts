@@ -102,11 +102,22 @@ export var playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
+    loadBlob(blob: Blob, play?: boolean) {
+        var reader = new FileReader();
+        reader.onload = (ev) => {
+            this.audio.src = reader.result as string;
+            this.audio.load();
+            if (play) this.play();
+        };
+        reader.readAsDataURL(blob);
+    }
     setTrack(track: Track) {
         var oldTrack = this.track;
         this.track = track;
         this.onTrackChanged.invoke();
-        if (oldTrack?.url !== this.track?.url) this.loadUrl(null);
+        if (oldTrack?.url !== this.track?.url
+            || (track?.blob && track.blob !== oldTrack?.blob))
+            this.loadUrl(null);
         this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
     }
     playTrack(track: Track, forceStart?: boolean) {
@@ -115,8 +126,13 @@ export var playerCore = new class PlayerCore {
         this.play();
     }
     play() {
-        if (this.track && !this.audio.src)
-            this.loadUrl(api.processUrl(this.track.url));
+        if (this.track && !this.audio.readyState)
+            if (this.track.blob) {
+                this.loadBlob(this.track.blob, true);
+                return;
+            } else {
+                this.loadUrl(api.processUrl(this.track.url));
+            }
         this.audio.play();
     }
     pause() {
