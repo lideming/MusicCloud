@@ -165,6 +165,10 @@ export class ListIndex {
             path: 'my/lists/' + id
         });
         this.getViewItem(id)?.remove();
+        const curContent = ui.content.current;
+        if (curContent instanceof TrackListView && curContent.list.id === id) {
+            ui.content.setCurrent(null);
+        }
     }
 
     private nextId = -100;

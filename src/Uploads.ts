@@ -243,38 +243,37 @@ export var uploads = new class extends TrackList {
 
         var respTrack: Api.Track;
 
+        var onprogerss = (ev) => {
+            if (ev.lengthComputable) {
+                track._upload.progress = ev.loaded / ev.total;
+                track._upload.view?.updateDom();
+            }
+        };
+
         if (uploadReq.mode === 'direct') {
             const jsonBlob = new Blob([JSON.stringify(apitrack)]);
             const finalBlob = new Blob([
                 BlockFormat.encodeBlock(jsonBlob),
                 BlockFormat.encodeBlock(file)
             ]);
-            respTrack = await api.post({
-                path: 'tracks/newfile',
-                mode: 'raw',
-                obj: finalBlob,
-                headers: { 'Content-Type': 'application/x-mcloud-upload' }
-            }) as Api.Track;
+            const xhr = await api.upload({
+                method: 'POST',
+                url: 'tracks/newfile',
+                body: finalBlob,
+                auth: api.defaultAuth,
+                contentType: 'application/x-mcloud-upload',
+                onprogerss
+            });
+            respTrack = JSON.parse(xhr.responseText);
         } else if (uploadReq.mode === 'put-url') {
             console.info('uploading to url', uploadReq);
 
-            const xhr = new XMLHttpRequest();
-            const whenXhrComplete = new Promise((resolve, reject) => {
-                xhr.onload = ev => resolve();
-                xhr.onerror = ev => reject("XHR error");
+            await api.upload({
+                method: uploadReq.method,
+                url: uploadReq.url,
+                body: file,
+                onprogerss
             });
-            xhr.upload.onprogress = (ev) => {
-                if (ev.lengthComputable) {
-                    track._upload.progress = ev.loaded / ev.total;
-                    track._upload.view?.updateDom();
-                }
-            };
-
-            xhr.open(uploadReq.method, uploadReq.url);
-            xhr.send(file);
-            await whenXhrComplete;
-
-            if (xhr.status < 200 || xhr.status >= 300) throw new Error("HTTP status " + xhr.status);
 
             console.info('posting result to api');
             track.setState('processing');

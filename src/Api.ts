@@ -70,6 +70,34 @@ export var api = new class {
     delete(arg: PostOptions) {
         return this.post({ ...arg, method: 'DELETE' });
     }
+    async upload(arg: {
+        method: 'POST' | 'PUT';
+        url: string;
+        body: any;
+        auth?: string;
+        contentType?: string;
+        onprogerss?: (e: ProgressEvent) => void;
+    }) {
+        const xhr = new XMLHttpRequest();
+        const whenXhrComplete = new Promise((resolve, reject) => {
+            xhr.onload = ev => resolve();
+            xhr.onerror = ev => reject("XHR error");
+        });
+        xhr.upload.onprogress = arg.onprogerss;
+
+        xhr.open(arg.method, this.processUrl(arg.url));
+
+        if (arg.auth) xhr.setRequestHeader('Authorization', arg.auth);
+        if (arg.contentType) xhr.setRequestHeader('Content-Type', arg.contentType);
+        
+        xhr.send(arg.body);
+
+        await whenXhrComplete;
+
+        if (xhr.status < 200 || xhr.status >= 300) throw new Error("HTTP status " + xhr.status);
+
+        return xhr;
+    }
     private async checkResp(options: { status?: number | false; }, resp: Response) {
         if (options.status !== false &&
             ((options.status !== undefined && resp.status != options.status)

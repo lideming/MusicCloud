@@ -84,6 +84,26 @@ exports.api = new class {
     delete(arg) {
         return this.post(Object.assign(Object.assign({}, arg), { method: 'DELETE' }));
     }
+    upload(arg) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const xhr = new XMLHttpRequest();
+            const whenXhrComplete = new Promise((resolve, reject) => {
+                xhr.onload = ev => resolve();
+                xhr.onerror = ev => reject("XHR error");
+            });
+            xhr.upload.onprogress = arg.onprogerss;
+            xhr.open(arg.method, this.processUrl(arg.url));
+            if (arg.auth)
+                xhr.setRequestHeader('Authorization', arg.auth);
+            if (arg.contentType)
+                xhr.setRequestHeader('Content-Type', arg.contentType);
+            xhr.send(arg.body);
+            yield whenXhrComplete;
+            if (xhr.status < 200 || xhr.status >= 300)
+                throw new Error("HTTP status " + xhr.status);
+            return xhr;
+        });
+    }
     checkResp(options, resp) {
         return __awaiter(this, void 0, void 0, function* () {
             if (options.status !== false &&
@@ -929,6 +949,10 @@ class ListIndex {
                 path: 'my/lists/' + id
             });
             (_a = this.getViewItem(id)) === null || _a === void 0 ? void 0 : _a.remove();
+            const curContent = UI_1.ui.content.current;
+            if (curContent instanceof TrackList_1.TrackListView && curContent.list.id === id) {
+                UI_1.ui.content.setCurrent(null);
+            }
         });
     }
     /**
@@ -2758,38 +2782,37 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 }
             });
             var respTrack;
+            var onprogerss = (ev) => {
+                var _a;
+                if (ev.lengthComputable) {
+                    track._upload.progress = ev.loaded / ev.total;
+                    (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
+                }
+            };
             if (uploadReq.mode === 'direct') {
                 const jsonBlob = new Blob([JSON.stringify(apitrack)]);
                 const finalBlob = new Blob([
                     BlockFormat.encodeBlock(jsonBlob),
                     BlockFormat.encodeBlock(file)
                 ]);
-                respTrack = (yield Api_1.api.post({
-                    path: 'tracks/newfile',
-                    mode: 'raw',
-                    obj: finalBlob,
-                    headers: { 'Content-Type': 'application/x-mcloud-upload' }
-                }));
+                const xhr = yield Api_1.api.upload({
+                    method: 'POST',
+                    url: 'tracks/newfile',
+                    body: finalBlob,
+                    auth: Api_1.api.defaultAuth,
+                    contentType: 'application/x-mcloud-upload',
+                    onprogerss
+                });
+                respTrack = JSON.parse(xhr.responseText);
             }
             else if (uploadReq.mode === 'put-url') {
                 console.info('uploading to url', uploadReq);
-                const xhr = new XMLHttpRequest();
-                const whenXhrComplete = new Promise((resolve, reject) => {
-                    xhr.onload = ev => resolve();
-                    xhr.onerror = ev => reject("XHR error");
+                yield Api_1.api.upload({
+                    method: uploadReq.method,
+                    url: uploadReq.url,
+                    body: file,
+                    onprogerss
                 });
-                xhr.upload.onprogress = (ev) => {
-                    var _a;
-                    if (ev.lengthComputable) {
-                        track._upload.progress = ev.loaded / ev.total;
-                        (_a = track._upload.view) === null || _a === void 0 ? void 0 : _a.updateDom();
-                    }
-                };
-                xhr.open(uploadReq.method, uploadReq.url);
-                xhr.send(file);
-                yield whenXhrComplete;
-                if (xhr.status < 200 || xhr.status >= 300)
-                    throw new Error("HTTP status " + xhr.status);
                 console.info('posting result to api');
                 track.setState('processing');
                 respTrack = (yield Api_1.api.post({
