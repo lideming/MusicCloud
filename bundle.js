@@ -1861,6 +1861,7 @@ class TrackListView extends ListContentView_1.ListContentView {
     appendListView() {
         super.appendListView();
         var lv = this.listView;
+        lv.dom.classList.add('tracklistview');
         this.list.listView = lv;
         lv.dragging = true;
         if (this.list.canEdit)

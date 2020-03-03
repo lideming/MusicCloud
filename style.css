@@ -260,8 +260,8 @@ html, body {
     margin: 5px;
 }
 
-.tracklist {
-    padding: 10px 0;
+.tracklistview {
+    padding-bottom: 30px;
     touch-action: pan-y pinch-zoom;
 }
 

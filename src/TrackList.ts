@@ -340,6 +340,7 @@ export class TrackListView extends ListContentView {
     protected appendListView() {
         super.appendListView();
         var lv = this.listView;
+        lv.dom.classList.add('tracklistview');
         this.list.listView = lv;
         lv.dragging = true;
         if (this.list.canEdit) lv.moveByDragging = true;
