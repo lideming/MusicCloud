@@ -9,11 +9,36 @@ html {
 body {
     margin: 0;
     font-family: sans-serif;
+
+    --color-bg: white;
+    --color-text: black;
+    --color-text-gray: gray;
+    --color-primary: hsl(5, 100%, 67%);
+    --color-primary-darker: hsl(5, 100%, 60%);
+    --color-primary-dark: hsl(5, 100%, 40%);
+    --color-primary-light: hsl(5, 100%, 83%);
+    --color-primary-lighter: hsl(5, 100%, 70%);
+    --color-fg-11: #111111;
+    --color-fg-22: #222222;
+    --color-fg-33: #333333;
+    --color-bg-cc: #cccccc;
+    --color-bg-dd: #dddddd;
+    --color-bg-ee: #eeeeee;
+    --color-bg-f8: #f8f8f8;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 body.dark {
-    background: black;
-    color: #ccc;
+    --color-bg: black;
+    --color-text: #ccc;
+    --color-fg-11: #eeeeee;
+    --color-fg-22: #dddddd;
+    --color-fg-33: #cccccc;
+    --color-bg-f8: #080808;
+    --color-bg-ee: #111111;
+    --color-bg-dd: #222222;
+    --color-bg-cc: #333333;
 }
 
 .no-transition, .no-transition * {
@@ -21,7 +46,7 @@ body.dark {
 }
 
 .changing-theme, .changing-theme * {
-    transition: background-color .3s, color .3s !important;
+    transition: background-color .3s, color .3s, border-color .3s !important;
 }
 
 .fading-out {
@@ -93,22 +118,14 @@ html, body {
 
 #content-outer {
     width: calc(100% - 200px);
-}
-
-.dark #content-outer {
-    background: black;
+    background: var(--color-bg);
 }
 
 #sidebar {
     width: 200px;
-    background: #f8f8f8;
-    border-right: 1px solid #ccc;
+    background: var(--color-bg-f8);
+    border-right: 1px solid var(--color-bg-cc);
     touch-action: pan-y pinch-zoom;
-}
-
-.dark #sidebar {
-    background: #080808;
-    border-right-color: #333;
 }
 
 @media only screen and (min-width: 800px) {
@@ -167,12 +184,8 @@ html, body {
     line-height: 50px;
     font-size: 20px;
     font-weight: 700;
-    background: #eee;
-    color: hsl(5, 100%, 67%);
-}
-
-.dark .sidebar-toggle {
-    background: #222;
+    background: var(--color-bg-ee);
+    color: var(--color-primary);
 }
 
 .content-header {
@@ -180,16 +193,12 @@ html, body {
     position: sticky;
     top: 0;
     padding: 10px;
-    background: white;
+    background: var(--color-bg);
     animation: showing-top .3s;
     z-index: 1;
     cursor: default;
     font-size: 16px;
     line-height: 1.25;
-}
-
-.dark .content-header {
-    background: black;
 }
 
 .float-sidebar .content-header {
@@ -199,7 +208,7 @@ html, body {
 .content-header .catalog {
     font-size: 120%;
     line-height: 1;
-    color: gray;
+    color: var(--color-text-gray);
     padding: 5px;
     margin-left: 5px;
 }
@@ -220,11 +229,7 @@ html, body {
 }
 
 .content-header .title.editable:hover {
-    background: #eeeeee
-}
-
-.dark .content-header .title.editable:hover {
-    background: #111111
+    background: var(--color-bg-ee)
 }
 
 .content-header .title.editing {
@@ -239,12 +244,8 @@ html, body {
     font: inherit;
     border: none;
     outline: none;
-    background: #dddddd;
-}
-
-.dark .content-header .title input {
-    color: #ccc;
-    background: #222222;
+    background: var(--color-bg-dd);
+    color: var(--color-text);
 }
 
 .content-header .actions {
@@ -255,7 +256,7 @@ html, body {
 .content-header .actions .action {
     display: inline-block;
     vertical-align: middle;
-    color: gray;
+    color: var(--color-text-gray);
     margin: 5px;
 }
 
@@ -285,11 +286,7 @@ a.item {
 }
 
 .item:hover, .dragover {
-    background: #eee;
-}
-
-.dark .item:hover, .dark .dragover {
-    background: #111;
+    background: var(--color-bg-ee);
 }
 
 .dragover-placeholder {
@@ -312,16 +309,12 @@ a.item {
 }
 
 .item.active {
-    background: #ddd;
-}
-
-.dark .item.active {
-    background: #222;
+    background: var(--color-bg-dd);
 }
 
 .section-header {
     display: flex;
-    color: gray;
+    color: var(--color-text-gray);
     padding: 10px;
     font-size: 85%;
     position: sticky;
@@ -329,11 +322,7 @@ a.item {
 }
 
 #sidebar .section-header {
-    background: #f8f8f8;
-}
-
-.dark #sidebar .section-header {
-    background: #080808;
+    background: var(--color-bg-f8);
 }
 
 .section-title {
@@ -352,7 +341,7 @@ a.item {
     display: inline-block;
     text-align: center;
     min-width: 2em;
-    color: gray;
+    color: var(--color-text-gray);
     vertical-align: middle;
 }
 
@@ -368,7 +357,7 @@ a.item {
 }
 
 .trackitem .artist, #bottombar-trackinfo .artist {
-    color: #888;
+    color: var(--color-text-gray);
 }
 
 .trackitem.uploads-item .name {
@@ -403,7 +392,7 @@ a.item {
 
 #bottombar-trackinfo .artist::before {
     content: " - ";
-    color: #888;
+    color: var(--color-text-gray);
 }
 
 #main-container::after {
@@ -418,23 +407,15 @@ a.item {
     height: 60px;
     transform: translate(0, 0);
     transition: transform .3s;
-    background: #ddd;
+    background: var(--color-bg-dd);
     box-shadow: 0 0px 3px #999;
     z-index: 10001;
-}
-
-.dark #bottombar {
-    background: #222222;
 }
 
 .bottompinned #bottombar {
     box-sizing: content-box;
     box-shadow: none;
-    border-top: 1px solid #ccc;
-}
-
-.dark.bottompinned #bottombar {
-    border-top-color: #333;
+    border-top: 1px solid var(--color-bg-cc);
 }
 
 #bottombar.show {
@@ -542,13 +523,9 @@ a.item {
     content: "";
     height: 1px;
     margin: 0%;
-    background: black;
+    background: var(--color-text);
     display: block;
     animation: fadein .5s 1s backwards;
-}
-
-.dark .loading-indicator.running .loading-indicator-inner::after {
-    background: #ccc;
 }
 
 .loading-indicator.running .loading-indicator-text {
@@ -646,11 +623,7 @@ a.item {
 }
 
 #sidebar-login, #sidebar-features {
-    border-bottom: 1px solid #ccc;
-}
-
-.dark #sidebar-login, .dark #sidebar-features {
-    border-bottom-color: #333;
+    border-bottom: 1px solid var(--color-bg-cc);
 }
 
 .overlay {
@@ -662,6 +635,10 @@ a.item {
     bottom: 0;
     animation: fadein .3s;
     z-index: 10000;
+}
+
+.dark .overlay {
+    background: rgba(0, 0, 0, .4);
 }
 
 .overlay.nobg {
@@ -682,7 +659,7 @@ a.item {
     font-size: 14px;
     position: relative;
     overflow: auto;
-    background: white;
+    background: var(--color-bg);
     border-radius: 5px;
     box-shadow: 0 0 6px #666;
     animation: dialogin .3s ease-out;
@@ -697,20 +674,12 @@ a.item {
     transform: scale(.85);
 }
 
-.dark .dialog {
-    background: black;
-}
-
 .dialog-title, .dialog-content, .dialog-bottom {
     padding: 10px;
 }
 
 .dialog-title {
-    background: #f0f0f0;
-}
-
-.dark .dialog-title {
-    background: #101010;
+    background: var(--color-bg-ee);
 }
 
 .dialog-content {
@@ -724,7 +693,7 @@ a.item {
 
 .input-label {
     font-size: 80%;
-    color: gray;
+    color: var(--color-text-gray);
     margin: 5px 0 3px 0;
 }
 
@@ -734,24 +703,24 @@ a.item {
     padding: 5px;
     margin: 5px 0;
     border: solid 1px gray;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 .dark .input-text {
-    background: black;
-    color: #ccc;
     border: solid 1px #ccc;
 }
 
 .labeled-input:focus-within .input-label {
-    color: hsl(5, 100%, 60%);
+    color: var(--color-primary-darker);
 }
 
 .input-text:focus {
-    border-color: hsl(5, 100%, 60%);
+    border-color: var(--color-primary-darker);
 }
 
 .input-text:active {
-    border-color: hsl(5, 100%, 40%);
+    border-color: var(--color-primary-dark);
 }
 
 .btn {
@@ -761,7 +730,7 @@ a.item {
     padding: 0 .4em;
     min-width: 3em;
     line-height: 1.5em;
-    background: hsl(5, 100%, 67%);
+    background: var(--color-primary);
     color: white;
     box-shadow: 0 0 3px gray;
     cursor: pointer;
@@ -775,17 +744,17 @@ a.item {
 
 .btn:hover {
     transition: all .05s;
-    background: hsl(5, 100%, 60%);
+    background: var(--color-primary-darker);
 }
 
 .btn.btn-down, .btn:active {
     transition: all .05s;
-    background: hsl(5, 100%, 40%);
+    background: var(--color-primary-dark);
     box-shadow: 0 0 1px gray;
 }
 
 .btn.disabled {
-    background: hsl(5, 100%, 83%);
+    background: var(--color-primary-light);
 }
 
 .dialog .btn {
@@ -798,16 +767,12 @@ a.item {
 
 .tab {
     display: inline-block;
-    color: gray;
+    color: var(--color-text-gray);
     margin: 0 5px;
 }
 
 .tab.active {
-    color: black;
-}
-
-.dark .tab.active {
-    color: #ccc;
+    color: var(--color-text);
 }
 
 *[hidden] {
@@ -830,27 +795,19 @@ a.item {
     align-items: center;
     justify-content: center;
     min-height: 100px;
-    background: #eeeeee;
+    background: var(--color-bg-ee);
     animation: showing-top .3s;
-}
-
-.dark .upload-area {
-    background: #111111;
 }
 
 .context-menu {
     position: absolute;
     overflow: hidden;
-    background: white;
+    background: var(--color-bg);
     border: solid 1px #777;
     box-shadow: 0 0px 5px rgb(180, 180, 180);
     max-width: 450px;
     outline: none;
     z-index: 10001;
-}
-
-.dark .context-menu {
-    background: black;
 }
 
 .context-menu .item.dangerous {
@@ -866,7 +823,7 @@ a.item {
 
 .menu-info {
     white-space: pre-wrap;
-    color: gray;
+    color: var(--color-text-gray);
     padding: 5px 10px;
     animation: showing .3s;
     cursor: default;
@@ -900,12 +857,12 @@ a.item {
 
 .comment .username {
     float: left;
-    color: #777777;
+    color: var(--color-text-gray);
 }
 
 .comment .date {
     float: right;
-    color: #777777;
+    color: var(--color-text-gray);
 }
 
 .comment .content {
@@ -926,13 +883,9 @@ a.item {
     padding: 10px;
     border-radius: 5px;
     box-shadow: 0 0 6px #666;
-    background: white;
+    background: var(--color-bg);
     white-space: pre-wrap;
     animation: showing-right .3s;
-}
-
-.dark .toast {
-    background: black;
 }
 
 .btn-progress {
@@ -956,12 +909,12 @@ a.item {
     top: 0;
     left: 0;
     height: 100%;
-    background-color: #ff6659;
+    background-color: var(--color-primary-lighter);
     transition: all .2s;
 }
 
 .btn:hover .btn-fill {
-    background-color: hsl(5, 100%, 60%);
+    background-color: var(--color-primary-darker);
     transition: all .05s;
 }
 
