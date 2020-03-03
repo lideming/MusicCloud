@@ -131,6 +131,9 @@ export function I(literals: TemplateStringsArray, ...placeholders: any[]) {
 i18n.add2dArray(JSON.parse(`[
     ["en", "zh"],
     ["English", "中文"],
+    ["Language: {0}", "语言：{0}"],
+    [" (auto-detected)", "（自动检测）"],
+    ["Reload to fully apply changes", "刷新以完全应用更改"],
     ["Pin", "固定"],
     ["Unpin", "浮动"],
     ["Pause", "暂停"],
@@ -213,8 +216,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Select all", "全选"],
     ["Cancel", "取消"],
     ["Settings", "设置"],
-    ["Switch to light theme", "切换到亮色主题"],
-    ["Switch to dark theme", "切换到暗色主题"],
+    ["Color theme: {0}", "配色主题：{0}"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));
@@ -235,4 +237,6 @@ i18n.add2dArray([
     ["msgbox_yes", "Yes", "是"],
     ["msgbox_ok", "OK", "确定"],
     ["msgbox_cancel", "Cancel", "取消"],
+    ["colortheme_light", "light", "亮色"],
+    ["colortheme_dark", "dark", "暗色"],
 ]);

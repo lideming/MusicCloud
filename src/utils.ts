@@ -389,12 +389,17 @@ export class SettingItem<T> {
     key: string;
     type: SiType<T>;
     data: T;
+    isInitial: boolean;
     onRender: (obj: T) => void;
     constructor(key: string, type: 'bool' | 'str' | 'json' | SiType<T>, initial: T) {
         this.key = key;
         type = this.type = typeof type == 'string' ? SettingItem.types[type] : type;
         if (!type || !type.serialize || !type.deserialize) throw new Error("invalid 'type' arugment");
-        var str = key ? localStorage.getItem(key) : null;
+        this.readFromStorage(initial);
+    }
+    readFromStorage(initial: T) {
+        var str = this.key ? localStorage.getItem(this.key) : null;
+        this.isInitial = !str;
         this.set(str ? this.type.deserialize(str) : initial, true);
     }
     render(fn: (obj: T) => void, dontRaiseNow?: boolean) {
@@ -422,10 +427,12 @@ export class SettingItem<T> {
         localStorage.removeItem(this.key);
     }
     save() {
+        this.isInitial = false;
         localStorage.setItem(this.key, this.type.serialize(this.data));
     }
     set(data: T, dontSave?: boolean) {
         this.data = data;
+        this.isInitial = false;
         this.onRender && this.onRender(data);
         if (!dontSave && this.key) this.save();
     };

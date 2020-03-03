@@ -105,18 +105,21 @@ export const ui = new class {
     };
     lang = new class {
         availableLangs = ['en', 'zh'];
-        siLang = new SettingItem('mcloud-lang', 'str', I18n.detectLanguage(this.availableLangs));
+        siLang = new SettingItem('mcloud-lang', 'str', '');
+        curLang: string;
         init() {
             this.siLang.render((lang) => {
+                if (!lang) lang = I18n.detectLanguage(this.availableLangs);
+                this.curLang = lang;
                 i18n.curLang = lang;
                 document.body.lang = lang;
+                console.log(`Current language: '${i18n.curLang}' - '${I`English`}'`);
+                i18n.renderElements(document.querySelectorAll('.i18ne'));
             });
-            console.log(`Current language: '${i18n.curLang}' - '${I`English`}'`);
-            i18n.renderElements(document.querySelectorAll('.i18ne'));
         }
-        setLang(lang: string) {
-            this.siLang.set(lang);
-            window.location.reload();
+        setLang(lang: string, reload?: boolean) {
+            this.siLang.set(lang ?? '');
+            if (reload === undefined || reload) window.location.reload();
         }
     };
     bottomBar = new class {

@@ -7,7 +7,7 @@ export type ViewArg = View | HTMLElement;
 
 export class View {
     constructor(dom?: BuildDomExpr) {
-        if (dom) this._dom = utils.buildDOM(dom) as HTMLElement;
+        if (dom) this.domExprCreated(dom);
     }
 
     public parentView?: ContainerView<View>;
@@ -26,10 +26,13 @@ export class View {
     public ensureDom() {
         if (!this._dom) {
             var r = this.createDom();
-            this._dom = utils.buildDOM(r, this.domctx) as HTMLElement;
-            this.postCreateDom();
-            this.updateDom();
+            this.domExprCreated(r);
         }
+    }
+    private domExprCreated(r: BuildDomExpr) {
+        this._dom = utils.buildDOM(r, this.domctx) as HTMLElement;
+        this.postCreateDom();
+        this.updateDom();
     }
     protected createDom(): BuildDomExpr {
         return document.createElement('div');
@@ -101,6 +104,11 @@ export class ContainerView<T extends View> extends View {
     }
     removeAllView() {
         while (this.length) this.removeView(this.length - 1);
+    }
+    updateChildrenDom() {
+        for (const item of this.items) {
+            item.updateDom();
+        }
     }
     protected _ensureItem(item: T | number) {
         if (typeof item === 'number') item = this.items[item];

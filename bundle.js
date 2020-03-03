@@ -541,6 +541,9 @@ exports.I = I;
 exports.i18n.add2dArray(JSON.parse(`[
     ["en", "zh"],
     ["English", "中文"],
+    ["Language: {0}", "语言：{0}"],
+    [" (auto-detected)", "（自动检测）"],
+    ["Reload to fully apply changes", "刷新以完全应用更改"],
     ["Pin", "固定"],
     ["Unpin", "浮动"],
     ["Pause", "暂停"],
@@ -623,8 +626,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Select all", "全选"],
     ["Cancel", "取消"],
     ["Settings", "设置"],
-    ["Switch to light theme", "切换到亮色主题"],
-    ["Switch to dark theme", "切换到暗色主题"],
+    ["Color theme: {0}", "配色主题：{0}"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));
@@ -644,6 +646,8 @@ exports.i18n.add2dArray([
     ["msgbox_yes", "Yes", "是"],
     ["msgbox_ok", "OK", "确定"],
     ["msgbox_cancel", "Cancel", "取消"],
+    ["colortheme_light", "light", "亮色"],
+    ["colortheme_dark", "dark", "暗色"],
 ]);
 
 },{}],4:[function(require,module,exports){
@@ -1469,30 +1473,59 @@ exports.settingsUI = new class {
 class SettingsDialog extends viewlib_1.Dialog {
     constructor() {
         super();
-        this.title = I18n_1.I `Settings`;
         this.btnSwitchTheme = new viewlib_1.ButtonView({ type: 'big' });
+        this.btnSwitchLang = new viewlib_1.ButtonView({ type: 'big' });
+        this.reloadShown = false;
         this.addContent(this.btnSwitchTheme);
         this.btnSwitchTheme.onclick = () => {
             UI_1.ui.theme.set((UI_1.ui.theme.current == 'light') ? 'dark' : 'light');
             this.updateDom();
         };
-        this.addContent(new viewlib_1.View({
+        this.addContent(this.btnSwitchLang);
+        this.btnSwitchLang.onclick = () => {
+            var origUsingLang = UI_1.ui.lang.curLang;
+            var curlang = UI_1.ui.lang.siLang.data;
+            var langs = ['', ...UI_1.ui.lang.availableLangs];
+            curlang = langs[(langs.indexOf(curlang) + 1) % langs.length];
+            UI_1.ui.lang.siLang.set(curlang);
+            if (origUsingLang != UI_1.ui.lang.curLang)
+                this.showReload();
+            this.updateDom();
+        };
+        this.addContent(this.bottom = new viewlib_1.View({
             tag: 'div',
             style: 'margin: 5px 0;',
             child: [
                 { tag: 'span', text: 'MusicCloud' },
                 {
                     tag: 'a', style: 'float: right; color: inherit;',
-                    text: I18n_1.I `Source code`, href: 'https://github.com/lideming/MusicCloud',
+                    text: () => I18n_1.I `Source code`, href: 'https://github.com/lideming/MusicCloud',
                     target: '_blank'
                 },
             ]
         }));
     }
+    showReload() {
+        if (this.reloadShown)
+            return;
+        this.reloadShown = true;
+        this.content.addView(new viewlib_1.View({
+            tag: 'div.clickable',
+            style: 'color: var(--color-primary); text-align: center; margin: 10px 0;',
+            text: () => I18n_1.I `Reload to fully apply changes`,
+            onclick: () => {
+                window.location.reload();
+            }
+        }), this.bottom.position);
+    }
     updateDom() {
+        this.title = I18n_1.I `Settings`;
         super.updateDom();
-        this.btnSwitchTheme.text = (UI_1.ui.theme.current == 'light') ?
-            I18n_1.I `Switch to dark theme` : I18n_1.I `Switch to light theme`;
+        this.btnSwitchTheme.text = I18n_1.I `Color theme: ${I18n_1.i18n.get('colortheme_' + UI_1.ui.theme.current)}`;
+        this.btnSwitchLang.text = I18n_1.I `Language: ${I18n_1.I `English`}`;
+        if (!UI_1.ui.lang.siLang.data)
+            this.btnSwitchLang.text += I18n_1.I ` (auto-detected)`;
+        this.content.updateChildrenDom();
     }
 }
 
@@ -2109,19 +2142,23 @@ exports.ui = new class {
         this.lang = new class {
             constructor() {
                 this.availableLangs = ['en', 'zh'];
-                this.siLang = new utils_1.SettingItem('mcloud-lang', 'str', I18n_1.I18n.detectLanguage(this.availableLangs));
+                this.siLang = new utils_1.SettingItem('mcloud-lang', 'str', '');
             }
             init() {
                 this.siLang.render((lang) => {
+                    if (!lang)
+                        lang = I18n_1.I18n.detectLanguage(this.availableLangs);
+                    this.curLang = lang;
                     I18n_1.i18n.curLang = lang;
                     document.body.lang = lang;
+                    console.log(`Current language: '${I18n_1.i18n.curLang}' - '${I18n_1.I `English`}'`);
+                    I18n_1.i18n.renderElements(document.querySelectorAll('.i18ne'));
                 });
-                console.log(`Current language: '${I18n_1.i18n.curLang}' - '${I18n_1.I `English`}'`);
-                I18n_1.i18n.renderElements(document.querySelectorAll('.i18ne'));
             }
-            setLang(lang) {
-                this.siLang.set(lang);
-                window.location.reload();
+            setLang(lang, reload) {
+                this.siLang.set(lang !== null && lang !== void 0 ? lang : '');
+                if (reload === undefined || reload)
+                    window.location.reload();
             }
         };
         this.bottomBar = new class {
@@ -3830,7 +3867,11 @@ class SettingItem {
         type = this.type = typeof type == 'string' ? SettingItem.types[type] : type;
         if (!type || !type.serialize || !type.deserialize)
             throw new Error("invalid 'type' arugment");
-        var str = key ? localStorage.getItem(key) : null;
+        this.readFromStorage(initial);
+    }
+    readFromStorage(initial) {
+        var str = this.key ? localStorage.getItem(this.key) : null;
+        this.isInitial = !str;
         this.set(str ? this.type.deserialize(str) : initial, true);
     }
     render(fn, dontRaiseNow) {
@@ -3863,10 +3904,12 @@ class SettingItem {
         localStorage.removeItem(this.key);
     }
     save() {
+        this.isInitial = false;
         localStorage.setItem(this.key, this.type.serialize(this.data));
     }
     set(data, dontSave) {
         this.data = data;
+        this.isInitial = false;
         this.onRender && this.onRender(data);
         if (!dontSave && this.key)
             this.save();
@@ -4058,7 +4101,7 @@ class View {
     constructor(dom) {
         this.domctx = new utils_1.BuildDOMCtx();
         if (dom)
-            this._dom = utils_1.utils.buildDOM(dom);
+            this.domExprCreated(dom);
     }
     get position() { return this._position; }
     get domCreated() { return !!this._dom; }
@@ -4071,10 +4114,13 @@ class View {
     ensureDom() {
         if (!this._dom) {
             var r = this.createDom();
-            this._dom = utils_1.utils.buildDOM(r, this.domctx);
-            this.postCreateDom();
-            this.updateDom();
+            this.domExprCreated(r);
         }
+    }
+    domExprCreated(r) {
+        this._dom = utils_1.utils.buildDOM(r, this.domctx);
+        this.postCreateDom();
+        this.updateDom();
     }
     createDom() {
         return document.createElement('div');
@@ -4142,6 +4188,11 @@ class ContainerView extends View {
     removeAllView() {
         while (this.length)
             this.removeView(this.length - 1);
+    }
+    updateChildrenDom() {
+        for (const item of this.items) {
+            item.updateDom();
+        }
     }
     _ensureItem(item) {
         if (typeof item === 'number')
