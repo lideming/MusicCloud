@@ -33,7 +33,7 @@ exports.api = new class {
         var _a;
         arg = arg || {};
         var headers = {};
-        var auth = (_a = arg.auth, (_a !== null && _a !== void 0 ? _a : this.defaultAuth));
+        var auth = (_a = arg.auth) !== null && _a !== void 0 ? _a : this.defaultAuth;
         if (auth)
             headers['Authorization'] = auth;
         return headers;
@@ -68,7 +68,7 @@ exports.api = new class {
             headers = Object.assign(Object.assign({}, headers), arg.headers);
             var resp = yield this._fetch(this.baseUrl + arg.path, {
                 body: body,
-                method: (_a = arg.method, (_a !== null && _a !== void 0 ? _a : 'POST')),
+                method: (_a = arg.method) !== null && _a !== void 0 ? _a : 'POST',
                 headers: headers
             });
             yield this.checkResp(arg, resp);
@@ -273,7 +273,7 @@ class CommentsView {
     createContentView() {
         var _a;
         var view = new CommentsContentView(this);
-        view.title = (_a = this.title, (_a !== null && _a !== void 0 ? _a : utils_1.I `Comments`));
+        view.title = (_a = this.title) !== null && _a !== void 0 ? _a : utils_1.I `Comments`;
         return view;
     }
 }
@@ -915,9 +915,9 @@ class ListIndex {
         });
     }
     setIndex(index) {
-        var _a, _b;
+        var _a;
         this.listView.clear();
-        for (const item of (_b = (_a = index) === null || _a === void 0 ? void 0 : _a.lists, (_b !== null && _b !== void 0 ? _b : []))) {
+        for (const item of (_a = index === null || index === void 0 ? void 0 : index.lists) !== null && _a !== void 0 ? _a : []) {
             this.addListInfo(item);
         }
     }
@@ -1034,7 +1034,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
             tag: 'div.item.no-selection',
             style: 'display: flex',
             child: [
-                { tag: 'span.name.flex-1', text: () => { var _a, _b; return _b = (_a = this.listInfo) === null || _a === void 0 ? void 0 : _a.name, (_b !== null && _b !== void 0 ? _b : this.text); } },
+                { tag: 'span.name.flex-1', text: () => { var _a, _b; return (_b = (_a = this.listInfo) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : this.text; } },
                 {
                     tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;',
                     update: (dom) => {
@@ -1043,7 +1043,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
                     },
                 }
             ],
-            onclick: (ev) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev); }
+            onclick: (ev) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, ev); }
         };
     }
 }
@@ -1248,7 +1248,7 @@ exports.playerCore = new class PlayerCore {
     get currentTime() { var _a; return (_a = this.audio) === null || _a === void 0 ? void 0 : _a.currentTime; }
     set currentTime(val) { this.audio.currentTime = val; }
     get duration() { var _a; return (_a = this.audio) === null || _a === void 0 ? void 0 : _a.duration; }
-    get volume() { var _a, _b; return _b = (_a = this.audio) === null || _a === void 0 ? void 0 : _a.volume, (_b !== null && _b !== void 0 ? _b : 1); }
+    get volume() { var _a, _b; return (_b = (_a = this.audio) === null || _a === void 0 ? void 0 : _a.volume) !== null && _b !== void 0 ? _b : 1; }
     set volume(val) {
         this.audio.volume = val;
         if (val !== this.siPlayer.data.volume) {
@@ -1332,12 +1332,12 @@ exports.playerCore = new class PlayerCore {
         reader.readAsDataURL(blob);
     }
     setTrack(track) {
-        var _a, _b, _c, _d;
+        var _a;
         var oldTrack = this.track;
         this.track = track;
         this.onTrackChanged.invoke();
-        if (((_a = oldTrack) === null || _a === void 0 ? void 0 : _a.url) !== ((_b = this.track) === null || _b === void 0 ? void 0 : _b.url)
-            || (((_c = track) === null || _c === void 0 ? void 0 : _c.blob) && track.blob !== ((_d = oldTrack) === null || _d === void 0 ? void 0 : _d.blob)))
+        if ((oldTrack === null || oldTrack === void 0 ? void 0 : oldTrack.url) !== ((_a = this.track) === null || _a === void 0 ? void 0 : _a.url)
+            || ((track === null || track === void 0 ? void 0 : track.blob) && track.blob !== (oldTrack === null || oldTrack === void 0 ? void 0 : oldTrack.blob)))
             this.loadUrl(null);
         this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
     }
@@ -1367,17 +1367,16 @@ exports.playingLoopModes = ['list-seq', 'list-loop', 'track-loop'];
 if (navigator['mediaSession']) {
     let mediaSession = navigator['mediaSession'];
     exports.playerCore.onTrackChanged.add(() => {
-        var _a, _b;
         try {
             var track = exports.playerCore.track;
             if (!track)
                 return;
             mediaSession.metadata = new MediaMetadata({
-                title: (_a = track) === null || _a === void 0 ? void 0 : _a.name,
-                artist: (_b = track) === null || _b === void 0 ? void 0 : _b.artist
+                title: track === null || track === void 0 ? void 0 : track.name,
+                artist: track === null || track === void 0 ? void 0 : track.artist
             });
         }
-        catch (_c) { }
+        catch (_a) { }
     });
     mediaSession.setActionHandler('play', () => exports.playerCore.play());
     mediaSession.setActionHandler('pause', () => exports.playerCore.pause());
@@ -1654,7 +1653,7 @@ class TrackList {
         var _a;
         if (force)
             this.fetching = null;
-        return this.fetching = (_a = this.fetching, (_a !== null && _a !== void 0 ? _a : this.fetchImpl()));
+        return this.fetching = (_a = this.fetching) !== null && _a !== void 0 ? _a : this.fetchImpl();
     }
     postToUser() {
         return this.posting = this.posting || this._post();
@@ -1759,20 +1758,20 @@ class TrackList {
         return this.contentView = this.contentView || new TrackListView(this);
     }
     getNextTrack(track, loopMode, offset) {
-        var _a, _b, _c, _d, _e, _f;
-        offset = (offset !== null && offset !== void 0 ? offset : 1);
+        var _a, _b, _c, _d, _e;
+        offset = offset !== null && offset !== void 0 ? offset : 1;
         var bind = track._bind;
         var position = bind.position;
-        if (((_a = bind) === null || _a === void 0 ? void 0 : _a.list) !== this)
+        if ((bind === null || bind === void 0 ? void 0 : bind.list) !== this)
             return null;
-        position = (_c = (position !== null && position !== void 0 ? position : (_b = this.listView.find(x => x.track === track)) === null || _b === void 0 ? void 0 : _b.position), (_c !== null && _c !== void 0 ? _c : (_d = this.listView.find(x => x.track.id === track.id)) === null || _d === void 0 ? void 0 : _d.position));
+        position = (_b = position !== null && position !== void 0 ? position : (_a = this.listView.find(x => x.track === track)) === null || _a === void 0 ? void 0 : _a.position) !== null && _b !== void 0 ? _b : (_c = this.listView.find(x => x.track.id === track.id)) === null || _c === void 0 ? void 0 : _c.position;
         if (position == null /* or undefined */)
             return null;
         if (loopMode == 'list-seq') {
-            return _e = this.tracks[position + offset], (_e !== null && _e !== void 0 ? _e : null);
+            return (_d = this.tracks[position + offset]) !== null && _d !== void 0 ? _d : null;
         }
         else if (loopMode == 'list-loop') {
-            return _f = this.tracks[utils_1.utils.mod(position + offset, this.tracks.length)], (_f !== null && _f !== void 0 ? _f : null);
+            return (_e = this.tracks[utils_1.utils.mod(position + offset, this.tracks.length)]) !== null && _e !== void 0 ? _e : null;
         }
         else if (loopMode == 'track-loop') {
             return track;
@@ -1890,15 +1889,15 @@ class TrackListView extends ListContentView_1.ListContentView {
         return view;
     }
     updateCurPlaying(item) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c;
         var playing = PlayerCore_1.playerCore.track;
         if (item === undefined) {
-            item = (((_b = (_a = playing) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) : (_c = (playing && this.listView.find(x => x.track === playing)), (_c !== null && _c !== void 0 ? _c : this.listView.find(x => x.track.id === playing.id)));
+            item = (((_a = playing === null || playing === void 0 ? void 0 : playing._bind) === null || _a === void 0 ? void 0 : _a.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) : (_b = (playing && this.listView.find(x => x.track === playing))) !== null && _b !== void 0 ? _b : this.listView.find(x => x.track.id === playing.id);
             this.curPlaying.set(item);
         }
         else if (playing) {
             var track = item.track;
-            if ((((_d = playing._bind) === null || _d === void 0 ? void 0 : _d.list) === this.list && track === playing)
+            if ((((_c = playing._bind) === null || _c === void 0 ? void 0 : _c.list) === this.list && track === playing)
                 || (!this.curPlaying && track.id === playing.id)) {
                 this.curPlaying.set(item);
             }
@@ -2042,7 +2041,7 @@ class ActionBtn extends viewlib_1.TextView {
     }
     postCreateDom() {
         super.postCreateDom();
-        this.dom.addEventListener('click', () => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a); });
+        this.dom.addEventListener('click', () => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this); });
     }
 }
 exports.ActionBtn = ActionBtn;
@@ -2061,7 +2060,7 @@ class SidebarItem extends viewlib_1.ListViewItem {
         return {
             tag: 'div.item.no-selection',
             text: () => this.text,
-            onclick: (e) => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, e); }
+            onclick: (e) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e); }
         };
     }
     bindContentView(viewFunc) {
@@ -2135,7 +2134,7 @@ exports.ui = new class {
                 this.inTransition = false;
             }
             setPinned(val) {
-                val = (val !== null && val !== void 0 ? val : !this.pinned);
+                val = val !== null && val !== void 0 ? val : !this.pinned;
                 this.pinned = val;
                 utils_1.utils.toggleClass(document.body, 'bottompinned', val);
                 this.btnPin.textContent = val ? I18n_1.I `Unpin` : I18n_1.I `Pin`;
@@ -2372,7 +2371,7 @@ exports.ui = new class {
             update() {
                 var _a, _b;
                 var text = this.loginState.textContent;
-                var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username, (_b !== null && _b !== void 0 ? _b : User_1.user.info.username));
+                var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username) !== null && _b !== void 0 ? _b : User_1.user.info.username;
                 if (username) {
                     text = username;
                     if (User_1.user.state == 'logging')
@@ -2494,7 +2493,7 @@ exports.ui = new class {
 }; // ui
 class ProgressButton extends viewlib_1.View {
     constructor(dom) {
-        super((dom !== null && dom !== void 0 ? dom : { tag: 'div.btn' }));
+        super(dom !== null && dom !== void 0 ? dom : { tag: 'div.btn' });
         this.fill = new viewlib_1.View({
             tag: 'div.btn-fill'
         });
@@ -2656,7 +2655,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
             }
             updateUsage() {
                 var total = 0;
-                exports.uploads.tracks.forEach(x => { var _a; return total += (_a = x.size, (_a !== null && _a !== void 0 ? _a : 0)); });
+                exports.uploads.tracks.forEach(x => { var _a; return total += (_a = x.size) !== null && _a !== void 0 ? _a : 0; });
                 this.usage.text = total ? `(${utils_1.utils.formatFileSize(total)})` : '';
             }
             updateView() {
@@ -2964,11 +2963,11 @@ class UploadArea extends viewlib_1.View {
         });
     }
     handleFiles(files) {
-        var _a, _b;
+        var _a;
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             console.log('drop file', { name: file.name, size: file.size });
-            (_b = (_a = this).onfile) === null || _b === void 0 ? void 0 : _b.call(_a, file);
+            (_a = this.onfile) === null || _a === void 0 ? void 0 : _a.call(this, file);
         }
     }
 }
@@ -3039,7 +3038,7 @@ exports.user = new class User {
         this.loginDialog = new LoginDialog();
     }
     openUI(login) {
-        login = (login !== null && login !== void 0 ? login : this.state !== 'logged');
+        login = login !== null && login !== void 0 ? login : this.state !== 'logged';
         if (login) {
             if (!this.loginDialog)
                 this.loginDialog = new LoginDialog();
@@ -3201,28 +3200,27 @@ exports.user = new class User {
         });
     }
     playingTrackChanged() {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        var _a, _b, _c, _d, _e, _f;
         var track = PlayerCore_1.playerCore.track;
         if (track && this._ignore_track_once === track) {
             this._ignore_track_once = null;
             return;
         }
         var tl = {
-            listid: (_d = (_c = (_b = (_a = track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === null || _c === void 0 ? void 0 : _c.id, (_d !== null && _d !== void 0 ? _d : 0)),
-            position: (_g = (_f = (_e = track) === null || _e === void 0 ? void 0 : _e._bind) === null || _f === void 0 ? void 0 : _f.position, (_g !== null && _g !== void 0 ? _g : 0)),
-            trackid: (_j = (_h = track) === null || _h === void 0 ? void 0 : _h.id, (_j !== null && _j !== void 0 ? _j : 0))
+            listid: (_c = (_b = (_a = track === null || track === void 0 ? void 0 : track._bind) === null || _a === void 0 ? void 0 : _a.list) === null || _b === void 0 ? void 0 : _b.id) !== null && _c !== void 0 ? _c : 0,
+            position: (_e = (_d = track === null || track === void 0 ? void 0 : track._bind) === null || _d === void 0 ? void 0 : _d.position) !== null && _e !== void 0 ? _e : 0,
+            trackid: (_f = track === null || track === void 0 ? void 0 : track.id) !== null && _f !== void 0 ? _f : 0
         };
         this.postPlaying(tl)
             .then(() => console.info("post playing OK"), (err) => console.warn('post playing error', err));
     }
     tryRestorePlaying(playing) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             if (playing.trackid) {
                 var list = playing.listid ? main_1.listIndex.getList(playing.listid) : Uploads_1.uploads;
                 yield list.fetch();
                 var track = list.tracks[playing.position];
-                if (((_a = track) === null || _a === void 0 ? void 0 : _a.id) !== playing.trackid)
+                if ((track === null || track === void 0 ? void 0 : track.id) !== playing.trackid)
                     track = list.tracks.find(x => x.id === playing.trackid);
                 this._ignore_track_once = track;
                 PlayerCore_1.playerCore.setTrack(track);
@@ -3605,7 +3603,7 @@ exports.utils = new class Utils {
                 else
                     cb = callback;
             },
-            cancel() { var _a; (_a = end) === null || _a === void 0 ? void 0 : _a(); }
+            cancel() { end === null || end === void 0 ? void 0 : end(); }
         };
     }
     addEvent(element, event, handler) {
@@ -3701,7 +3699,7 @@ exports.Timer = Timer;
 exports.utils.Timer = Timer;
 class BuildDOMCtx {
     constructor(dict) {
-        this.dict = (dict !== null && dict !== void 0 ? dict : {});
+        this.dict = dict !== null && dict !== void 0 ? dict : {};
     }
     static EnsureCtx(ctxOrDict, origctx) {
         var ctx;
@@ -4184,7 +4182,7 @@ exports.dragManager = new class DragManager {
         this.onDragStart = new utils_1.Callbacks();
         this.onDragEnd = new utils_1.Callbacks();
     }
-    get currentItem() { var _a, _b, _c; return _c = (_a = this._currentItem, (_a !== null && _a !== void 0 ? _a : (_b = this._currentArray) === null || _b === void 0 ? void 0 : _b[0])), (_c !== null && _c !== void 0 ? _c : null); }
+    get currentItem() { var _a, _b, _c; return (_c = (_a = this._currentItem) !== null && _a !== void 0 ? _a : (_b = this._currentArray) === null || _b === void 0 ? void 0 : _b[0]) !== null && _c !== void 0 ? _c : null; }
     ;
     get currentArray() {
         if (this._currentItem)
@@ -4231,18 +4229,18 @@ class ListViewItem extends View {
     postCreateDom() {
         super.postCreateDom();
         this.dom.addEventListener('click', (ev) => {
-            var _a, _b, _c, _d;
+            var _a, _b, _c;
             if ((_a = this.listview) === null || _a === void 0 ? void 0 : _a.selectionHelper.handleItemClicked(this, ev))
                 return;
-            (_d = (_b = this.listview) === null || _b === void 0 ? void 0 : (_c = _b).onItemClicked) === null || _d === void 0 ? void 0 : _d.call(_c, this);
+            (_c = (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
         });
         this.dom.addEventListener('contextmenu', (ev) => {
             var _a, _b, _c;
-            (_c = (_a = this.onContextMenu, (_a !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onContextMenu))) === null || _c === void 0 ? void 0 : _c(this, ev);
+            (_c = ((_a = this.onContextMenu) !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onContextMenu)) === null || _c === void 0 ? void 0 : _c(this, ev);
         });
         this.dom.addEventListener('dragstart', (ev) => {
             var _a, _b;
-            if (!(_a = this.dragging, (_a !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.dragging))) {
+            if (!((_a = this.dragging) !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.dragging)) {
                 ev.preventDefault();
                 return;
             }
@@ -4309,13 +4307,13 @@ class ListViewItem extends View {
                     }
                 }
             }
-            var onDragover = (_b = this.onDragover, (_b !== null && _b !== void 0 ? _b : (_c = this.listview) === null || _c === void 0 ? void 0 : _c.onDragover));
+            var onDragover = (_b = this.onDragover) !== null && _b !== void 0 ? _b : (_c = this.listview) === null || _c === void 0 ? void 0 : _c.onDragover;
             if (!arg.accept && onDragover) {
                 onDragover(arg);
                 if (drop || arg.accept)
                     ev.preventDefault();
             }
-            var onContextMenu = (_d = this.onContextMenu, (_d !== null && _d !== void 0 ? _d : (_e = this.listview) === null || _e === void 0 ? void 0 : _e.onContextMenu));
+            var onContextMenu = (_d = this.onContextMenu) !== null && _d !== void 0 ? _d : (_e = this.listview) === null || _e === void 0 ? void 0 : _e.onContextMenu;
             if (!arg.accept && item === this && onContextMenu) {
                 if (drop)
                     onContextMenu(this, ev);
@@ -4595,13 +4593,13 @@ class EditableHelper {
         input.select();
         input.focus();
         var stopEdit = () => {
-            var _a, _b, _c;
+            var _a;
             this.editing = false;
             utils_1.utils.toggleClass(ele, 'editing', false);
             events.forEach(x => x.remove());
             input.remove();
-            (_b = (_a = this).onComplete) === null || _b === void 0 ? void 0 : _b.call(_a, input.value);
-            (_c = onComplete) === null || _c === void 0 ? void 0 : _c(input.value);
+            (_a = this.onComplete) === null || _a === void 0 ? void 0 : _a.call(this, input.value);
+            onComplete === null || onComplete === void 0 ? void 0 : onComplete(input.value);
         };
         var events = [
             utils_1.utils.addEvent(input, 'keydown', (evv) => {
@@ -4628,12 +4626,12 @@ class MenuItem extends ListViewItem {
         return {
             tag: 'div.item.no-selection',
             onclick: (ev) => {
-                var _a, _b;
+                var _a;
                 if (this.parentView instanceof ContextMenu) {
                     if (!this.parentView.keepOpen)
                         this.parentView.close();
                 }
-                (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a, ev);
+                (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, ev);
             }
         };
     }
@@ -4684,12 +4682,11 @@ class MenuInfoItem extends MenuItem {
 exports.MenuInfoItem = MenuInfoItem;
 class ContextMenu extends ListView {
     constructor(items) {
-        var _a;
         super({ tag: 'div.context-menu', tabIndex: 0 });
         this.keepOpen = false;
         this.useOverlay = true;
         this._visible = false;
-        (_a = items) === null || _a === void 0 ? void 0 : _a.forEach(x => this.add(x));
+        items === null || items === void 0 ? void 0 : items.forEach(x => this.add(x));
     }
     get visible() { return this._visible; }
     ;
@@ -4833,15 +4830,15 @@ class Dialog extends View {
         return { x, y };
     }
     show() {
-        var _a, _b, _c;
+        var _a, _b;
         if (this.shown)
             return;
         this.shown = true;
-        (_b = (_a = this)._cancelFadeout) === null || _b === void 0 ? void 0 : _b.call(_a);
+        (_a = this._cancelFadeout) === null || _a === void 0 ? void 0 : _a.call(this);
         this.ensureDom();
         Dialog.defaultParent.onDialogShowing(this);
         this.dom.focus();
-        (_c = this.autoFocus) === null || _c === void 0 ? void 0 : _c.dom.focus();
+        (_b = this.autoFocus) === null || _b === void 0 ? void 0 : _b.dom.focus();
         this.onShown.invoke();
     }
     close() {
@@ -4864,14 +4861,14 @@ class Dialog extends View {
 exports.Dialog = Dialog;
 class DialogParent extends View {
     constructor(dom) {
-        super((dom !== null && dom !== void 0 ? dom : document.body));
+        super(dom !== null && dom !== void 0 ? dom : document.body);
         this.bgOverlay = new Overlay();
         this.dialogCount = 0;
     }
     onDialogShowing(dialog) {
-        var _a, _b;
+        var _a;
         if (this.dialogCount++ === 0) {
-            (_b = (_a = this)._cancelFadeout) === null || _b === void 0 ? void 0 : _b.call(_a);
+            (_a = this._cancelFadeout) === null || _a === void 0 ? void 0 : _a.call(this);
             this.appendView(this.bgOverlay);
         }
         this.appendView(dialog.overlay);
@@ -4897,8 +4894,8 @@ class TabBtn extends View {
             tag: 'span.tab.no-selection',
             tabIndex: 0,
             onclick: () => {
-                var _a, _b;
-                (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a);
+                var _a;
+                (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this);
                 this.onClick.invoke();
             }
         };
@@ -4934,7 +4931,7 @@ class ButtonView extends TextView {
     }
     postCreateDom() {
         super.postCreateDom();
-        this.dom.addEventListener('click', () => { var _a, _b; return (_b = (_a = this).onclick) === null || _b === void 0 ? void 0 : _b.call(_a); });
+        this.dom.addEventListener('click', () => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this); });
     }
     updateDom() {
         super.updateDom();
