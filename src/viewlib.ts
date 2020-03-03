@@ -412,6 +412,19 @@ export class SelectionHelper<TItem extends ISelectable> {
     }
 }
 
+export class ItemActiveHelper<T extends ListViewItem> {
+    funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
+    current: T;
+    constructor(init?: Partial<ItemActiveHelper<T>>) {
+        utils.objectApply(this, init);
+    }
+    set(item: T) {
+        if (this.current) this.funcSetActive(this.current, false);
+        this.current = item;
+        if (this.current) this.funcSetActive(this.current, true);
+    }
+}
+
 type SectionActionOptions = { text: string, onclick: Action; };
 
 export class Section extends View {

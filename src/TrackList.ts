@@ -1,7 +1,7 @@
 // file: TrackList.ts
 
-import { utils, I, ItemActiveHelper, AsyncFunc, Action, BuildDomExpr, BuildDOMCtx, DataUpdatingHelper } from "./utils";
-import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView } from "./viewlib";
+import { utils, I, Action, BuildDomExpr, DataUpdatingHelper } from "./utils";
+import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView, ItemActiveHelper } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -239,7 +239,6 @@ export class TrackList {
         await this.put();
     }
     createView(): ContentView {
-        var list = this;
         return this.contentView = this.contentView || new TrackListView(this);
     }
     getNextTrack(track: Track, loopMode: PlayingLoopMode, offset?: number): Track {

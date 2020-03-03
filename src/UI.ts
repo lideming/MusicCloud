@@ -1,6 +1,6 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, dragManager } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager } from "./viewlib";
 
 export class SidebarItem extends ListViewItem {
     text: string;
@@ -28,7 +28,7 @@ export class SidebarItem extends ListViewItem {
 }
 
 import { router } from "./Router";
-import { SettingItem, utils, ItemActiveHelper, Action, BuildDomExpr, Func, Callbacks, Timer } from "./utils";
+import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer } from "./utils";
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";

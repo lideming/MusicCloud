@@ -1754,7 +1754,6 @@ class TrackList {
         });
     }
     createView() {
-        var list = this;
         return this.contentView = this.contentView || new TrackListView(this);
     }
     getNextTrack(track, loopMode, offset) {
@@ -1822,7 +1821,7 @@ exports.TrackList = TrackList;
 class TrackListView extends ListContentView_1.ListContentView {
     constructor(list) {
         super();
-        this.curPlaying = new utils_1.ItemActiveHelper({
+        this.curPlaying = new viewlib_1.ItemActiveHelper({
             funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
         });
         this.canMultiSelect = true;
@@ -2397,7 +2396,7 @@ exports.ui = new class {
                 this.listview = new viewlib_1.ListView(this.container);
                 this.features = document.getElementById('sidebar-features');
                 this.featuresListview = new viewlib_1.ListView(this.features);
-                this.currentActive = new utils_1.ItemActiveHelper();
+                this.currentActive = new viewlib_1.ItemActiveHelper();
             }
             setActive(item) {
                 this.currentActive.set(item);
@@ -3906,20 +3905,6 @@ SettingItem.types = {
         deserialize: function (x) { return JSON.parse(x); }
     }
 };
-class ItemActiveHelper {
-    constructor(init) {
-        this.funcSetActive = (item, val) => item.toggleClass('active', val);
-        exports.utils.objectApply(this, init);
-    }
-    set(item) {
-        if (this.current)
-            this.funcSetActive(this.current, false);
-        this.current = item;
-        if (this.current)
-            this.funcSetActive(this.current, true);
-    }
-}
-exports.ItemActiveHelper = ItemActiveHelper;
 class Callbacks {
     constructor() {
         this.list = [];
@@ -4459,6 +4444,20 @@ class SelectionHelper {
     }
 }
 exports.SelectionHelper = SelectionHelper;
+class ItemActiveHelper {
+    constructor(init) {
+        this.funcSetActive = (item, val) => item.toggleClass('active', val);
+        utils_1.utils.objectApply(this, init);
+    }
+    set(item) {
+        if (this.current)
+            this.funcSetActive(this.current, false);
+        this.current = item;
+        if (this.current)
+            this.funcSetActive(this.current, true);
+    }
+}
+exports.ItemActiveHelper = ItemActiveHelper;
 class Section extends View {
     constructor(arg) {
         super();

@@ -1,6 +1,6 @@
 import { user } from './User';
 import { api } from './Api';
-import { Callbacks, Action, Func } from './utils';
+import { Callbacks, Action } from './utils';
 
 export const msgcli = new class {
     ws: WebSocket;

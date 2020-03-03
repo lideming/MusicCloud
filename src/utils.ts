@@ -1,6 +1,5 @@
 // file: utils.ts
 
-import { ListViewItem } from "./viewlib";
 import { i18n, I } from "./I18n";
 
 export { i18n, I };
@@ -463,19 +462,6 @@ export class SettingItem<T> {
 interface SiType<T> {
     serialize: (obj: T) => string;
     deserialize: (str: string) => T;
-}
-
-export class ItemActiveHelper<T extends ListViewItem> {
-    funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
-    current: T;
-    constructor(init?: Partial<ItemActiveHelper<T>>) {
-        utils.objectApply(this, init);
-    }
-    set(item: T) {
-        if (this.current) this.funcSetActive(this.current, false);
-        this.current = item;
-        if (this.current) this.funcSetActive(this.current, true);
-    }
 }
 
 export class Callbacks<T extends CallableFunction> {
