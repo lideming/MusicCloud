@@ -194,6 +194,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
     ["Failed to remove track.", "移除歌曲失败。"],
     ["Failed to logout.", "注销失败。"],
+    ["Player error:", "播放器错误："],
     ["Removing of a uploading track is currently not supported.", "目前不支持移除上传中的歌曲。"],
     ["Changing password...", "正在更改密码..."],
     ["Failed to change password.", "更改密码失败。"],

@@ -1,7 +1,7 @@
 // file: Api.ts
 
 import { settings } from "./main";
-import { Callbacks, Action, utils } from "./utils";
+import { Callbacks, Action, utils, CancelToken } from "./utils";
 import { Api } from "./apidef";
 
 
@@ -70,18 +70,27 @@ export var api = new class {
     delete(arg: PostOptions) {
         return this.post({ ...arg, method: 'DELETE' });
     }
-    async upload(arg: {
+    upload(arg: {
         method: 'POST' | 'PUT';
         url: string;
         body: any;
         auth?: string;
         contentType?: string;
+        cancelToken?: CancelToken;
         onprogerss?: (e: ProgressEvent) => void;
     }) {
+        const ct = arg.cancelToken;
+        if (ct) {
+            var cb = ct.onCancelled.add(function () {
+                xhr.abort();
+            });
+        }
+
         const xhr = new XMLHttpRequest();
         const whenXhrComplete = new Promise((resolve, reject) => {
             xhr.onload = ev => resolve();
             xhr.onerror = ev => reject("XHR error");
+            xhr.onabort = ev => reject("XHR abort");
         });
         xhr.upload.onprogress = arg.onprogerss;
 
@@ -89,14 +98,27 @@ export var api = new class {
 
         if (arg.auth) xhr.setRequestHeader('Authorization', arg.auth);
         if (arg.contentType) xhr.setRequestHeader('Content-Type', arg.contentType);
-        
+
         xhr.send(arg.body);
+        const complete = (async function (checkStatus?: boolean) {
+            try {
+                await whenXhrComplete;
+            } finally {
+                if (ct) {
+                    ct.onCancelled.remove(cb);
+                    ct.throwIfCancelled();
+                }
+            }
 
-        await whenXhrComplete;
+            if (checkStatus === undefined || checkStatus)
+                if (xhr.status < 200 || xhr.status >= 300) throw new Error("HTTP status " + xhr.status);
+            return xhr;
+        })();
 
-        if (xhr.status < 200 || xhr.status >= 300) throw new Error("HTTP status " + xhr.status);
-
-        return xhr;
+        return {
+            xhr,
+            complete
+        };
     }
     private async checkResp(options: { status?: number | false; }, resp: Response) {
         if (options.status !== false &&

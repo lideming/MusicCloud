@@ -545,6 +545,21 @@ export class Semaphore {
     }
 }
 
+/** Just like CancellationToken[Source] on .NET */
+export class CancelToken {
+    cancelled = false;
+    onCancelled = new Callbacks();
+    cancel() {
+        if (this.cancelled) return;
+        this.cancelled = true;
+        this.onCancelled.invoke();
+    }
+    throwIfCancelled() {
+        if (this.cancelled)
+            throw new Error("operation cancelled.");
+    }
+}
+
 export interface IId {
     id: keyof any;
 }

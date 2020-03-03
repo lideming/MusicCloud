@@ -1,13 +1,15 @@
 // file: PlayerCore.ts
 
 import { Track } from "./TrackList";
-import { Callbacks, Action, SettingItem } from "./utils";
+import { Callbacks, Action, SettingItem, I } from "./utils";
 import { api } from "./Api";
+import { Toast } from "./viewlib";
 
 /** 播放器核心：控制播放逻辑 */
 export var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track;
+    audioLoaded = false;
     onTrackChanged = new Callbacks<Action>();
 
     siPlayer = new SettingItem('mcloud-player', 'json', {
@@ -78,6 +80,9 @@ export var playerCore = new class PlayerCore {
         this.audio.addEventListener('error', (e) => {
             console.log(e);
             this.state = 'paused';
+            if (this.audioLoaded) {
+                Toast.show(I`Player error:` + '\n' + e.message, 3000);
+            }
         });
         this.audio.addEventListener('ended', () => {
             this.next();
@@ -94,6 +99,9 @@ export var playerCore = new class PlayerCore {
             this.setTrack(null);
     }
     loadUrl(src: string) {
+        // Getting `this.audio.src` is very slow when a blob is loaded,
+        // so we add this property:
+        this.audioLoaded = !!src;
         if (src) {
             this.audio.src = src;
         } else {
@@ -106,6 +114,7 @@ export var playerCore = new class PlayerCore {
         var reader = new FileReader();
         reader.onload = (ev) => {
             this.audio.src = reader.result as string;
+            this.audioLoaded = true;
             this.audio.load();
             if (play) this.play();
         };
@@ -126,7 +135,7 @@ export var playerCore = new class PlayerCore {
         this.play();
     }
     play() {
-        if (this.track && !this.audio.readyState)
+        if (this.track && !this.audioLoaded)
             if (this.track.blob) {
                 this.loadBlob(this.track.blob, true);
                 return;

@@ -1,7 +1,7 @@
 // file: Uploads.ts
 
 import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader, ActionBtn } from "./TrackList";
-import { Semaphore, ItemActiveHelper, utils, DataUpdatingHelper } from "./utils";
+import { Semaphore, ItemActiveHelper, utils, DataUpdatingHelper, CancelToken } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -21,6 +21,7 @@ class UploadTrack extends Track {
             list: uploads
         };
     }
+    get canEdit() { return this._upload.state === 'done'; }
     setState(state: UploadTrack['_upload']['state']) {
         this._upload.state = state;
         this._upload.view?.updateDom();
@@ -32,6 +33,7 @@ class UploadTrack extends Track {
         // With prefix "uploads_", these are i18n keys 
 
         file?: File;
+        cancelToken?: CancelToken;
     };
 }
 
@@ -131,12 +133,9 @@ export var uploads = new class extends TrackList {
         }
         async removeTrack(item: UploadViewItem, noPrompt?: boolean) {
             const track = item.track;
-            if (track._upload.state === 'uploading') {
-                Toast.show(I`Removing of a uploading track is currently not supported.`);
-                return;
-            }
-            if (track._upload.state === 'pending') {
+            if (track._upload.state === 'uploading' || track._upload.state === 'pending') {
                 track._upload.state = 'cancelled';
+                track._upload.cancelToken.cancel();
                 uploads.remove(track);
             } else if (track._upload.state === 'error') {
                 uploads.remove(track);
@@ -212,7 +211,8 @@ export var uploads = new class extends TrackList {
             ...apitrack,
             blob: file,
             _upload: {
-                state: 'pending'
+                state: 'pending',
+                cancelToken: new CancelToken()
             }
         });
         this.insertTrack(track);
@@ -223,6 +223,7 @@ export var uploads = new class extends TrackList {
 
             await this.uploadCore(apitrack, track, file);
         } catch (err) {
+            if (track._upload.state === 'cancelled') return;
             track.setState('error');
             Toast.show(I`Failed to upload file "${file.name}".` + '\n' + err, 3000);
             console.log('uploads failed: ', file.name, err);
@@ -236,6 +237,8 @@ export var uploads = new class extends TrackList {
     private async uploadCore(apitrack: Api.Track, track: UploadTrack, file: File) {
         track.setState('uploading');
 
+        const ct = track._upload.cancelToken;
+
         const uploadReq = await api.post({
             path: 'tracks/uploadrequest',
             obj: {
@@ -243,6 +246,8 @@ export var uploads = new class extends TrackList {
                 size: file.size
             } as Api.UploadRequest
         }) as Api.UploadParameters;
+
+        ct.throwIfCancelled();
 
         var respTrack: Api.Track;
 
@@ -265,18 +270,21 @@ export var uploads = new class extends TrackList {
                 body: finalBlob,
                 auth: api.defaultAuth,
                 contentType: 'application/x-mcloud-upload',
+                cancelToken: ct,
                 onprogerss
-            });
+            }).complete;
+            ct.throwIfCancelled();
             respTrack = JSON.parse(xhr.responseText);
         } else if (uploadReq.mode === 'put-url') {
             console.info('uploading to url', uploadReq);
 
-            await api.upload({
+            const xhr = await api.upload({
                 method: uploadReq.method,
                 url: uploadReq.url,
                 body: file,
+                cancelToken: ct,
                 onprogerss
-            });
+            }).complete;
 
             console.info('posting result to api');
             track.setState('processing');
@@ -288,6 +296,7 @@ export var uploads = new class extends TrackList {
                     tag: uploadReq.tag
                 } as Api.UploadResult
             }) as Api.Track;
+            ct.throwIfCancelled();
         } else {
             throw new Error("Unknown upload mode");
         }

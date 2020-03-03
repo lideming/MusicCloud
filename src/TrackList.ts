@@ -24,6 +24,7 @@ export class Track implements Api.Track {
         position?: number;
         list?: TrackList;
     };
+    get canEdit() { return true; }
     constructor(init: Partial<Track>) {
         utils.objectApply(this, init);
     }
@@ -246,7 +247,9 @@ export class TrackList {
         var bind = track._bind;
         var position = bind.position;
         if (bind?.list !== this) return null;
-        position = position ?? this.listView.find(x => x.track.id === track.id).position;
+        position = position ?? this.listView.find(x => x.track === track)?.position
+            ?? this.listView.find(x => x.track.id === track.id)?.position;
+        if (position == null /* or undefined */) return null;
         if (loopMode == 'list-seq') {
             return this.tracks[position + offset] ?? null;
         } else if (loopMode == 'list-loop') {
@@ -423,7 +426,7 @@ export class TrackViewItem extends ListViewItem {
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
         ev.preventDefault();
         var m = new ContextMenu();
-        m.add(new MenuItem({
+        if (item.track.id) m.add(new MenuItem({
             text: I`Comments`, onclick: () => {
                 router.nav(['track-comments', item.track.id.toString()]);
             }
@@ -438,7 +441,7 @@ export class TrackViewItem extends ListViewItem {
                 download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
             }));
         }
-        m.add(new MenuItem({
+        if (this.track.canEdit) m.add(new MenuItem({
             text: I`Edit`,
             onclick: () => this.track.startEdit()
         }));

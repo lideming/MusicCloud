@@ -85,24 +85,46 @@ exports.api = new class {
         return this.post(Object.assign(Object.assign({}, arg), { method: 'DELETE' }));
     }
     upload(arg) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const xhr = new XMLHttpRequest();
-            const whenXhrComplete = new Promise((resolve, reject) => {
-                xhr.onload = ev => resolve();
-                xhr.onerror = ev => reject("XHR error");
+        const ct = arg.cancelToken;
+        if (ct) {
+            var cb = ct.onCancelled.add(function () {
+                xhr.abort();
             });
-            xhr.upload.onprogress = arg.onprogerss;
-            xhr.open(arg.method, this.processUrl(arg.url));
-            if (arg.auth)
-                xhr.setRequestHeader('Authorization', arg.auth);
-            if (arg.contentType)
-                xhr.setRequestHeader('Content-Type', arg.contentType);
-            xhr.send(arg.body);
-            yield whenXhrComplete;
-            if (xhr.status < 200 || xhr.status >= 300)
-                throw new Error("HTTP status " + xhr.status);
-            return xhr;
+        }
+        const xhr = new XMLHttpRequest();
+        const whenXhrComplete = new Promise((resolve, reject) => {
+            xhr.onload = ev => resolve();
+            xhr.onerror = ev => reject("XHR error");
+            xhr.onabort = ev => reject("XHR abort");
         });
+        xhr.upload.onprogress = arg.onprogerss;
+        xhr.open(arg.method, this.processUrl(arg.url));
+        if (arg.auth)
+            xhr.setRequestHeader('Authorization', arg.auth);
+        if (arg.contentType)
+            xhr.setRequestHeader('Content-Type', arg.contentType);
+        xhr.send(arg.body);
+        const complete = (function (checkStatus) {
+            return __awaiter(this, void 0, void 0, function* () {
+                try {
+                    yield whenXhrComplete;
+                }
+                finally {
+                    if (ct) {
+                        ct.onCancelled.remove(cb);
+                        ct.throwIfCancelled();
+                    }
+                }
+                if (checkStatus === undefined || checkStatus)
+                    if (xhr.status < 200 || xhr.status >= 300)
+                        throw new Error("HTTP status " + xhr.status);
+                return xhr;
+            });
+        })();
+        return {
+            xhr,
+            complete
+        };
     }
     checkResp(options, resp) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -582,6 +604,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Failed to upload file \\"{0}\\".", "上传文件 \\"{0}\\" 失败。"],
     ["Failed to remove track.", "移除歌曲失败。"],
     ["Failed to logout.", "注销失败。"],
+    ["Player error:", "播放器错误："],
     ["Removing of a uploading track is currently not supported.", "目前不支持移除上传中的歌曲。"],
     ["Changing password...", "正在更改密码..."],
     ["Failed to change password.", "更改密码失败。"],
@@ -1195,9 +1218,11 @@ exports.msgcli = new class {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const Api_1 = require("./Api");
+const viewlib_1 = require("./viewlib");
 /** 播放器核心：控制播放逻辑 */
 exports.playerCore = new class PlayerCore {
     constructor() {
+        this.audioLoaded = false;
         this.onTrackChanged = new utils_1.Callbacks();
         this.siPlayer = new utils_1.SettingItem('mcloud-player', 'json', {
             loopMode: 'list-loop',
@@ -1263,6 +1288,9 @@ exports.playerCore = new class PlayerCore {
         this.audio.addEventListener('error', (e) => {
             console.log(e);
             this.state = 'paused';
+            if (this.audioLoaded) {
+                viewlib_1.Toast.show(utils_1.I `Player error:` + '\n' + e.message, 3000);
+            }
         });
         this.audio.addEventListener('ended', () => {
             this.next();
@@ -1280,6 +1308,9 @@ exports.playerCore = new class PlayerCore {
             this.setTrack(null);
     }
     loadUrl(src) {
+        // Getting `this.audio.src` is very slow when a blob is loaded,
+        // so we add this property:
+        this.audioLoaded = !!src;
         if (src) {
             this.audio.src = src;
         }
@@ -1293,6 +1324,7 @@ exports.playerCore = new class PlayerCore {
         var reader = new FileReader();
         reader.onload = (ev) => {
             this.audio.src = reader.result;
+            this.audioLoaded = true;
             this.audio.load();
             if (play)
                 this.play();
@@ -1317,7 +1349,7 @@ exports.playerCore = new class PlayerCore {
         this.play();
     }
     play() {
-        if (this.track && !this.audio.readyState)
+        if (this.track && !this.audioLoaded)
             if (this.track.blob) {
                 this.loadBlob(this.track.blob, true);
                 return;
@@ -1359,7 +1391,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./utils":15}],8:[function(require,module,exports){
+},{"./Api":1,"./utils":15,"./viewlib":16}],8:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1491,6 +1523,7 @@ class Track {
     constructor(init) {
         utils_1.utils.objectApply(this, init);
     }
+    get canEdit() { return true; }
     toString() {
         return `${utils_1.I `Track ID`}: ${this.id}\r\n${utils_1.I `Name`}: ${this.name}\r\n${utils_1.I `Artist`}: ${this.artist}`;
     }
@@ -1726,18 +1759,20 @@ class TrackList {
         return this.contentView = this.contentView || new TrackListView(this);
     }
     getNextTrack(track, loopMode, offset) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e, _f;
         offset = (offset !== null && offset !== void 0 ? offset : 1);
         var bind = track._bind;
         var position = bind.position;
         if (((_a = bind) === null || _a === void 0 ? void 0 : _a.list) !== this)
             return null;
-        position = (position !== null && position !== void 0 ? position : this.listView.find(x => x.track.id === track.id).position);
+        position = (_c = (position !== null && position !== void 0 ? position : (_b = this.listView.find(x => x.track === track)) === null || _b === void 0 ? void 0 : _b.position), (_c !== null && _c !== void 0 ? _c : (_d = this.listView.find(x => x.track.id === track.id)) === null || _d === void 0 ? void 0 : _d.position));
+        if (position == null /* or undefined */)
+            return null;
         if (loopMode == 'list-seq') {
-            return _b = this.tracks[position + offset], (_b !== null && _b !== void 0 ? _b : null);
+            return _e = this.tracks[position + offset], (_e !== null && _e !== void 0 ? _e : null);
         }
         else if (loopMode == 'list-loop') {
-            return _c = this.tracks[utils_1.utils.mod(position + offset, this.tracks.length)], (_c !== null && _c !== void 0 ? _c : null);
+            return _f = this.tracks[utils_1.utils.mod(position + offset, this.tracks.length)], (_f !== null && _f !== void 0 ? _f : null);
         }
         else if (loopMode == 'track-loop') {
             return track;
@@ -1878,11 +1913,12 @@ class TrackViewItem extends viewlib_1.ListViewItem {
         this.onContextMenu = (item, ev) => {
             ev.preventDefault();
             var m = new viewlib_1.ContextMenu();
-            m.add(new viewlib_1.MenuItem({
-                text: utils_1.I `Comments`, onclick: () => {
-                    Router_1.router.nav(['track-comments', item.track.id.toString()]);
-                }
-            }));
+            if (item.track.id)
+                m.add(new viewlib_1.MenuItem({
+                    text: utils_1.I `Comments`, onclick: () => {
+                        Router_1.router.nav(['track-comments', item.track.id.toString()]);
+                    }
+                }));
             if (this.track.url) {
                 var ext = this.track.getExtensionName();
                 ext = ext ? (ext.toUpperCase() + ', ') : '';
@@ -1893,10 +1929,11 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                     download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
                 }));
             }
-            m.add(new viewlib_1.MenuItem({
-                text: utils_1.I `Edit`,
-                onclick: () => this.track.startEdit()
-            }));
+            if (this.track.canEdit)
+                m.add(new viewlib_1.MenuItem({
+                    text: utils_1.I `Edit`,
+                    onclick: () => this.track.startEdit()
+                }));
             if (this.actionHandler.onTrackRemove)
                 m.add(new viewlib_1.MenuItem({
                     text: utils_1.I `Remove`, cls: 'dangerous',
@@ -2562,6 +2599,7 @@ class UploadTrack extends TrackList_1.Track {
             list: exports.uploads
         };
     }
+    get canEdit() { return this._upload.state === 'done'; }
     setState(state) {
         var _a;
         this._upload.state = state;
@@ -2633,12 +2671,9 @@ exports.uploads = new class extends TrackList_1.TrackList {
             removeTrack(item, noPrompt) {
                 return __awaiter(this, void 0, void 0, function* () {
                     const track = item.track;
-                    if (track._upload.state === 'uploading') {
-                        viewlib_1.Toast.show(I18n_1.I `Removing of a uploading track is currently not supported.`);
-                        return;
-                    }
-                    if (track._upload.state === 'pending') {
+                    if (track._upload.state === 'uploading' || track._upload.state === 'pending') {
                         track._upload.state = 'cancelled';
+                        track._upload.cancelToken.cancel();
                         exports.uploads.remove(track);
                     }
                     else if (track._upload.state === 'error') {
@@ -2765,7 +2800,8 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 artist: 'Unknown', name: file.name
             };
             var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { blob: file, _upload: {
-                    state: 'pending'
+                    state: 'pending',
+                    cancelToken: new utils_1.CancelToken()
                 } }));
             this.insertTrack(track);
             yield this.uploadSemaphore.enter();
@@ -2775,6 +2811,8 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 yield this.uploadCore(apitrack, track, file);
             }
             catch (err) {
+                if (track._upload.state === 'cancelled')
+                    return;
                 track.setState('error');
                 viewlib_1.Toast.show(I18n_1.I `Failed to upload file "${file.name}".` + '\n' + err, 3000);
                 console.log('uploads failed: ', file.name, err);
@@ -2790,6 +2828,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
     uploadCore(apitrack, track, file) {
         return __awaiter(this, void 0, void 0, function* () {
             track.setState('uploading');
+            const ct = track._upload.cancelToken;
             const uploadReq = yield Api_1.api.post({
                 path: 'tracks/uploadrequest',
                 obj: {
@@ -2797,6 +2836,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
                     size: file.size
                 }
             });
+            ct.throwIfCancelled();
             var respTrack;
             var onprogerss = (ev) => {
                 var _a;
@@ -2817,18 +2857,21 @@ exports.uploads = new class extends TrackList_1.TrackList {
                     body: finalBlob,
                     auth: Api_1.api.defaultAuth,
                     contentType: 'application/x-mcloud-upload',
+                    cancelToken: ct,
                     onprogerss
-                });
+                }).complete;
+                ct.throwIfCancelled();
                 respTrack = JSON.parse(xhr.responseText);
             }
             else if (uploadReq.mode === 'put-url') {
                 console.info('uploading to url', uploadReq);
-                yield Api_1.api.upload({
+                const xhr = yield Api_1.api.upload({
                     method: uploadReq.method,
                     url: uploadReq.url,
                     body: file,
+                    cancelToken: ct,
                     onprogerss
-                });
+                }).complete;
                 console.info('posting result to api');
                 track.setState('processing');
                 respTrack = (yield Api_1.api.post({
@@ -2839,6 +2882,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
                         tag: uploadReq.tag
                     }
                 }));
+                ct.throwIfCancelled();
             }
             else {
                 throw new Error("Unknown upload mode");
@@ -3953,6 +3997,24 @@ class Semaphore {
     }
 }
 exports.Semaphore = Semaphore;
+/** Just like CancellationToken[Source] on .NET */
+class CancelToken {
+    constructor() {
+        this.cancelled = false;
+        this.onCancelled = new Callbacks();
+    }
+    cancel() {
+        if (this.cancelled)
+            return;
+        this.cancelled = true;
+        this.onCancelled.invoke();
+    }
+    throwIfCancelled() {
+        if (this.cancelled)
+            throw new Error("operation cancelled.");
+    }
+}
+exports.CancelToken = CancelToken;
 class DataUpdatingHelper {
     update(newData) {
         const oldData = this.items;
