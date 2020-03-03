@@ -797,8 +797,8 @@ export class Dialog extends View {
         this.content.appendView(view instanceof View ? view : new View(view));
     }
     setOffset(x: number, y: number) {
-        this.dom.style.left = x + 'px';
-        this.dom.style.top = y + 'px';
+        this.dom.style.left = x ? x + 'px' : '';
+        this.dom.style.top = y ? y + 'px' : '';
     }
     getOffset() {
         var x = this.dom.style.left ? parseFloat(this.dom.style.left) : 0;

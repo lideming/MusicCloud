@@ -351,6 +351,7 @@ a.item {
     vertical-align: middle;
     margin-left: .5em;
     width: calc((100% - 2.5em - 20px) * .6);
+    overflow-wrap: break-word;
 }
 
 .trackitem .artist {
@@ -791,6 +792,8 @@ a.item {
 
 .upload-area {
     margin: 10px;
+    padding: 10px;
+    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;

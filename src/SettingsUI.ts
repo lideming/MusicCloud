@@ -3,8 +3,12 @@ import { I, i18n } from "./I18n";
 import { ui } from "./UI";
 
 export var settingsUI = new class {
+    dialog: SettingsDialog;
     openUI() {
-        new SettingsDialog().show();
+        if (!this.dialog)
+            this.dialog = new SettingsDialog();
+        this.dialog.setOffset(0, 0);
+        this.dialog.show();
     }
 };
 

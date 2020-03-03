@@ -1467,7 +1467,10 @@ const I18n_1 = require("./I18n");
 const UI_1 = require("./UI");
 exports.settingsUI = new class {
     openUI() {
-        new SettingsDialog().show();
+        if (!this.dialog)
+            this.dialog = new SettingsDialog();
+        this.dialog.setOffset(0, 0);
+        this.dialog.show();
     }
 };
 class SettingsDialog extends viewlib_1.Dialog {
@@ -4872,8 +4875,8 @@ class Dialog extends View {
         this.content.appendView(view instanceof View ? view : new View(view));
     }
     setOffset(x, y) {
-        this.dom.style.left = x + 'px';
-        this.dom.style.top = y + 'px';
+        this.dom.style.left = x ? x + 'px' : '';
+        this.dom.style.top = y ? y + 'px' : '';
     }
     getOffset() {
         var x = this.dom.style.left ? parseFloat(this.dom.style.left) : 0;
