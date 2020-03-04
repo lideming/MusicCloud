@@ -1501,7 +1501,7 @@ class SettingsDialog extends viewlib_1.Dialog {
             child: [
                 { tag: 'span', text: 'MusicCloud' },
                 {
-                    tag: 'a', style: 'float: right; color: inherit;',
+                    tag: 'a.clickable', style: 'float: right; color: inherit;',
                     text: () => I18n_1.I `Source code`, href: 'https://github.com/lideming/MusicCloud',
                     target: '_blank'
                 },
@@ -1523,6 +1523,7 @@ class SettingsDialog extends viewlib_1.Dialog {
     }
     updateDom() {
         this.title = I18n_1.I `Settings`;
+        this.btnClose.updateWith({ text: I18n_1.I `Close` });
         super.updateDom();
         this.btnSwitchTheme.text = I18n_1.I `Color theme: ${I18n_1.i18n.get('colortheme_' + UI_1.ui.theme.current)}`;
         this.btnSwitchLang.text = I18n_1.I `Language: ${I18n_1.I `English`}`;
