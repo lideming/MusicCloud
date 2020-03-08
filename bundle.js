@@ -1353,13 +1353,25 @@ exports.playerCore = new class PlayerCore {
         this.play();
     }
     play() {
-        if (this.track && !this.audioLoaded)
-            if (this.track.blob) {
-                this.loadBlob(this.track.blob, true);
+        var track = this.track;
+        if (track && !this.audioLoaded)
+            if (track.blob) {
+                this.loadBlob(track.blob, true);
                 return;
             }
             else {
-                this.loadUrl(Api_1.api.processUrl(this.track.url));
+                var url = track.url;
+                var bitrate = 0;
+                var prefer = this.preferBitrate;
+                if (prefer && track.files) {
+                    track.files.forEach(f => {
+                        if (!bitrate || Math.abs(bitrate - prefer) > Math.abs(f.bitrate - prefer)) {
+                            url = f.url;
+                            bitrate = f.bitrate;
+                        }
+                    });
+                }
+                this.loadUrl(Api_1.api.processUrl(url));
             }
         this.audio.play();
     }
@@ -1558,6 +1570,12 @@ class Track {
     constructor(init) {
         utils_1.utils.objectApply(this, init);
     }
+    get id() { return this.infoObj.id; }
+    get name() { return this.infoObj.name; }
+    get artist() { return this.infoObj.artist; }
+    get url() { return this.infoObj.url; }
+    get files() { return this.infoObj.files; }
+    get size() { return this.infoObj.size; }
     get canEdit() { return true; }
     toString() {
         return `${utils_1.I `Track ID`}: ${this.id}\r\n${utils_1.I `Name`}: ${this.name}\r\n${utils_1.I `Artist`}: ${this.artist}`;
@@ -1572,7 +1590,8 @@ class Track {
     updateFromApiTrack(t) {
         if (this.id !== t.id)
             throw new Error('Bad track id');
-        utils_1.utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
+        // utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
+        this.infoObj = t;
     }
     startEdit() {
         var dialog = new class extends viewlib_1.Dialog {
@@ -1671,10 +1690,13 @@ class TrackList {
         return track;
     }
     addTrack_NoUpdating(t, pos) {
-        var track = new Track(Object.assign(Object.assign({}, t), { _bind: {
+        var track = new Track({
+            infoObj: t,
+            _bind: {
                 list: this,
                 position: this.tracks.length
-            } }));
+            }
+        });
         utils_1.utils.arrayInsert(this.tracks, track, pos);
         if (this.contentView)
             this.contentView.addItem(track, pos);
@@ -1799,8 +1821,12 @@ class TrackList {
         var position = bind.position;
         if ((bind === null || bind === void 0 ? void 0 : bind.list) !== this)
             return null;
-        position = (_b = position !== null && position !== void 0 ? position : (_a = this.listView.find(x => x.track === track)) === null || _a === void 0 ? void 0 : _a.position) !== null && _b !== void 0 ? _b : (_c = this.listView.find(x => x.track.id === track.id)) === null || _c === void 0 ? void 0 : _c.position;
-        if (position == null /* or undefined */)
+        if (this.listView)
+            position = (_b = position !== null && position !== void 0 ? position : (_a = this.listView.find(x => x.track === track)) === null || _a === void 0 ? void 0 : _a.position) !== null && _b !== void 0 ? _b : (_c = this.listView.find(x => x.track.id === track.id)) === null || _c === void 0 ? void 0 : _c.position;
+        position = position !== null && position !== void 0 ? position : this.tracks.indexOf(track);
+        if (position == null || position < 0)
+            position = this.tracks.findIndex(x => x.id === track.id);
+        if (position == null || position < 0)
             return null;
         if (loopMode == 'list-seq') {
             return (_d = this.tracks[position + offset]) !== null && _d !== void 0 ? _d : null;
@@ -2807,8 +2833,10 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 li.reset();
                 var fetched = (yield Api_1.api.get('my/uploads'))['tracks']
                     .map(t => {
-                    t._upload = { state: 'done' };
-                    return new UploadTrack(t);
+                    return new UploadTrack({
+                        infoObj: t,
+                        _upload: { state: 'done' }
+                    });
                 });
                 this.state = 'fetched';
             }
@@ -2838,10 +2866,14 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 id: undefined, url: undefined,
                 artist: 'Unknown', name: file.name
             };
-            var track = new UploadTrack(Object.assign(Object.assign({}, apitrack), { blob: file, _upload: {
+            var track = new UploadTrack({
+                infoObj: apitrack,
+                blob: file,
+                _upload: {
                     state: 'pending',
                     cancelToken: new utils_1.CancelToken()
-                } }));
+                }
+            });
             this.insertTrack(track);
             yield this.uploadSemaphore.enter();
             try {
@@ -2926,8 +2958,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
             else {
                 throw new Error("Unknown upload mode");
             }
-            track.id = respTrack.id;
-            track.updateFromApiTrack(respTrack);
+            track.infoObj = respTrack;
             track.setState('done');
         });
     }

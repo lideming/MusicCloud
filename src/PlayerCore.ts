@@ -24,6 +24,8 @@ export var playerCore = new class PlayerCore {
     }
     onLoopModeChanged = new Callbacks<Action>();
 
+    preferBitrate: number;
+
     private _state: 'none' | 'playing' | 'paused' | 'stalled' = 'none';
     get state() { return this._state; }
     set state(val) {
@@ -135,12 +137,24 @@ export var playerCore = new class PlayerCore {
         this.play();
     }
     play() {
-        if (this.track && !this.audioLoaded)
-            if (this.track.blob) {
-                this.loadBlob(this.track.blob, true);
+        var track = this.track;
+        if (track && !this.audioLoaded)
+            if (track.blob) {
+                this.loadBlob(track.blob, true);
                 return;
             } else {
-                this.loadUrl(api.processUrl(this.track.url));
+                var url = track.url;
+                var bitrate = 0;
+                var prefer = this.preferBitrate;
+                if (prefer && track.files) {
+                    track.files.forEach(f => {
+                        if (!bitrate || Math.abs(bitrate - prefer) > Math.abs(f.bitrate - prefer)) {
+                            url = f.url;
+                            bitrate = f.bitrate;
+                        }
+                    });
+                }
+                this.loadUrl(api.processUrl(url));
             }
         this.audio.play();
     }

@@ -45,6 +45,14 @@ export namespace Api {
         /** URL to audio file */
         url: string;
         size?: number;
+        files?: TrackFile[];
+    }
+
+    interface TrackFile {
+        /** Bitrate in kbps */
+        bitrate: number;
+        format: string;
+        url: string;
     }
 
     /** 
