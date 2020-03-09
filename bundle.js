@@ -162,6 +162,8 @@ exports.api = new class {
             });
         });
     }
+    getTrack(id) { return this.get('tracks/' + id); }
+    getList(id) { return this.get('lists/' + id); }
     processUrl(url) {
         if (url.match('^(https?:/)?/'))
             return url;
@@ -627,6 +629,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Cancel", "取消"],
     ["Settings", "设置"],
     ["Color theme: {0}", "配色主题：{0}"],
+    ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));
@@ -1219,6 +1222,15 @@ exports.msgcli = new class {
 },{"./Api":1,"./User":13,"./utils":15}],7:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const Api_1 = require("./Api");
@@ -1230,7 +1242,8 @@ exports.playerCore = new class PlayerCore {
         this.onTrackChanged = new utils_1.Callbacks();
         this.siPlayer = new utils_1.SettingItem('mcloud-player', 'json', {
             loopMode: 'list-loop',
-            volume: 1
+            volume: 1,
+            preferBitrate: 0
         });
         this.onLoopModeChanged = new utils_1.Callbacks();
         this._state = 'none';
@@ -1244,6 +1257,7 @@ exports.playerCore = new class PlayerCore {
         this.siPlayer.save();
         this.onLoopModeChanged.invoke();
     }
+    get preferBitrate() { return this.siPlayer.data.preferBitrate; }
     get state() { return this._state; }
     set state(val) {
         this._state = val;
@@ -1324,17 +1338,6 @@ exports.playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
-    loadBlob(blob, play) {
-        var reader = new FileReader();
-        reader.onload = (ev) => {
-            this.audio.src = reader.result;
-            this.audioLoaded = true;
-            this.audio.load();
-            if (play)
-                this.play();
-        };
-        reader.readAsDataURL(blob);
-    }
     setTrack(track) {
         var _a;
         var oldTrack = this.track;
@@ -1352,28 +1355,43 @@ exports.playerCore = new class PlayerCore {
             this.audio.currentTime = 0;
         this.play();
     }
-    play() {
-        var track = this.track;
-        if (track && !this.audioLoaded)
+    loadTrack(track) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            (_a = this._loadct) === null || _a === void 0 ? void 0 : _a.cancel();
+            var ct = this._loadct = new utils_1.CancelToken();
             if (track.blob) {
-                this.loadBlob(track.blob, true);
-                return;
+                var dataurl = yield utils_1.utils.readBlobAsDataUrl(track.blob);
+                ct.throwIfCancelled();
+                this.loadUrl(dataurl);
             }
             else {
-                var url = track.url;
-                var bitrate = 0;
+                let cur = { url: track.url, bitrate: 0 };
                 var prefer = this.preferBitrate;
                 if (prefer && track.files) {
                     track.files.forEach(f => {
-                        if (!bitrate || Math.abs(bitrate - prefer) > Math.abs(f.bitrate - prefer)) {
-                            url = f.url;
-                            bitrate = f.bitrate;
+                        if (!cur.bitrate || Math.abs(cur.bitrate - prefer) > Math.abs(f.bitrate - prefer)) {
+                            cur = f;
                         }
                     });
                 }
-                this.loadUrl(Api_1.api.processUrl(url));
+                if (!cur.url && cur.urlurl) {
+                    cur.url = (yield Api_1.api.get(cur.urlurl))['url'];
+                    ct.throwIfCancelled();
+                }
+                this.loadUrl(Api_1.api.processUrl(cur.url));
             }
-        this.audio.play();
+            return true;
+        });
+    }
+    play() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var track = this.track;
+            if (track && !this.audioLoaded)
+                if (!(yield this.loadTrack(this.track)))
+                    return;
+            this.audio.play();
+        });
     }
     pause() {
         this.audio.pause();
@@ -1477,6 +1495,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const I18n_1 = require("./I18n");
 const UI_1 = require("./UI");
+const PlayerCore_1 = require("./PlayerCore");
 exports.settingsUI = new class {
     openUI() {
         if (!this.dialog)
@@ -1490,6 +1509,7 @@ class SettingsDialog extends viewlib_1.Dialog {
         super();
         this.btnSwitchTheme = new viewlib_1.ButtonView({ type: 'big' });
         this.btnSwitchLang = new viewlib_1.ButtonView({ type: 'big' });
+        this.inputPreferBitrate = new viewlib_1.LabeledInput();
         this.reloadShown = false;
         this.addContent(this.btnSwitchTheme);
         this.btnSwitchTheme.onclick = () => {
@@ -1507,6 +1527,18 @@ class SettingsDialog extends viewlib_1.Dialog {
                 this.showReload();
             this.updateDom();
         };
+        this.addContent(this.inputPreferBitrate);
+        this.onShown.add(() => {
+            var _a;
+            this.inputPreferBitrate.value = ((_a = PlayerCore_1.playerCore.siPlayer.data.preferBitrate) !== null && _a !== void 0 ? _a : '0').toString();
+        });
+        this.onClose.add(() => {
+            var val = parseInt(this.inputPreferBitrate.value);
+            if (!isNaN(val)) {
+                PlayerCore_1.playerCore.siPlayer.data.preferBitrate = val;
+                PlayerCore_1.playerCore.siPlayer.save();
+            }
+        });
         this.addContent(this.bottom = new viewlib_1.View({
             tag: 'div',
             style: 'margin: 5px 0;',
@@ -1540,11 +1572,12 @@ class SettingsDialog extends viewlib_1.Dialog {
         this.btnSwitchLang.text = I18n_1.I `Language: ${I18n_1.I `English`}`;
         if (!UI_1.ui.lang.siLang.data)
             this.btnSwitchLang.text += I18n_1.I ` (auto-detected)`;
+        this.inputPreferBitrate.updateWith({ label: I18n_1.I `Preferred bitrate (0: original file)` });
         this.content.updateChildrenDom();
     }
 }
 
-},{"./I18n":3,"./UI":11,"./viewlib":16}],10:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":7,"./UI":11,"./viewlib":16}],10:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3740,6 +3773,16 @@ exports.utils = new class Utils {
         if (a < 0)
             a = b + a;
         return a % b;
+    }
+    readBlobAsDataUrl(blob) {
+        return new Promise((resolve, reject) => {
+            var reader = new FileReader();
+            reader.onload = (ev) => {
+                resolve(reader.result);
+            };
+            reader.onerror = (ev) => reject();
+            reader.readAsDataURL(blob);
+        });
     }
 };
 Array.prototype.remove = function (item) {

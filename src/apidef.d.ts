@@ -52,7 +52,8 @@ export namespace Api {
         /** Bitrate in kbps */
         bitrate: number;
         format: string;
-        url: string;
+        url?: string;
+        urlurl?: string;
     }
 
     /** 

@@ -199,6 +199,17 @@ export var utils = new class Utils {
         if (a < 0) a = b + a;
         return a % b;
     }
+
+    readBlobAsDataUrl(blob: Blob) {
+        return new Promise<string>((resolve, reject) => {
+            var reader = new FileReader();
+            reader.onload = (ev) => {
+                resolve(reader.result as string);
+            };
+            reader.onerror = (ev) => reject();
+            reader.readAsDataURL(blob);
+        });
+    }
 };
 
 Array.prototype.remove = function (item) {
