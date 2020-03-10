@@ -45,6 +45,7 @@ export namespace Api {
         /** URL to audio file */
         url: string;
         size?: number;
+        length?: number;
         files?: TrackFile[];
     }
 

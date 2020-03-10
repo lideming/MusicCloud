@@ -20,7 +20,9 @@ export class Track {
     get artist() { return this.infoObj.artist; }
     get url() { return this.infoObj.url; }
     get files() { return this.infoObj.files; }
+    get length() { return this.infoObj.length; }
     get size() { return this.infoObj.size; }
+    get displayName() { return this.artist + ' - ' + this.name; }
     blob?: Blob;
     _bind?: {
         position?: number;
@@ -94,6 +96,18 @@ export class Track {
         };
         dialog.fillInfo(this);
         dialog.show();
+    }
+    async requestFileUrl(file: Api.TrackFile) {
+        if (!file.url) {
+            var toast = Toast.show(I`Converting "${this.displayName}"...`);
+            try {
+                file.url = (await api.get(file.urlurl))['url'];
+                toast.close();
+            } catch (error) {
+                toast.updateWith({ text: I`Error converting "${this.displayName}".` + '\n' + error });
+                toast.show(3000);
+            }
+        }
     }
 }
 
@@ -431,6 +445,7 @@ export class TrackViewItem extends ListViewItem {
     }
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
         ev.preventDefault();
+        var selected: TrackViewItem[] = this.selected ? this.selectionHelper.selectedItems : [this];
         var m = new ContextMenu();
         if (item.track.id) m.add(new MenuItem({
             text: I`Comments`, onclick: () => {
@@ -441,11 +456,28 @@ export class TrackViewItem extends ListViewItem {
             var ext = this.track.getExtensionName();
             ext = ext ? (ext.toUpperCase() + ', ') : '';
             var fileSize = utils.formatFileSize(this.track.size);
-            m.add(new MenuLinkItem({
-                text: I`Download` + ' (' + ext + fileSize + ')',
-                link: api.processUrl(this.track.url),
-                download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
-            }));
+            var files = [...(this.track.files ?? [])];
+            files.sort((a, b) => b.bitrate - a.bitrate);
+            if (!files.find(f => f.url === this.track.url))
+                m.add(new MenuLinkItem({
+                    text: I`Download` + ' (' + ext + fileSize + ')',
+                    link: api.processUrl(this.track.url),
+                    download: this.track.artist + ' - ' + this.track.name + '.' + ext
+                }));
+            files.forEach(f => {
+                var format = f.format?.toUpperCase();
+                if (f.url) m.add(new MenuLinkItem({
+                    text: I`Download` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
+                    link: api.processUrl(f.url),
+                    download: this.track.artist + ' - ' + this.track.name + '.' + format
+                }));
+                else if (f.urlurl) m.add(new MenuItem({
+                    text: I`Convert` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
+                    onclick: () => {
+                        this.track.requestFileUrl(f);
+                    }
+                }));
+            });
         }
         if (this.track.canEdit) m.add(new MenuItem({
             text: I`Edit`,
@@ -464,8 +496,11 @@ export class TrackViewItem extends ListViewItem {
             }));
         m.add(new MenuInfoItem({
             text: I`Track ID` + ': ' +
-                (!this.selected ? this.track.id
-                    : this.selectionHelper.selectedItems.map(x => x.track.id).join(', '))
+                selected.map(x => x.track.id).join(', ') + '\n'
+                + I`Duration` + ': ' +
+                utils.formatTime(utils.arraySum(selected, x => x.track.length)) + '\n'
+                + I`Size` + ': ' +
+                utils.formatFileSize(utils.arraySum(selected, x => x.track.size))
         }));
         m.show({ ev: ev });
     };

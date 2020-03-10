@@ -589,11 +589,16 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Track ID", "歌曲 ID"],
     ["Name", "名称"],
     ["Artist", "艺术家"],
+    ["Duration", "时长"],
+    ["Size", "大小"],
     ["Discussion", "灌水区"],
     ["Notes", "便签"],
     ["Submit", "提交"],
     ["Submitting", "提交中"],
     ["Download", "下载"],
+    ["Convert", "转换"],
+    ["Converting \\"{0}\\"...", "正在转换 \\"{0}\\"..."],
+    ["Error converting \\"{0}\\".", "转换 \\"{0}\\" 时发生错误."],
     ["Edit", "编辑"],
     ["Save", "保存"],
     ["Saving...", "保存中..."],
@@ -1375,8 +1380,8 @@ exports.playerCore = new class PlayerCore {
                         }
                     });
                 }
-                if (!cur.url && cur.urlurl) {
-                    cur.url = (yield Api_1.api.get(cur.urlurl))['url'];
+                if (!cur.url) {
+                    yield track.requestFileUrl(cur);
                     ct.throwIfCancelled();
                 }
                 this.loadUrl(Api_1.api.processUrl(cur.url));
@@ -1609,7 +1614,9 @@ class Track {
     get artist() { return this.infoObj.artist; }
     get url() { return this.infoObj.url; }
     get files() { return this.infoObj.files; }
+    get length() { return this.infoObj.length; }
     get size() { return this.infoObj.size; }
+    get displayName() { return this.artist + ' - ' + this.name; }
     get canEdit() { return true; }
     toString() {
         return `${utils_1.I `Track ID`}: ${this.id}\r\n${utils_1.I `Name`}: ${this.name}\r\n${utils_1.I `Artist`}: ${this.artist}`;
@@ -1680,6 +1687,21 @@ class Track {
         };
         dialog.fillInfo(this);
         dialog.show();
+    }
+    requestFileUrl(file) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!file.url) {
+                var toast = viewlib_1.Toast.show(utils_1.I `Converting "${this.displayName}"...`);
+                try {
+                    file.url = (yield Api_1.api.get(file.urlurl))['url'];
+                    toast.close();
+                }
+                catch (error) {
+                    toast.updateWith({ text: utils_1.I `Error converting "${this.displayName}".` + '\n' + error });
+                    toast.show(3000);
+                }
+            }
+        });
     }
 }
 exports.Track = Track;
@@ -2006,7 +2028,9 @@ class TrackViewItem extends viewlib_1.ListViewItem {
     constructor(item) {
         super();
         this.onContextMenu = (item, ev) => {
+            var _a;
             ev.preventDefault();
+            var selected = this.selected ? this.selectionHelper.selectedItems : [this];
             var m = new viewlib_1.ContextMenu();
             if (item.track.id)
                 m.add(new viewlib_1.MenuItem({
@@ -2018,11 +2042,31 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                 var ext = this.track.getExtensionName();
                 ext = ext ? (ext.toUpperCase() + ', ') : '';
                 var fileSize = utils_1.utils.formatFileSize(this.track.size);
-                m.add(new viewlib_1.MenuLinkItem({
-                    text: utils_1.I `Download` + ' (' + ext + fileSize + ')',
-                    link: Api_1.api.processUrl(this.track.url),
-                    download: this.track.artist + ' - ' + this.track.name + '.mp3' // TODO
-                }));
+                var files = [...((_a = this.track.files) !== null && _a !== void 0 ? _a : [])];
+                files.sort((a, b) => b.bitrate - a.bitrate);
+                if (!files.find(f => f.url === this.track.url))
+                    m.add(new viewlib_1.MenuLinkItem({
+                        text: utils_1.I `Download` + ' (' + ext + fileSize + ')',
+                        link: Api_1.api.processUrl(this.track.url),
+                        download: this.track.artist + ' - ' + this.track.name + '.' + ext
+                    }));
+                files.forEach(f => {
+                    var _a;
+                    var format = (_a = f.format) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+                    if (f.url)
+                        m.add(new viewlib_1.MenuLinkItem({
+                            text: utils_1.I `Download` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
+                            link: Api_1.api.processUrl(f.url),
+                            download: this.track.artist + ' - ' + this.track.name + '.' + format
+                        }));
+                    else if (f.urlurl)
+                        m.add(new viewlib_1.MenuItem({
+                            text: utils_1.I `Convert` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
+                            onclick: () => {
+                                this.track.requestFileUrl(f);
+                            }
+                        }));
+                });
             }
             if (this.track.canEdit)
                 m.add(new viewlib_1.MenuItem({
@@ -2044,8 +2088,11 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                 }));
             m.add(new viewlib_1.MenuInfoItem({
                 text: utils_1.I `Track ID` + ': ' +
-                    (!this.selected ? this.track.id
-                        : this.selectionHelper.selectedItems.map(x => x.track.id).join(', '))
+                    selected.map(x => x.track.id).join(', ') + '\n'
+                    + utils_1.I `Duration` + ': ' +
+                    utils_1.utils.formatTime(utils_1.utils.arraySum(selected, x => x.track.length)) + '\n'
+                    + utils_1.I `Size` + ': ' +
+                    utils_1.utils.formatFileSize(utils_1.utils.arraySum(selected, x => x.track.size))
             }));
             m.show({ ev: ev });
         };
@@ -3756,6 +3803,15 @@ exports.utils = new class Utils {
             if (func(item, idx++))
                 return item;
         }
+    }
+    arraySum(arr, func) {
+        var sum = 0;
+        this.arrayForeach(arr, (x) => {
+            var val = func(x);
+            if (val)
+                sum += val;
+        });
+        return sum;
     }
     objectApply(obj, kv, keys) {
         if (kv) {

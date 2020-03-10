@@ -182,6 +182,15 @@ export var utils = new class Utils {
         }
     }
 
+    arraySum<T>(arr: Iterable<T>, func: (item: T) => number) {
+        var sum = 0;
+        this.arrayForeach(arr, (x) => {
+            var val = func(x);
+            if (val) sum += val;
+        });
+        return sum;
+    }
+
     objectApply<T>(obj: Partial<T>, kv?: Partial<T>, keys?: Array<keyof T>) {
         if (kv) {
             if (!keys) return _object_assign(obj, kv);

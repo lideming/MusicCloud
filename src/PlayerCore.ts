@@ -146,8 +146,8 @@ export var playerCore = new class PlayerCore {
                     }
                 });
             }
-            if (!cur.url && cur.urlurl) {
-                cur.url = (await api.get(cur.urlurl))['url'];
+            if (!cur.url) {
+                await track.requestFileUrl(cur);
                 ct.throwIfCancelled();
             }
             this.loadUrl(api.processUrl(cur.url));
