@@ -2118,6 +2118,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                 },
                 { tag: 'span.name', text: () => this.track.name },
                 { tag: 'span.artist', text: () => this.track.artist },
+                { tag: 'span.duration', text: () => utils_1.utils.formatTime(this.track.length) },
             ],
             draggable: true,
             _item: this

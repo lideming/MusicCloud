@@ -346,24 +346,68 @@ a.item {
     vertical-align: middle;
 }
 
-.trackitem .name, .trackitem .artist {
+.trackitem .name, .trackitem .artist, .trackitem .duration {
     display: inline-block;
     vertical-align: middle;
     margin-left: .5em;
-    width: calc((100% - 2.5em - 20px) * .6);
     overflow-wrap: break-word;
 }
 
+.trackitem .name {
+    width: calc((100% - 3em - 20px) * .6);
+}
+
 .trackitem .artist {
-    width: calc((100% - 2.5em - 20px) * .4);
+    width: calc((100% - 3em - 20px) * .4);
 }
 
 .trackitem .artist, #bottombar-trackinfo .artist {
     color: var(--color-text-gray);
 }
 
+.trackitem .duration {
+    color: var(--color-text-gray);
+    display: none;
+}
+
 .trackitem.uploads-item .name {
-    width: calc((100% - 3.5em - 20px) * .5);
+    width: calc((100% - 3em - 20px) * .5);
+}
+
+@media only screen and (min-width: 1000px) {
+    .trackitem .name {
+        width: calc((100% - 3em - 20px - 4.5em) * .6);
+    }
+    .trackitem .artist {
+        width: calc((100% - 3em - 20px - 4.5em) * .4);
+    }
+    .trackitem .duration {
+        display: inline-block;
+        width: 4em;
+    }
+    .trackitem.uploads-item .name {
+        width: calc((100% - 3em - 20px - 4.5em) * .5);
+    }
+}
+
+@media only screen and (max-width: 500px) {
+    .trackitem {
+        padding: 5px;
+    }
+    .trackitem .name, .trackitem .artist,
+    .trackitem.uploads-item .name, .trackitem.uploads-item .uploads-state {
+        display: block;
+        margin: 3px 10px;
+        margin-left: 3em;
+        width: auto;
+    }
+    .trackitem .pos {
+        position: absolute;
+        margin: 3px;
+    }
+    .trackitem.uploads-item.state-done .uploads-state {
+        display: none;
+    }
 }
 
 .trackitem.uploads-item .uploads-state {
