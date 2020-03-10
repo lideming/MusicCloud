@@ -977,3 +977,39 @@ a.item {
 .uploads-usage {
     margin-left: 10px;
 }
+
+.playingview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.playingview .name, .playingview .artist {
+    font-size: 120%;
+    margin: 10px 20px;
+    animation: showing .3s;
+}
+
+.playingview .pic {
+    margin: 20px 0;
+    width: 30vw;
+    height: 30vw;
+    background: var(--color-bg-dd);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.playingview .pic .nopic {
+    color: var(--color-text-gray);
+}
+
+.playingview .artist {
+    color: var(--color-text-gray);
+}
+
+.float-sidebar .playingview .pic {
+    width: 60vw;
+    height: 60vw;
+}

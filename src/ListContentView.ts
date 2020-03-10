@@ -38,7 +38,7 @@ class DataBackedListView<T extends DataBackedListViewItem, TData> extends ListVi
 }
 
 
-export class ListContentView implements ContentView {
+export class ListContentView extends ContentView {
     dom: HTMLElement;
 
     header: ContentHeader;
@@ -50,7 +50,7 @@ export class ListContentView implements ContentView {
     loadingIndicator: LoadingIndicator;
     emptyIndicator: LoadingIndicator;
 
-    get rendered() { return !!this.listView; }
+    get rendered() { return this.domCreated; }
 
 
     private _canMultiSelect: boolean;
@@ -61,13 +61,14 @@ export class ListContentView implements ContentView {
         if (this.listView) this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
     }
 
+    createDom() {
+        return utils.buildDOM({ tag: 'div' });
+    }
 
-    ensureRendered() {
-        if (!this.listView) {
-            this.dom = this.dom || utils.buildDOM({ tag: 'div' });
-            this.appendHeader();
-            this.appendListView();
-        }
+    postCreateDom() {
+        super.postCreateDom();
+        this.appendHeader();
+        this.appendListView();
     }
 
     title: string;
@@ -101,7 +102,7 @@ export class ListContentView implements ContentView {
     }
 
     onShow() {
-        this.ensureRendered();
+        this.ensureDom();
     }
     onRemove() {
     }

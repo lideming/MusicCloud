@@ -27,6 +27,13 @@ export class SidebarItem extends ListViewItem {
     }
 }
 
+export class ContentView extends View {
+    dom: HTMLElement;
+    onShow() {}
+    onRemove() {}
+    contentViewState?: ContentViewState;
+}
+
 import { router } from "./Router";
 import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer } from "./utils";
 import { I18n, i18n, I } from "./I18n";
@@ -382,14 +389,14 @@ export const ui = new class {
             this.current = null;
             if (!cur) return;
             cur.contentViewState.scrollTop = this.container.scrollTop;
-            if (cur.onRemove) cur.onRemove();
+            cur.onRemove();
             if (cur.dom) this.container.removeChild(cur.dom);
         }
         setCurrent(arg: ContentView) {
             if (arg === this.current) return;
             this.removeCurrent();
             if (arg) {
-                if (arg.onShow) arg.onShow();
+                arg.onShow();
                 if (arg.dom) this.container.appendChild(arg.dom);
                 if (!arg.contentViewState) arg.contentViewState = { scrollTop: 0 };
                 this.container.scrollTop = arg.contentViewState.scrollTop;
@@ -399,12 +406,6 @@ export const ui = new class {
     };
 }; // ui
 
-export interface ContentView {
-    dom: HTMLElement;
-    onShow?: Action;
-    onRemove?: Action;
-    contentViewState?: ContentViewState;
-}
 
 interface ContentViewState {
     scrollTop: number;

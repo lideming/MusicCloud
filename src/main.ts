@@ -22,6 +22,7 @@ import { discussion, notes, comments } from "./Discussion";
 import { router } from "./Router";
 import { settingsUI } from "./SettingsUI";
 import { msgcli } from "./MessageClient"
+import { nowPlaying } from "./NowPlaying"
 
 ui.init();
 playerCore.init();
@@ -30,7 +31,7 @@ export var listIndex = new ListIndex();
 
 var app = window['app'] = {
     settings, settingsUI,
-    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes,
+    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying,
     Toast, ToastsContainer,
     msgcli,
     init() {
@@ -38,6 +39,7 @@ var app = window['app'] = {
         uploads.init();
         discussion.init();
         notes.init();
+        nowPlaying.init();
         comments.init();
         listIndex.init();
         msgcli.init();
