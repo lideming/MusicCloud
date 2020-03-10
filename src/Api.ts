@@ -148,6 +148,8 @@ export var api = new class {
             obj: list,
         });
     }
+    getTrack(id: number) { return this.get('tracks/' + id) as Promise<Api.Track>; }
+    getList(id: number) { return this.get('lists/' + id) as Promise<Api.Track>; }
     processUrl(url: string) {
         if (url.match('^(https?:/)?/')) return url;
         if (this.storageUrlBase && url.startsWith('storage/'))

@@ -1,9 +1,10 @@
 // file: PlayerCore.ts
 
 import { Track } from "./TrackList";
-import { Callbacks, Action, SettingItem, I } from "./utils";
+import { Callbacks, Action, SettingItem, I, utils, CancelToken } from "./utils";
 import { api } from "./Api";
 import { Toast } from "./viewlib";
+import { Api } from "./apidef";
 
 /** 播放器核心：控制播放逻辑 */
 export var playerCore = new class PlayerCore {
@@ -14,7 +15,8 @@ export var playerCore = new class PlayerCore {
 
     siPlayer = new SettingItem('mcloud-player', 'json', {
         loopMode: 'list-loop' as PlayingLoopMode,
-        volume: 1
+        volume: 1,
+        preferBitrate: 0
     });
     get loopMode() { return this.siPlayer.data.loopMode; }
     set loopMode(val) {
@@ -23,6 +25,8 @@ export var playerCore = new class PlayerCore {
         this.onLoopModeChanged.invoke();
     }
     onLoopModeChanged = new Callbacks<Action>();
+
+    get preferBitrate() { return this.siPlayer.data.preferBitrate; }
 
     private _state: 'none' | 'playing' | 'paused' | 'stalled' = 'none';
     get state() { return this._state; }
@@ -110,16 +114,6 @@ export var playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
-    loadBlob(blob: Blob, play?: boolean) {
-        var reader = new FileReader();
-        reader.onload = (ev) => {
-            this.audio.src = reader.result as string;
-            this.audioLoaded = true;
-            this.audio.load();
-            if (play) this.play();
-        };
-        reader.readAsDataURL(blob);
-    }
     setTrack(track: Track) {
         var oldTrack = this.track;
         this.track = track;
@@ -134,14 +128,36 @@ export var playerCore = new class PlayerCore {
         if (forceStart) this.audio.currentTime = 0;
         this.play();
     }
-    play() {
-        if (this.track && !this.audioLoaded)
-            if (this.track.blob) {
-                this.loadBlob(this.track.blob, true);
-                return;
-            } else {
-                this.loadUrl(api.processUrl(this.track.url));
+    private _loadct: CancelToken;
+    private async loadTrack(track: Track) {
+        this._loadct?.cancel();
+        var ct = this._loadct = new CancelToken();
+        if (track.blob) {
+            var dataurl = await utils.readBlobAsDataUrl(track.blob);
+            ct.throwIfCancelled();
+            this.loadUrl(dataurl);
+        } else {
+            let cur = { url: track.url, bitrate: 0 } as Api.TrackFile;
+            var prefer = this.preferBitrate;
+            if (prefer && track.files) {
+                track.files.forEach(f => {
+                    if (!cur.bitrate || Math.abs(cur.bitrate - prefer) > Math.abs(f.bitrate - prefer)) {
+                        cur = f;
+                    }
+                });
             }
+            if (!cur.url && cur.urlurl) {
+                cur.url = (await api.get(cur.urlurl))['url'];
+                ct.throwIfCancelled();
+            }
+            this.loadUrl(api.processUrl(cur.url));
+        }
+        return true;
+    }
+    async play() {
+        var track = this.track;
+        if (track && !this.audioLoaded)
+            if (!await this.loadTrack(this.track)) return;
         this.audio.play();
     }
     pause() {

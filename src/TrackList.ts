@@ -13,12 +13,14 @@ import { router } from "./Router";
 
 
 /** A track binding with list */
-export class Track implements Api.Track {
-    id: number;
-    name: string;
-    artist: string;
-    url: string;
-    size: number;
+export class Track {
+    infoObj: Api.Track;
+    get id(): number { return this.infoObj.id; }
+    get name() { return this.infoObj.name; }
+    get artist() { return this.infoObj.artist; }
+    get url() { return this.infoObj.url; }
+    get files() { return this.infoObj.files; }
+    get size() { return this.infoObj.size; }
     blob?: Blob;
     _bind?: {
         position?: number;
@@ -39,7 +41,8 @@ export class Track implements Api.Track {
     }
     updateFromApiTrack(t: Api.Track) {
         if (this.id !== t.id) throw new Error('Bad track id');
-        utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
+        // utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
+        this.infoObj = t;
     }
     startEdit() {
         var dialog = new class extends Dialog {
@@ -141,7 +144,7 @@ export class TrackList {
     }
     private addTrack_NoUpdating(t: Api.Track, pos: number) {
         var track: Track = new Track({
-            ...t,
+            infoObj: t,
             _bind: {
                 list: this,
                 position: this.tracks.length
@@ -246,9 +249,12 @@ export class TrackList {
         var bind = track._bind;
         var position = bind.position;
         if (bind?.list !== this) return null;
-        position = position ?? this.listView.find(x => x.track === track)?.position
-            ?? this.listView.find(x => x.track.id === track.id)?.position;
-        if (position == null /* or undefined */) return null;
+        if (this.listView)
+            position = position ?? this.listView.find(x => x.track === track)?.position
+                ?? this.listView.find(x => x.track.id === track.id)?.position;
+        position = position ?? this.tracks.indexOf(track);
+        if (position == null || position < 0) position = this.tracks.findIndex(x => x.id === track.id);
+        if (position == null || position < 0) return null;
         if (loopMode == 'list-seq') {
             return this.tracks[position + offset] ?? null;
         } else if (loopMode == 'list-loop') {

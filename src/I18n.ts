@@ -217,6 +217,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Cancel", "取消"],
     ["Settings", "设置"],
     ["Color theme: {0}", "配色主题：{0}"],
+    ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));

@@ -181,8 +181,10 @@ export var uploads = new class extends TrackList {
             li.reset();
             var fetched = ((await api.get('my/uploads'))['tracks'] as any[])
                 .map(t => {
-                    t._upload = { state: 'done' };
-                    return new UploadTrack(t);
+                    return new UploadTrack({
+                        infoObj: t,
+                        _upload: { state: 'done' }
+                    });
                 });
             this.state = 'fetched';
         } catch (error) {
@@ -207,7 +209,7 @@ export var uploads = new class extends TrackList {
             artist: 'Unknown', name: file.name
         };
         var track = new UploadTrack({
-            ...apitrack,
+            infoObj: apitrack,
             blob: file,
             _upload: {
                 state: 'pending',
@@ -299,8 +301,7 @@ export var uploads = new class extends TrackList {
         } else {
             throw new Error("Unknown upload mode");
         }
-        track.id = respTrack.id;
-        track.updateFromApiTrack(respTrack);
+        track.infoObj = respTrack;
         track.setState('done');
     }
 };
