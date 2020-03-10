@@ -392,9 +392,13 @@ export class TrackListView extends ListContentView {
     protected updateCurPlaying(item?: TrackViewItem) {
         var playing = playerCore.track;
         if (item === undefined) {
-            item = (playing?._bind?.list === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
-                (playing && this.listView.find(x => x.track === playing))
-                ?? this.listView.find(x => x.track.id === playing.id);
+            if (playing) {
+                item = (playing._bind?.list === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
+                    (playing && this.listView.find(x => x.track === playing))
+                    ?? this.listView.find(x => x.track.id === playing.id);
+            } else {
+                item = null;
+            }
             this.curPlaying.set(item);
         } else if (playing) {
             var track = item.track;

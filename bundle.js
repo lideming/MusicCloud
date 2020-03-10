@@ -1331,18 +1331,17 @@ class LyricsView extends viewlib_1.View {
     setLyrics(lyrics) {
         if (typeof lyrics === 'string')
             lyrics = Lyrics_1.parse(lyrics);
+        this.curLine.set(null);
         this.lyrics.removeAllView();
         lyrics.lines.forEach(l => {
             this.lyrics.addView(new LineView(l));
         });
     }
     setCurrentTime(time, scroll) {
-        var line;
-        this.lyrics.forEach(x => {
-            if (x.line.startTime && x.line.startTime <= time)
-                line = x;
-        });
+        if (!(time >= 0))
+            time = 0;
         var prev = this.curLine.current;
+        var line = this.getLineByTime(time, prev);
         this.curLine.set(line);
         if (scroll && line && prev !== line) {
             line.dom.scrollIntoView({
@@ -1350,6 +1349,31 @@ class LyricsView extends viewlib_1.View {
                 block: 'center'
             });
         }
+    }
+    getLineByTime(time, hint) {
+        var line;
+        if (hint && time >= hint.line.startTime) {
+            line = hint;
+            for (let i = hint.position + 1; i < this.lyrics.length; i++) {
+                let x = this.lyrics.get(i);
+                if (x.line.startTime >= 0) {
+                    if (x.line.startTime <= time) {
+                        line = x;
+                    }
+                    else {
+                        break;
+                    }
+                }
+            }
+        }
+        else {
+            line = null;
+            this.lyrics.forEach(x => {
+                if (x.line.startTime >= 0 && x.line.startTime <= time)
+                    line = x;
+            });
+        }
+        return line;
     }
 }
 exports.LyricsView = LyricsView;
@@ -1588,6 +1612,7 @@ class PlayingView extends UI_1.ContentView {
             if (this.loadedLyrics != newLyrics) {
                 this.loadedLyrics = newLyrics;
                 this.lyricsView.setLyrics(newLyrics);
+                this.lyricsView.dom.scrollTop = 0;
             }
         };
         this.onProgressChanged = () => {
@@ -1601,12 +1626,12 @@ class PlayingView extends UI_1.ContentView {
                 this.header.dom,
                 { tag: 'div.name', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.name; } },
                 { tag: 'div.artist', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.artist; } },
-                {
-                    tag: 'div.pic',
-                    child: [
-                        { tag: 'div.nopic.no-selection', text: () => utils_1.I `No album cover` }
-                    ]
-                },
+                // {
+                //     tag: 'div.pic',
+                //     child: [
+                //         { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
+                //     ]
+                // },
                 this.lyricsView.dom
             ]
         };
@@ -1618,11 +1643,16 @@ class PlayingView extends UI_1.ContentView {
         this.ensureDom();
         PlayerCore_1.playerCore.onTrackChanged.add(this.onTrackChanged)();
         PlayerCore_1.playerCore.onProgressChanged.add(this.onProgressChanged);
-        setTimeout(() => this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, true), 1);
+    }
+    onDomInserted() {
+        this.lyricsView.dom.scrollTop; // force layout
+        this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, true);
+        // if (this.lyricsScrollPos) this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
     }
     onRemove() {
         PlayerCore_1.playerCore.onTrackChanged.remove(this.onTrackChanged);
         PlayerCore_1.playerCore.onProgressChanged.remove(this.onProgressChanged);
+        this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
     }
 }
 
@@ -2416,7 +2446,12 @@ class TrackListView extends ListContentView_1.ListContentView {
         var _a, _b, _c;
         var playing = PlayerCore_1.playerCore.track;
         if (item === undefined) {
-            item = (((_a = playing === null || playing === void 0 ? void 0 : playing._bind) === null || _a === void 0 ? void 0 : _a.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) : (_b = (playing && this.listView.find(x => x.track === playing))) !== null && _b !== void 0 ? _b : this.listView.find(x => x.track.id === playing.id);
+            if (playing) {
+                item = (((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) : (_b = (playing && this.listView.find(x => x.track === playing))) !== null && _b !== void 0 ? _b : this.listView.find(x => x.track.id === playing.id);
+            }
+            else {
+                item = null;
+            }
             this.curPlaying.set(item);
         }
         else if (playing) {
@@ -2627,6 +2662,7 @@ class SidebarItem extends viewlib_1.ListViewItem {
 exports.SidebarItem = SidebarItem;
 class ContentView extends viewlib_1.View {
     onShow() { }
+    onDomInserted() { }
     onRemove() { }
 }
 exports.ContentView = ContentView;
@@ -2988,8 +3024,10 @@ exports.ui = new class {
                 this.removeCurrent();
                 if (arg) {
                     arg.onShow();
-                    if (arg.dom)
+                    if (arg.dom) {
                         this.container.appendChild(arg.dom);
+                        arg.onDomInserted();
+                    }
                     if (!arg.contentViewState)
                         arg.contentViewState = { scrollTop: 0 };
                     this.container.scrollTop = arg.contentViewState.scrollTop;

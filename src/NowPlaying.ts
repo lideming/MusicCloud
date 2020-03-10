@@ -33,12 +33,12 @@ class PlayingView extends ContentView {
                 this.header.dom,
                 { tag: 'div.name', text: () => playerCore.track?.name },
                 { tag: 'div.artist', text: () => playerCore.track?.artist },
-                {
-                    tag: 'div.pic',
-                    child: [
-                        { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
-                    ]
-                },
+                // {
+                //     tag: 'div.pic',
+                //     child: [
+                //         { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
+                //     ]
+                // },
                 this.lyricsView.dom
             ]
         };
@@ -50,19 +50,26 @@ class PlayingView extends ContentView {
         this.ensureDom();
         playerCore.onTrackChanged.add(this.onTrackChanged)();
         playerCore.onProgressChanged.add(this.onProgressChanged);
-        setTimeout(() => this.lyricsView.setCurrentTime(playerCore.currentTime, true), 1);
+    }
+    onDomInserted() {
+        this.lyricsView.dom.scrollTop; // force layout
+        this.lyricsView.setCurrentTime(playerCore.currentTime, true);
+        // if (this.lyricsScrollPos) this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
     }
     onRemove() {
         playerCore.onTrackChanged.remove(this.onTrackChanged);
         playerCore.onProgressChanged.remove(this.onProgressChanged);
+        this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
     }
     loadedLyrics: string;
+    lyricsScrollPos: number;
     onTrackChanged = () => {
         this.updateDom();
         var newLyrics = playerCore.track?.infoObj.lyrics || '';
         if (this.loadedLyrics != newLyrics) {
             this.loadedLyrics = newLyrics;
             this.lyricsView.setLyrics(newLyrics);
+            this.lyricsView.dom.scrollTop = 0;
         }
     };
     onProgressChanged = () => {

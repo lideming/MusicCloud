@@ -29,8 +29,9 @@ export class SidebarItem extends ListViewItem {
 
 export class ContentView extends View {
     dom: HTMLElement;
-    onShow() {}
-    onRemove() {}
+    onShow() { }
+    onDomInserted() { }
+    onRemove() { }
     contentViewState?: ContentViewState;
 }
 
@@ -397,7 +398,10 @@ export const ui = new class {
             this.removeCurrent();
             if (arg) {
                 arg.onShow();
-                if (arg.dom) this.container.appendChild(arg.dom);
+                if (arg.dom) {
+                    this.container.appendChild(arg.dom);
+                    arg.onDomInserted();
+                }
                 if (!arg.contentViewState) arg.contentViewState = { scrollTop: 0 };
                 this.container.scrollTop = arg.contentViewState.scrollTop;
             }

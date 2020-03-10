@@ -1028,7 +1028,7 @@ textarea.input-text {
 .playingview .lyricsview {
     position: relative;
     flex: 1;
-    margin: 0 20px 20px;
+    width: 100%;
     overflow: auto;
 }
 

@@ -16,17 +16,16 @@ export class LyricsView extends View {
     }
     setLyrics(lyrics: string | Parsed) {
         if (typeof lyrics === 'string') lyrics = parse(lyrics);
+        this.curLine.set(null);
         this.lyrics.removeAllView();
         lyrics.lines.forEach(l => {
             this.lyrics.addView(new LineView(l));
         });
     }
     setCurrentTime(time: number, scroll?: true | 'smooth') {
-        var line: LineView;
-        this.lyrics.forEach(x => {
-            if (x.line.startTime && x.line.startTime <= time) line = x;
-        });
+        if (!(time >= 0)) time = 0;
         var prev = this.curLine.current;
+        var line = this.getLineByTime(time, prev);
         this.curLine.set(line);
         if (scroll && line && prev !== line) {
             line.dom.scrollIntoView({
@@ -34,6 +33,29 @@ export class LyricsView extends View {
                 block: 'center'
             });
         }
+    }
+
+    getLineByTime(time: number, hint?: LineView) {
+        var line: LineView;
+        if (hint && time >= hint.line.startTime) {
+            line = hint;
+            for (let i = hint.position + 1; i < this.lyrics.length; i++) {
+                let x = this.lyrics.get(i);
+                if (x.line.startTime >= 0) {
+                    if (x.line.startTime <= time) {
+                        line = x;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        } else {
+            line = null;
+            this.lyrics.forEach(x => {
+                if (x.line.startTime >= 0 && x.line.startTime <= time) line = x;
+            });
+        }
+        return line;
     }
 }
 
