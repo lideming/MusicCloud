@@ -420,7 +420,7 @@ export class SelectionHelper<TItem extends ISelectable> {
     }
 }
 
-export class ItemActiveHelper<T extends ListViewItem> {
+export class ItemActiveHelper<T extends View> {
     funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
     current: T;
     constructor(init?: Partial<ItemActiveHelper<T>>) {
@@ -885,8 +885,15 @@ export class TabBtn extends View {
 }
 
 export class InputView extends View {
+    dom: HTMLInputElement;
+    multiline: boolean;
+    type: string;
     createDom() {
-        return { tag: 'input.input-text' };
+        return this.multiline ? { tag: 'textarea.input-text' } : { tag: 'input.input-text' };
+    }
+    updateDom() {
+        super.updateDom();
+        if (!this.multiline) this.dom.type = this.type;
     }
 }
 
@@ -927,9 +934,7 @@ export class LabeledInput extends View {
     set value(val) { this.dominput.value = val; }
     constructor(init?: Partial<LabeledInput>) {
         super();
-        this.ensureDom();
         utils.objectApply(this, init);
-        this.updateDom();
     }
     createDom(): BuildDomExpr {
         return {
@@ -943,7 +948,8 @@ export class LabeledInput extends View {
     }
     updateDom() {
         super.updateDom();
-        this.dominput.type = this.type;
+        this.input.type = this.type;
+        this.input.domCreated && this.input.updateDom();
     }
 }
 

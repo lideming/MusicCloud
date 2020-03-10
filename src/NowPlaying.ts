@@ -4,6 +4,7 @@ import { ContentView, SidebarItem, ui } from './UI';
 import { Lazy, I, utils, BuildDomExpr } from './utils';
 import { ContentHeader } from './TrackList';
 import { playerCore } from './PlayerCore';
+import { LyricsView } from './LyricsView';
 
 
 export var nowPlaying = new class {
@@ -24,24 +25,22 @@ class PlayingView extends ContentView {
     header = new ContentHeader({
         title: I`Now Playing`
     });
+    lyricsView = new LyricsView();
     createDom(): BuildDomExpr {
         return {
-            tag: 'div',
+            tag: 'div.playingview',
             child: [
                 this.header.dom,
+                { tag: 'div.name', text: () => playerCore.track?.name },
+                { tag: 'div.artist', text: () => playerCore.track?.artist },
                 {
-                    tag: 'div.playingview',
+                    tag: 'div.pic',
                     child: [
-                        { tag: 'div.name', text: () => playerCore.track?.name },
-                        { tag: 'div.artist', text: () => playerCore.track?.artist },
-                        {
-                            tag: 'div.pic',
-                            child: [
-                                { tag: 'div.nopic', text: () => I`No album cover` }
-                            ]
-                        }
+                        { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
                     ]
-                }]
+                },
+                this.lyricsView.dom
+            ]
         };
     }
     postCreateDom() {
@@ -50,11 +49,23 @@ class PlayingView extends ContentView {
     onShow() {
         this.ensureDom();
         playerCore.onTrackChanged.add(this.onTrackChanged)();
+        playerCore.onProgressChanged.add(this.onProgressChanged);
+        setTimeout(() => this.lyricsView.setCurrentTime(playerCore.currentTime, true), 1);
     }
     onRemove() {
         playerCore.onTrackChanged.remove(this.onTrackChanged);
+        playerCore.onProgressChanged.remove(this.onProgressChanged);
     }
+    loadedLyrics: string;
     onTrackChanged = () => {
         this.updateDom();
+        var newLyrics = playerCore.track?.infoObj.lyrics || '';
+        if (this.loadedLyrics != newLyrics) {
+            this.loadedLyrics = newLyrics;
+            this.lyricsView.setLyrics(newLyrics);
+        }
+    };
+    onProgressChanged = () => {
+        this.lyricsView.setCurrentTime(playerCore.currentTime, 'smooth');
     };
 }

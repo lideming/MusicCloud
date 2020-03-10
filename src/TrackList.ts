@@ -52,15 +52,17 @@ export class Track {
             trackId: number;
             inputName = new LabeledInput({ label: I`Name` });
             inputArtist = new LabeledInput({ label: I`Artist` });
+            inputLyrics = new LabeledInput({ label: I`Lyrics` });
             btnSave = new TabBtn({ text: I`Save`, right: true });
             autoFocus = this.inputName.input;
             constructor() {
                 super();
-                [this.inputName, this.inputArtist].forEach(x => this.addContent(x));
+                this.inputLyrics.input.multiline = true;
+                [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
                 this.addBtn(this.btnSave);
                 this.btnSave.onClick.add(() => this.save());
                 this.dom.addEventListener('keydown', (ev) => {
-                    if (ev.keyCode == 13) {
+                    if (ev.keyCode == 13 && ev.target !== this.inputLyrics.dominput) {
                         ev.preventDefault();
                         this.save();
                     }
@@ -71,6 +73,7 @@ export class Track {
                 this.title = I`Track ID` + ' ' + t.id;
                 this.inputName.updateWith({ value: t.name });
                 this.inputArtist.updateWith({ value: t.artist });
+                this.inputLyrics.updateWith({ value: t.lyrics });
                 this.updateDom();
             }
             async save() {
@@ -81,7 +84,8 @@ export class Track {
                         obj: {
                             id: this.trackId,
                             name: this.inputName.value,
-                            artist: this.inputArtist.value
+                            artist: this.inputArtist.value,
+                            lyrics: this.inputLyrics.value
                         }
                     }) as Api.Track;
                     if (newinfo.id != this.trackId) throw new Error('Bad ID in response');
@@ -94,7 +98,7 @@ export class Track {
                 this.btnSave.updateWith({ clickable: true, text: I`Save` });
             }
         };
-        dialog.fillInfo(this);
+        dialog.fillInfo(this.infoObj);
         dialog.show();
     }
     async requestFileUrl(file: Api.TrackFile) {

@@ -173,7 +173,7 @@ exports.api = new class {
     }
 };
 
-},{"./main":15,"./utils":16}],2:[function(require,module,exports){
+},{"./main":17,"./utils":18}],2:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -413,7 +413,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./MessageClient":6,"./Router":9,"./UI":12,"./User":14,"./utils":16,"./viewlib":17}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./MessageClient":8,"./Router":11,"./UI":14,"./User":16,"./utils":18,"./viewlib":19}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -802,7 +802,7 @@ class ListContentView extends UI_1.ContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./TrackList":11,"./UI":12,"./utils":16,"./viewlib":17}],5:[function(require,module,exports){
+},{"./TrackList":13,"./UI":14,"./utils":18,"./viewlib":19}],5:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1063,7 +1063,331 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":8,"./Router":9,"./TrackList":11,"./UI":12,"./User":14,"./utils":16,"./viewlib":17}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":10,"./Router":11,"./TrackList":13,"./UI":14,"./User":16,"./utils":18,"./viewlib":19}],6:[function(require,module,exports){
+"use strict";
+// file: Lyrics.ts
+Object.defineProperty(exports, "__esModule", { value: true });
+function parse(str) {
+    return new Parser(str).parse();
+}
+exports.parse = parse;
+class LookaheadBuffer {
+    constructor() {
+        this.buf = [];
+    }
+    consume() {
+        var item = this.peek(0);
+        this.buf.shift();
+        return item;
+    }
+    peek(i) {
+        if (i === undefined)
+            i = 0;
+        while (this.buf.length <= i) {
+            this.buf.push(this.provider());
+        }
+        return this.buf[i];
+    }
+}
+var TAGBEGIN = '['.charCodeAt(0);
+var TAGEND = ']'.charCodeAt(0);
+var BRACKETBEGIN = '{'.charCodeAt(0);
+var BRACKETEND = '}'.charCodeAt(0);
+var NOTLINEFEED = '\r'.charCodeAt(0);
+var LINEFEED = '\n'.charCodeAt(0);
+class Lexer {
+    constructor(str) {
+        this.buf = new LookaheadBuffer();
+        this.cur = 0;
+        this.str = str;
+        this.buf.provider = () => {
+            return this.read();
+        };
+    }
+    get len() { return this.str.length; }
+    toArray() {
+        for (var i = 0; this.buf.peek(i).type !== 'eof'; i++) { }
+        return this.buf.buf.map(x => x);
+    }
+    read() {
+        var token = this.readCore();
+        this.lastToken = token;
+        return token;
+    }
+    readCore() {
+        var str = this.str;
+        var begin = this.cur;
+        var cur = this.cur;
+        try {
+            if (cur == str.length)
+                return new Token('eof');
+            while (true) {
+                var ch = str.charCodeAt(cur);
+                cur++;
+                if (ch === TAGBEGIN)
+                    return new Token('tagBegin', ch);
+                if (ch === TAGEND)
+                    return new Token('tagEnd', ch);
+                if (ch === BRACKETBEGIN)
+                    return new Token('bracketBegin', ch);
+                if (ch === BRACKETEND)
+                    return new Token('bracketEnd', ch);
+                if (ch === TAGBEGIN)
+                    return new Token('tagBegin', ch);
+                if (ch === TAGEND)
+                    return new Token('tagEnd', ch);
+                if (ch === NOTLINEFEED)
+                    continue;
+                if (ch === LINEFEED)
+                    return new Token('lineFeed', ch);
+                do {
+                    cur++;
+                    ch = str.charCodeAt(cur);
+                } while (!(isNaN(ch) || ch === TAGBEGIN || ch === TAGEND
+                    || ch === BRACKETBEGIN || ch === BRACKETEND
+                    || ch === LINEFEED || ch === NOTLINEFEED));
+                return new Token('text', str.substring(begin, cur));
+            }
+        }
+        finally {
+            this.cur = cur;
+        }
+    }
+    peek(pos) { return this.buf.peek(pos); }
+    consume() { return this.buf.consume(); }
+    tryExpect(type, pos) {
+        var t = this.peek(pos);
+        if (t.type === type)
+            return t;
+        return null;
+    }
+    tryExpectSeq(types) {
+        var i = 0;
+        for (const t of types) {
+            if (!this.tryExpect(t, i++))
+                return false;
+        }
+        return true;
+    }
+    expect(type) {
+        var t = this.tryExpect(type);
+        if (!t)
+            this.error(`expected token type '${type}'`);
+        return t;
+    }
+    error(msg) {
+        throw new Error((msg !== null && msg !== void 0 ? msg : 'error') + ' at ' + this.peek());
+    }
+    expectAndConsume(type) {
+        this.expect(type);
+        return this.consume();
+    }
+}
+class Token {
+    constructor(type, val) {
+        this.type = type;
+        this.val = typeof val == 'number' ? String.fromCharCode(val) : val;
+    }
+    toString() {
+        return `{${this.type}|${this.val}}`;
+    }
+}
+class Parser {
+    constructor(str) {
+        this.lines = [];
+        this.lex = new Lexer(str);
+        this.tokens = this.lex.buf;
+    }
+    parse() {
+        var lex = this.lex;
+        this.skipLineFeeds();
+        while (lex.peek().type !== 'eof') {
+            this.parseLine();
+            this.skipLineFeeds();
+        }
+        this.lines.sort((a, b) => a.startTime - b.startTime);
+        return { lines: this.lines };
+    }
+    parseLine() {
+        var lex = this.lex;
+        var startTime = null;
+        var duplicateTime = [];
+        var spans = [];
+        var lastSpan = null;
+        var curTime = null;
+        while (true) {
+            if (lex.tryExpect('tagBegin')) {
+                lex.consume();
+                let text = lex.expectAndConsume('text').val;
+                let ts = this.parseTimestamp(text);
+                if (typeof ts == 'number') {
+                    curTime = ts;
+                    lex.expectAndConsume('tagEnd');
+                    if (!lastSpan) {
+                        if (startTime) {
+                            duplicateTime.push(ts);
+                        }
+                        else {
+                            startTime = ts;
+                        }
+                    }
+                    else {
+                        lastSpan.endTime = ts;
+                    }
+                }
+                else if (lex.tryExpectSeq(['tagEnd', 'bracketBegin'])) {
+                    lex.consume();
+                    lex.consume();
+                    let ruby = lex.expectAndConsume('text').val;
+                    lex.expectAndConsume('bracketEnd');
+                    spans.push(lastSpan = { text, ruby, startTime: curTime, endTime: null });
+                }
+                else {
+                    if (!lastSpan) {
+                        // unknown tag at the beginning of the line, so skip this line.
+                        this.skipLine();
+                        return;
+                    }
+                }
+            }
+            else if (lex.tryExpect('text')) {
+                let text = lex.consume().val;
+                spans.push(lastSpan = { text, ruby: null, startTime: curTime, endTime: null });
+            }
+            else if (lex.tryExpect('lineFeed')) {
+                lex.consume();
+                break;
+            }
+            else if (lex.tryExpect('eof')) {
+                break;
+            }
+            else {
+                break;
+            }
+        }
+        if (startTime === null && spans.length === 0)
+            return;
+        this.lines.push({
+            startTime,
+            spans
+        });
+        duplicateTime.forEach(t => {
+            this.lines.push({
+                startTime: t,
+                spans: spans.filter(s => (Object.assign(Object.assign({}, s), { startTime: t - startTime + s.startTime, endTime: t - startTime + s.endTime })))
+            });
+        });
+    }
+    skipLine() {
+        while (!(this.lex.tryExpect('lineFeed') || this.lex.tryExpect('eof')))
+            this.lex.consume();
+        this.lex.consume();
+    }
+    skipLineFeeds() {
+        while (this.lex.tryExpect('lineFeed'))
+            this.lex.consume();
+    }
+    parseTimestamp(str) {
+        var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
+        if (!match)
+            return null;
+        var result = 0;
+        if (match[2])
+            result += parseInt(match[2]) * 60;
+        if (match[3])
+            result += parseInt(match[3]);
+        if (match[4])
+            result += parseFloat(match[4]);
+        return result;
+    }
+}
+exports.Parser = Parser;
+var l = new Parser(`
+
+[00:00.00] the first line of lyrics
+
+`);
+
+},{}],7:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const viewlib_1 = require("./viewlib");
+const utils_1 = require("./utils");
+const Lyrics_1 = require("./Lyrics");
+class LyricsView extends viewlib_1.View {
+    constructor() {
+        super(...arguments);
+        this.lyrics = new viewlib_1.ContainerView({ tag: 'div.lyrics' });
+        this.curLine = new viewlib_1.ItemActiveHelper();
+    }
+    createDom() {
+        return {
+            tag: 'div.lyricsview',
+            child: [
+                this.lyrics.dom
+            ]
+        };
+    }
+    setLyrics(lyrics) {
+        if (typeof lyrics === 'string')
+            lyrics = Lyrics_1.parse(lyrics);
+        this.lyrics.removeAllView();
+        lyrics.lines.forEach(l => {
+            this.lyrics.addView(new LineView(l));
+        });
+    }
+    setCurrentTime(time, scroll) {
+        var line;
+        this.lyrics.forEach(x => {
+            if (x.line.startTime && x.line.startTime <= time)
+                line = x;
+        });
+        var prev = this.curLine.current;
+        this.curLine.set(line);
+        if (scroll && line && prev !== line) {
+            line.dom.scrollIntoView({
+                behavior: scroll === 'smooth' ? 'smooth' : undefined,
+                block: 'center'
+            });
+        }
+    }
+}
+exports.LyricsView = LyricsView;
+class LineView extends viewlib_1.View {
+    constructor(line) {
+        super();
+        this.line = line;
+        this.spans = this.line.spans.map(s => {
+            if (!s.ruby) {
+                return utils_1.utils.buildDOM({
+                    tag: 'span.span', text: s.text
+                });
+            }
+            else {
+                return utils_1.utils.buildDOM({
+                    tag: 'span.span',
+                    child: {
+                        tag: 'ruby',
+                        child: [
+                            s.text,
+                            { tag: 'rp', text: '(' },
+                            { tag: 'rt', text: s.ruby },
+                            { tag: 'rp', text: ')' }
+                        ]
+                    }
+                });
+            }
+        });
+    }
+    createDom() {
+        return {
+            tag: 'p.line',
+            child: this.spans
+        };
+    }
+}
+
+},{"./Lyrics":6,"./utils":18,"./viewlib":19}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const User_1 = require("./User");
@@ -1226,7 +1550,7 @@ exports.msgcli = new class {
     }
 };
 
-},{"./Api":1,"./User":14,"./utils":16}],7:[function(require,module,exports){
+},{"./Api":1,"./User":16,"./utils":18}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Router_1 = require("./Router");
@@ -1234,6 +1558,7 @@ const UI_1 = require("./UI");
 const utils_1 = require("./utils");
 const TrackList_1 = require("./TrackList");
 const PlayerCore_1 = require("./PlayerCore");
+const LyricsView_1 = require("./LyricsView");
 exports.nowPlaying = new class {
     constructor() {
         this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Now Playing` });
@@ -1255,28 +1580,34 @@ class PlayingView extends UI_1.ContentView {
         this.header = new TrackList_1.ContentHeader({
             title: utils_1.I `Now Playing`
         });
+        this.lyricsView = new LyricsView_1.LyricsView();
         this.onTrackChanged = () => {
+            var _a;
             this.updateDom();
+            var newLyrics = ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.infoObj.lyrics) || '';
+            if (this.loadedLyrics != newLyrics) {
+                this.loadedLyrics = newLyrics;
+                this.lyricsView.setLyrics(newLyrics);
+            }
+        };
+        this.onProgressChanged = () => {
+            this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'smooth');
         };
     }
     createDom() {
         return {
-            tag: 'div',
+            tag: 'div.playingview',
             child: [
                 this.header.dom,
+                { tag: 'div.name', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.name; } },
+                { tag: 'div.artist', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.artist; } },
                 {
-                    tag: 'div.playingview',
+                    tag: 'div.pic',
                     child: [
-                        { tag: 'div.name', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.name; } },
-                        { tag: 'div.artist', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.artist; } },
-                        {
-                            tag: 'div.pic',
-                            child: [
-                                { tag: 'div.nopic', text: () => utils_1.I `No album cover` }
-                            ]
-                        }
+                        { tag: 'div.nopic.no-selection', text: () => utils_1.I `No album cover` }
                     ]
-                }
+                },
+                this.lyricsView.dom
             ]
         };
     }
@@ -1286,13 +1617,16 @@ class PlayingView extends UI_1.ContentView {
     onShow() {
         this.ensureDom();
         PlayerCore_1.playerCore.onTrackChanged.add(this.onTrackChanged)();
+        PlayerCore_1.playerCore.onProgressChanged.add(this.onProgressChanged);
+        setTimeout(() => this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, true), 1);
     }
     onRemove() {
         PlayerCore_1.playerCore.onTrackChanged.remove(this.onTrackChanged);
+        PlayerCore_1.playerCore.onProgressChanged.remove(this.onProgressChanged);
     }
 }
 
-},{"./PlayerCore":8,"./Router":9,"./TrackList":11,"./UI":12,"./utils":16}],8:[function(require,module,exports){
+},{"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./TrackList":13,"./UI":14,"./utils":18}],10:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1497,7 +1831,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./utils":16,"./viewlib":17}],9:[function(require,module,exports){
+},{"./Api":1,"./utils":18,"./viewlib":19}],11:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1562,7 +1896,7 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":12,"./utils":16}],10:[function(require,module,exports){
+},{"./UI":14,"./utils":18}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -1651,7 +1985,7 @@ class SettingsDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":8,"./UI":12,"./viewlib":17}],11:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":10,"./UI":14,"./viewlib":19}],13:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1709,13 +2043,15 @@ class Track {
                 this.width = '500px';
                 this.inputName = new viewlib_1.LabeledInput({ label: utils_1.I `Name` });
                 this.inputArtist = new viewlib_1.LabeledInput({ label: utils_1.I `Artist` });
+                this.inputLyrics = new viewlib_1.LabeledInput({ label: utils_1.I `Lyrics` });
                 this.btnSave = new viewlib_1.TabBtn({ text: utils_1.I `Save`, right: true });
                 this.autoFocus = this.inputName.input;
-                [this.inputName, this.inputArtist].forEach(x => this.addContent(x));
+                this.inputLyrics.input.multiline = true;
+                [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
                 this.addBtn(this.btnSave);
                 this.btnSave.onClick.add(() => this.save());
                 this.dom.addEventListener('keydown', (ev) => {
-                    if (ev.keyCode == 13) {
+                    if (ev.keyCode == 13 && ev.target !== this.inputLyrics.dominput) {
                         ev.preventDefault();
                         this.save();
                     }
@@ -1726,6 +2062,7 @@ class Track {
                 this.title = utils_1.I `Track ID` + ' ' + t.id;
                 this.inputName.updateWith({ value: t.name });
                 this.inputArtist.updateWith({ value: t.artist });
+                this.inputLyrics.updateWith({ value: t.lyrics });
                 this.updateDom();
             }
             save() {
@@ -1737,7 +2074,8 @@ class Track {
                             obj: {
                                 id: this.trackId,
                                 name: this.inputName.value,
-                                artist: this.inputArtist.value
+                                artist: this.inputArtist.value,
+                                lyrics: this.inputLyrics.value
                             }
                         });
                         if (newinfo.id != this.trackId)
@@ -1753,7 +2091,7 @@ class Track {
                 });
             }
         };
-        dialog.fillInfo(this);
+        dialog.fillInfo(this.infoObj);
         dialog.show();
     }
     requestFileUrl(file) {
@@ -2258,7 +2596,7 @@ class ActionBtn extends viewlib_1.TextView {
 }
 exports.ActionBtn = ActionBtn;
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":8,"./Router":9,"./User":14,"./main":15,"./utils":16,"./viewlib":17}],12:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./User":16,"./main":17,"./utils":18,"./viewlib":19}],14:[function(require,module,exports){
 "use strict";
 // file: UI.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2787,7 +3125,7 @@ class SidebarToggle extends viewlib_1.View {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":8,"./Router":9,"./Uploads":13,"./User":14,"./utils":16,"./viewlib":17}],13:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":10,"./Router":11,"./Uploads":15,"./User":16,"./utils":18,"./viewlib":19}],15:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3209,7 +3547,7 @@ var BlockFormat = {
     }
 };
 
-},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":8,"./Router":9,"./TrackList":11,"./UI":12,"./User":14,"./utils":16,"./viewlib":17}],14:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":10,"./Router":11,"./TrackList":13,"./UI":14,"./User":16,"./utils":18,"./viewlib":19}],16:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3650,7 +3988,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./Api":1,"./PlayerCore":8,"./SettingsUI":10,"./UI":12,"./Uploads":13,"./main":15,"./utils":16,"./viewlib":17}],15:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":10,"./SettingsUI":12,"./UI":14,"./Uploads":15,"./main":17,"./utils":18,"./viewlib":19}],17:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -3698,7 +4036,7 @@ var app = window['app'] = {
 app.init();
 window['preload'].jsOk();
 
-},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":6,"./NowPlaying":7,"./PlayerCore":8,"./Router":9,"./SettingsUI":10,"./UI":12,"./Uploads":13,"./User":14,"./viewlib":17}],16:[function(require,module,exports){
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":8,"./NowPlaying":9,"./PlayerCore":10,"./Router":11,"./SettingsUI":12,"./UI":14,"./Uploads":15,"./User":16,"./viewlib":19}],18:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4290,7 +4628,7 @@ class DataUpdatingHelper {
 }
 exports.DataUpdatingHelper = DataUpdatingHelper;
 
-},{"./I18n":3}],17:[function(require,module,exports){
+},{"./I18n":3}],19:[function(require,module,exports){
 "use strict";
 // file: viewlib.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -5169,7 +5507,12 @@ class TabBtn extends View {
 exports.TabBtn = TabBtn;
 class InputView extends View {
     createDom() {
-        return { tag: 'input.input-text' };
+        return this.multiline ? { tag: 'textarea.input-text' } : { tag: 'input.input-text' };
+    }
+    updateDom() {
+        super.updateDom();
+        if (!this.multiline)
+            this.dom.type = this.type;
     }
 }
 exports.InputView = InputView;
@@ -5204,9 +5547,7 @@ class LabeledInput extends View {
         super();
         this.type = 'text';
         this.input = new InputView();
-        this.ensureDom();
         utils_1.utils.objectApply(this, init);
-        this.updateDom();
     }
     get dominput() { return this.input.dom; }
     get value() { return this.dominput.value; }
@@ -5223,7 +5564,8 @@ class LabeledInput extends View {
     }
     updateDom() {
         super.updateDom();
-        this.dominput.type = this.type;
+        this.input.type = this.type;
+        this.input.domCreated && this.input.updateDom();
     }
 }
 exports.LabeledInput = LabeledInput;
@@ -5341,4 +5683,4 @@ class MessageBox extends Dialog {
 }
 exports.MessageBox = MessageBox;
 
-},{"./I18n":3,"./utils":16}]},{},[15]);
+},{"./I18n":3,"./utils":18}]},{},[17]);

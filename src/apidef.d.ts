@@ -44,6 +44,7 @@ export namespace Api {
         artist: string;
         /** URL to audio file */
         url: string;
+        lyrics?: string;
         size?: number;
         length?: number;
         files?: TrackFile[];
