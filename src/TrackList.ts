@@ -36,7 +36,7 @@ export class Track {
         return `${I`Track ID`}: ${this.id}\r\n${I`Name`}: ${this.name}\r\n${I`Artist`}: ${this.artist}`;
     }
     toApiTrack(): Api.Track {
-        return utils.objectApply<Api.Track>({} as any, this, ['id', 'artist', 'name', 'url', 'size']) as any;
+        return this.infoObj;
     }
     getExtensionName() {
         return /\.([\w\-_]{1,6})$/.exec(this.url)?.[1];

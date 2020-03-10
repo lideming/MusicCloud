@@ -1690,7 +1690,7 @@ class Track {
         return `${utils_1.I `Track ID`}: ${this.id}\r\n${utils_1.I `Name`}: ${this.name}\r\n${utils_1.I `Artist`}: ${this.artist}`;
     }
     toApiTrack() {
-        return utils_1.utils.objectApply({}, this, ['id', 'artist', 'name', 'url', 'size']);
+        return this.infoObj;
     }
     getExtensionName() {
         var _a;
