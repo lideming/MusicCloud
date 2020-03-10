@@ -346,7 +346,8 @@ a.item {
     vertical-align: middle;
 }
 
-.trackitem .name, .trackitem .artist, .trackitem .duration {
+.trackitem .name, .trackitem .artist, .trackitem .duration,
+.trackitem .uploads-state {
     display: inline-block;
     vertical-align: middle;
     margin-left: .5em;
@@ -411,6 +412,10 @@ a.item {
 }
 
 .trackitem.uploads-item .uploads-state {
+    width: calc((100% - 3em - 20px) * .1);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
     color: #ff6659;
 }
 
