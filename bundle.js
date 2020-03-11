@@ -1073,11 +1073,13 @@ function parse(str) {
 exports.parse = parse;
 class LookaheadBuffer {
     constructor() {
+        this.consumed = 0;
         this.buf = [];
     }
     consume() {
         var item = this.peek(0);
         this.buf.shift();
+        this.consumed++;
         return item;
     }
     peek(i) {
@@ -1111,6 +1113,7 @@ class Lexer {
     }
     read() {
         var token = this.readCore();
+        // console.debug('token', token, this.cur);
         this.lastToken = token;
         return token;
     }
@@ -1132,20 +1135,22 @@ class Lexer {
                     return new Token('bracketBegin', ch);
                 if (ch === BRACKETEND)
                     return new Token('bracketEnd', ch);
-                if (ch === TAGBEGIN)
-                    return new Token('tagBegin', ch);
-                if (ch === TAGEND)
-                    return new Token('tagEnd', ch);
                 if (ch === NOTLINEFEED)
                     continue;
                 if (ch === LINEFEED)
                     return new Token('lineFeed', ch);
-                do {
-                    cur++;
+                if (!(ch >= 0))
+                    return new Token('eof', 'eof');
+                while (true) {
                     ch = str.charCodeAt(cur);
-                } while (!(isNaN(ch) || ch === TAGBEGIN || ch === TAGEND
-                    || ch === BRACKETBEGIN || ch === BRACKETEND
-                    || ch === LINEFEED || ch === NOTLINEFEED));
+                    if (!(ch >= 0)
+                        || ch === TAGBEGIN || ch === TAGEND
+                        || ch === BRACKETBEGIN || ch === BRACKETEND
+                        || ch === LINEFEED || ch === NOTLINEFEED)
+                        break;
+                    cur++;
+                }
+                ;
                 return new Token('text', str.substring(begin, cur));
             }
         }
@@ -1200,10 +1205,16 @@ class Parser {
     }
     parse() {
         var lex = this.lex;
+        var lastpos;
         this.skipLineFeeds();
         while (lex.peek().type !== 'eof') {
+            lastpos = lex.buf.consumed;
             this.parseLine();
             this.skipLineFeeds();
+            if (lex.buf.consumed === lastpos) {
+                this.parseLine();
+                lex.error('parseLine() doesn\'t consume tokens');
+            }
         }
         this.lines.sort((a, b) => a.startTime - b.startTime);
         return { lines: this.lines };
@@ -1248,6 +1259,11 @@ class Parser {
                         this.skipLine();
                         return;
                     }
+                    else {
+                        spans.push(lastSpan = { text: '[' + text + ']', ruby: null, startTime: curTime, endTime: null });
+                        if (lex.tryExpect('tagEnd'))
+                            lex.consume();
+                    }
                 }
             }
             else if (lex.tryExpect('text')) {
@@ -1262,6 +1278,7 @@ class Parser {
                 break;
             }
             else {
+                this.skipLine();
                 break;
             }
         }
