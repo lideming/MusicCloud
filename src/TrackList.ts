@@ -58,6 +58,7 @@ export class Track {
             constructor() {
                 super();
                 this.inputLyrics.input.multiline = true;
+                this.inputLyrics.dominput.style.height = '10em';
                 [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
                 this.addBtn(this.btnSave);
                 this.btnSave.onClick.add(() => this.save());

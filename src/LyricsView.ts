@@ -1,6 +1,6 @@
 import { View, ContainerView, ItemActiveHelper } from "./viewlib";
 import { BuildDomExpr, utils } from "./utils";
-import { parse, Parsed, Line } from "./Lyrics";
+import { parse, Parsed, Line, Span } from "./Lyrics";
 
 
 export class LyricsView extends View {
@@ -26,6 +26,7 @@ export class LyricsView extends View {
         if (!(time >= 0)) time = 0;
         var prev = this.curLine.current;
         var line = this.getLineByTime(time, prev);
+        line?.setCurrentTime(time);
         this.curLine.set(line);
         if (scroll && line && prev !== line) {
             line.dom.scrollIntoView({
@@ -61,35 +62,50 @@ export class LyricsView extends View {
 
 class LineView extends View {
     line: Line;
-    spans: HTMLSpanElement[];
+    spans: SpanView[];
     constructor(line: Line) {
         super();
         this.line = line;
-        this.spans = this.line.spans.map(s => {
-            if (!s.ruby) {
-                return utils.buildDOM({
-                    tag: 'span.span', text: s.text
-                });
-            } else {
-                return utils.buildDOM({
-                    tag: 'span.span',
-                    child: {
-                        tag: 'ruby',
-                        child: [
-                            s.text,
-                            { tag: 'rp', text: '(' },
-                            { tag: 'rt', text: s.ruby },
-                            { tag: 'rp', text: ')' }
-                        ]
-                    }
-                });
-            }
-        });
+        this.spans = this.line.spans.map(s => new SpanView(s));
     }
     createDom() {
         return {
             tag: 'p.line',
-            child: this.spans
+            child: this.spans.map(x => x.dom)
         };
+    }
+    setCurrentTime(time: number) {
+        this.spans.forEach(s => {
+            s.toggleClass('active', s.span.startTime <= time);
+        });
+    }
+}
+
+class SpanView extends View {
+    span: Span;
+    constructor(span: Span) {
+        super();
+        this.span = span;
+    }
+    createDom() {
+        var s = this.span;
+        if (!s.ruby) {
+            return utils.buildDOM({
+                tag: 'span.span', text: s.text
+            });
+        } else {
+            return utils.buildDOM({
+                tag: 'span.span',
+                child: {
+                    tag: 'ruby',
+                    child: [
+                        s.text,
+                        { tag: 'rp', text: '(' },
+                        { tag: 'rt', text: s.ruby },
+                        { tag: 'rp', text: ')' }
+                    ]
+                }
+            });
+        }
     }
 }

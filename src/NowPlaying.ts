@@ -1,7 +1,7 @@
 import { router } from './Router';
 import { ListContentView } from './ListContentView';
 import { ContentView, SidebarItem, ui } from './UI';
-import { Lazy, I, utils, BuildDomExpr } from './utils';
+import { Lazy, I, utils, BuildDomExpr, Timer } from './utils';
 import { ContentHeader } from './TrackList';
 import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
@@ -54,6 +54,7 @@ class PlayingView extends ContentView {
     onDomInserted() {
         this.lyricsView.dom.scrollTop; // force layout
         this.lyricsView.setCurrentTime(playerCore.currentTime, true);
+        this.timer.tryCancel();
         // if (this.lyricsScrollPos) this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
     }
     onRemove() {
@@ -72,7 +73,18 @@ class PlayingView extends ContentView {
             this.lyricsView.dom.scrollTop = 0;
         }
     };
+
+    timer = new Timer(() => this.onProgressChanged());
+    lastTime = 0;
+    lastChangedRealTime = 0;
     onProgressChanged = () => {
-        this.lyricsView.setCurrentTime(playerCore.currentTime, 'smooth');
+        var time = playerCore.currentTime;
+        var realTime = new Date().getTime();
+        var timerOn = true;
+        if (time != this.lastTime) {
+            this.lastChangedRealTime = realTime;
+            this.lyricsView.setCurrentTime(time, 'smooth');
+        }
+        if (realTime - this.lastChangedRealTime < 500) this.timer.timeout(32);
     };
 }

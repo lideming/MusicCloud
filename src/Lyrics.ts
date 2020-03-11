@@ -165,15 +165,16 @@ export class Parser {
                 let text = lex.expectAndConsume('text').val;
                 let ts = this.parseTimestamp(text);
                 if (typeof ts == 'number') {
-                    curTime = ts;
                     lex.expectAndConsume('tagEnd');
                     if (!lastSpan) {
                         if (startTime) {
                             duplicateTime.push(ts);
                         } else {
+                            curTime = ts;
                             startTime = ts;
                         }
                     } else {
+                        curTime = ts;
                         lastSpan.endTime = ts;
                     }
                 } else if (lex.tryExpectSeq(['tagEnd', 'bracketBegin'])) {

@@ -1030,6 +1030,7 @@ textarea.input-text {
     flex: 1;
     width: 100%;
     overflow: auto;
+    animation: showing .3s;
 }
 
 .lyricsview .line {
@@ -1037,8 +1038,27 @@ textarea.input-text {
     min-height: 1em;
     line-height: 1.3;
     text-align: center;
+    color: var(--color-text-gray);
+}
+
+.lyricsview .line rt {
+    font-size: 60%;
 }
 
 .lyricsview .line.active {
+    color: var(--color-text);
+}
+
+.lyricsview .line.active .span.active{
     color: var(--color-primary);
+    animation: lryics-span-active .2s;
+}
+
+@keyframes lryics-span-active {
+    0%, 100% {
+        color: var(--color-primary);
+    }
+    50% {
+        color: var(--color-primary-light);
+    }
 }

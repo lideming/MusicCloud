@@ -1232,17 +1232,18 @@ class Parser {
                 let text = lex.expectAndConsume('text').val;
                 let ts = this.parseTimestamp(text);
                 if (typeof ts == 'number') {
-                    curTime = ts;
                     lex.expectAndConsume('tagEnd');
                     if (!lastSpan) {
                         if (startTime) {
                             duplicateTime.push(ts);
                         }
                         else {
+                            curTime = ts;
                             startTime = ts;
                         }
                     }
                     else {
+                        curTime = ts;
                         lastSpan.endTime = ts;
                     }
                 }
@@ -1359,6 +1360,7 @@ class LyricsView extends viewlib_1.View {
             time = 0;
         var prev = this.curLine.current;
         var line = this.getLineByTime(time, prev);
+        line === null || line === void 0 ? void 0 : line.setCurrentTime(time);
         this.curLine.set(line);
         if (scroll && line && prev !== line) {
             line.dom.scrollIntoView({
@@ -1398,33 +1400,46 @@ class LineView extends viewlib_1.View {
     constructor(line) {
         super();
         this.line = line;
-        this.spans = this.line.spans.map(s => {
-            if (!s.ruby) {
-                return utils_1.utils.buildDOM({
-                    tag: 'span.span', text: s.text
-                });
-            }
-            else {
-                return utils_1.utils.buildDOM({
-                    tag: 'span.span',
-                    child: {
-                        tag: 'ruby',
-                        child: [
-                            s.text,
-                            { tag: 'rp', text: '(' },
-                            { tag: 'rt', text: s.ruby },
-                            { tag: 'rp', text: ')' }
-                        ]
-                    }
-                });
-            }
-        });
+        this.spans = this.line.spans.map(s => new SpanView(s));
     }
     createDom() {
         return {
             tag: 'p.line',
-            child: this.spans
+            child: this.spans.map(x => x.dom)
         };
+    }
+    setCurrentTime(time) {
+        this.spans.forEach(s => {
+            s.toggleClass('active', s.span.startTime <= time);
+        });
+    }
+}
+class SpanView extends viewlib_1.View {
+    constructor(span) {
+        super();
+        this.span = span;
+    }
+    createDom() {
+        var s = this.span;
+        if (!s.ruby) {
+            return utils_1.utils.buildDOM({
+                tag: 'span.span', text: s.text
+            });
+        }
+        else {
+            return utils_1.utils.buildDOM({
+                tag: 'span.span',
+                child: {
+                    tag: 'ruby',
+                    child: [
+                        s.text,
+                        { tag: 'rp', text: '(' },
+                        { tag: 'rt', text: s.ruby },
+                        { tag: 'rp', text: ')' }
+                    ]
+                }
+            });
+        }
     }
 }
 
@@ -1632,8 +1647,19 @@ class PlayingView extends UI_1.ContentView {
                 this.lyricsView.dom.scrollTop = 0;
             }
         };
+        this.timer = new utils_1.Timer(() => this.onProgressChanged());
+        this.lastTime = 0;
+        this.lastChangedRealTime = 0;
         this.onProgressChanged = () => {
-            this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'smooth');
+            var time = PlayerCore_1.playerCore.currentTime;
+            var realTime = new Date().getTime();
+            var timerOn = true;
+            if (time != this.lastTime) {
+                this.lastChangedRealTime = realTime;
+                this.lyricsView.setCurrentTime(time, 'smooth');
+            }
+            if (realTime - this.lastChangedRealTime < 500)
+                this.timer.timeout(32);
         };
     }
     createDom() {
@@ -1664,6 +1690,7 @@ class PlayingView extends UI_1.ContentView {
     onDomInserted() {
         this.lyricsView.dom.scrollTop; // force layout
         this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, true);
+        this.timer.tryCancel();
         // if (this.lyricsScrollPos) this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
     }
     onRemove() {
@@ -2094,6 +2121,7 @@ class Track {
                 this.btnSave = new viewlib_1.TabBtn({ text: utils_1.I `Save`, right: true });
                 this.autoFocus = this.inputName.input;
                 this.inputLyrics.input.multiline = true;
+                this.inputLyrics.dominput.style.height = '10em';
                 [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
                 this.addBtn(this.btnSave);
                 this.btnSave.onClick.add(() => this.save());
