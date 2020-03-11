@@ -1,11 +1,12 @@
 import { View, ContainerView, ItemActiveHelper } from "./viewlib";
-import { BuildDomExpr, utils } from "./utils";
+import { BuildDomExpr, utils, Callbacks, Action } from "./utils";
 import { parse, Parsed, Line, Span } from "./Lyrics";
 
 
 export class LyricsView extends View {
     lyrics = new ContainerView<LineView>({ tag: 'div.lyrics' });
     curLine = new ItemActiveHelper<LineView>();
+    onSpanClick = new Callbacks<Action<Span>>();
     createDom(): BuildDomExpr {
         return {
             tag: 'div.lyricsview',
@@ -19,7 +20,7 @@ export class LyricsView extends View {
         this.curLine.set(null);
         this.lyrics.removeAllView();
         lyrics.lines.forEach(l => {
-            this.lyrics.addView(new LineView(l));
+            this.lyrics.addView(new LineView(l, this));
         });
     }
     setCurrentTime(time: number, scroll?: true | 'smooth') {
@@ -63,10 +64,12 @@ export class LyricsView extends View {
 class LineView extends View {
     line: Line;
     spans: SpanView[];
-    constructor(line: Line) {
+    lyricsView: LyricsView;
+    constructor(line: Line, lyricsView: LyricsView) {
         super();
         this.line = line;
-        this.spans = this.line.spans.map(s => new SpanView(s));
+        this.lyricsView = lyricsView;
+        this.spans = this.line.spans.map(s => new SpanView(s, this));
     }
     createDom() {
         return {
@@ -83,9 +86,11 @@ class LineView extends View {
 
 class SpanView extends View {
     span: Span;
-    constructor(span: Span) {
+    lineView: LineView;
+    constructor(span: Span, lineView: LineView) {
         super();
         this.span = span;
+        this.lineView = lineView;
     }
     createDom() {
         var s = this.span;
@@ -107,5 +112,11 @@ class SpanView extends View {
                 }
             });
         }
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.addEventListener('click', () => {
+            this.lineView.lyricsView.onSpanClick.invoke(this.span);
+        });
     }
 }

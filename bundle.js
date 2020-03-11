@@ -1354,6 +1354,7 @@ class LyricsView extends viewlib_1.View {
         super(...arguments);
         this.lyrics = new viewlib_1.ContainerView({ tag: 'div.lyrics' });
         this.curLine = new viewlib_1.ItemActiveHelper();
+        this.onSpanClick = new utils_1.Callbacks();
     }
     createDom() {
         return {
@@ -1369,7 +1370,7 @@ class LyricsView extends viewlib_1.View {
         this.curLine.set(null);
         this.lyrics.removeAllView();
         lyrics.lines.forEach(l => {
-            this.lyrics.addView(new LineView(l));
+            this.lyrics.addView(new LineView(l, this));
         });
     }
     setCurrentTime(time, scroll) {
@@ -1414,10 +1415,11 @@ class LyricsView extends viewlib_1.View {
 }
 exports.LyricsView = LyricsView;
 class LineView extends viewlib_1.View {
-    constructor(line) {
+    constructor(line, lyricsView) {
         super();
         this.line = line;
-        this.spans = this.line.spans.map(s => new SpanView(s));
+        this.lyricsView = lyricsView;
+        this.spans = this.line.spans.map(s => new SpanView(s, this));
     }
     createDom() {
         return {
@@ -1432,9 +1434,10 @@ class LineView extends viewlib_1.View {
     }
 }
 class SpanView extends viewlib_1.View {
-    constructor(span) {
+    constructor(span, lineView) {
         super();
         this.span = span;
+        this.lineView = lineView;
     }
     createDom() {
         var s = this.span;
@@ -1457,6 +1460,12 @@ class SpanView extends viewlib_1.View {
                 }
             });
         }
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.addEventListener('click', () => {
+            this.lineView.lyricsView.onSpanClick.invoke(this.span);
+        });
     }
 }
 
@@ -1649,7 +1658,7 @@ exports.nowPlaying = new class {
 };
 class PlayingView extends UI_1.ContentView {
     constructor() {
-        super(...arguments);
+        super();
         this.header = new TrackList_1.ContentHeader({
             title: utils_1.I `Now Playing`
         });
@@ -1678,6 +1687,10 @@ class PlayingView extends UI_1.ContentView {
             if (realTime - this.lastChangedRealTime < 500)
                 this.timer.timeout(16);
         };
+        this.lyricsView.onSpanClick.add((span) => {
+            if (span.startTime >= 0)
+                PlayerCore_1.playerCore.currentTime = span.startTime;
+        });
     }
     createDom() {
         return {

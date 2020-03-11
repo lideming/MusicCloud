@@ -26,6 +26,12 @@ class PlayingView extends ContentView {
         title: I`Now Playing`
     });
     lyricsView = new LyricsView();
+    constructor() {
+        super();
+        this.lyricsView.onSpanClick.add((span) => {
+            if (span.startTime >= 0) playerCore.currentTime = span.startTime;
+        });
+    }
     createDom(): BuildDomExpr {
         return {
             tag: 'div.playingview',
