@@ -85,6 +85,6 @@ class PlayingView extends ContentView {
             this.lastChangedRealTime = realTime;
             this.lyricsView.setCurrentTime(time, 'smooth');
         }
-        if (realTime - this.lastChangedRealTime < 500) this.timer.timeout(32);
+        if (realTime - this.lastChangedRealTime < 500) this.timer.timeout(16);
     };
 }

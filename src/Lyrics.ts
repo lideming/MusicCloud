@@ -132,6 +132,8 @@ export class Parser {
     lex: Lexer;
     tokens: LookaheadBuffer<Token>;
     lines: Line[] = [];
+    bpm = 60;
+    curTime = 0;
     constructor(str: string) {
         this.lex = new Lexer(str);
         this.tokens = this.lex.buf;
@@ -163,7 +165,7 @@ export class Parser {
             if (lex.tryExpect('tagBegin')) {
                 lex.consume();
                 let text = lex.expectAndConsume('text').val;
-                let ts = this.parseTimestamp(text);
+                let ts = this.parseTimestamp(text, curTime ?? this.curTime);
                 if (typeof ts == 'number') {
                     lex.expectAndConsume('tagEnd');
                     if (!lastSpan) {
@@ -182,6 +184,9 @@ export class Parser {
                     let ruby = lex.expectAndConsume('text').val;
                     lex.expectAndConsume('bracketEnd');
                     spans.push(lastSpan = { text, ruby, startTime: curTime, endTime: null });
+                } else if (text.startsWith('bpm:')) {
+                    this.bpm = parseFloat(text.substr(4));
+                    lex.expectAndConsume('tagEnd');
                 } else {
                     if (!lastSpan) {
                         // unknown tag at the beginning of the line, so skip this line.
@@ -206,6 +211,7 @@ export class Parser {
             }
         }
         if (startTime === null && spans.length === 0) return;
+        if (curTime != null) this.curTime = curTime;
         this.lines.push({
             startTime,
             spans
@@ -229,13 +235,20 @@ export class Parser {
         while (this.lex.tryExpect('lineFeed'))
             this.lex.consume();
     }
-    parseTimestamp(str: string): number {
+    parseTimestamp(str: string, curTime: number): number {
+        var result = null;
         var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
-        if (!match) return null;
-        var result = 0;
-        if (match[2]) result += parseInt(match[2]) * 60;
-        if (match[3]) result += parseInt(match[3]);
-        if (match[4]) result += parseFloat(match[4]);
+        if (match) {
+            result = 0;
+            if (match[2]) result += parseInt(match[2]) * 60;
+            if (match[3]) result += parseInt(match[3]);
+            if (match[4]) result += parseFloat(match[4]);
+        } else if (match = /^b(\d+)?(\/(\d+))?$/.exec(str)) {
+            result = 60 / this.bpm;
+            if (match[1]) result *= parseInt(match[1]);
+            if (match[3]) result /= parseInt(match[3]);
+            result += curTime;
+        }
         return result;
     }
 }

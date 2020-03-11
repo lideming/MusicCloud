@@ -1200,6 +1200,8 @@ class Token {
 class Parser {
     constructor(str) {
         this.lines = [];
+        this.bpm = 60;
+        this.curTime = 0;
         this.lex = new Lexer(str);
         this.tokens = this.lex.buf;
     }
@@ -1230,7 +1232,7 @@ class Parser {
             if (lex.tryExpect('tagBegin')) {
                 lex.consume();
                 let text = lex.expectAndConsume('text').val;
-                let ts = this.parseTimestamp(text);
+                let ts = this.parseTimestamp(text, curTime !== null && curTime !== void 0 ? curTime : this.curTime);
                 if (typeof ts == 'number') {
                     lex.expectAndConsume('tagEnd');
                     if (!lastSpan) {
@@ -1253,6 +1255,10 @@ class Parser {
                     let ruby = lex.expectAndConsume('text').val;
                     lex.expectAndConsume('bracketEnd');
                     spans.push(lastSpan = { text, ruby, startTime: curTime, endTime: null });
+                }
+                else if (text.startsWith('bpm:')) {
+                    this.bpm = parseFloat(text.substr(4));
+                    lex.expectAndConsume('tagEnd');
                 }
                 else {
                     if (!lastSpan) {
@@ -1285,6 +1291,8 @@ class Parser {
         }
         if (startTime === null && spans.length === 0)
             return;
+        if (curTime != null)
+            this.curTime = curTime;
         this.lines.push({
             startTime,
             spans
@@ -1305,17 +1313,26 @@ class Parser {
         while (this.lex.tryExpect('lineFeed'))
             this.lex.consume();
     }
-    parseTimestamp(str) {
+    parseTimestamp(str, curTime) {
+        var result = null;
         var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
-        if (!match)
-            return null;
-        var result = 0;
-        if (match[2])
-            result += parseInt(match[2]) * 60;
-        if (match[3])
-            result += parseInt(match[3]);
-        if (match[4])
-            result += parseFloat(match[4]);
+        if (match) {
+            result = 0;
+            if (match[2])
+                result += parseInt(match[2]) * 60;
+            if (match[3])
+                result += parseInt(match[3]);
+            if (match[4])
+                result += parseFloat(match[4]);
+        }
+        else if (match = /^b(\d+)?(\/(\d+))?$/.exec(str)) {
+            result = 60 / this.bpm;
+            if (match[1])
+                result *= parseInt(match[1]);
+            if (match[3])
+                result /= parseInt(match[3]);
+            result += curTime;
+        }
         return result;
     }
 }
@@ -1659,7 +1676,7 @@ class PlayingView extends UI_1.ContentView {
                 this.lyricsView.setCurrentTime(time, 'smooth');
             }
             if (realTime - this.lastChangedRealTime < 500)
-                this.timer.timeout(32);
+                this.timer.timeout(16);
         };
     }
     createDom() {
