@@ -1203,6 +1203,8 @@ class Parser {
         this.lines = [];
         this.bpm = 60;
         this.curTime = 0;
+        this.lang = '';
+        this.tlang = '';
         this.lex = new Lexer(str);
         this.tokens = this.lex.buf;
     }
@@ -1220,13 +1222,18 @@ class Parser {
             }
         }
         this.lines.sort((a, b) => a.startTime - b.startTime);
-        return { lines: this.lines };
+        return {
+            lines: this.lines,
+            lang: this.lang,
+            translationLang: this.tlang
+        };
     }
     parseLine() {
         var lex = this.lex;
         var startTime = null;
         var duplicateTime = [];
         var spans = [];
+        var trans = null;
         var lastSpan = null;
         var curTime = null;
         while (true) {
@@ -1261,6 +1268,14 @@ class Parser {
                     this.bpm = parseFloat(text.substr(4));
                     lex.expectAndConsume('tagEnd');
                 }
+                else if (text.startsWith('lang:')) {
+                    let r = /^([\w\-]+)(\/([\w\-]+))?$/.exec(text.substr(5));
+                    if (r) {
+                        this.lang = r[1];
+                        this.tlang = r[3] || '';
+                    }
+                    lex.expectAndConsume('tagEnd');
+                }
                 else {
                     if (!lastSpan) {
                         // unknown tag at the beginning of the line, so skip this line.
@@ -1280,6 +1295,13 @@ class Parser {
             }
             else if (lex.tryExpect('lineFeed')) {
                 lex.consume();
+                if (spans.length > 0 && lex.tryExpect('text')) {
+                    let nextline = lex.peek().val;
+                    if (nextline.startsWith('/')) {
+                        trans = nextline.substr(1);
+                        lex.consume();
+                    }
+                }
                 break;
             }
             else if (lex.tryExpect('eof')) {
@@ -1296,12 +1318,14 @@ class Parser {
             this.curTime = curTime;
         this.lines.push({
             startTime,
+            translation: trans,
             spans
         });
         duplicateTime.forEach(t => {
             this.lines.push({
                 startTime: t,
-                spans: spans.filter(s => (Object.assign(Object.assign({}, s), { startTime: t - startTime + s.startTime, endTime: t - startTime + s.endTime })))
+                translation: trans,
+                spans: spans.map(s => (Object.assign(Object.assign({}, s), { startTime: t - startTime + s.startTime, endTime: t - startTime + s.endTime })))
             });
         });
     }
@@ -1353,7 +1377,7 @@ const Lyrics_1 = require("./Lyrics");
 class LyricsView extends viewlib_1.View {
     constructor() {
         super(...arguments);
-        this.lyrics = new viewlib_1.ContainerView({ tag: 'div.lyrics' });
+        this.lines = new viewlib_1.ContainerView({ tag: 'div.lyrics' });
         this.curLine = new viewlib_1.ItemActiveHelper();
         this.onSpanClick = new utils_1.Callbacks();
     }
@@ -1361,17 +1385,31 @@ class LyricsView extends viewlib_1.View {
         return {
             tag: 'div.lyricsview',
             child: [
-                this.lyrics.dom
+                this.lines.dom
             ]
         };
     }
     setLyrics(lyrics) {
-        if (typeof lyrics === 'string')
-            lyrics = Lyrics_1.parse(lyrics);
+        try {
+            if (typeof lyrics === 'string')
+                lyrics = Lyrics_1.parse(lyrics);
+        }
+        catch (error) {
+            console.error(error);
+            lyrics = {
+                lines: [{
+                        spans: [{
+                                text: utils_1.I `Error parsing lyrics`
+                            }]
+                    }]
+            };
+        }
+        this.lyrics = lyrics;
         this.curLine.set(null);
-        this.lyrics.removeAllView();
+        this.lines.dom.lang = lyrics.lang;
+        this.lines.removeAllView();
         lyrics.lines.forEach(l => {
-            this.lyrics.addView(new LineView(l, this));
+            this.lines.addView(new LineView(l, this));
         });
     }
     setCurrentTime(time, scroll) {
@@ -1392,8 +1430,8 @@ class LyricsView extends viewlib_1.View {
         var line;
         if (hint && time >= hint.line.startTime) {
             line = hint;
-            for (let i = hint.position + 1; i < this.lyrics.length; i++) {
-                let x = this.lyrics.get(i);
+            for (let i = hint.position + 1; i < this.lines.length; i++) {
+                let x = this.lines.get(i);
                 if (x.line.startTime >= 0) {
                     if (x.line.startTime <= time) {
                         line = x;
@@ -1406,7 +1444,7 @@ class LyricsView extends viewlib_1.View {
         }
         else {
             line = null;
-            this.lyrics.forEach(x => {
+            this.lines.forEach(x => {
                 if (x.line.startTime >= 0 && x.line.startTime <= time)
                     line = x;
             });
@@ -1427,6 +1465,19 @@ class LineView extends viewlib_1.View {
             tag: 'p.line',
             child: this.spans.map(x => x.dom)
         };
+    }
+    postCreateDom() {
+        var _a;
+        super.postCreateDom();
+        if (this.line.translation) {
+            var lyrics = (_a = this.lyricsView) === null || _a === void 0 ? void 0 : _a.lyrics;
+            var tlang = lyrics && lyrics.translationLang || lyrics.lang;
+            this.dom.appendChild(utils_1.utils.buildDOM({
+                tag: 'div.trans',
+                lang: tlang,
+                text: this.line.translation
+            }));
+        }
     }
     setCurrentTime(time) {
         this.spans.forEach(s => {

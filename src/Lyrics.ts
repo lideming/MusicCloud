@@ -134,11 +134,13 @@ export class Parser {
     lines: Line[] = [];
     bpm = 60;
     curTime = 0;
+    lang = '';
+    tlang = '';
     constructor(str: string) {
         this.lex = new Lexer(str);
         this.tokens = this.lex.buf;
     }
-    parse(): Parsed {
+    parse(): Lyrics {
         var lex = this.lex;
         var lastpos: number;
         this.skipLineFeeds();
@@ -152,13 +154,18 @@ export class Parser {
             }
         }
         this.lines.sort((a, b) => a.startTime - b.startTime);
-        return { lines: this.lines };
+        return {
+            lines: this.lines,
+            lang: this.lang,
+            translationLang: this.tlang
+        };
     }
     parseLine() {
         var lex = this.lex;
         var startTime: number = null;
         var duplicateTime: number[] = [];
         var spans: Span[] = [];
+        var trans: string = null;
         var lastSpan: Span = null;
         var curTime: number = null;
         while (true) {
@@ -187,6 +194,13 @@ export class Parser {
                 } else if (text.startsWith('bpm:')) {
                     this.bpm = parseFloat(text.substr(4));
                     lex.expectAndConsume('tagEnd');
+                } else if (text.startsWith('lang:')) {
+                    let r = /^([\w\-]+)(\/([\w\-]+))?$/.exec(text.substr(5));
+                    if (r) {
+                        this.lang = r[1];
+                        this.tlang = r[3] || '';
+                    }
+                    lex.expectAndConsume('tagEnd');
                 } else {
                     if (!lastSpan) {
                         // unknown tag at the beginning of the line, so skip this line.
@@ -202,6 +216,13 @@ export class Parser {
                 spans.push(lastSpan = { text, ruby: null, startTime: curTime, endTime: null });
             } else if (lex.tryExpect('lineFeed')) {
                 lex.consume();
+                if (spans.length > 0 && lex.tryExpect('text')) {
+                    let nextline = lex.peek().val;
+                    if (nextline.startsWith('/')) {
+                        trans = nextline.substr(1);
+                        lex.consume();
+                    }
+                }
                 break;
             } else if (lex.tryExpect('eof')) {
                 break;
@@ -214,12 +235,14 @@ export class Parser {
         if (curTime != null) this.curTime = curTime;
         this.lines.push({
             startTime,
+            translation: trans,
             spans
         });
         duplicateTime.forEach(t => {
             this.lines.push({
                 startTime: t,
-                spans: spans.filter(s => ({
+                translation: trans,
+                spans: spans.map(s => ({
                     ...s,
                     startTime: t - startTime + s.startTime,
                     endTime: t - startTime + s.endTime
@@ -257,17 +280,20 @@ export interface Line {
     startTime?: number;
     endTime?: number;
     spans: Span[];
+    translation?: string;
 }
 
 export interface Span {
     startTime?: number;
     endTime?: number;
     text: string;
-    ruby: string;
+    ruby?: string;
 }
 
-export interface Parsed {
+export interface Lyrics {
     lines: Line[];
+    lang?: string;
+    translationLang?: string;
 }
 
 

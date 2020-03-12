@@ -1057,6 +1057,10 @@ textarea.input-text {
     animation: lryics-span-active .2s;
 }
 
+.lyricsview .line .trans {
+    font-size: 80%;
+}
+
 @keyframes lryics-span-active {
     0%, 100% {
         color: var(--color-primary);
