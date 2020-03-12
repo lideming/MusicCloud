@@ -109,7 +109,7 @@ export var uploads = new class extends TrackList {
             var header = new ContentHeader({
                 title: this.title
             });
-            header.appendView(this.usage);
+            header.titlebar.appendView(this.usage);
             return header;
         }
         protected appendListView() {

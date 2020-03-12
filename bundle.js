@@ -173,7 +173,7 @@ exports.api = new class {
     }
 };
 
-},{"./main":17,"./utils":18}],2:[function(require,module,exports){
+},{"./main":18,"./utils":19}],2:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -413,7 +413,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./MessageClient":8,"./Router":11,"./UI":14,"./User":16,"./utils":18,"./viewlib":19}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./MessageClient":8,"./Router":11,"./UI":15,"./User":17,"./utils":19,"./viewlib":20}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -753,6 +753,7 @@ class ListContentView extends UI_1.ContentView {
         this.ensureDom();
     }
     onRemove() {
+        this._shownEvents && this._shownEvents.removeAll();
     }
     useLoadingIndicator(li) {
         if (li !== this.loadingIndicator) {
@@ -802,7 +803,7 @@ class ListContentView extends UI_1.ContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./TrackList":13,"./UI":14,"./utils":18,"./viewlib":19}],5:[function(require,module,exports){
+},{"./TrackList":14,"./UI":15,"./utils":19,"./viewlib":20}],5:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1063,7 +1064,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":10,"./Router":11,"./TrackList":13,"./UI":14,"./User":16,"./utils":18,"./viewlib":19}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./User":17,"./utils":19,"./viewlib":20}],6:[function(require,module,exports){
 "use strict";
 // file: Lyrics.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1469,7 +1470,7 @@ class SpanView extends viewlib_1.View {
     }
 }
 
-},{"./Lyrics":6,"./utils":18,"./viewlib":19}],8:[function(require,module,exports){
+},{"./Lyrics":6,"./utils":19,"./viewlib":20}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const User_1 = require("./User");
@@ -1632,7 +1633,7 @@ exports.msgcli = new class {
     }
 };
 
-},{"./Api":1,"./User":16,"./utils":18}],9:[function(require,module,exports){
+},{"./Api":1,"./User":17,"./utils":19}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Router_1 = require("./Router");
@@ -1730,7 +1731,7 @@ class PlayingView extends UI_1.ContentView {
     }
 }
 
-},{"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./TrackList":13,"./UI":14,"./utils":18}],10:[function(require,module,exports){
+},{"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./utils":19}],10:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1935,7 +1936,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./utils":18,"./viewlib":19}],11:[function(require,module,exports){
+},{"./Api":1,"./utils":19,"./viewlib":20}],11:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2000,7 +2001,129 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":14,"./utils":18}],12:[function(require,module,exports){
+},{"./UI":15,"./utils":19}],12:[function(require,module,exports){
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const Router_1 = require("./Router");
+const UI_1 = require("./UI");
+const utils_1 = require("./utils");
+const ListContentView_1 = require("./ListContentView");
+const viewlib_1 = require("./viewlib");
+const Api_1 = require("./Api");
+const TrackList_1 = require("./TrackList");
+const PlayerCore_1 = require("./PlayerCore");
+exports.search = new class {
+    constructor() {
+        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Search` });
+        this.lazyView = new utils_1.Lazy(() => new SearchView());
+    }
+    init() {
+        Router_1.router.addRoute({
+            path: ['search'],
+            contentView: () => this.view,
+            sidebarItem: () => this.sidebarItem
+        });
+        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+    }
+    get view() { return this.lazyView.value; }
+};
+class SearchView extends ListContentView_1.ListContentView {
+    constructor() {
+        super(...arguments);
+        this.title = utils_1.I `Search`;
+        this.searchbar = new SearchBar();
+    }
+    appendListView() {
+        super.appendListView();
+        this.listView.dragging = true;
+        this.listView.onItemClicked = (item) => {
+            var tempList = new TrackList_1.TrackList();
+            this.listView.forEach(t => tempList.addTrack(t.track.infoObj));
+            PlayerCore_1.playerCore.playTrack(tempList.tracks[item.position]);
+        };
+    }
+    appendHeader() {
+        super.appendHeader();
+        this.refreshBtn.hidden = true;
+        this.header.appendView(this.searchbar);
+        this.searchbar.onSearch.add(() => {
+            this.performSearch(this.searchbar.input.value);
+        });
+    }
+    performSearch(query) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.currentQuery = query;
+            var li = new viewlib_1.LoadingIndicator();
+            this.useLoadingIndicator(li);
+            try {
+                var r = yield Api_1.api.get('tracks?query=' + encodeURIComponent(query));
+                this.listView.removeAll();
+                r.tracks.forEach(t => {
+                    this.listView.add(new TrackList_1.TrackViewItem(new TrackList_1.Track({ infoObj: t })));
+                });
+                this.updatePlaying();
+                this.useLoadingIndicator(null);
+            }
+            catch (error) {
+                li.error(error, () => this.performSearch(query));
+            }
+        });
+    }
+    onShow() {
+        super.onShow();
+        this.updatePlaying();
+        this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, () => this.updatePlaying());
+    }
+    onRemove() {
+        super.onRemove();
+    }
+    updatePlaying() {
+        var playing = PlayerCore_1.playerCore.track;
+        this.listView.forEach(t => {
+            t.updateWith({ playing: playing && t.track.id === playing.id });
+        });
+    }
+    ;
+}
+class SearchBar extends viewlib_1.View {
+    constructor() {
+        super(...arguments);
+        this.input = new viewlib_1.InputView();
+        this.btn = new viewlib_1.ButtonView({ text: utils_1.I `Search`, onclick: () => this.onSearch.invoke() });
+        this.onSearch = new utils_1.Callbacks();
+    }
+    get value() { return this.input.value; }
+    set value(val) { this.input.value = val; }
+    createDom() {
+        return {
+            tag: 'div.searchbar',
+            child: [
+                this.input.dom,
+                this.btn.dom
+            ]
+        };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.input.dom.addEventListener('keydown', (ev) => {
+            if (ev.keyCode == 13) {
+                ev.preventDefault();
+                this.onSearch.invoke();
+            }
+        });
+    }
+}
+
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./utils":19,"./viewlib":20}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -2089,7 +2212,7 @@ class SettingsDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":10,"./UI":14,"./viewlib":19}],13:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":10,"./UI":15,"./viewlib":20}],14:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2479,12 +2602,11 @@ class TrackListView extends ListContentView_1.ListContentView {
     }
     onShow() {
         super.onShow();
-        PlayerCore_1.playerCore.onTrackChanged.add(this.trackChanged);
+        this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, this.trackChanged);
         this.updateItems();
     }
     onRemove() {
         super.onRemove();
-        PlayerCore_1.playerCore.onTrackChanged.remove(this.trackChanged);
     }
     appendListView() {
         super.appendListView();
@@ -2544,7 +2666,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
     constructor(item) {
         super();
         this.onContextMenu = (item, ev) => {
-            var _a;
+            var _a, _b, _c;
             ev.preventDefault();
             var selected = this.selected ? this.selectionHelper.selectedItems : [this];
             var m = new viewlib_1.ContextMenu();
@@ -2589,12 +2711,12 @@ class TrackViewItem extends viewlib_1.ListViewItem {
                     text: utils_1.I `Edit`,
                     onclick: () => this.track.startEdit()
                 }));
-            if (this.actionHandler.onTrackRemove)
+            if ((_b = this.actionHandler) === null || _b === void 0 ? void 0 : _b.onTrackRemove)
                 m.add(new viewlib_1.MenuItem({
                     text: utils_1.I `Remove`, cls: 'dangerous',
                     onclick: () => { var _a, _b; return (_b = (_a = this.actionHandler).onTrackRemove) === null || _b === void 0 ? void 0 : _b.call(_a, [this]); }
                 }));
-            if (this.actionHandler.onTrackRemove && this.selected && this.selectionHelper.count > 1)
+            if (((_c = this.actionHandler) === null || _c === void 0 ? void 0 : _c.onTrackRemove) && this.selected && this.selectionHelper.count > 1)
                 m.add(new viewlib_1.MenuItem({
                     text: utils_1.I `Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
                     onclick: () => {
@@ -2622,11 +2744,12 @@ class TrackViewItem extends viewlib_1.ListViewItem {
             child: [
                 {
                     tag: 'span.pos', update: (dompos) => {
+                        var _a;
                         if (this.playing) {
                             dompos.textContent = '🎵';
                         }
                         else if (!this.noPos) {
-                            dompos.textContent = this.track._bind.position !== undefined
+                            dompos.textContent = ((_a = this.track._bind) === null || _a === void 0 ? void 0 : _a.position) != null
                                 ? (this.track._bind.position + 1).toString() : '';
                         }
                         dompos.hidden = this.noPos && !this.playing;
@@ -2651,16 +2774,8 @@ class ContentHeader extends viewlib_1.View {
         super();
         this.titleEditable = false;
         this.actions = new viewlib_1.ContainerView({ tag: 'div.actions' });
-        if (init)
-            utils_1.utils.objectApply(this, init);
-    }
-    get domdict() {
-        return this.domctx.dict;
-    }
-    createDom() {
-        var editHelper;
-        return {
-            tag: 'div.content-header.clearfix',
+        this.titlebar = new viewlib_1.View({
+            tag: 'div.titlebar.clearfix',
             child: [
                 { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
                 {
@@ -2675,11 +2790,11 @@ class ContentHeader extends viewlib_1.View {
                     onclick: (ev) => __awaiter(this, void 0, void 0, function* () {
                         if (!this.titleEditable)
                             return;
-                        editHelper = editHelper || new viewlib_1.EditableHelper(this.domdict.title);
-                        if (editHelper.editing)
+                        this.editHelper = this.editHelper || new viewlib_1.EditableHelper(this.domdict.title);
+                        if (this.editHelper.editing)
                             return;
-                        var newName = yield editHelper.startEditAsync();
-                        if (newName !== editHelper.beforeEdit && newName != '') {
+                        var newName = yield this.editHelper.startEditAsync();
+                        if (newName !== this.editHelper.beforeEdit && newName != '') {
                             this.onTitleEdit(newName);
                         }
                         this.updateDom();
@@ -2687,7 +2802,24 @@ class ContentHeader extends viewlib_1.View {
                 },
                 this.actions.dom
             ]
+        });
+        if (init)
+            utils_1.utils.objectApply(this, init);
+    }
+    get domdict() {
+        return this.domctx.dict;
+    }
+    createDom() {
+        return {
+            tag: 'div.content-header',
+            child: [
+                this.titlebar.dom
+            ]
         };
+    }
+    updateDom() {
+        super.updateDom();
+        this.titlebar.updateDom();
     }
 }
 exports.ContentHeader = ContentHeader;
@@ -2706,7 +2838,7 @@ class ActionBtn extends viewlib_1.TextView {
 }
 exports.ActionBtn = ActionBtn;
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./User":16,"./main":17,"./utils":18,"./viewlib":19}],14:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./User":17,"./main":18,"./utils":19,"./viewlib":20}],15:[function(require,module,exports){
 "use strict";
 // file: UI.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2739,6 +2871,7 @@ class ContentView extends viewlib_1.View {
     onShow() { }
     onDomInserted() { }
     onRemove() { }
+    get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new utils_1.EventRegistrations()); }
 }
 exports.ContentView = ContentView;
 const Router_1 = require("./Router");
@@ -3238,7 +3371,7 @@ class SidebarToggle extends viewlib_1.View {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":10,"./Router":11,"./Uploads":15,"./User":16,"./utils":18,"./viewlib":19}],15:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":10,"./Router":11,"./Uploads":16,"./User":17,"./utils":19,"./viewlib":20}],16:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3315,7 +3448,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 var header = new TrackList_1.ContentHeader({
                     title: this.title
                 });
-                header.appendView(this.usage);
+                header.titlebar.appendView(this.usage);
                 return header;
             }
             appendListView() {
@@ -3660,7 +3793,7 @@ var BlockFormat = {
     }
 };
 
-},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":10,"./Router":11,"./TrackList":13,"./UI":14,"./User":16,"./utils":18,"./viewlib":19}],16:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./User":17,"./utils":19,"./viewlib":20}],17:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4101,7 +4234,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./Api":1,"./PlayerCore":10,"./SettingsUI":12,"./UI":14,"./Uploads":15,"./main":17,"./utils":18,"./viewlib":19}],17:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":10,"./SettingsUI":13,"./UI":15,"./Uploads":16,"./main":18,"./utils":19,"./viewlib":20}],18:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -4126,6 +4259,7 @@ const Router_1 = require("./Router");
 const SettingsUI_1 = require("./SettingsUI");
 const MessageClient_1 = require("./MessageClient");
 const NowPlaying_1 = require("./NowPlaying");
+const Search_1 = require("./Search");
 UI_1.ui.init();
 PlayerCore_1.playerCore.init();
 exports.listIndex = new ListIndex_1.ListIndex();
@@ -4137,6 +4271,7 @@ var app = window['app'] = {
     init() {
         User_1.user.init();
         Uploads_1.uploads.init();
+        Search_1.search.init();
         Discussion_1.discussion.init();
         Discussion_1.notes.init();
         NowPlaying_1.nowPlaying.init();
@@ -4149,7 +4284,7 @@ var app = window['app'] = {
 app.init();
 window['preload'].jsOk();
 
-},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":8,"./NowPlaying":9,"./PlayerCore":10,"./Router":11,"./SettingsUI":12,"./UI":14,"./Uploads":15,"./User":16,"./viewlib":19}],18:[function(require,module,exports){
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":8,"./NowPlaying":9,"./PlayerCore":10,"./Router":11,"./Search":12,"./SettingsUI":13,"./UI":15,"./Uploads":16,"./User":17,"./viewlib":20}],19:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4740,8 +4875,25 @@ class DataUpdatingHelper {
     removeItem(obj) { }
 }
 exports.DataUpdatingHelper = DataUpdatingHelper;
+class EventRegistrations {
+    constructor() {
+        this.list = [];
+    }
+    add(event, func) {
+        this.list.push({ event, func });
+        event.add(func);
+        return func;
+    }
+    removeAll() {
+        while (this.list.length) {
+            var r = this.list.pop();
+            r.event.remove(r.func);
+        }
+    }
+}
+exports.EventRegistrations = EventRegistrations;
 
-},{"./I18n":3}],19:[function(require,module,exports){
+},{"./I18n":3}],20:[function(require,module,exports){
 "use strict";
 // file: viewlib.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -5619,6 +5771,14 @@ class TabBtn extends View {
 }
 exports.TabBtn = TabBtn;
 class InputView extends View {
+    constructor(init) {
+        super();
+        this.type = 'text';
+        this.placeholder = '';
+        utils_1.utils.objectApply(this, init);
+    }
+    get value() { return this.dom.value; }
+    set value(val) { this.dom.value = val; }
     createDom() {
         return this.multiline ? { tag: 'textarea.input-text' } : { tag: 'input.input-text' };
     }
@@ -5626,6 +5786,7 @@ class InputView extends View {
         super.updateDom();
         if (!this.multiline)
             this.dom.type = this.type;
+        this.dom.placeholder = this.placeholder;
     }
 }
 exports.InputView = InputView;
@@ -5796,4 +5957,4 @@ class MessageBox extends Dialog {
 }
 exports.MessageBox = MessageBox;
 
-},{"./I18n":3,"./utils":18}]},{},[17]);
+},{"./I18n":3,"./utils":19}]},{},[18]);

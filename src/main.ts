@@ -23,6 +23,7 @@ import { router } from "./Router";
 import { settingsUI } from "./SettingsUI";
 import { msgcli } from "./MessageClient"
 import { nowPlaying } from "./NowPlaying"
+import { search } from "./Search"
 
 ui.init();
 playerCore.init();
@@ -37,6 +38,7 @@ var app = window['app'] = {
     init() {
         user.init();
         uploads.init();
+        search.init();
         discussion.init();
         notes.init();
         nowPlaying.init();

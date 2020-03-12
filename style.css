@@ -753,10 +753,13 @@ a.item {
     display: block;
     width: 100%;
     padding: 5px;
-    margin: 5px 0;
     border: solid 1px gray;
     background: var(--color-bg);
     color: var(--color-text);
+}
+
+.dialog .input-text {
+    margin: 5px 0;
 }
 
 .dark .input-text {
@@ -1061,4 +1064,21 @@ textarea.input-text {
     50% {
         color: var(--color-primary-light);
     }
+}
+
+.searchbar {
+    display: flex;
+    align-items: center;
+    margin: 5px 10px;
+}
+
+.searchbar .input-text {
+    flex: 1;
+    line-height: 1.5;
+}
+
+.searchbar .btn {
+    margin-left: 10px;
+    line-height: 1.5;
+    padding: 3px;
 }

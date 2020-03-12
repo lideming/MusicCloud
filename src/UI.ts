@@ -33,10 +33,13 @@ export class ContentView extends View {
     onDomInserted() { }
     onRemove() { }
     contentViewState?: ContentViewState;
+
+    _shownEvents: EventRegistrations;
+    get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }
 }
 
 import { router } from "./Router";
-import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer } from "./utils";
+import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer, EventRegistrations } from "./utils";
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./TrackList";
 import { user } from "./User";

@@ -614,3 +614,18 @@ export class DataUpdatingHelper<T extends IId, TData extends IId = T> {
     updateItem(old: T, data: TData) { }
     removeItem(obj: T) { }
 }
+
+export class EventRegistrations {
+    list: { event: Callbacks<CallableFunction>; func: CallableFunction; }[] = [];
+    add<T extends CallableFunction>(event: Callbacks<T>, func: T) {
+        this.list.push({ event, func });
+        event.add(func);
+        return func;
+    }
+    removeAll() {
+        while (this.list.length) {
+            var r = this.list.pop();
+            r.event.remove(r.func);
+        }
+    }
+}

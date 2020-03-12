@@ -354,12 +354,11 @@ export class TrackListView extends ListContentView {
     }
     onShow() {
         super.onShow();
-        playerCore.onTrackChanged.add(this.trackChanged);
+        this.shownEvents.add(playerCore.onTrackChanged, this.trackChanged);
         this.updateItems();
     }
     onRemove() {
         super.onRemove();
-        playerCore.onTrackChanged.remove(this.trackChanged);
     }
     protected appendListView() {
         super.appendListView();
@@ -435,7 +434,7 @@ export class TrackViewItem extends ListViewItem {
                         if (this.playing) {
                             dompos.textContent = '🎵';
                         } else if (!this.noPos) {
-                            dompos.textContent = this.track._bind.position !== undefined
+                            dompos.textContent = this.track._bind?.position != null
                                 ? (this.track._bind.position + 1).toString() : '';
                         }
                         dompos.hidden = this.noPos && !this.playing;
@@ -493,11 +492,11 @@ export class TrackViewItem extends ListViewItem {
             text: I`Edit`,
             onclick: () => this.track.startEdit()
         }));
-        if (this.actionHandler.onTrackRemove) m.add(new MenuItem({
+        if (this.actionHandler?.onTrackRemove) m.add(new MenuItem({
             text: I`Remove`, cls: 'dangerous',
             onclick: () => this.actionHandler.onTrackRemove?.([this])
         }));
-        if (this.actionHandler.onTrackRemove && this.selected && this.selectionHelper.count > 1)
+        if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1)
             m.add(new MenuItem({
                 text: I`Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
                 onclick: () => {
@@ -525,6 +524,7 @@ export class ContentHeader extends View {
     catalog: string;
     title: string;
     titleEditable = false;
+    editHelper: EditableHelper;
     get domdict(): { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } {
         return this.domctx.dict;
     }
@@ -535,32 +535,41 @@ export class ContentHeader extends View {
         if (init) utils.objectApply(this, init);
     }
     createDom(): BuildDomExpr {
-        var editHelper: EditableHelper;
         return {
-            tag: 'div.content-header.clearfix',
+            tag: 'div.content-header',
             child: [
-                { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
-                {
-                    tag: 'span.title', text: () => this.title, _key: 'title',
-                    update: (domdict) => {
-                        utils.toggleClass(domdict, 'editable', !!this.titleEditable);
-                        if (this.titleEditable) domdict.title = I`Click to edit`;
-                        else domdict.removeAttribute('title');
-                    },
-                    onclick: async (ev) => {
-                        if (!this.titleEditable) return;
-                        editHelper = editHelper || new EditableHelper(this.domdict.title);
-                        if (editHelper.editing) return;
-                        var newName = await editHelper.startEditAsync();
-                        if (newName !== editHelper.beforeEdit && newName != '') {
-                            this.onTitleEdit(newName);
-                        }
-                        this.updateDom();
-                    }
-                },
-                this.actions.dom
+                this.titlebar.dom
             ]
         };
+    }
+    titlebar = new View({
+        tag: 'div.titlebar.clearfix',
+        child: [
+            { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
+            {
+                tag: 'span.title', text: () => this.title, _key: 'title',
+                update: (domdict) => {
+                    utils.toggleClass(domdict, 'editable', !!this.titleEditable);
+                    if (this.titleEditable) domdict.title = I`Click to edit`;
+                    else domdict.removeAttribute('title');
+                },
+                onclick: async (ev) => {
+                    if (!this.titleEditable) return;
+                    this.editHelper = this.editHelper || new EditableHelper(this.domdict.title);
+                    if (this.editHelper.editing) return;
+                    var newName = await this.editHelper.startEditAsync();
+                    if (newName !== this.editHelper.beforeEdit && newName != '') {
+                        this.onTitleEdit(newName);
+                    }
+                    this.updateDom();
+                }
+            },
+            this.actions.dom
+        ]
+    })
+    updateDom() {
+        super.updateDom();
+        this.titlebar.updateDom();
     }
 }
 

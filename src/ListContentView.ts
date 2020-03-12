@@ -2,7 +2,7 @@
 
 import { ListViewItem, ListView, LoadingIndicator } from "./viewlib";
 import { ContentHeader, ActionBtn } from "./TrackList";
-import { utils, I } from "./utils";
+import { utils, I, EventRegistrations } from "./utils";
 import { ContentView } from "./UI";
 
 class DataBackedListViewItem extends ListViewItem {
@@ -51,7 +51,6 @@ export class ListContentView extends ContentView {
     emptyIndicator: LoadingIndicator;
 
     get rendered() { return this.domCreated; }
-
 
     private _canMultiSelect: boolean;
     public get canMultiSelect(): boolean { return this._canMultiSelect; }
@@ -105,6 +104,7 @@ export class ListContentView extends ContentView {
         this.ensureDom();
     }
     onRemove() {
+        this._shownEvents && this._shownEvents.removeAll();
     }
 
     useLoadingIndicator(li: LoadingIndicator) {

@@ -887,13 +887,21 @@ export class TabBtn extends View {
 export class InputView extends View {
     dom: HTMLInputElement;
     multiline: boolean;
-    type: string;
+    type = 'text';
+    placeholder = '';
+    get value() { return this.dom.value; }
+    set value(val) { this.dom.value = val; }
+    constructor(init?: Partial<InputView>) {
+        super();
+        utils.objectApply(this, init);
+    }
     createDom() {
         return this.multiline ? { tag: 'textarea.input-text' } : { tag: 'input.input-text' };
     }
     updateDom() {
         super.updateDom();
         if (!this.multiline) this.dom.type = this.type;
+        this.dom.placeholder = this.placeholder;
     }
 }
 
