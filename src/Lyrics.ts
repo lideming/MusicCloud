@@ -169,7 +169,7 @@ export class Parser {
                 if (typeof ts == 'number') {
                     lex.expectAndConsume('tagEnd');
                     if (!lastSpan) {
-                        if (startTime) {
+                        if (startTime != null) {
                             duplicateTime.push(ts);
                         } else {
                             curTime = ts;

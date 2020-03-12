@@ -1236,7 +1236,7 @@ class Parser {
                 if (typeof ts == 'number') {
                     lex.expectAndConsume('tagEnd');
                     if (!lastSpan) {
-                        if (startTime) {
+                        if (startTime != null) {
                             duplicateTime.push(ts);
                         }
                         else {
@@ -3457,7 +3457,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
                     this.items = doneTracks;
                 }
                 addItem(data, pos) { thiz.insertTrack(data, firstPos); }
-                updateItem(item, data) { item.updateFromApiTrack(data); }
+                updateItem(item, data) { item.updateFromApiTrack(data.infoObj); }
                 removeItem(item) { var _a; (_a = item._upload.view) === null || _a === void 0 ? void 0 : _a.remove(); }
             }().update(fetched);
             this.view.useLoadingIndicator(null);

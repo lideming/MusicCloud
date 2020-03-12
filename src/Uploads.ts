@@ -197,7 +197,7 @@ export var uploads = new class extends TrackList {
         new class extends DataUpdatingHelper<UploadTrack, UploadTrack>{
             items = doneTracks;
             addItem(data: UploadTrack, pos: number) { thiz.insertTrack(data, firstPos); }
-            updateItem(item: UploadTrack, data: UploadTrack) { item.updateFromApiTrack(data); }
+            updateItem(item: UploadTrack, data: UploadTrack) { item.updateFromApiTrack(data.infoObj); }
             removeItem(item: UploadTrack) { item._upload.view?.remove(); }
         }().update(fetched);
         this.view.useLoadingIndicator(null);
