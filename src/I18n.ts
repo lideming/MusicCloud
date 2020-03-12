@@ -179,6 +179,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Artist", "艺术家"],
     ["Duration", "时长"],
     ["Size", "大小"],
+    ["Search", "搜索"],
     ["Discussion", "灌水区"],
     ["Notes", "便签"],
     ["Submit", "提交"],
@@ -223,6 +224,9 @@ i18n.add2dArray(JSON.parse(`[
     ["Settings", "设置"],
     ["Color theme: {0}", "配色主题：{0}"],
     ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
+    ["Now Playing", "正在播放"],
+    ["Lyrics", "歌词"],
+    ["Error parsing lyrics", "歌词解析错误"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));

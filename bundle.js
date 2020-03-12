@@ -591,6 +591,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Artist", "艺术家"],
     ["Duration", "时长"],
     ["Size", "大小"],
+    ["Search", "搜索"],
     ["Discussion", "灌水区"],
     ["Notes", "便签"],
     ["Submit", "提交"],
@@ -635,6 +636,9 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Settings", "设置"],
     ["Color theme: {0}", "配色主题：{0}"],
     ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
+    ["Now Playing", "正在播放"],
+    ["Lyrics", "歌词"],
+    ["Error parsing lyrics", "歌词解析错误"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
 ]`));
@@ -1695,16 +1699,16 @@ const PlayerCore_1 = require("./PlayerCore");
 const LyricsView_1 = require("./LyricsView");
 exports.nowPlaying = new class {
     constructor() {
-        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Now Playing` });
         this.lazyView = new utils_1.Lazy(() => new PlayingView());
     }
     init() {
+        var sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Now Playing` });
         Router_1.router.addRoute({
             path: ['nowplaying'],
             contentView: () => this.view,
-            sidebarItem: () => this.sidebarItem
+            sidebarItem: () => sidebarItem
         });
-        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addFeatureItem(sidebarItem);
     }
     get view() { return this.lazyView.value; }
 };
@@ -1766,8 +1770,8 @@ class PlayingView extends UI_1.ContentView {
     }
     onShow() {
         this.ensureDom();
-        PlayerCore_1.playerCore.onTrackChanged.add(this.onTrackChanged)();
-        PlayerCore_1.playerCore.onProgressChanged.add(this.onProgressChanged);
+        this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, this.onTrackChanged)();
+        this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, this.onProgressChanged);
     }
     onDomInserted() {
         this.lyricsView.dom.scrollTop; // force layout
@@ -2074,16 +2078,16 @@ const TrackList_1 = require("./TrackList");
 const PlayerCore_1 = require("./PlayerCore");
 exports.search = new class {
     constructor() {
-        this.sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Search` });
         this.lazyView = new utils_1.Lazy(() => new SearchView());
     }
     init() {
+        var sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Search` });
         Router_1.router.addRoute({
             path: ['search'],
             contentView: () => this.view,
-            sidebarItem: () => this.sidebarItem
+            sidebarItem: () => sidebarItem
         });
-        UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+        UI_1.ui.sidebarList.addFeatureItem(sidebarItem);
     }
     get view() { return this.lazyView.value; }
 };

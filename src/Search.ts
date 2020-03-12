@@ -10,14 +10,14 @@ import { playerCore } from './PlayerCore';
 
 export var search = new class {
     init() {
+        var sidebarItem = new SidebarItem({ text: I`Search` });
         router.addRoute({
             path: ['search'],
             contentView: () => this.view,
-            sidebarItem: () => this.sidebarItem
+            sidebarItem: () => sidebarItem
         });
-        ui.sidebarList.addFeatureItem(this.sidebarItem);
+        ui.sidebarList.addFeatureItem(sidebarItem);
     }
-    sidebarItem = new SidebarItem({ text: I`Search` });
     get view() { return this.lazyView.value; }
     lazyView = new Lazy(() => new SearchView());
 };

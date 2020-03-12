@@ -9,14 +9,14 @@ import { LyricsView } from './LyricsView';
 
 export var nowPlaying = new class {
     init() {
+        var sidebarItem = new SidebarItem({ text: I`Now Playing` });
         router.addRoute({
             path: ['nowplaying'],
             contentView: () => this.view,
-            sidebarItem: () => this.sidebarItem
+            sidebarItem: () => sidebarItem
         });
-        ui.sidebarList.addFeatureItem(this.sidebarItem);
+        ui.sidebarList.addFeatureItem(sidebarItem);
     }
-    sidebarItem = new SidebarItem({ text: I`Now Playing` });
     get view() { return this.lazyView.value; }
     lazyView = new Lazy(() => new PlayingView());
 };
@@ -54,8 +54,8 @@ class PlayingView extends ContentView {
     }
     onShow() {
         this.ensureDom();
-        playerCore.onTrackChanged.add(this.onTrackChanged)();
-        playerCore.onProgressChanged.add(this.onProgressChanged);
+        this.shownEvents.add(playerCore.onTrackChanged, this.onTrackChanged)();
+        this.shownEvents.add(playerCore.onProgressChanged, this.onProgressChanged);
     }
     onDomInserted() {
         this.lyricsView.dom.scrollTop; // force layout
