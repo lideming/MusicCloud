@@ -201,7 +201,7 @@ html, body {
     cursor: default;
     font-size: 16px;
     line-height: 1.25;
-    align-self: flex-start;
+    align-self: stretch;
 }
 
 .float-sidebar .content-header {

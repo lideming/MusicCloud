@@ -1729,6 +1729,7 @@ const utils_1 = require("./utils");
 const TrackList_1 = require("./TrackList");
 const PlayerCore_1 = require("./PlayerCore");
 const LyricsView_1 = require("./LyricsView");
+const Api_1 = require("./Api");
 exports.nowPlaying = new class {
     constructor() {
         this.lazyView = new utils_1.Lazy(() => new PlayingView());
@@ -1754,6 +1755,7 @@ class PlayingView extends UI_1.ContentView {
         this.onTrackChanged = () => {
             var _a;
             this.updateDom();
+            this.editBtn.hidden = !PlayerCore_1.playerCore.track;
             var newLyrics = ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.infoObj.lyrics) || '';
             if (this.loadedLyrics != newLyrics) {
                 this.loadedLyrics = newLyrics;
@@ -1779,6 +1781,11 @@ class PlayingView extends UI_1.ContentView {
             if (span.startTime >= 0)
                 PlayerCore_1.playerCore.currentTime = span.startTime;
         });
+        this.header.actions.addView(this.editBtn = new TrackList_1.ActionBtn({
+            text: utils_1.I `Edit`, onclick: () => {
+                PlayerCore_1.playerCore.track.startEdit();
+            }
+        }));
     }
     createDom() {
         return {
@@ -1804,6 +1811,12 @@ class PlayingView extends UI_1.ContentView {
         this.ensureDom();
         this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, this.onTrackChanged)();
         this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, this.onProgressChanged);
+        this.shownEvents.add(Api_1.api.onTrackInfoChanged, (track) => {
+            var _a;
+            if (track.id === ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.id)) {
+                this.onTrackChanged();
+            }
+        });
     }
     onDomInserted() {
         this.lyricsView.dom.scrollTop; // force layout
@@ -1818,7 +1831,7 @@ class PlayingView extends UI_1.ContentView {
     }
 }
 
-},{"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./utils":19}],10:[function(require,module,exports){
+},{"./Api":1,"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./utils":19}],10:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {

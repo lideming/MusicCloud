@@ -2,9 +2,10 @@ import { router } from './Router';
 import { ListContentView } from './ListContentView';
 import { ContentView, SidebarItem, ui } from './UI';
 import { Lazy, I, utils, BuildDomExpr, Timer } from './utils';
-import { ContentHeader } from './TrackList';
+import { ContentHeader, ActionBtn } from './TrackList';
 import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
+import { api } from './Api';
 
 
 export var nowPlaying = new class {
@@ -26,11 +27,17 @@ class PlayingView extends ContentView {
         title: I`Now Playing`
     });
     lyricsView = new LyricsView();
+    editBtn: ActionBtn;
     constructor() {
         super();
         this.lyricsView.onSpanClick.add((span) => {
             if (span.startTime >= 0) playerCore.currentTime = span.startTime;
         });
+        this.header.actions.addView(this.editBtn = new ActionBtn({
+            text: I`Edit`, onclick: () => {
+                playerCore.track.startEdit();
+            }
+        }));
     }
     createDom(): BuildDomExpr {
         return {
@@ -56,6 +63,11 @@ class PlayingView extends ContentView {
         this.ensureDom();
         this.shownEvents.add(playerCore.onTrackChanged, this.onTrackChanged)();
         this.shownEvents.add(playerCore.onProgressChanged, this.onProgressChanged);
+        this.shownEvents.add(api.onTrackInfoChanged, (track) => {
+            if (track.id === playerCore.track?.id) {
+                this.onTrackChanged();
+            }
+        });
     }
     onDomInserted() {
         this.lyricsView.dom.scrollTop; // force layout
@@ -72,6 +84,7 @@ class PlayingView extends ContentView {
     lyricsScrollPos: number;
     onTrackChanged = () => {
         this.updateDom();
+        this.editBtn.hidden = !playerCore.track;
         var newLyrics = playerCore.track?.infoObj.lyrics || '';
         if (this.loadedLyrics != newLyrics) {
             this.loadedLyrics = newLyrics;
