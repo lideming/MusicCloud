@@ -97,6 +97,7 @@ export class Track {
                     api.onTrackInfoChanged.invoke(newinfo);
                     this.close();
                 } catch (error) {
+                    console.error(error);
                     this.btnSave.updateWith({ clickable: false, text: I`Error` });
                     await utils.sleepAsync(3000);
                 }
@@ -308,7 +309,7 @@ export class TrackList {
 
     updateTrackInfo(track: Track, newInfo: Api.Track) {
         track.updateFromApiTrack(newInfo);
-        this.listView.get(track._bind.position).updateDom();
+        if (this.listView) this.listView.get(track._bind.position).updateDom();
     }
     remove(track: Track, put?: boolean) {
         this.remove_NoUpdating(track);

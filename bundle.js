@@ -2664,7 +2664,8 @@ class TrackList {
     }
     updateTrackInfo(track, newInfo) {
         track.updateFromApiTrack(newInfo);
-        this.listView.get(track._bind.position).updateDom();
+        if (this.listView)
+            this.listView.get(track._bind.position).updateDom();
     }
     remove(track, put) {
         var _a;
