@@ -725,6 +725,10 @@ a.item {
     max-height: 100%;
 }
 
+.dialog.resize {
+    resize: both;
+}
+
 .fading-out .dialog {
     transition: transform .3s ease-in;
     transform: scale(.85);
@@ -739,8 +743,14 @@ a.item {
 }
 
 .dialog-content {
+    flex: 1;
     padding: 5px 10px;
     overflow: auto;
+}
+
+.dialog-content.flex {
+    display: flex;
+    flex-direction: column;
 }
 
 .dialog-bottom {
@@ -772,6 +782,15 @@ a.item {
 
 textarea.input-text {
     resize: vertical;
+}
+
+.labeled-input {
+    display: flex;
+    flex-direction: column;
+}
+
+.labeled-input .input-text {
+    flex: 1;
 }
 
 .labeled-input:focus-within .input-label {

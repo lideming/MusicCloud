@@ -57,8 +57,12 @@ export class Track {
             autoFocus = this.inputName.input;
             constructor() {
                 super();
+                this.resizable = true;
+                this.contentFlex = true;
                 this.inputLyrics.input.multiline = true;
-                this.inputLyrics.dominput.style.height = '10em';
+                this.inputLyrics.dominput.style.resize = 'none';
+                this.inputLyrics.dom.style.flex = '1';
+                this.inputLyrics.dominput.style.minHeight = '5em';
                 [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
                 this.addBtn(this.btnSave);
                 this.btnSave.onClick.add(() => this.save());
@@ -566,7 +570,7 @@ export class ContentHeader extends View {
             },
             this.actions.dom
         ]
-    })
+    });
     updateDom() {
         super.updateDom();
         this.titlebar.updateDom();

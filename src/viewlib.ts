@@ -714,7 +714,6 @@ export class Dialog extends View {
     btnClose = new TabBtn({ text: I`Close`, right: true });
 
     title = 'Dialog';
-    width = '300px';
     allowClose = true;
     showCloseButton = true;
     onShown = new Callbacks<Action>();
@@ -722,6 +721,15 @@ export class Dialog extends View {
     autoFocus: View;
 
     static defaultParent: DialogParent;
+    
+    get width() { return this.dom.style.width; }
+    set width(val) { this.dom.style.width = val; }
+
+    get contentFlex() { return this.content.dom.classList.contains('flex'); }
+    set contentFlex(val) { this.content.toggleClass('flex', !!val); }
+
+    get resizable() { return this.dom.classList.contains('resize'); }
+    set resizable(val) { this.toggleClass('resize', !!val); }
 
     constructor() {
         super();
@@ -732,6 +740,7 @@ export class Dialog extends View {
             _ctx: this,
             _key: 'dialog',
             tag: 'div.dialog',
+            style: 'width: 300px',
             child: [
                 {
                     _key: 'domheader',
@@ -780,11 +789,14 @@ export class Dialog extends View {
             document.addEventListener('mousemove', mousemove);
             document.addEventListener('mouseup', mouseup);
         });
+        this.dom.addEventListener('resize', () => {
+            if (this.dom.style.width)
+                this.width = this.dom.style.width;
+        });
     }
     updateDom() {
         this.btnTitle.updateWith({ text: this.title });
         this.btnTitle.hidden = !this.title;
-        this.dom.style.width = this.width;
         this.btnClose.hidden = !(this.allowClose && this.showCloseButton);
     }
     addBtn(btn: TabBtn) {

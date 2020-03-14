@@ -2382,8 +2382,12 @@ class Track {
                 this.inputLyrics = new viewlib_1.LabeledInput({ label: utils_1.I `Lyrics` });
                 this.btnSave = new viewlib_1.TabBtn({ text: utils_1.I `Save`, right: true });
                 this.autoFocus = this.inputName.input;
+                this.resizable = true;
+                this.contentFlex = true;
                 this.inputLyrics.input.multiline = true;
-                this.inputLyrics.dominput.style.height = '10em';
+                this.inputLyrics.dominput.style.resize = 'none';
+                this.inputLyrics.dom.style.flex = '1';
+                this.inputLyrics.dominput.style.minHeight = '5em';
                 [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
                 this.addBtn(this.btnSave);
                 this.btnSave.onClick.add(() => this.save());
@@ -5752,18 +5756,24 @@ class Dialog extends View {
         this.btnTitle = new TabBtn({ active: true, clickable: false });
         this.btnClose = new TabBtn({ text: utils_1.I `Close`, right: true });
         this.title = 'Dialog';
-        this.width = '300px';
         this.allowClose = true;
         this.showCloseButton = true;
         this.onShown = new utils_1.Callbacks();
         this.onClose = new utils_1.Callbacks();
         this.btnClose.onClick.add(() => this.allowClose && this.close());
     }
+    get width() { return this.dom.style.width; }
+    set width(val) { this.dom.style.width = val; }
+    get contentFlex() { return this.content.dom.classList.contains('flex'); }
+    set contentFlex(val) { this.content.toggleClass('flex', !!val); }
+    get resizable() { return this.dom.classList.contains('resize'); }
+    set resizable(val) { this.toggleClass('resize', !!val); }
     createDom() {
         return {
             _ctx: this,
             _key: 'dialog',
             tag: 'div.dialog',
+            style: 'width: 300px',
             child: [
                 {
                     _key: 'domheader',
@@ -5814,11 +5824,14 @@ class Dialog extends View {
             document.addEventListener('mousemove', mousemove);
             document.addEventListener('mouseup', mouseup);
         });
+        this.dom.addEventListener('resize', () => {
+            if (this.dom.style.width)
+                this.width = this.dom.style.width;
+        });
     }
     updateDom() {
         this.btnTitle.updateWith({ text: this.title });
         this.btnTitle.hidden = !this.title;
-        this.dom.style.width = this.width;
         this.btnClose.hidden = !(this.allowClose && this.showCloseButton);
     }
     addBtn(btn) {
