@@ -17,6 +17,9 @@ export var nowPlaying = new class {
             sidebarItem: () => sidebarItem
         });
         ui.sidebarList.addFeatureItem(sidebarItem);
+        playerCore.onTrackChanged.add(() => {
+            sidebarItem.hidden = !playerCore.track;
+        })();
     }
     get view() { return this.lazyView.value; }
     lazyView = new Lazy(() => new PlayingView());

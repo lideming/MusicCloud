@@ -678,6 +678,10 @@ a.item {
     border-bottom: 1px solid var(--color-bg-cc);
 }
 
+#sidebar-login .item, #sidebar-features .item {
+    animation: none;
+}
+
 .overlay {
     background: rgba(0, 0, 0, .2);
     position: absolute;

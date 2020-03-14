@@ -60,6 +60,9 @@ export var uploads = new class extends TrackList {
                 setTimeout(() => this.fetch(true), 1);
             }
         });
+        user.onSwitchedUser.add(() => {
+            this.sidebarItem.hidden = user.state != 'logged';
+        })();
         playerCore.onTrackChanged.add(() => {
             this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === playerCore.track) });
         });

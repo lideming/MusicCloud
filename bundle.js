@@ -320,6 +320,9 @@ exports.discussion = new class extends CommentsView {
             contentView: () => this.lazyView.value
         });
         UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+        User_1.user.onSwitchedUser.add(() => {
+            this.sidebarItem.hidden = User_1.user.state != 'logged';
+        })();
     }
 };
 exports.notes = new class extends CommentsView {
@@ -341,6 +344,9 @@ exports.notes = new class extends CommentsView {
             if (this.state && exports.notes.state !== 'waiting')
                 this.fetch();
         });
+        User_1.user.onSwitchedUser.add(() => {
+            this.sidebarItem.hidden = User_1.user.state != 'logged';
+        })();
     }
 };
 exports.comments = new class {
@@ -1742,6 +1748,9 @@ exports.nowPlaying = new class {
             sidebarItem: () => sidebarItem
         });
         UI_1.ui.sidebarList.addFeatureItem(sidebarItem);
+        PlayerCore_1.playerCore.onTrackChanged.add(() => {
+            sidebarItem.hidden = !PlayerCore_1.playerCore.track;
+        })();
     }
     get view() { return this.lazyView.value; }
 };
@@ -3619,6 +3628,9 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 setTimeout(() => this.fetch(true), 1);
             }
         });
+        User_1.user.onSwitchedUser.add(() => {
+            this.sidebarItem.hidden = User_1.user.state != 'logged';
+        })();
         PlayerCore_1.playerCore.onTrackChanged.add(() => {
             this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === PlayerCore_1.playerCore.track) });
         });
