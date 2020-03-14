@@ -14,7 +14,7 @@ import { router } from "./Router";
 
 /** A track binding with list */
 export class Track {
-    infoObj: Api.Track;
+    infoObj: Api.Track = null;
     get id(): number { return this.infoObj.id; }
     get name() { return this.infoObj.name; }
     get artist() { return this.infoObj.artist; }
@@ -23,11 +23,11 @@ export class Track {
     get length() { return this.infoObj.length; }
     get size() { return this.infoObj.size; }
     get displayName() { return this.artist + ' - ' + this.name; }
-    blob?: Blob;
+    blob?: Blob = null;
     _bind?: {
         position?: number;
         list?: TrackList;
-    };
+    } = null;
     get canEdit() { return true; }
     constructor(init: Partial<Track>) {
         utils.objectApply(this, init);
@@ -122,13 +122,13 @@ export class Track {
 }
 
 export class TrackList {
-    info: Api.TrackListInfo;
-    id: number;
-    apiid: number;
-    name: string;
+    info: Api.TrackListInfo = null;
+    id: number = null;
+    apiid: number = null;
+    name: string = null;
     tracks: Track[] = [];
-    fetching: Promise<void>;
-    posting: Promise<void>;
+    fetching: Promise<void> = null;
+    posting: Promise<void> = null;
 
     canEdit = true;
 
@@ -421,9 +421,9 @@ export class TrackListView extends ListContentView {
 export class TrackViewItem extends ListViewItem {
     track: Track;
     dom: HTMLDivElement;
-    actionHandler: TrackActionHandler<this>;
-    noPos: boolean;
-    playing: boolean;
+    actionHandler: TrackActionHandler<this> = null;
+    noPos: boolean = false;
+    playing: boolean = false;
     constructor(item: Track) {
         super();
         this.track = item;
@@ -579,7 +579,7 @@ export class ContentHeader extends View {
 }
 
 export class ActionBtn extends TextView {
-    onclick: Action;
+    onclick: Action = null;
     constructor(init?: Partial<ActionBtn>) {
         super();
         utils.objectApply(this, init);

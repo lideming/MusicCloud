@@ -283,9 +283,10 @@ declare global {
 
 export class Timer {
     callback: () => void;
-    cancelFunc: () => void;
+    cancelFunc: (() => void) | undefined;
     constructor(callback: () => void) {
         this.callback = callback;
+        this.cancelFunc = undefined;
     }
     timeout(time) {
         this.tryCancel();
@@ -571,13 +572,14 @@ export class Lazy<T> {
     get value() {
         if (this._func) {
             this._value = this._func();
-            delete this._func;
+            this._func = undefined;
         }
         return this._value;
     }
     constructor(func: Func<T>) {
         if (typeof func != 'function') throw new Error('func is not a function');
         this._func = func;
+        this._value = undefined;
     }
 }
 

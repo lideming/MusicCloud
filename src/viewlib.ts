@@ -10,12 +10,12 @@ export class View {
         if (dom) this.domExprCreated(dom);
     }
 
-    public parentView?: ContainerView<View>;
-    public _position?: number;
+    public parentView?: ContainerView<View> = undefined;
+    public _position?: number = undefined;
     get position() { return this._position; }
 
     domctx = new BuildDOMCtx();
-    protected _dom: HTMLElement;
+    protected _dom: HTMLElement = undefined;
     public get domCreated() { return !!this._dom; }
     public get dom() {
         this.ensureDom();
@@ -130,8 +130,8 @@ export class ContainerView<T extends View> extends View {
 /** DragManager is used to help exchange information between views */
 export var dragManager = new class DragManager {
     /** The item being dragged */
-    _currentItem: any;
-    _currentArray: any[];
+    _currentItem: any = null;
+    _currentArray: any[] = null;
     get currentItem() { return this._currentItem ?? this._currentArray?.[0] ?? null; };
     get currentArray() {
         if (this._currentItem) return [this._currentItem];
@@ -157,7 +157,6 @@ export var dragManager = new class DragManager {
 };
 
 export abstract class ListViewItem extends View implements ISelectable {
-    _position: number;
     get listview() { return this.parentView as ListView<this>; }
     get selectionHelper() { return this.listview.selectionHelper; }
 
@@ -168,7 +167,7 @@ export abstract class ListViewItem extends View implements ISelectable {
 
     dragging?: boolean;
 
-    private _selected: boolean;
+    private _selected: boolean = false;
     public get selected(): boolean { return this._selected; }
     public set selected(v: boolean) {
         this._selected = v;
@@ -361,10 +360,10 @@ export interface ISelectable {
 }
 
 export class SelectionHelper<TItem extends ISelectable> {
-    _enabled: boolean;
+    _enabled: boolean = false;
     get enabled() { return this._enabled; }
     set enabled(val) {
-        if (val == !!this._enabled) return;
+        if (!!val == !!this._enabled) return;
         this._enabled = val;
         while (this.selectedItems.length)
             this.toggleItemSelection(this.selectedItems[0], false);
@@ -373,7 +372,7 @@ export class SelectionHelper<TItem extends ISelectable> {
     }
     onEnabledChanged = new Callbacks();
 
-    itemProvider: (pos: number) => TItem;
+    itemProvider: ((pos: number) => TItem) = null;
 
     ctrlForceSelect = false;
 
@@ -422,7 +421,7 @@ export class SelectionHelper<TItem extends ISelectable> {
 
 export class ItemActiveHelper<T extends View> {
     funcSetActive = (item: T, val: boolean) => item.toggleClass('active', val);
-    current: T;
+    current: T = null;
     constructor(init?: Partial<ItemActiveHelper<T>>) {
         utils.objectApply(this, init);
     }
@@ -592,7 +591,7 @@ export class EditableHelper {
 }
 
 export class MenuItem extends ListViewItem {
-    text: string;
+    text: string = '';
     cls: 'normal' | 'dangerous' = 'normal';
     onclick: (ev: Event) => void;
     constructor(init: Partial<MenuItem>) {
@@ -621,8 +620,8 @@ export class MenuItem extends ListViewItem {
 }
 
 export class MenuLinkItem extends MenuItem {
-    link: string;
-    download: string;
+    link: string = '';
+    download: string = '';
     constructor(init: Partial<MenuLinkItem>) {
         super(init);
         utils.objectApply(this, init);
@@ -641,7 +640,7 @@ export class MenuLinkItem extends MenuItem {
 }
 
 export class MenuInfoItem extends MenuItem {
-    text: string;
+    text: string = '';
     constructor(init: Partial<MenuInfoItem>) {
         super(init);
         utils.objectApply(this, init);
@@ -663,7 +662,7 @@ export class ContextMenu extends ListView {
     useOverlay = true;
     private _visible = false;
     get visible() { return this._visible; };
-    overlay: Overlay;
+    overlay: Overlay = null;
     constructor(items?: MenuItem[]) {
         super({ tag: 'div.context-menu', tabIndex: 0 });
         items?.forEach(x => this.add(x));
@@ -868,7 +867,7 @@ export class DialogParent extends View {
 }
 
 export class TabBtn extends View {
-    text: string;
+    text: string = '';
     clickable = true;
     active = false;
     right = false;
@@ -898,7 +897,7 @@ export class TabBtn extends View {
 
 export class InputView extends View {
     dom: HTMLInputElement;
-    multiline: boolean;
+    multiline: boolean = false;
     type = 'text';
     placeholder = '';
     get value() { return this.dom.value; }
@@ -924,8 +923,8 @@ export class TextView extends View {
 
 export class ButtonView extends TextView {
     disabled: boolean = false;
-    onclick: Action;
-    type: 'normal' | 'big';
+    onclick: Action = null;
+    type: 'normal' | 'big' = 'normal';
     constructor(init?: Partial<ButtonView>) {
         super();
         utils.objectApply(this, init);
@@ -946,7 +945,7 @@ export class ButtonView extends TextView {
 }
 
 export class LabeledInput extends View {
-    label: string;
+    label: string = '';
     type = 'text';
     input = new InputView();
     get dominput(): HTMLInputElement { return this.input.dom as any; }
@@ -975,7 +974,7 @@ export class LabeledInput extends View {
 
 export class ToastsContainer extends View {
     static default: ToastsContainer = new ToastsContainer();
-    parentDom: HTMLElement;
+    parentDom: HTMLElement = null;
     toasts: Toast[] = [];
     createDom() {
         return { tag: 'div.toasts-container' };
@@ -1000,8 +999,8 @@ export class ToastsContainer extends View {
 }
 
 export class Toast extends View {
-    text: string;
-    container: ToastsContainer;
+    text: string = '';
+    container: ToastsContainer = null;
     shown = false;
     timer = new Timer(() => this.close());
     constructor(init?: Partial<Toast>) {

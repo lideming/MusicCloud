@@ -609,6 +609,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Edit", "编辑"],
     ["Save", "保存"],
     ["Saving...", "保存中..."],
+    ["Error", "错误"],
     ["User {0}", "用户 {0}"],
     ["You've logged in as \\"{0}\\".", "你已登录为 \\"{0}\\"。"],
     ["Switch user", "切换用户"],
@@ -2345,6 +2346,9 @@ const Router_1 = require("./Router");
 /** A track binding with list */
 class Track {
     constructor(init) {
+        this.infoObj = null;
+        this.blob = null;
+        this._bind = null;
         utils_1.utils.objectApply(this, init);
     }
     get id() { return this.infoObj.id; }
@@ -2425,6 +2429,7 @@ class Track {
                         this.close();
                     }
                     catch (error) {
+                        console.error(error);
                         this.btnSave.updateWith({ clickable: false, text: utils_1.I `Error` });
                         yield utils_1.utils.sleepAsync(3000);
                     }
@@ -2454,7 +2459,13 @@ class Track {
 exports.Track = Track;
 class TrackList {
     constructor() {
+        this.info = null;
+        this.id = null;
+        this.apiid = null;
+        this.name = null;
         this.tracks = [];
+        this.fetching = null;
+        this.posting = null;
         this.canEdit = true;
         this.putDelaying = null;
         this.putInProgress = null;
@@ -2779,6 +2790,9 @@ exports.TrackListView = TrackListView;
 class TrackViewItem extends viewlib_1.ListViewItem {
     constructor(item) {
         super();
+        this.actionHandler = null;
+        this.noPos = false;
+        this.playing = false;
         this.onContextMenu = (item, ev) => {
             var _a, _b, _c;
             ev.preventDefault();
@@ -2940,6 +2954,7 @@ exports.ContentHeader = ContentHeader;
 class ActionBtn extends viewlib_1.TextView {
     constructor(init) {
         super();
+        this.onclick = null;
         utils_1.utils.objectApply(this, init);
     }
     createDom() {
@@ -4662,6 +4677,7 @@ Array.prototype.remove = function (item) {
 class Timer {
     constructor(callback) {
         this.callback = callback;
+        this.cancelFunc = undefined;
     }
     timeout(time) {
         this.tryCancel();
@@ -4917,13 +4933,14 @@ class Lazy {
         if (typeof func != 'function')
             throw new Error('func is not a function');
         this._func = func;
+        this._value = undefined;
     }
     get computed() { return !this._func; }
     get rawValue() { return this._value; }
     get value() {
         if (this._func) {
             this._value = this._func();
-            delete this._func;
+            this._func = undefined;
         }
         return this._value;
     }
@@ -5064,7 +5081,10 @@ const utils_1 = require("./utils");
 const I18n_1 = require("./I18n");
 class View {
     constructor(dom) {
+        this.parentView = undefined;
+        this._position = undefined;
         this.domctx = new utils_1.BuildDOMCtx();
+        this._dom = undefined;
         if (dom)
             this.domExprCreated(dom);
     }
@@ -5181,6 +5201,9 @@ exports.ContainerView = ContainerView;
 /** DragManager is used to help exchange information between views */
 exports.dragManager = new class DragManager {
     constructor() {
+        /** The item being dragged */
+        this._currentItem = null;
+        this._currentArray = null;
         this.onDragStart = new utils_1.Callbacks();
         this.onDragEnd = new utils_1.Callbacks();
     }
@@ -5210,6 +5233,7 @@ exports.dragManager = new class DragManager {
 class ListViewItem extends View {
     constructor() {
         super(...arguments);
+        this._selected = false;
         this.onSelectedChanged = new utils_1.Callbacks();
         // https://stackoverflow.com/questions/7110353
         this.enterctr = 0;
@@ -5403,14 +5427,16 @@ class ListView extends ContainerView {
 exports.ListView = ListView;
 class SelectionHelper {
     constructor() {
+        this._enabled = false;
         this.onEnabledChanged = new utils_1.Callbacks();
+        this.itemProvider = null;
         this.ctrlForceSelect = false;
         this.selectedItems = [];
         this.onSelectedItemsChanged = new utils_1.Callbacks();
     }
     get enabled() { return this._enabled; }
     set enabled(val) {
-        if (val == !!this._enabled)
+        if (!!val == !!this._enabled)
             return;
         this._enabled = val;
         while (this.selectedItems.length)
@@ -5463,6 +5489,7 @@ exports.SelectionHelper = SelectionHelper;
 class ItemActiveHelper {
     constructor(init) {
         this.funcSetActive = (item, val) => item.toggleClass('active', val);
+        this.current = null;
         utils_1.utils.objectApply(this, init);
     }
     set(item) {
@@ -5635,6 +5662,7 @@ exports.EditableHelper = EditableHelper;
 class MenuItem extends ListViewItem {
     constructor(init) {
         super();
+        this.text = '';
         this.cls = 'normal';
         utils_1.utils.objectApply(this, init);
     }
@@ -5665,6 +5693,8 @@ exports.MenuItem = MenuItem;
 class MenuLinkItem extends MenuItem {
     constructor(init) {
         super(init);
+        this.link = '';
+        this.download = '';
         utils_1.utils.objectApply(this, init);
     }
     createDom() {
@@ -5683,6 +5713,7 @@ exports.MenuLinkItem = MenuLinkItem;
 class MenuInfoItem extends MenuItem {
     constructor(init) {
         super(init);
+        this.text = '';
         utils_1.utils.objectApply(this, init);
     }
     createDom() {
@@ -5702,6 +5733,7 @@ class ContextMenu extends ListView {
         this.keepOpen = false;
         this.useOverlay = true;
         this._visible = false;
+        this.overlay = null;
         items === null || items === void 0 ? void 0 : items.forEach(x => this.add(x));
     }
     get visible() { return this._visible; }
@@ -5908,6 +5940,7 @@ exports.DialogParent = DialogParent;
 class TabBtn extends View {
     constructor(init) {
         super();
+        this.text = '';
         this.clickable = true;
         this.active = false;
         this.right = false;
@@ -5936,6 +5969,7 @@ exports.TabBtn = TabBtn;
 class InputView extends View {
     constructor(init) {
         super();
+        this.multiline = false;
         this.type = 'text';
         this.placeholder = '';
         utils_1.utils.objectApply(this, init);
@@ -5962,6 +5996,8 @@ class ButtonView extends TextView {
     constructor(init) {
         super();
         this.disabled = false;
+        this.onclick = null;
+        this.type = 'normal';
         utils_1.utils.objectApply(this, init);
         this.updateDom();
     }
@@ -5982,6 +6018,7 @@ exports.ButtonView = ButtonView;
 class LabeledInput extends View {
     constructor(init) {
         super();
+        this.label = '';
         this.type = 'text';
         this.input = new InputView();
         utils_1.utils.objectApply(this, init);
@@ -6009,6 +6046,7 @@ exports.LabeledInput = LabeledInput;
 class ToastsContainer extends View {
     constructor() {
         super(...arguments);
+        this.parentDom = null;
         this.toasts = [];
     }
     createDom() {
@@ -6037,6 +6075,8 @@ ToastsContainer.default = new ToastsContainer();
 class Toast extends View {
     constructor(init) {
         super();
+        this.text = '';
+        this.container = null;
         this.shown = false;
         this.timer = new utils_1.Timer(() => this.close());
         utils_1.utils.objectApply(this, init);
