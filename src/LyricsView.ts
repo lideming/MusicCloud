@@ -16,6 +16,38 @@ export class LyricsView extends View {
             ]
         };
     }
+    postCreateDom() {
+        var startFontSize: number;
+        var distance: number;
+        this.dom.addEventListener('touchstart', (ev) => {
+            if (ev.touches.length >= 2) {
+                ev.preventDefault();
+                startFontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
+                distance = dist(ev.touches[0], ev.touches[1]);
+            }
+        });
+        this.dom.addEventListener('touchmove', (ev) => {
+            if (ev.touches.length >= 2) {
+                var newdist = dist(ev.touches[0], ev.touches[1]);
+                var fontSize = utils.numLimit(startFontSize * newdist / distance, 20, 500);
+                this.lines.dom.style.fontSize = fontSize + '%';
+            }
+        });
+        function dist(a: Touch, b: Touch) {
+            var dx = a.screenX - b.screenX;
+            var dy = a.screenY - b.screenY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        this.dom.addEventListener('wheel', (ev) => {
+            if (ev.ctrlKey && ev.deltaY) {
+                ev.preventDefault();
+                var fontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
+                fontSize += ev.deltaY > 0 ? -20 : 20;
+                fontSize = utils.numLimit(fontSize, 20, 500);
+                this.lines.dom.style.fontSize = fontSize + '%';
+            }
+        })
+    }
     setLyrics(lyrics: string | Lyrics) {
         try {
             if (typeof lyrics === 'string') lyrics = parse(lyrics);

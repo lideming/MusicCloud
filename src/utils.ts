@@ -135,6 +135,52 @@ export var utils = new class Utils {
         };
     }
 
+    listenPointerEvents(element: HTMLElement, callback: Action<PtrEvent>) {
+        element.addEventListener('mousedown', function (e) {
+            var mousemove = function (e: MouseEvent) {
+                callback({ type: 'mouse', ev: e, point: e, action: 'move' });
+            };
+            var mouseup = function (e: MouseEvent) {
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+                callback({ type: 'mouse', ev: e, point: e, action: 'up' });
+            };
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+            callback({ type: 'mouse', ev: e, point: e, action: 'down' });
+        });
+        var touchDown = false;
+        element.addEventListener('touchstart', function (e) {
+            var touchmove = function (e: TouchEvent) {
+                var ct = e.changedTouches[0];
+                callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
+            };
+            var touchend = function (e: TouchEvent) {
+                if (e.touches.length == 0) {
+                    touchDown = false;
+                    element.removeEventListener('touchmove', touchmove);
+                    element.removeEventListener('touchend', touchend);
+                }
+                var ct = e.changedTouches[0];
+                callback({
+                    type: 'touch', touch: 'end', ev: e, point: ct,
+                    action: touchDown ? 'move' : 'up'
+                });
+            };
+            var alreadyDown = touchDown;
+            if (!touchDown) {
+                touchDown = true;
+                element.addEventListener('touchmove', touchmove);
+                element.addEventListener('touchend', touchend);
+            }
+            var ct = e.changedTouches[0];
+            callback({
+                type: 'touch', touch: 'start', ev: e, point: ct,
+                action: alreadyDown ? 'move' : 'down'
+            });
+        });
+    }
+
     addEvent<K extends keyof HTMLElementEventMap>(element: HTMLElement, event: K, handler: (ev: HTMLElementEventMap[K]) => any) {
         element.addEventListener(event, handler);
         return {
@@ -259,6 +305,18 @@ export class Timer {
     }
 }
 utils.Timer = Timer;
+
+export type PtrEvent = ({
+    type: 'mouse';
+    ev: MouseEvent;
+} | {
+    type: 'touch';
+    touch: 'start' | 'move' | 'end';
+    ev: TouchEvent;
+}) & {
+    action: 'down' | 'move' | 'up';
+    point: MouseEvent | Touch;
+};
 
 
 // Some interesting types:

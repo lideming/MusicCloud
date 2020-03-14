@@ -244,20 +244,14 @@ export const ui = new class {
         }
         onProgressSeeking(cb: (percent: number) => void) {
             var call = (offsetX) => { cb(utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
-            this.progbar.addEventListener('mousedown', (e) => {
-                e.preventDefault();
+            utils.listenPointerEvents(this.progbar, (e) => {
+                e.ev.preventDefault();
                 if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
-                    if (e.buttons == 1) call(e.offsetX);
-                document.addEventListener('mousemove', mousemove);
-                document.addEventListener('mouseup', mouseup);
+                    if ((e.type === 'mouse' && e.ev.buttons == 1)
+                        || e.type === 'touch') {
+                        call(e.point.pageX - this.progbar.getBoundingClientRect().left);
+                    }
             });
-            var mousemove = (e: MouseEvent) => {
-                call(e.pageX - this.progbar.getBoundingClientRect().left);
-            };
-            var mouseup = () => {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
-            };
         }
     };
     trackinfo = new class {
@@ -453,25 +447,22 @@ class VolumeButton extends ProgressButton {
             var delta = Math.sign(ev.deltaY) * -0.1;
             this.onChanging.invoke(delta);
         });
-        this.dom.addEventListener('mousedown', (ev) => {
-            if (ev.buttons !== 1) return;
-            ev.preventDefault();
-            var startX = ev.pageX;
-            var mousemove = (ev) => {
-                var deltaX = ev.pageX - startX;
-                startX = ev.pageX;
+        var startX: number;
+        utils.listenPointerEvents(this.dom, (e) => {
+            if (e.type == 'mouse' && e.action == 'down' && e.ev.buttons != 1) return;
+            e.ev.preventDefault();
+            if (e.action == 'down') {
+                startX = e.point.pageX;
+                this.dom.classList.add('btn-down');
+                this.fill.dom.style.transition = 'none';
+            } else if (e.action == 'move') {
+                var deltaX = e.point.pageX - startX;
+                startX = e.point.pageX;
                 this.onChanging.invoke(deltaX * 0.01);
-            };
-            var mouseup = (ev) => {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
+            } else if (e.action == 'up') {
                 this.dom.classList.remove('btn-down');
                 this.fill.dom.style.transition = '';
-            };
-            document.addEventListener('mousemove', mousemove);
-            document.addEventListener('mouseup', mouseup);
-            this.dom.classList.add('btn-down');
-            this.fill.dom.style.transition = 'none';
+            }
         });
     }
     bindToPlayer() {

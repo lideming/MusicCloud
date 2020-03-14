@@ -1393,6 +1393,38 @@ class LyricsView extends viewlib_1.View {
             ]
         };
     }
+    postCreateDom() {
+        var startFontSize;
+        var distance;
+        this.dom.addEventListener('touchstart', (ev) => {
+            if (ev.touches.length >= 2) {
+                ev.preventDefault();
+                startFontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
+                distance = dist(ev.touches[0], ev.touches[1]);
+            }
+        });
+        this.dom.addEventListener('touchmove', (ev) => {
+            if (ev.touches.length >= 2) {
+                var newdist = dist(ev.touches[0], ev.touches[1]);
+                var fontSize = utils_1.utils.numLimit(startFontSize * newdist / distance, 20, 500);
+                this.lines.dom.style.fontSize = fontSize + '%';
+            }
+        });
+        function dist(a, b) {
+            var dx = a.screenX - b.screenX;
+            var dy = a.screenY - b.screenY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        this.dom.addEventListener('wheel', (ev) => {
+            if (ev.ctrlKey && ev.deltaY) {
+                ev.preventDefault();
+                var fontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
+                fontSize += ev.deltaY > 0 ? -20 : 20;
+                fontSize = utils_1.utils.numLimit(fontSize, 20, 500);
+                this.lines.dom.style.fontSize = fontSize + '%';
+            }
+        });
+    }
     setLyrics(lyrics) {
         try {
             if (typeof lyrics === 'string')
@@ -3108,21 +3140,14 @@ exports.ui = new class {
             }
             onProgressSeeking(cb) {
                 var call = (offsetX) => { cb(utils_1.utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
-                this.progbar.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
+                utils_1.utils.listenPointerEvents(this.progbar, (e) => {
+                    e.ev.preventDefault();
                     if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
-                        if (e.buttons == 1)
-                            call(e.offsetX);
-                    document.addEventListener('mousemove', mousemove);
-                    document.addEventListener('mouseup', mouseup);
+                        if ((e.type === 'mouse' && e.ev.buttons == 1)
+                            || e.type === 'touch') {
+                            call(e.point.pageX - this.progbar.getBoundingClientRect().left);
+                        }
                 });
-                var mousemove = (e) => {
-                    call(e.pageX - this.progbar.getBoundingClientRect().left);
-                };
-                var mouseup = () => {
-                    document.removeEventListener('mousemove', mousemove);
-                    document.removeEventListener('mouseup', mouseup);
-                };
             }
         };
         this.trackinfo = new class {
@@ -3378,26 +3403,25 @@ class VolumeButton extends ProgressButton {
             var delta = Math.sign(ev.deltaY) * -0.1;
             this.onChanging.invoke(delta);
         });
-        this.dom.addEventListener('mousedown', (ev) => {
-            if (ev.buttons !== 1)
+        var startX;
+        utils_1.utils.listenPointerEvents(this.dom, (e) => {
+            if (e.type == 'mouse' && e.action == 'down' && e.ev.buttons != 1)
                 return;
-            ev.preventDefault();
-            var startX = ev.pageX;
-            var mousemove = (ev) => {
-                var deltaX = ev.pageX - startX;
-                startX = ev.pageX;
+            e.ev.preventDefault();
+            if (e.action == 'down') {
+                startX = e.point.pageX;
+                this.dom.classList.add('btn-down');
+                this.fill.dom.style.transition = 'none';
+            }
+            else if (e.action == 'move') {
+                var deltaX = e.point.pageX - startX;
+                startX = e.point.pageX;
                 this.onChanging.invoke(deltaX * 0.01);
-            };
-            var mouseup = (ev) => {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
+            }
+            else if (e.action == 'up') {
                 this.dom.classList.remove('btn-down');
                 this.fill.dom.style.transition = '';
-            };
-            document.addEventListener('mousemove', mousemove);
-            document.addEventListener('mouseup', mouseup);
-            this.dom.classList.add('btn-down');
-            this.fill.dom.style.transition = 'none';
+            }
         });
     }
     bindToPlayer() {
@@ -4472,6 +4496,51 @@ exports.utils = new class Utils {
             },
             cancel() { end === null || end === void 0 ? void 0 : end(); }
         };
+    }
+    listenPointerEvents(element, callback) {
+        element.addEventListener('mousedown', function (e) {
+            var mousemove = function (e) {
+                callback({ type: 'mouse', ev: e, point: e, action: 'move' });
+            };
+            var mouseup = function (e) {
+                document.removeEventListener('mousemove', mousemove);
+                document.removeEventListener('mouseup', mouseup);
+                callback({ type: 'mouse', ev: e, point: e, action: 'up' });
+            };
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+            callback({ type: 'mouse', ev: e, point: e, action: 'down' });
+        });
+        var touchDown = false;
+        element.addEventListener('touchstart', function (e) {
+            var touchmove = function (e) {
+                var ct = e.changedTouches[0];
+                callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
+            };
+            var touchend = function (e) {
+                if (e.touches.length == 0) {
+                    touchDown = false;
+                    element.removeEventListener('touchmove', touchmove);
+                    element.removeEventListener('touchend', touchend);
+                }
+                var ct = e.changedTouches[0];
+                callback({
+                    type: 'touch', touch: 'end', ev: e, point: ct,
+                    action: touchDown ? 'move' : 'up'
+                });
+            };
+            var alreadyDown = touchDown;
+            if (!touchDown) {
+                touchDown = true;
+                element.addEventListener('touchmove', touchmove);
+                element.addEventListener('touchend', touchend);
+            }
+            var ct = e.changedTouches[0];
+            callback({
+                type: 'touch', touch: 'start', ev: e, point: ct,
+                action: alreadyDown ? 'move' : 'down'
+            });
+        });
     }
     addEvent(element, event, handler) {
         element.addEventListener(event, handler);
