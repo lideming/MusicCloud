@@ -8,6 +8,7 @@ export class LyricsView extends View {
     lyrics: Lyrics;
     curLine = new ItemActiveHelper<LineView>();
     onSpanClick = new Callbacks<Action<Span>>();
+    onFontSizeChanged = new Callbacks<Action>();
     createDom(): BuildDomExpr {
         return {
             tag: 'div.lyricsview',
@@ -22,15 +23,15 @@ export class LyricsView extends View {
         this.dom.addEventListener('touchstart', (ev) => {
             if (ev.touches.length >= 2) {
                 ev.preventDefault();
-                startFontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
+                startFontSize = this.scale;
                 distance = dist(ev.touches[0], ev.touches[1]);
             }
         });
         this.dom.addEventListener('touchmove', (ev) => {
             if (ev.touches.length >= 2) {
                 var newdist = dist(ev.touches[0], ev.touches[1]);
-                var fontSize = utils.numLimit(startFontSize * newdist / distance, 20, 500);
-                this.lines.dom.style.fontSize = fontSize + '%';
+                var scale = utils.numLimit(startFontSize * newdist / distance, 20, 500);
+                this.scale = scale;
             }
         });
         function dist(a: Touch, b: Touch) {
@@ -41,12 +42,11 @@ export class LyricsView extends View {
         this.dom.addEventListener('wheel', (ev) => {
             if (ev.ctrlKey && ev.deltaY) {
                 ev.preventDefault();
-                var fontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
-                fontSize += ev.deltaY > 0 ? -20 : 20;
-                fontSize = utils.numLimit(fontSize, 20, 500);
-                this.lines.dom.style.fontSize = fontSize + '%';
+                var scale = this.scale + (ev.deltaY > 0 ? -20 : 20);
+                scale = utils.numLimit(scale, 20, 500);
+                this.scale = scale;
             }
-        })
+        });
     }
     setLyrics(lyrics: string | Lyrics) {
         try {
@@ -82,6 +82,17 @@ export class LyricsView extends View {
             });
         }
     }
+
+    private _fontSize: number = 100;
+    public get scale(): number {
+        return this._fontSize;
+    }
+    public set scale(v: number) {
+        this._fontSize = v;
+        this.lines.dom.style.fontSize = v + '%';
+        this.onFontSizeChanged.invoke();
+    }
+
 
     getLineByTime(time: number, hint?: LineView) {
         var line: LineView;

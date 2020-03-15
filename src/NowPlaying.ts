@@ -1,7 +1,7 @@
 import { router } from './Router';
 import { ListContentView } from './ListContentView';
 import { ContentView, SidebarItem, ui } from './UI';
-import { Lazy, I, utils, BuildDomExpr, Timer } from './utils';
+import { Lazy, I, utils, BuildDomExpr, Timer, SettingItem } from './utils';
 import { ContentHeader, ActionBtn } from './TrackList';
 import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
@@ -31,8 +31,16 @@ class PlayingView extends ContentView {
     });
     lyricsView = new LyricsView();
     editBtn: ActionBtn;
+    si = new SettingItem('mcloud-nowplaying', 'json', {
+        lyricsScale: 100
+    });
     constructor() {
         super();
+        this.lyricsView.scale = this.si.data.lyricsScale;
+        this.lyricsView.onFontSizeChanged.add(() => {
+            this.si.data.lyricsScale = this.lyricsView.scale;
+            this.si.save();
+        });
         this.lyricsView.onSpanClick.add((span) => {
             if (span.startTime >= 0) playerCore.currentTime = span.startTime;
         });

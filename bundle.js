@@ -1391,6 +1391,8 @@ class LyricsView extends viewlib_1.View {
         this.lines = new viewlib_1.ContainerView({ tag: 'div.lyrics' });
         this.curLine = new viewlib_1.ItemActiveHelper();
         this.onSpanClick = new utils_1.Callbacks();
+        this.onFontSizeChanged = new utils_1.Callbacks();
+        this._fontSize = 100;
     }
     createDom() {
         return {
@@ -1406,15 +1408,15 @@ class LyricsView extends viewlib_1.View {
         this.dom.addEventListener('touchstart', (ev) => {
             if (ev.touches.length >= 2) {
                 ev.preventDefault();
-                startFontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
+                startFontSize = this.scale;
                 distance = dist(ev.touches[0], ev.touches[1]);
             }
         });
         this.dom.addEventListener('touchmove', (ev) => {
             if (ev.touches.length >= 2) {
                 var newdist = dist(ev.touches[0], ev.touches[1]);
-                var fontSize = utils_1.utils.numLimit(startFontSize * newdist / distance, 20, 500);
-                this.lines.dom.style.fontSize = fontSize + '%';
+                var scale = utils_1.utils.numLimit(startFontSize * newdist / distance, 20, 500);
+                this.scale = scale;
             }
         });
         function dist(a, b) {
@@ -1425,10 +1427,9 @@ class LyricsView extends viewlib_1.View {
         this.dom.addEventListener('wheel', (ev) => {
             if (ev.ctrlKey && ev.deltaY) {
                 ev.preventDefault();
-                var fontSize = parseFloat(this.lines.dom.style.fontSize) || 100;
-                fontSize += ev.deltaY > 0 ? -20 : 20;
-                fontSize = utils_1.utils.numLimit(fontSize, 20, 500);
-                this.lines.dom.style.fontSize = fontSize + '%';
+                var scale = this.scale + (ev.deltaY > 0 ? -20 : 20);
+                scale = utils_1.utils.numLimit(scale, 20, 500);
+                this.scale = scale;
             }
         });
     }
@@ -1468,6 +1469,14 @@ class LyricsView extends viewlib_1.View {
                 block: 'center'
             });
         }
+    }
+    get scale() {
+        return this._fontSize;
+    }
+    set scale(v) {
+        this._fontSize = v;
+        this.lines.dom.style.fontSize = v + '%';
+        this.onFontSizeChanged.invoke();
     }
     getLineByTime(time, hint) {
         var line;
@@ -1762,6 +1771,9 @@ class PlayingView extends UI_1.ContentView {
             title: utils_1.I `Now Playing`
         });
         this.lyricsView = new LyricsView_1.LyricsView();
+        this.si = new utils_1.SettingItem('mcloud-nowplaying', 'json', {
+            lyricsScale: 100
+        });
         this.onTrackChanged = () => {
             var _a;
             this.updateDom();
@@ -1787,6 +1799,11 @@ class PlayingView extends UI_1.ContentView {
             if (realTime - this.lastChangedRealTime < 500)
                 this.timer.timeout(16);
         };
+        this.lyricsView.scale = this.si.data.lyricsScale;
+        this.lyricsView.onFontSizeChanged.add(() => {
+            this.si.data.lyricsScale = this.lyricsView.scale;
+            this.si.save();
+        });
         this.lyricsView.onSpanClick.add((span) => {
             if (span.startTime >= 0)
                 PlayerCore_1.playerCore.currentTime = span.startTime;
@@ -3245,7 +3262,7 @@ exports.ui = new class {
                 this.dom.addEventListener('dragover', () => this.toggleHide(false));
             }
             checkWidth() {
-                var width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+                var width = window.innerWidth;
                 this.toggleFloat(width < 800);
             }
             toggleFloat(float) {

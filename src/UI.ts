@@ -302,7 +302,7 @@ export const ui = new class {
             this.dom.addEventListener('dragover', () => this.toggleHide(false));
         }
         checkWidth() {
-            var width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+            var width = window.innerWidth;
             this.toggleFloat(width < 800);
         }
         toggleFloat(float?) {
