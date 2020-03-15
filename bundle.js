@@ -1212,6 +1212,7 @@ class Parser {
     constructor(str) {
         this.lines = [];
         this.bpm = 60;
+        this.offset = 0;
         this.curTime = 0;
         this.lang = '';
         this.tlang = '';
@@ -1276,6 +1277,10 @@ class Parser {
                 }
                 else if (text.startsWith('bpm:')) {
                     this.bpm = parseFloat(text.substr(4));
+                    lex.expectAndConsume('tagEnd');
+                }
+                else if (text.startsWith('offset:')) {
+                    this.offset = parseFloat(text.substr(7)) / 1000;
                     lex.expectAndConsume('tagEnd');
                 }
                 else if (text.startsWith('lang:')) {
@@ -1359,8 +1364,9 @@ class Parser {
                 result += parseInt(match[3]);
             if (match[4])
                 result += parseFloat(match[4]);
+            result += this.offset;
         }
-        else if (match = /^b(\d+)?(\/(\d+))?$/.exec(str)) {
+        else if (match = /^b([\d\.]+)?(\/(\d+))?$/.exec(str)) {
             result = 60 / this.bpm;
             if (match[1])
                 result *= parseInt(match[1]);

@@ -133,6 +133,7 @@ export class Parser {
     tokens: LookaheadBuffer<Token>;
     lines: Line[] = [];
     bpm = 60;
+    offset = 0;
     curTime = 0;
     lang = '';
     tlang = '';
@@ -193,6 +194,9 @@ export class Parser {
                     spans.push(lastSpan = { text, ruby, startTime: curTime, endTime: null });
                 } else if (text.startsWith('bpm:')) {
                     this.bpm = parseFloat(text.substr(4));
+                    lex.expectAndConsume('tagEnd');
+                } else if (text.startsWith('offset:')) {
+                    this.offset = parseFloat(text.substr(7)) / 1000;
                     lex.expectAndConsume('tagEnd');
                 } else if (text.startsWith('lang:')) {
                     let r = /^([\w\-]+)(\/([\w\-]+))?$/.exec(text.substr(5));
@@ -266,7 +270,8 @@ export class Parser {
             if (match[2]) result += parseInt(match[2]) * 60;
             if (match[3]) result += parseInt(match[3]);
             if (match[4]) result += parseFloat(match[4]);
-        } else if (match = /^b(\d+)?(\/(\d+))?$/.exec(str)) {
+            result += this.offset;
+        } else if (match = /^b([\d\.]+)?(\/(\d+))?$/.exec(str)) {
             result = 60 / this.bpm;
             if (match[1]) result *= parseInt(match[1]);
             if (match[3]) result /= parseInt(match[3]);
