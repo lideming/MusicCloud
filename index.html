@@ -58,6 +58,13 @@
                     this.jsLoaded = true
                     this.update();
                 },
+                onJsLoad() {
+                    if (!this.jsLoaded) {
+                        console.error('js loaded without calling callback');
+                        this.jsError = true;
+                        this.update();
+                    }
+                },
                 update() {
                     if (!this.domLoaded) return;
                     document.getElementById('css-ok').hidden = !preload.cssLoaded;
@@ -87,7 +94,7 @@
     </script>
     <!-- End of preload style and script -->
     <link rel="stylesheet" href="style.css" media="print" onload="this.media='all'; preload.cssOk(); this.onload = null;">
-    <script src="bundle.js" defer async></script>
+    <script src="bundle.js" onload="window.preload && preload.onJsLoad()" defer async></script>
 </head>
 
 <body>
