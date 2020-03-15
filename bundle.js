@@ -1079,7 +1079,10 @@ exports.ListIndexViewItem = ListIndexViewItem;
 // file: Lyrics.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 function parse(str) {
-    return new Parser(str).parse();
+    var time = new Date().getTime();
+    var r = new Parser(str).parse();
+    console.log(`Lyrics: parsed ${str.length} chars in ${new Date().getTime() - time} ms`);
+    return r;
 }
 exports.parse = parse;
 class LookaheadBuffer {
@@ -1102,12 +1105,20 @@ class LookaheadBuffer {
         return this.buf[i];
     }
 }
-var TAGBEGIN = '['.charCodeAt(0);
-var TAGEND = ']'.charCodeAt(0);
-var BRACKETBEGIN = '{'.charCodeAt(0);
-var BRACKETEND = '}'.charCodeAt(0);
-var NOTLINEFEED = '\r'.charCodeAt(0);
-var LINEFEED = '\n'.charCodeAt(0);
+const TAGBEGIN = '['.charCodeAt(0);
+const TAGEND = ']'.charCodeAt(0);
+const BRACKETBEGIN = '{'.charCodeAt(0);
+const BRACKETEND = '}'.charCodeAt(0);
+const NOTLINEFEED = '\r'.charCodeAt(0);
+const LINEFEED = '\n'.charCodeAt(0);
+const mapCharToken = {
+    [TAGBEGIN]: 1 /* tagBegin */,
+    [TAGEND]: 2 /* tagEnd */,
+    [BRACKETBEGIN]: 3 /* bracketBegin */,
+    [BRACKETEND]: 4 /* bracketEnd */,
+    [NOTLINEFEED]: null,
+    [LINEFEED]: 6 /* lineFeed */
+};
 class Lexer {
     constructor(str) {
         this.buf = new LookaheadBuffer();
@@ -1119,7 +1130,7 @@ class Lexer {
     }
     get len() { return this.str.length; }
     toArray() {
-        for (var i = 0; this.buf.peek(i).type !== 'eof'; i++) { }
+        for (var i = 0; this.buf.peek(i).type !== 7 /* eof */; i++) { }
         return this.buf.buf.map(x => x);
     }
     read() {
@@ -1134,35 +1145,26 @@ class Lexer {
         var cur = this.cur;
         try {
             if (cur == str.length)
-                return new Token('eof');
+                return new Token(7 /* eof */);
             while (true) {
                 var ch = str.charCodeAt(cur);
                 cur++;
-                if (ch === TAGBEGIN)
-                    return new Token('tagBegin', ch);
-                if (ch === TAGEND)
-                    return new Token('tagEnd', ch);
-                if (ch === BRACKETBEGIN)
-                    return new Token('bracketBegin', ch);
-                if (ch === BRACKETEND)
-                    return new Token('bracketEnd', ch);
-                if (ch === NOTLINEFEED)
-                    continue;
-                if (ch === LINEFEED)
-                    return new Token('lineFeed', ch);
                 if (!(ch >= 0))
-                    return new Token('eof', 'eof');
+                    return new Token(7 /* eof */, 'eof');
+                const tokenType = mapCharToken[ch];
+                if (tokenType !== undefined) {
+                    if (tokenType === null)
+                        continue; // ignore charater
+                    return new Token(tokenType, ch);
+                }
                 while (true) {
                     ch = str.charCodeAt(cur);
-                    if (!(ch >= 0)
-                        || ch === TAGBEGIN || ch === TAGEND
-                        || ch === BRACKETBEGIN || ch === BRACKETEND
-                        || ch === LINEFEED || ch === NOTLINEFEED)
+                    if (!(ch >= 0) || mapCharToken[ch] !== undefined)
                         break;
                     cur++;
                 }
                 ;
-                return new Token('text', str.substring(begin, cur));
+                return new Token(5 /* text */, str.substring(begin, cur));
             }
         }
         finally {
@@ -1188,7 +1190,7 @@ class Lexer {
     expect(type) {
         var t = this.tryExpect(type);
         if (!t)
-            this.error(`expected token type '${type}'`);
+            this.error(`expected token type '${TokenTypeEnum[type]}'`);
         return t;
     }
     error(msg) {
@@ -1199,13 +1201,23 @@ class Lexer {
         return this.consume();
     }
 }
+var TokenTypeEnum;
+(function (TokenTypeEnum) {
+    TokenTypeEnum[TokenTypeEnum['tagBegin'] = 1] = 'tagBegin';
+    TokenTypeEnum[TokenTypeEnum['tagEnd'] = 2] = 'tagEnd';
+    TokenTypeEnum[TokenTypeEnum['bracketBegin'] = 3] = 'bracketBegin';
+    TokenTypeEnum[TokenTypeEnum['bracketEnd'] = 4] = 'bracketEnd';
+    TokenTypeEnum[TokenTypeEnum['text'] = 5] = 'text';
+    TokenTypeEnum[TokenTypeEnum['lineFeed'] = 6] = 'lineFeed';
+    TokenTypeEnum[TokenTypeEnum['eof'] = 7] = 'eof';
+})(TokenTypeEnum || (TokenTypeEnum = {}));
 class Token {
     constructor(type, val) {
         this.type = type;
         this.val = typeof val == 'number' ? String.fromCharCode(val) : val;
     }
     toString() {
-        return `{${this.type}|${this.val}}`;
+        return `{${TokenTypeEnum[this.type]}|${this.val}}`;
     }
 }
 class Parser {
@@ -1223,7 +1235,7 @@ class Parser {
         var lex = this.lex;
         var lastpos;
         this.skipLineFeeds();
-        while (lex.peek().type !== 'eof') {
+        while (lex.peek().type !== 7 /* eof */) {
             lastpos = lex.buf.consumed;
             this.parseLine();
             this.skipLineFeeds();
@@ -1248,12 +1260,12 @@ class Parser {
         var lastSpan = null;
         var curTime = null;
         while (true) {
-            if (lex.tryExpect('tagBegin')) {
+            if (lex.tryExpect(1 /* tagBegin */)) {
                 lex.consume();
-                let text = lex.expectAndConsume('text').val;
+                let text = lex.expectAndConsume(5 /* text */).val;
                 let ts = this.parseTimestamp(text, curTime !== null && curTime !== void 0 ? curTime : this.curTime);
                 if (typeof ts == 'number') {
-                    lex.expectAndConsume('tagEnd');
+                    lex.expectAndConsume(2 /* tagEnd */);
                     if (!lastSpan) {
                         if (startTime != null) {
                             duplicateTime.push(ts);
@@ -1268,20 +1280,20 @@ class Parser {
                         lastSpan.endTime = ts;
                     }
                 }
-                else if (lex.tryExpectSeq(['tagEnd', 'bracketBegin'])) {
+                else if (lex.tryExpectSeq([2 /* tagEnd */, 3 /* bracketBegin */])) {
                     lex.consume();
                     lex.consume();
-                    let ruby = lex.expectAndConsume('text').val;
-                    lex.expectAndConsume('bracketEnd');
+                    let ruby = lex.expectAndConsume(5 /* text */).val;
+                    lex.expectAndConsume(4 /* bracketEnd */);
                     spans.push(lastSpan = { text, ruby, startTime: curTime, endTime: null });
                 }
                 else if (text.startsWith('bpm:')) {
                     this.bpm = parseFloat(text.substr(4));
-                    lex.expectAndConsume('tagEnd');
+                    lex.expectAndConsume(2 /* tagEnd */);
                 }
                 else if (text.startsWith('offset:')) {
                     this.offset = parseFloat(text.substr(7)) / 1000;
-                    lex.expectAndConsume('tagEnd');
+                    lex.expectAndConsume(2 /* tagEnd */);
                 }
                 else if (text.startsWith('lang:')) {
                     let r = /^([\w\-]+)(\/([\w\-]+))?$/.exec(text.substr(5));
@@ -1289,7 +1301,7 @@ class Parser {
                         this.lang = r[1];
                         this.tlang = r[3] || '';
                     }
-                    lex.expectAndConsume('tagEnd');
+                    lex.expectAndConsume(2 /* tagEnd */);
                 }
                 else {
                     if (!lastSpan) {
@@ -1299,18 +1311,18 @@ class Parser {
                     }
                     else {
                         spans.push(lastSpan = { text: '[' + text + ']', ruby: null, startTime: curTime, endTime: null });
-                        if (lex.tryExpect('tagEnd'))
+                        if (lex.tryExpect(2 /* tagEnd */))
                             lex.consume();
                     }
                 }
             }
-            else if (lex.tryExpect('text')) {
+            else if (lex.tryExpect(5 /* text */)) {
                 let text = lex.consume().val;
                 spans.push(lastSpan = { text, ruby: null, startTime: curTime, endTime: null });
             }
-            else if (lex.tryExpect('lineFeed')) {
+            else if (lex.tryExpect(6 /* lineFeed */)) {
                 lex.consume();
-                if (spans.length > 0 && lex.tryExpect('text')) {
+                if (spans.length > 0 && lex.tryExpect(5 /* text */)) {
                     let nextline = lex.peek().val;
                     if (nextline.startsWith('/')) {
                         trans = nextline.substr(1);
@@ -1319,7 +1331,7 @@ class Parser {
                 }
                 break;
             }
-            else if (lex.tryExpect('eof')) {
+            else if (lex.tryExpect(7 /* eof */)) {
                 break;
             }
             else {
@@ -1345,12 +1357,12 @@ class Parser {
         });
     }
     skipLine() {
-        while (!(this.lex.tryExpect('lineFeed') || this.lex.tryExpect('eof')))
+        while (!(this.lex.tryExpect(6 /* lineFeed */) || this.lex.tryExpect(7 /* eof */)))
             this.lex.consume();
         this.lex.consume();
     }
     skipLineFeeds() {
-        while (this.lex.tryExpect('lineFeed'))
+        while (this.lex.tryExpect(6 /* lineFeed */))
             this.lex.consume();
     }
     parseTimestamp(str, curTime) {
