@@ -1061,7 +1061,7 @@ textarea.input-text {
 }
 
 .lyricsview .line {
-    margin: 10px;
+    margin: .5em 10px;
     min-height: 1em;
     line-height: 1.3;
     text-align: center;
