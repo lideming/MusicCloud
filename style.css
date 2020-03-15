@@ -194,7 +194,6 @@ html, body {
     /* position: relative; */
     position: sticky;
     top: 0;
-    padding: 10px;
     background: var(--color-bg);
     animation: showing-top .3s;
     z-index: 1;
@@ -204,11 +203,15 @@ html, body {
     align-self: stretch;
 }
 
-.float-sidebar .content-header {
+.titlebar {
+    padding: 10px;
+}
+
+.float-sidebar .content-header .titlebar {
     padding-left: 50px;
 }
 
-.content-header .catalog {
+.titlebar .catalog {
     font-size: 120%;
     line-height: 1;
     color: var(--color-text-gray);
@@ -216,7 +219,7 @@ html, body {
     margin-left: 5px;
 }
 
-.content-header .title {
+.titlebar .title {
     vertical-align: baseline;
     display: inline-block;
     font-size: 120%;
@@ -227,19 +230,19 @@ html, body {
     margin-left: 5px;
 }
 
-.content-header .title.editable {
+.titlebar .title.editable {
     cursor: text;
 }
 
-.content-header .title.editable:hover {
+.titlebar .title.editable:hover {
     background: var(--color-bg-ee)
 }
 
-.content-header .title.editing {
+.titlebar .title.editing {
     padding: 0;
 }
 
-.content-header .title input {
+.titlebar .title input {
     display: inline-block;
     line-height: inherit;
     padding: 5px;
@@ -251,12 +254,12 @@ html, body {
     color: var(--color-text);
 }
 
-.content-header .actions {
+.titlebar .actions {
     float: right;
     vertical-align: middle;
 }
 
-.content-header .actions .action {
+.titlebar .actions .action {
     display: inline-block;
     vertical-align: middle;
     color: var(--color-text-gray);
@@ -1095,7 +1098,7 @@ textarea.input-text {
 .searchbar {
     display: flex;
     align-items: center;
-    margin: 5px 10px;
+    margin: 10px 10px 5px;
 }
 
 .searchbar .input-text {
