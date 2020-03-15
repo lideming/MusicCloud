@@ -1584,8 +1584,16 @@ class SpanView extends viewlib_1.View {
     }
     postCreateDom() {
         super.postCreateDom();
-        this.dom.addEventListener('click', () => {
-            this.lineView.lyricsView.onSpanClick.invoke(this.span);
+        var startX, startY;
+        this.dom.addEventListener('mousedown', (ev) => {
+            startX = ev.offsetX;
+            startY = ev.offsetY;
+        });
+        this.dom.addEventListener('click', (ev) => {
+            if (Math.abs(ev.offsetX - startX) <= 3 && Math.abs(ev.offsetY - startY) <= 3) {
+                ev.preventDefault();
+                this.lineView.lyricsView.onSpanClick.invoke(this.span);
+            }
         });
     }
 }
