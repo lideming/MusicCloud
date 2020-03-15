@@ -31,7 +31,9 @@ export class ContentView extends View {
     dom: HTMLElement;
     onShow() { }
     onDomInserted() { }
-    onRemove() { }
+    onRemove() {
+        this._shownEvents?.removeAll();
+    }
     contentViewState?: ContentViewState;
 
     _shownEvents: EventRegistrations;

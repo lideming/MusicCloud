@@ -763,7 +763,7 @@ class ListContentView extends UI_1.ContentView {
         this.ensureDom();
     }
     onRemove() {
-        this._shownEvents && this._shownEvents.removeAll();
+        super.onRemove();
     }
     useLoadingIndicator(li) {
         if (li !== this.loadingIndicator) {
@@ -1480,7 +1480,7 @@ class LyricsView extends viewlib_1.View {
         var line = this.getLineByTime(time, prev);
         line === null || line === void 0 ? void 0 : line.setCurrentTime(time);
         this.curLine.set(line);
-        if (scroll && ((line && prev !== line) || scroll == 'force')) {
+        if (scroll && line && (prev !== line || scroll == 'force')) {
             line.dom.scrollIntoView({
                 behavior: scroll === 'smooth' ? 'smooth' : undefined,
                 block: 'center'
@@ -1803,6 +1803,7 @@ class PlayingView extends UI_1.ContentView {
                 this.lyricsView.dom.scrollTop = 0;
             }
         };
+        this.onResize = () => this.centerLyrics();
         this.timer = new utils_1.Timer(() => this.onProgressChanged());
         this.lastTime = 0;
         this.lastChangedRealTime = 0;
@@ -1821,6 +1822,7 @@ class PlayingView extends UI_1.ContentView {
         this.lyricsView.onFontSizeChanged.add(() => {
             this.si.data.lyricsScale = this.lyricsView.scale;
             this.si.save();
+            this.centerLyrics();
         });
         this.lyricsView.onSpanClick.add((span) => {
             if (span.startTime >= 0)
@@ -1869,16 +1871,19 @@ class PlayingView extends UI_1.ContentView {
             this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
         }
         else {
-            requestAnimationFrame(() => {
-                this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'force');
-            });
+            requestAnimationFrame(() => this.centerLyrics());
         }
+        window.addEventListener('resize', this.onResize);
     }
     onRemove() {
-        PlayerCore_1.playerCore.onTrackChanged.remove(this.onTrackChanged);
-        PlayerCore_1.playerCore.onProgressChanged.remove(this.onProgressChanged);
+        super.onRemove();
+        window.removeEventListener('resize', this.onResize);
         this.timer.tryCancel();
         this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
+    }
+    centerLyrics() {
+        if (PlayerCore_1.playerCore.state === 'playing')
+            this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'force');
     }
 }
 
@@ -3004,7 +3009,10 @@ exports.SidebarItem = SidebarItem;
 class ContentView extends viewlib_1.View {
     onShow() { }
     onDomInserted() { }
-    onRemove() { }
+    onRemove() {
+        var _a;
+        (_a = this._shownEvents) === null || _a === void 0 ? void 0 : _a.removeAll();
+    }
     get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new utils_1.EventRegistrations()); }
 }
 exports.ContentView = ContentView;

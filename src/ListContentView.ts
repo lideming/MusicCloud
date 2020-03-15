@@ -103,7 +103,7 @@ export class ListContentView extends ContentView {
         this.ensureDom();
     }
     onRemove() {
-        this._shownEvents && this._shownEvents.removeAll();
+        super.onRemove();
     }
 
     useLoadingIndicator(li: LoadingIndicator) {

@@ -75,7 +75,7 @@ export class LyricsView extends View {
         var line = this.getLineByTime(time, prev);
         line?.setCurrentTime(time);
         this.curLine.set(line);
-        if (scroll && ((line && prev !== line) || scroll == 'force')) {
+        if (scroll && line && (prev !== line || scroll == 'force')) {
             line.dom.scrollIntoView({
                 behavior: scroll === 'smooth' ? 'smooth' : undefined,
                 block: 'center'
