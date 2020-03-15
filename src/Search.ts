@@ -5,7 +5,8 @@ import { ListContentView } from './ListContentView';
 import { InputView, View, ButtonView, LoadingIndicator, ListView } from './viewlib';
 import { api } from './Api';
 import { Api } from './apidef';
-import { TrackViewItem, Track, TrackList } from './TrackList';
+import { TrackViewItem, TrackList } from './TrackList';
+import { Track } from "./Track";
 import { playerCore } from './PlayerCore';
 
 export var search = new class {

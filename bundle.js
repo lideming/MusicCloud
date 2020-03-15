@@ -173,7 +173,7 @@ exports.api = new class {
     }
 };
 
-},{"./main":18,"./utils":19}],2:[function(require,module,exports){
+},{"./main":19,"./utils":20}],2:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -419,7 +419,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./MessageClient":8,"./Router":11,"./UI":15,"./User":17,"./utils":19,"./viewlib":20}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./MessageClient":8,"./Router":11,"./UI":16,"./User":18,"./utils":20,"./viewlib":21}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -683,7 +683,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
-const TrackList_1 = require("./TrackList");
 const utils_1 = require("./utils");
 const UI_1 = require("./UI");
 class DataBackedListViewItem extends viewlib_1.ListViewItem {
@@ -735,13 +734,13 @@ class ListContentView extends UI_1.ContentView {
         this.appendListView();
     }
     createHeader() {
-        return new TrackList_1.ContentHeader({ title: this.title });
+        return new UI_1.ContentHeader({ title: this.title });
     }
     appendHeader() {
         this.header = this.createHeader();
-        this.header.actions.addView(this.refreshBtn = new TrackList_1.ActionBtn({ text: utils_1.I `Refresh` }));
-        this.header.actions.addView(this.selectAllBtn = new TrackList_1.ActionBtn({ text: utils_1.I `Select all` }));
-        this.header.actions.addView(this.selectBtn = new TrackList_1.ActionBtn({ text: utils_1.I `Select` }));
+        this.header.actions.addView(this.refreshBtn = new UI_1.ActionBtn({ text: utils_1.I `Refresh` }));
+        this.header.actions.addView(this.selectAllBtn = new UI_1.ActionBtn({ text: utils_1.I `Select all` }));
+        this.header.actions.addView(this.selectBtn = new UI_1.ActionBtn({ text: utils_1.I `Select` }));
         this.selectBtn.onclick = () => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
         };
@@ -814,7 +813,7 @@ class ListContentView extends UI_1.ContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./TrackList":14,"./UI":15,"./utils":19,"./viewlib":20}],5:[function(require,module,exports){
+},{"./UI":16,"./utils":20,"./viewlib":21}],5:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1075,7 +1074,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./User":17,"./utils":19,"./viewlib":20}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":10,"./Router":11,"./TrackList":15,"./UI":16,"./User":18,"./utils":20,"./viewlib":21}],6:[function(require,module,exports){
 "use strict";
 // file: Lyrics.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1573,7 +1572,7 @@ class SpanView extends viewlib_1.View {
     }
 }
 
-},{"./Lyrics":6,"./utils":19,"./viewlib":20}],8:[function(require,module,exports){
+},{"./Lyrics":6,"./utils":20,"./viewlib":21}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const User_1 = require("./User");
@@ -1736,13 +1735,12 @@ exports.msgcli = new class {
     }
 };
 
-},{"./Api":1,"./User":17,"./utils":19}],9:[function(require,module,exports){
+},{"./Api":1,"./User":18,"./utils":20}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Router_1 = require("./Router");
 const UI_1 = require("./UI");
 const utils_1 = require("./utils");
-const TrackList_1 = require("./TrackList");
 const PlayerCore_1 = require("./PlayerCore");
 const LyricsView_1 = require("./LyricsView");
 const Api_1 = require("./Api");
@@ -1767,7 +1765,7 @@ exports.nowPlaying = new class {
 class PlayingView extends UI_1.ContentView {
     constructor() {
         super();
-        this.header = new TrackList_1.ContentHeader({
+        this.header = new UI_1.ContentHeader({
             title: utils_1.I `Now Playing`
         });
         this.lyricsView = new LyricsView_1.LyricsView();
@@ -1808,7 +1806,7 @@ class PlayingView extends UI_1.ContentView {
             if (span.startTime >= 0)
                 PlayerCore_1.playerCore.currentTime = span.startTime;
         });
-        this.header.actions.addView(this.editBtn = new TrackList_1.ActionBtn({
+        this.header.actions.addView(this.editBtn = new UI_1.ActionBtn({
             text: utils_1.I `Edit`, onclick: () => {
                 PlayerCore_1.playerCore.track.startEdit();
             }
@@ -1858,7 +1856,7 @@ class PlayingView extends UI_1.ContentView {
     }
 }
 
-},{"./Api":1,"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./utils":19}],10:[function(require,module,exports){
+},{"./Api":1,"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./UI":16,"./utils":20}],10:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2063,7 +2061,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./utils":19,"./viewlib":20}],11:[function(require,module,exports){
+},{"./Api":1,"./utils":20,"./viewlib":21}],11:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2128,7 +2126,7 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":15,"./utils":19}],12:[function(require,module,exports){
+},{"./UI":16,"./utils":20}],12:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -2147,6 +2145,7 @@ const ListContentView_1 = require("./ListContentView");
 const viewlib_1 = require("./viewlib");
 const Api_1 = require("./Api");
 const TrackList_1 = require("./TrackList");
+const Track_1 = require("./Track");
 const PlayerCore_1 = require("./PlayerCore");
 exports.search = new class {
     constructor() {
@@ -2195,7 +2194,7 @@ class SearchView extends ListContentView_1.ListContentView {
                 var r = yield Api_1.api.get('tracks?query=' + encodeURIComponent(query));
                 this.listView.removeAll();
                 r.tracks.forEach(t => {
-                    this.listView.add(new TrackList_1.TrackViewItem(new TrackList_1.Track({ infoObj: t })));
+                    this.listView.add(new TrackList_1.TrackViewItem(new Track_1.Track({ infoObj: t })));
                 });
                 this.updatePlaying();
                 this.useLoadingIndicator(null);
@@ -2250,7 +2249,7 @@ class SearchBar extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./utils":19,"./viewlib":20}],13:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./Track":14,"./TrackList":15,"./UI":16,"./utils":20,"./viewlib":21}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -2339,9 +2338,8 @@ class SettingsDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":10,"./UI":15,"./viewlib":20}],14:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":10,"./UI":16,"./viewlib":21}],14:[function(require,module,exports){
 "use strict";
-// file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -2354,12 +2352,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const viewlib_1 = require("./viewlib");
-const ListContentView_1 = require("./ListContentView");
-const User_1 = require("./User");
 const Api_1 = require("./Api");
-const main_1 = require("./main");
-const PlayerCore_1 = require("./PlayerCore");
-const Router_1 = require("./Router");
 /** A track binding with list */
 class Track {
     constructor(init) {
@@ -2394,66 +2387,7 @@ class Track {
         this.infoObj = t;
     }
     startEdit() {
-        var dialog = new class extends viewlib_1.Dialog {
-            constructor() {
-                super();
-                this.width = '500px';
-                this.inputName = new viewlib_1.LabeledInput({ label: utils_1.I `Name` });
-                this.inputArtist = new viewlib_1.LabeledInput({ label: utils_1.I `Artist` });
-                this.inputLyrics = new viewlib_1.LabeledInput({ label: utils_1.I `Lyrics` });
-                this.btnSave = new viewlib_1.TabBtn({ text: utils_1.I `Save`, right: true });
-                this.autoFocus = this.inputName.input;
-                this.resizable = true;
-                this.contentFlex = true;
-                this.inputLyrics.input.multiline = true;
-                this.inputLyrics.dominput.style.resize = 'none';
-                this.inputLyrics.dom.style.flex = '1';
-                this.inputLyrics.dominput.style.minHeight = '5em';
-                [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
-                this.addBtn(this.btnSave);
-                this.btnSave.onClick.add(() => this.save());
-                this.dom.addEventListener('keydown', (ev) => {
-                    if (ev.keyCode == 13 && ev.target !== this.inputLyrics.dominput) {
-                        ev.preventDefault();
-                        this.save();
-                    }
-                });
-            }
-            fillInfo(t) {
-                this.trackId = t.id;
-                this.title = utils_1.I `Track ID` + ' ' + t.id;
-                this.inputName.updateWith({ value: t.name });
-                this.inputArtist.updateWith({ value: t.artist });
-                this.inputLyrics.updateWith({ value: t.lyrics });
-                this.updateDom();
-            }
-            save() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    this.btnSave.updateWith({ clickable: false, text: utils_1.I `Saving...` });
-                    try {
-                        var newinfo = yield Api_1.api.put({
-                            path: 'tracks/' + this.trackId,
-                            obj: {
-                                id: this.trackId,
-                                name: this.inputName.value,
-                                artist: this.inputArtist.value,
-                                lyrics: this.inputLyrics.value
-                            }
-                        });
-                        if (newinfo.id != this.trackId)
-                            throw new Error('Bad ID in response');
-                        Api_1.api.onTrackInfoChanged.invoke(newinfo);
-                        this.close();
-                    }
-                    catch (error) {
-                        console.error(error);
-                        this.btnSave.updateWith({ clickable: false, text: utils_1.I `Error` });
-                        yield utils_1.utils.sleepAsync(3000);
-                    }
-                    this.btnSave.updateWith({ clickable: true, text: utils_1.I `Save` });
-                });
-            }
-        };
+        var dialog = new TrackDialog();
         dialog.fillInfo(this.infoObj);
         dialog.show();
     }
@@ -2474,6 +2408,94 @@ class Track {
     }
 }
 exports.Track = Track;
+class TrackDialog extends viewlib_1.Dialog {
+    constructor() {
+        super();
+        this.width = '500px';
+        this.inputName = new viewlib_1.LabeledInput({ label: utils_1.I `Name` });
+        this.inputArtist = new viewlib_1.LabeledInput({ label: utils_1.I `Artist` });
+        this.inputLyrics = new viewlib_1.LabeledInput({ label: utils_1.I `Lyrics` });
+        this.btnSave = new viewlib_1.TabBtn({ text: utils_1.I `Save`, right: true });
+        this.autoFocus = this.inputName.input;
+        this.resizable = true;
+        this.contentFlex = true;
+        this.inputLyrics.input.multiline = true;
+        this.inputLyrics.dominput.style.resize = 'none';
+        this.inputLyrics.dom.style.flex = '1';
+        this.inputLyrics.dominput.style.minHeight = '5em';
+        [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
+        this.addBtn(this.btnSave);
+        this.btnSave.onClick.add(() => this.save());
+        this.dom.addEventListener('keydown', (ev) => {
+            if (ev.keyCode == 13
+                && (ev.ctrlKey || ev.target !== this.inputLyrics.dominput)) {
+                ev.preventDefault();
+                this.save();
+            }
+        });
+    }
+    fillInfo(t) {
+        this.trackId = t.id;
+        this.title = utils_1.I `Track ID` + ' ' + t.id;
+        this.inputName.updateWith({ value: t.name });
+        this.inputArtist.updateWith({ value: t.artist });
+        this.inputLyrics.updateWith({ value: t.lyrics });
+        this.updateDom();
+    }
+    save() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.btnSave.clickable)
+                throw new Error('btnSave is not clickable.');
+            this.btnSave.updateWith({ clickable: false, text: utils_1.I `Saving...` });
+            try {
+                var newinfo = yield Api_1.api.put({
+                    path: 'tracks/' + this.trackId,
+                    obj: {
+                        id: this.trackId,
+                        name: this.inputName.value,
+                        artist: this.inputArtist.value,
+                        lyrics: this.inputLyrics.value
+                    }
+                });
+                if (newinfo.id != this.trackId)
+                    throw new Error('Bad ID in response');
+                Api_1.api.onTrackInfoChanged.invoke(newinfo);
+                this.close();
+            }
+            catch (error) {
+                console.error(error);
+                this.btnSave.updateWith({ clickable: false, text: utils_1.I `Error` });
+                yield utils_1.utils.sleepAsync(3000);
+            }
+            this.btnSave.updateWith({ clickable: true, text: utils_1.I `Save` });
+        });
+    }
+}
+exports.TrackDialog = TrackDialog;
+
+},{"./Api":1,"./utils":20,"./viewlib":21}],15:[function(require,module,exports){
+"use strict";
+// file: TrackList.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("./utils");
+const viewlib_1 = require("./viewlib");
+const ListContentView_1 = require("./ListContentView");
+const User_1 = require("./User");
+const Api_1 = require("./Api");
+const main_1 = require("./main");
+const UI_1 = require("./UI");
+const PlayerCore_1 = require("./PlayerCore");
+const Router_1 = require("./Router");
+const Track_1 = require("./Track");
 class TrackList {
     constructor() {
         this.info = null;
@@ -2521,7 +2543,7 @@ class TrackList {
         return track;
     }
     addTrack_NoUpdating(t, pos) {
-        var track = new Track({
+        var track = new Track_1.Track({
             infoObj: t,
             _bind: {
                 list: this,
@@ -2729,7 +2751,7 @@ class TrackListView extends ListContentView_1.ListContentView {
         }
     }
     createHeader() {
-        return new ContentHeader({
+        return new UI_1.ContentHeader({
             catalog: utils_1.I `Playlist`,
             title: this.list.name,
             titleEditable: !!this.list.rename,
@@ -2914,6 +2936,52 @@ class TrackViewItem extends viewlib_1.ListViewItem {
     }
 }
 exports.TrackViewItem = TrackViewItem;
+
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./Track":14,"./UI":16,"./User":18,"./main":19,"./utils":20,"./viewlib":21}],16:[function(require,module,exports){
+"use strict";
+// file: UI.ts
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const viewlib_1 = require("./viewlib");
+class SidebarItem extends viewlib_1.ListViewItem {
+    constructor(init) {
+        super();
+        utils_1.utils.objectApply(this, init);
+    }
+    createDom() {
+        return {
+            tag: 'div.item.no-selection',
+            text: () => this.text,
+            onclick: (e) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e); }
+        };
+    }
+    bindContentView(viewFunc) {
+        var view;
+        this.onclick = () => {
+            if (!view)
+                view = viewFunc();
+            exports.ui.content.setCurrent(view);
+            exports.ui.sidebarList.setActive(this);
+        };
+        return this;
+    }
+}
+exports.SidebarItem = SidebarItem;
+class ContentView extends viewlib_1.View {
+    onShow() { }
+    onDomInserted() { }
+    onRemove() { }
+    get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new utils_1.EventRegistrations()); }
+}
+exports.ContentView = ContentView;
 class ContentHeader extends viewlib_1.View {
     constructor(init) {
         super();
@@ -2928,7 +2996,7 @@ class ContentHeader extends viewlib_1.View {
                     update: (domdict) => {
                         utils_1.utils.toggleClass(domdict, 'editable', !!this.titleEditable);
                         if (this.titleEditable)
-                            domdict.title = utils_1.I `Click to edit`;
+                            domdict.title = I18n_1.I `Click to edit`;
                         else
                             domdict.removeAttribute('title');
                     },
@@ -2983,43 +3051,6 @@ class ActionBtn extends viewlib_1.TextView {
     }
 }
 exports.ActionBtn = ActionBtn;
-
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./User":17,"./main":18,"./utils":19,"./viewlib":20}],15:[function(require,module,exports){
-"use strict";
-// file: UI.ts
-Object.defineProperty(exports, "__esModule", { value: true });
-const viewlib_1 = require("./viewlib");
-class SidebarItem extends viewlib_1.ListViewItem {
-    constructor(init) {
-        super();
-        utils_1.utils.objectApply(this, init);
-    }
-    createDom() {
-        return {
-            tag: 'div.item.no-selection',
-            text: () => this.text,
-            onclick: (e) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e); }
-        };
-    }
-    bindContentView(viewFunc) {
-        var view;
-        this.onclick = () => {
-            if (!view)
-                view = viewFunc();
-            exports.ui.content.setCurrent(view);
-            exports.ui.sidebarList.setActive(this);
-        };
-        return this;
-    }
-}
-exports.SidebarItem = SidebarItem;
-class ContentView extends viewlib_1.View {
-    onShow() { }
-    onDomInserted() { }
-    onRemove() { }
-    get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new utils_1.EventRegistrations()); }
-}
-exports.ContentView = ContentView;
 const Router_1 = require("./Router");
 const utils_1 = require("./utils");
 const I18n_1 = require("./I18n");
@@ -3509,7 +3540,7 @@ class SidebarToggle extends viewlib_1.View {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":10,"./Router":11,"./Uploads":16,"./User":17,"./utils":19,"./viewlib":20}],16:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":10,"./Router":11,"./Uploads":17,"./User":18,"./utils":20,"./viewlib":21}],17:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3523,6 +3554,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const TrackList_1 = require("./TrackList");
+const Track_1 = require("./Track");
 const utils_1 = require("./utils");
 const ListIndex_1 = require("./ListIndex");
 const User_1 = require("./User");
@@ -3532,7 +3564,7 @@ const I18n_1 = require("./I18n");
 const PlayerCore_1 = require("./PlayerCore");
 const UI_1 = require("./UI");
 const Api_1 = require("./Api");
-class UploadTrack extends TrackList_1.Track {
+class UploadTrack extends Track_1.Track {
     constructor(init) {
         super(init);
         this._bind = {
@@ -3583,7 +3615,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
                 };
             }
             createHeader() {
-                var header = new TrackList_1.ContentHeader({
+                var header = new UI_1.ContentHeader({
                     title: this.title
                 });
                 header.titlebar.appendView(this.usage);
@@ -3934,7 +3966,7 @@ var BlockFormat = {
     }
 };
 
-},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":10,"./Router":11,"./TrackList":14,"./UI":15,"./User":17,"./utils":19,"./viewlib":20}],17:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":10,"./Router":11,"./Track":14,"./TrackList":15,"./UI":16,"./User":18,"./utils":20,"./viewlib":21}],18:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4375,7 +4407,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./Api":1,"./PlayerCore":10,"./SettingsUI":13,"./UI":15,"./Uploads":16,"./main":18,"./utils":19,"./viewlib":20}],18:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":10,"./SettingsUI":13,"./UI":16,"./Uploads":17,"./main":19,"./utils":20,"./viewlib":21}],19:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -4425,7 +4457,7 @@ var app = window['app'] = {
 app.init();
 window['preload'].jsOk();
 
-},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":8,"./NowPlaying":9,"./PlayerCore":10,"./Router":11,"./Search":12,"./SettingsUI":13,"./UI":15,"./Uploads":16,"./User":17,"./viewlib":20}],19:[function(require,module,exports){
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./MessageClient":8,"./NowPlaying":9,"./PlayerCore":10,"./Router":11,"./Search":12,"./SettingsUI":13,"./UI":16,"./Uploads":17,"./User":18,"./viewlib":21}],20:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -5081,7 +5113,7 @@ class EventRegistrations {
 }
 exports.EventRegistrations = EventRegistrations;
 
-},{"./I18n":3}],20:[function(require,module,exports){
+},{"./I18n":3}],21:[function(require,module,exports){
 "use strict";
 // file: viewlib.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -6177,4 +6209,4 @@ class MessageBox extends Dialog {
 }
 exports.MessageBox = MessageBox;
 
-},{"./I18n":3,"./utils":19}]},{},[18]);
+},{"./I18n":3,"./utils":20}]},{},[19]);

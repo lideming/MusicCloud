@@ -1,6 +1,6 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, EditableHelper, ContainerView } from "./viewlib";
 
 export class SidebarItem extends ListViewItem {
     text: string;
@@ -38,10 +38,78 @@ export class ContentView extends View {
     get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }
 }
 
+export class ContentHeader extends View {
+    catalog: string;
+    title: string;
+    titleEditable = false;
+    editHelper: EditableHelper;
+    get domdict(): { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } {
+        return this.domctx.dict;
+    }
+    actions = new ContainerView({ tag: 'div.actions' });
+    onTitleEdit: (title: string) => void;
+    constructor(init?: Partial<ContentHeader>) {
+        super();
+        if (init) utils.objectApply(this, init);
+    }
+    createDom(): BuildDomExpr {
+        return {
+            tag: 'div.content-header',
+            child: [
+                this.titlebar.dom
+            ]
+        };
+    }
+    titlebar = new View({
+        tag: 'div.titlebar.clearfix',
+        child: [
+            { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
+            {
+                tag: 'span.title', text: () => this.title, _key: 'title',
+                update: (domdict) => {
+                    utils.toggleClass(domdict, 'editable', !!this.titleEditable);
+                    if (this.titleEditable) domdict.title = I`Click to edit`;
+                    else domdict.removeAttribute('title');
+                },
+                onclick: async (ev) => {
+                    if (!this.titleEditable) return;
+                    this.editHelper = this.editHelper || new EditableHelper(this.domdict.title);
+                    if (this.editHelper.editing) return;
+                    var newName = await this.editHelper.startEditAsync();
+                    if (newName !== this.editHelper.beforeEdit && newName != '') {
+                        this.onTitleEdit(newName);
+                    }
+                    this.updateDom();
+                }
+            },
+            this.actions.dom
+        ]
+    });
+    updateDom() {
+        super.updateDom();
+        this.titlebar.updateDom();
+    }
+}
+
+export class ActionBtn extends TextView {
+    onclick: Action = null;
+    constructor(init?: Partial<ActionBtn>) {
+        super();
+        utils.objectApply(this, init);
+    }
+    createDom() {
+        return { tag: 'span.action.clickable.no-selection' };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.addEventListener('click', () => this.onclick?.());
+    }
+}
+
 import { router } from "./Router";
 import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer, EventRegistrations } from "./utils";
 import { I18n, i18n, I } from "./I18n";
-import { Track } from "./TrackList";
+import { Track } from "./Track";
 import { user } from "./User";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 import { uploads } from "./Uploads";

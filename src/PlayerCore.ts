@@ -1,6 +1,6 @@
 // file: PlayerCore.ts
 
-import { Track } from "./TrackList";
+import { Track } from "./Track";
 import { Callbacks, Action, SettingItem, I, utils, CancelToken } from "./utils";
 import { api } from "./Api";
 import { Toast } from "./viewlib";

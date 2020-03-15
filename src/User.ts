@@ -8,7 +8,8 @@ import { ui } from "./UI";
 import { api } from "./Api";
 import { playerCore } from "./PlayerCore";
 import { uploads } from "./Uploads";
-import { TrackList, Track } from "./TrackList";
+import { TrackList } from "./TrackList";
+import { Track } from "./Track";
 import { settingsUI } from "./SettingsUI";
 
 export var user = new class User {

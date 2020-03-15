@@ -1,125 +1,16 @@
 // file: TrackList.ts
 
 import { utils, I, Action, BuildDomExpr, DataUpdatingHelper } from "./utils";
-import { Dialog, LabeledInput, TabBtn, LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView, ItemActiveHelper } from "./viewlib";
+import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView, ItemActiveHelper } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { api } from "./Api";
 import { listIndex } from "./main";
-import { ContentView } from "./UI";
+import { ContentView, ContentHeader } from "./UI";
 import { playerCore, PlayingLoopMode } from "./PlayerCore";
 import { router } from "./Router";
-
-
-/** A track binding with list */
-export class Track {
-    infoObj: Api.Track = null;
-    get id(): number { return this.infoObj.id; }
-    get name() { return this.infoObj.name; }
-    get artist() { return this.infoObj.artist; }
-    get url() { return this.infoObj.url; }
-    get files() { return this.infoObj.files; }
-    get length() { return this.infoObj.length; }
-    get size() { return this.infoObj.size; }
-    get displayName() { return this.artist + ' - ' + this.name; }
-    blob?: Blob = null;
-    _bind?: {
-        position?: number;
-        list?: TrackList;
-    } = null;
-    get canEdit() { return true; }
-    constructor(init: Partial<Track>) {
-        utils.objectApply(this, init);
-    }
-    toString() {
-        return `${I`Track ID`}: ${this.id}\r\n${I`Name`}: ${this.name}\r\n${I`Artist`}: ${this.artist}`;
-    }
-    toApiTrack(): Api.Track {
-        return this.infoObj;
-    }
-    getExtensionName() {
-        return /\.([\w\-_]{1,6})$/.exec(this.url)?.[1];
-    }
-    updateFromApiTrack(t: Api.Track) {
-        if (this.id !== t.id) throw new Error('Bad track id');
-        // utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
-        this.infoObj = t;
-    }
-    startEdit() {
-        var dialog = new class extends Dialog {
-            width = '500px';
-            trackId: number;
-            inputName = new LabeledInput({ label: I`Name` });
-            inputArtist = new LabeledInput({ label: I`Artist` });
-            inputLyrics = new LabeledInput({ label: I`Lyrics` });
-            btnSave = new TabBtn({ text: I`Save`, right: true });
-            autoFocus = this.inputName.input;
-            constructor() {
-                super();
-                this.resizable = true;
-                this.contentFlex = true;
-                this.inputLyrics.input.multiline = true;
-                this.inputLyrics.dominput.style.resize = 'none';
-                this.inputLyrics.dom.style.flex = '1';
-                this.inputLyrics.dominput.style.minHeight = '5em';
-                [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
-                this.addBtn(this.btnSave);
-                this.btnSave.onClick.add(() => this.save());
-                this.dom.addEventListener('keydown', (ev) => {
-                    if (ev.keyCode == 13 && ev.target !== this.inputLyrics.dominput) {
-                        ev.preventDefault();
-                        this.save();
-                    }
-                });
-            }
-            fillInfo(t: Api.Track) {
-                this.trackId = t.id;
-                this.title = I`Track ID` + ' ' + t.id;
-                this.inputName.updateWith({ value: t.name });
-                this.inputArtist.updateWith({ value: t.artist });
-                this.inputLyrics.updateWith({ value: t.lyrics });
-                this.updateDom();
-            }
-            async save() {
-                this.btnSave.updateWith({ clickable: false, text: I`Saving...` });
-                try {
-                    var newinfo = await api.put({
-                        path: 'tracks/' + this.trackId,
-                        obj: {
-                            id: this.trackId,
-                            name: this.inputName.value,
-                            artist: this.inputArtist.value,
-                            lyrics: this.inputLyrics.value
-                        }
-                    }) as Api.Track;
-                    if (newinfo.id != this.trackId) throw new Error('Bad ID in response');
-                    api.onTrackInfoChanged.invoke(newinfo);
-                    this.close();
-                } catch (error) {
-                    console.error(error);
-                    this.btnSave.updateWith({ clickable: false, text: I`Error` });
-                    await utils.sleepAsync(3000);
-                }
-                this.btnSave.updateWith({ clickable: true, text: I`Save` });
-            }
-        };
-        dialog.fillInfo(this.infoObj);
-        dialog.show();
-    }
-    async requestFileUrl(file: Api.TrackFile) {
-        if (!file.url) {
-            var toast = Toast.show(I`Converting "${this.displayName}"...`);
-            try {
-                file.url = (await api.get(file.urlurl))['url'];
-                toast.close();
-            } catch (error) {
-                toast.updateWith({ text: I`Error converting "${this.displayName}".` + '\n' + error });
-                toast.show(3000);
-            }
-        }
-    }
-}
+import { Track } from "./Track";
 
 export class TrackList {
     info: Api.TrackListInfo = null;
@@ -523,72 +414,4 @@ export class TrackViewItem extends ListViewItem {
 export interface TrackActionHandler<T> {
     /** When undefined, the item is not removable */
     onTrackRemove?(arr: T[]);
-}
-
-export class ContentHeader extends View {
-    catalog: string;
-    title: string;
-    titleEditable = false;
-    editHelper: EditableHelper;
-    get domdict(): { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } {
-        return this.domctx.dict;
-    }
-    actions = new ContainerView({ tag: 'div.actions' });
-    onTitleEdit: (title: string) => void;
-    constructor(init?: Partial<ContentHeader>) {
-        super();
-        if (init) utils.objectApply(this, init);
-    }
-    createDom(): BuildDomExpr {
-        return {
-            tag: 'div.content-header',
-            child: [
-                this.titlebar.dom
-            ]
-        };
-    }
-    titlebar = new View({
-        tag: 'div.titlebar.clearfix',
-        child: [
-            { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
-            {
-                tag: 'span.title', text: () => this.title, _key: 'title',
-                update: (domdict) => {
-                    utils.toggleClass(domdict, 'editable', !!this.titleEditable);
-                    if (this.titleEditable) domdict.title = I`Click to edit`;
-                    else domdict.removeAttribute('title');
-                },
-                onclick: async (ev) => {
-                    if (!this.titleEditable) return;
-                    this.editHelper = this.editHelper || new EditableHelper(this.domdict.title);
-                    if (this.editHelper.editing) return;
-                    var newName = await this.editHelper.startEditAsync();
-                    if (newName !== this.editHelper.beforeEdit && newName != '') {
-                        this.onTitleEdit(newName);
-                    }
-                    this.updateDom();
-                }
-            },
-            this.actions.dom
-        ]
-    });
-    updateDom() {
-        super.updateDom();
-        this.titlebar.updateDom();
-    }
-}
-
-export class ActionBtn extends TextView {
-    onclick: Action = null;
-    constructor(init?: Partial<ActionBtn>) {
-        super();
-        utils.objectApply(this, init);
-    }
-    createDom() {
-        return { tag: 'span.action.clickable.no-selection' };
-    }
-    postCreateDom() {
-        super.postCreateDom();
-        this.dom.addEventListener('click', () => this.onclick?.());
-    }
 }

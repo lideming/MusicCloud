@@ -1,6 +1,7 @@
 // file: Uploads.ts
 
-import { Track, TrackList, TrackListView, TrackViewItem, ContentHeader } from "./TrackList";
+import { TrackList, TrackListView, TrackViewItem } from "./TrackList";
+import { Track } from "./Track";
 import { Semaphore, utils, DataUpdatingHelper, CancelToken } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
@@ -9,7 +10,7 @@ import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView } from ".
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
-import { ui } from "./UI";
+import { ui, ContentHeader } from "./UI";
 import { api } from "./Api";
 
 
