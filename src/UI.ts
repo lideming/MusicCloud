@@ -316,6 +316,9 @@ export const ui = new class {
             var call = (offsetX) => { cb(utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
             utils.listenPointerEvents(this.progbar, (e) => {
                 e.ev.preventDefault();
+                if (e.action != 'move') {
+                    utils.toggleClass(this.progbar, 'btn-down', e.action == 'down');
+                }
                 if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
                     if ((e.type === 'mouse' && e.ev.buttons == 1)
                         || e.type === 'touch') {

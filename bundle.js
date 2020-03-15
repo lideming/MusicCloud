@@ -3274,6 +3274,9 @@ exports.ui = new class {
                 var call = (offsetX) => { cb(utils_1.utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
                 utils_1.utils.listenPointerEvents(this.progbar, (e) => {
                     e.ev.preventDefault();
+                    if (e.action != 'move') {
+                        utils_1.utils.toggleClass(this.progbar, 'btn-down', e.action == 'down');
+                    }
                     if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
                         if ((e.type === 'mouse' && e.ev.buttons == 1)
                             || e.type === 'touch') {
