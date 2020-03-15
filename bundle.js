@@ -1480,7 +1480,7 @@ class LyricsView extends viewlib_1.View {
         var line = this.getLineByTime(time, prev);
         line === null || line === void 0 ? void 0 : line.setCurrentTime(time);
         this.curLine.set(line);
-        if (scroll && line && prev !== line) {
+        if (scroll && ((line && prev !== line) || scroll == 'force')) {
             line.dom.scrollIntoView({
                 behavior: scroll === 'smooth' ? 'smooth' : undefined,
                 block: 'center'
@@ -1790,6 +1790,8 @@ class PlayingView extends UI_1.ContentView {
         this.si = new utils_1.SettingItem('mcloud-nowplaying', 'json', {
             lyricsScale: 100
         });
+        this.lyricsScrollPos = 0;
+        this.loadedLyrics = '';
         this.onTrackChanged = () => {
             var _a;
             this.updateDom();
@@ -1862,14 +1864,20 @@ class PlayingView extends UI_1.ContentView {
         });
     }
     onDomInserted() {
-        this.lyricsView.dom.scrollTop; // force layout
-        this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, true);
-        this.timer.tryCancel();
-        // if (this.lyricsScrollPos) this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
+        this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime);
+        if (this.lyricsScrollPos && PlayerCore_1.playerCore.state !== 'playing') {
+            this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
+        }
+        else {
+            requestAnimationFrame(() => {
+                this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'force');
+            });
+        }
     }
     onRemove() {
         PlayerCore_1.playerCore.onTrackChanged.remove(this.onTrackChanged);
         PlayerCore_1.playerCore.onProgressChanged.remove(this.onProgressChanged);
+        this.timer.tryCancel();
         this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
     }
 }

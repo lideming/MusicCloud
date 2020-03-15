@@ -69,13 +69,13 @@ export class LyricsView extends View {
             this.lines.addView(new LineView(l, this));
         });
     }
-    setCurrentTime(time: number, scroll?: true | 'smooth') {
+    setCurrentTime(time: number, scroll?: boolean | 'smooth' | 'force') {
         if (!(time >= 0)) time = 0;
         var prev = this.curLine.current;
         var line = this.getLineByTime(time, prev);
         line?.setCurrentTime(time);
         this.curLine.set(line);
-        if (scroll && line && prev !== line) {
+        if (scroll && ((line && prev !== line) || scroll == 'force')) {
             line.dom.scrollIntoView({
                 behavior: scroll === 'smooth' ? 'smooth' : undefined,
                 block: 'center'

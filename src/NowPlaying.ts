@@ -33,6 +33,8 @@ class PlayingView extends ContentView {
     si = new SettingItem('mcloud-nowplaying', 'json', {
         lyricsScale: 100
     });
+    lyricsScrollPos: number = 0;
+    loadedLyrics: string = '';
     constructor() {
         super();
         this.lyricsView.scale = this.si.data.lyricsScale;
@@ -80,18 +82,21 @@ class PlayingView extends ContentView {
         });
     }
     onDomInserted() {
-        this.lyricsView.dom.scrollTop; // force layout
-        this.lyricsView.setCurrentTime(playerCore.currentTime, true);
-        this.timer.tryCancel();
-        // if (this.lyricsScrollPos) this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
+        this.lyricsView.setCurrentTime(playerCore.currentTime);
+        if (this.lyricsScrollPos && playerCore.state !== 'playing') {
+            this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
+        } else {
+            requestAnimationFrame(() => {
+                this.lyricsView.setCurrentTime(playerCore.currentTime, 'force');
+            });
+        }
     }
     onRemove() {
         playerCore.onTrackChanged.remove(this.onTrackChanged);
         playerCore.onProgressChanged.remove(this.onProgressChanged);
+        this.timer.tryCancel();
         this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
     }
-    loadedLyrics: string;
-    lyricsScrollPos: number;
     onTrackChanged = () => {
         this.updateDom();
         this.editBtn.hidden = !playerCore.track;
