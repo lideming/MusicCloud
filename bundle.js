@@ -1487,6 +1487,11 @@ class LyricsView extends viewlib_1.View {
             });
         }
     }
+    resize() {
+        if (this.domCreated) {
+            this.lines.dom.style.margin = (this.dom.offsetHeight / 2) + 'px 0';
+        }
+    }
     get scale() {
         return this._fontSize;
     }
@@ -1811,7 +1816,10 @@ class PlayingView extends UI_1.ContentView {
                 this.lyricsView.dom.scrollTop = 0;
             }
         };
-        this.onResize = () => this.centerLyrics();
+        this.onResize = () => {
+            this.lyricsView.resize();
+            this.centerLyrics();
+        };
         this.timer = new utils_1.Timer(() => this.onProgressChanged());
         this.lastTime = 0;
         this.lastChangedRealTime = 0;
@@ -1878,9 +1886,7 @@ class PlayingView extends UI_1.ContentView {
         if (this.lyricsScrollPos && PlayerCore_1.playerCore.state !== 'playing') {
             this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
         }
-        else {
-            requestAnimationFrame(() => this.centerLyrics());
-        }
+        requestAnimationFrame(this.onResize);
         window.addEventListener('resize', this.onResize);
     }
     onRemove() {

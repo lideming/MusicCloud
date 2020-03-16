@@ -86,9 +86,8 @@ class PlayingView extends ContentView {
         this.lyricsView.setCurrentTime(playerCore.currentTime);
         if (this.lyricsScrollPos && playerCore.state !== 'playing') {
             this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
-        } else {
-            requestAnimationFrame(() => this.centerLyrics());
         }
+        requestAnimationFrame(this.onResize);
         window.addEventListener('resize', this.onResize);
     }
     onRemove() {
@@ -107,7 +106,10 @@ class PlayingView extends ContentView {
             this.lyricsView.dom.scrollTop = 0;
         }
     };
-    onResize = () => this.centerLyrics();
+    onResize = () => {
+        this.lyricsView.resize();
+        this.centerLyrics();
+    };
     centerLyrics() {
         if (playerCore.state === 'playing')
             this.lyricsView.setCurrentTime(playerCore.currentTime, 'force');

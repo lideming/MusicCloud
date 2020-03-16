@@ -82,6 +82,11 @@ export class LyricsView extends View {
             });
         }
     }
+    resize() {
+        if (this.domCreated) {
+            this.lines.dom.style.margin = (this.dom.offsetHeight / 2) + 'px 0';
+        }
+    }
 
     private _fontSize: number = 100;
     public get scale(): number {
