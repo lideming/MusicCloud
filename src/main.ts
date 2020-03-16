@@ -21,9 +21,10 @@ import { uploads } from "./Uploads";
 import { discussion, notes, comments } from "./Discussion";
 import { router } from "./Router";
 import { settingsUI } from "./SettingsUI";
-import { msgcli } from "./MessageClient"
-import { nowPlaying } from "./NowPlaying"
-import { search } from "./Search"
+import { msgcli } from "./MessageClient";
+import { nowPlaying } from "./NowPlaying";
+import { search } from "./Search";
+import Lyrics = require("./Lyrics");
 
 ui.init();
 playerCore.init();
@@ -33,7 +34,7 @@ export var listIndex = new ListIndex();
 var app = window['app'] = {
     settings, settingsUI,
     ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying,
-    Toast, ToastsContainer,
+    Toast, ToastsContainer, Lyrics,
     msgcli,
     init() {
         user.init();

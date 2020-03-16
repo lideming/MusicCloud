@@ -66,7 +66,9 @@ export class LyricsView extends View {
         this.lines.dom.lang = lyrics.lang;
         this.lines.removeAllView();
         lyrics.lines.forEach(l => {
-            this.lines.addView(new LineView(l, this));
+            if (l.spans) {
+                this.lines.addView(new LineView(l, this));
+            }
         });
     }
     setCurrentTime(time: number, scroll?: boolean | 'smooth' | 'force') {
