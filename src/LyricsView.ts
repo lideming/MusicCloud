@@ -2,7 +2,6 @@ import { View, ContainerView, ItemActiveHelper } from "./viewlib";
 import { BuildDomExpr, utils, Callbacks, Action, I } from "./utils";
 import { parse, Lyrics, Line, Span } from "./Lyrics";
 
-
 export class LyricsView extends View {
     lines = new ContainerView<LineView>({ tag: 'div.lyrics' });
     lyrics: Lyrics;
@@ -29,6 +28,7 @@ export class LyricsView extends View {
         });
         this.dom.addEventListener('touchmove', (ev) => {
             if (ev.touches.length >= 2) {
+                ev.preventDefault();
                 var newdist = dist(ev.touches[0], ev.touches[1]);
                 var scale = utils.numLimit(startFontSize * newdist / distance, 20, 500);
                 this.scale = scale;

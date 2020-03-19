@@ -173,7 +173,7 @@ exports.api = new class {
     }
 };
 
-},{"./main":19,"./utils":20}],2:[function(require,module,exports){
+},{"./main":20,"./utils":21}],2:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -419,7 +419,7 @@ class CommentEditor extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./MessageClient":8,"./Router":11,"./UI":16,"./User":18,"./utils":20,"./viewlib":21}],3:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./MessageClient":9,"./Router":12,"./UI":17,"./User":19,"./utils":21,"./viewlib":22}],3:[function(require,module,exports){
 "use strict";
 // file: I18n.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -607,6 +607,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Converting \\"{0}\\"...", "正在转换 \\"{0}\\"..."],
     ["Error converting \\"{0}\\".", "转换 \\"{0}\\" 时发生错误."],
     ["Edit", "编辑"],
+    ["Discard", "放弃更改"],
     ["Save", "保存"],
     ["Saving...", "保存中..."],
     ["Error", "错误"],
@@ -645,6 +646,7 @@ exports.i18n.add2dArray(JSON.parse(`[
     ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
     ["Now Playing", "正在播放"],
     ["Lyrics", "歌词"],
+    ["Edit Lyrics", "编辑歌词"],
     ["Error parsing lyrics", "歌词解析错误"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]
@@ -813,7 +815,7 @@ class ListContentView extends UI_1.ContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./UI":16,"./utils":20,"./viewlib":21}],5:[function(require,module,exports){
+},{"./UI":17,"./utils":21,"./viewlib":22}],5:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -1074,7 +1076,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":10,"./Router":11,"./TrackList":15,"./UI":16,"./User":18,"./utils":20,"./viewlib":21}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":11,"./Router":12,"./TrackList":16,"./UI":17,"./User":19,"./utils":21,"./viewlib":22}],6:[function(require,module,exports){
 "use strict";
 // file: Lyrics.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1327,6 +1329,7 @@ class Parser {
                         // unknown tag at the beginning of the line, so skip this line.
                         this.skipLine();
                         this.lines.push({
+                            startTime: this.curTime,
                             spans: null,
                             rawLine: lex.str.substring(beginTag.pos, lex.peek().pos)
                         });
@@ -1477,6 +1480,56 @@ exports.serialize = serialize;
 },{}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const UI_1 = require("./UI");
+const I18n_1 = require("./I18n");
+const LyricsView_1 = require("./LyricsView");
+const Router_1 = require("./Router");
+exports.lyricsEdit = new class {
+    startEdit(track) {
+        if (!this.view) {
+            this.sidebarItem = new UI_1.SidebarItem({ text: I18n_1.I `Edit Lyrics` });
+            this.view = new LyricsEditContentView();
+            UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+            Router_1.router.addRoute({
+                path: ['lyricsEdit'],
+                contentView: () => this.view,
+                sidebarItem: () => this.sidebarItem
+            });
+        }
+        this.sidebarItem.hidden = false;
+        Router_1.router.nav('lyricsEdit');
+    }
+};
+class LyricsEditContentView extends UI_1.ContentView {
+    constructor() {
+        super();
+        this.header = new UI_1.ContentHeader({ title: I18n_1.I `Edit Lyrics` });
+        this.lyrics = new LyricsView_1.LyricsView();
+        this.header.actions.addView(new UI_1.ActionBtn({
+            text: I18n_1.I `Discard`,
+            onclick: () => {
+                exports.lyricsEdit.sidebarItem.hidden = true;
+                window.history.back();
+            }
+        }));
+        this.header.actions.addView(new UI_1.ActionBtn({
+            text: I18n_1.I `Save`
+        }));
+    }
+    createDom() {
+        return {
+            tag: 'div.lyricsedit',
+            child: [
+                this.header.dom,
+                this.lyrics.dom
+            ]
+        };
+    }
+}
+
+},{"./I18n":3,"./LyricsView":8,"./Router":12,"./UI":17}],8:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const utils_1 = require("./utils");
 const Lyrics_1 = require("./Lyrics");
@@ -1509,6 +1562,7 @@ class LyricsView extends viewlib_1.View {
         });
         this.dom.addEventListener('touchmove', (ev) => {
             if (ev.touches.length >= 2) {
+                ev.preventDefault();
                 var newdist = dist(ev.touches[0], ev.touches[1]);
                 var scale = utils_1.utils.numLimit(startFontSize * newdist / distance, 20, 500);
                 this.scale = scale;
@@ -1683,7 +1737,7 @@ class SpanView extends viewlib_1.View {
     }
 }
 
-},{"./Lyrics":6,"./utils":20,"./viewlib":21}],8:[function(require,module,exports){
+},{"./Lyrics":6,"./utils":21,"./viewlib":22}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const User_1 = require("./User");
@@ -1846,7 +1900,7 @@ exports.msgcli = new class {
     }
 };
 
-},{"./Api":1,"./User":18,"./utils":20}],9:[function(require,module,exports){
+},{"./Api":1,"./User":19,"./utils":21}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Router_1 = require("./Router");
@@ -1981,7 +2035,7 @@ class PlayingView extends UI_1.ContentView {
     }
 }
 
-},{"./Api":1,"./LyricsView":7,"./PlayerCore":10,"./Router":11,"./UI":16,"./utils":20}],10:[function(require,module,exports){
+},{"./Api":1,"./LyricsView":8,"./PlayerCore":11,"./Router":12,"./UI":17,"./utils":21}],11:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2186,7 +2240,7 @@ window.addEventListener('beforeunload', (ev) => {
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":1,"./utils":20,"./viewlib":21}],11:[function(require,module,exports){
+},{"./Api":1,"./utils":21,"./viewlib":22}],12:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2251,7 +2305,7 @@ function parsePath(path) {
     return path.split('/');
 }
 
-},{"./UI":16,"./utils":20}],12:[function(require,module,exports){
+},{"./UI":17,"./utils":21}],13:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -2374,7 +2428,7 @@ class SearchBar extends viewlib_1.View {
     }
 }
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./Track":14,"./TrackList":15,"./UI":16,"./utils":20,"./viewlib":21}],13:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":11,"./Router":12,"./Track":15,"./TrackList":16,"./UI":17,"./utils":21,"./viewlib":22}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -2463,7 +2517,7 @@ class SettingsDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":10,"./UI":16,"./viewlib":21}],14:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":11,"./UI":17,"./viewlib":22}],15:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -2598,7 +2652,7 @@ class TrackDialog extends viewlib_1.Dialog {
 }
 exports.TrackDialog = TrackDialog;
 
-},{"./Api":1,"./utils":20,"./viewlib":21}],15:[function(require,module,exports){
+},{"./Api":1,"./utils":21,"./viewlib":22}],16:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3062,7 +3116,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
 }
 exports.TrackViewItem = TrackViewItem;
 
-},{"./Api":1,"./ListContentView":4,"./PlayerCore":10,"./Router":11,"./Track":14,"./UI":16,"./User":18,"./main":19,"./utils":20,"./viewlib":21}],16:[function(require,module,exports){
+},{"./Api":1,"./ListContentView":4,"./PlayerCore":11,"./Router":12,"./Track":15,"./UI":17,"./User":19,"./main":20,"./utils":21,"./viewlib":22}],17:[function(require,module,exports){
 "use strict";
 // file: UI.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -3671,7 +3725,7 @@ class SidebarToggle extends viewlib_1.View {
     }
 }
 
-},{"./I18n":3,"./PlayerCore":10,"./Router":11,"./Uploads":17,"./User":18,"./utils":20,"./viewlib":21}],17:[function(require,module,exports){
+},{"./I18n":3,"./PlayerCore":11,"./Router":12,"./Uploads":18,"./User":19,"./utils":21,"./viewlib":22}],18:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4097,7 +4151,7 @@ var BlockFormat = {
     }
 };
 
-},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":10,"./Router":11,"./Track":14,"./TrackList":15,"./UI":16,"./User":18,"./utils":20,"./viewlib":21}],18:[function(require,module,exports){
+},{"./Api":1,"./I18n":3,"./ListIndex":5,"./PlayerCore":11,"./Router":12,"./Track":15,"./TrackList":16,"./UI":17,"./User":19,"./utils":21,"./viewlib":22}],19:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4538,7 +4592,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
     }
 }
 
-},{"./Api":1,"./PlayerCore":10,"./SettingsUI":13,"./UI":16,"./Uploads":17,"./main":19,"./utils":20,"./viewlib":21}],19:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":11,"./SettingsUI":14,"./UI":17,"./Uploads":18,"./main":20,"./utils":21,"./viewlib":22}],20:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -4565,12 +4619,13 @@ const MessageClient_1 = require("./MessageClient");
 const NowPlaying_1 = require("./NowPlaying");
 const Search_1 = require("./Search");
 const Lyrics = require("./Lyrics");
+const LyricsEdit_1 = require("./LyricsEdit");
 UI_1.ui.init();
 PlayerCore_1.playerCore.init();
 exports.listIndex = new ListIndex_1.ListIndex();
 var app = window['app'] = {
     settings: exports.settings, settingsUI: SettingsUI_1.settingsUI,
-    ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes, nowPlaying: NowPlaying_1.nowPlaying,
+    ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes, nowPlaying: NowPlaying_1.nowPlaying, lyricsEdit: LyricsEdit_1.lyricsEdit,
     Toast: viewlib_1.Toast, ToastsContainer: viewlib_1.ToastsContainer, Lyrics,
     msgcli: MessageClient_1.msgcli,
     init() {
@@ -4589,7 +4644,7 @@ var app = window['app'] = {
 app.init();
 window['preload'].jsOk();
 
-},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./Lyrics":6,"./MessageClient":8,"./NowPlaying":9,"./PlayerCore":10,"./Router":11,"./Search":12,"./SettingsUI":13,"./UI":16,"./Uploads":17,"./User":18,"./viewlib":21}],20:[function(require,module,exports){
+},{"./Api":1,"./Discussion":2,"./ListIndex":5,"./Lyrics":6,"./LyricsEdit":7,"./MessageClient":9,"./NowPlaying":10,"./PlayerCore":11,"./Router":12,"./Search":13,"./SettingsUI":14,"./UI":17,"./Uploads":18,"./User":19,"./viewlib":22}],21:[function(require,module,exports){
 "use strict";
 // file: utils.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -5245,7 +5300,7 @@ class EventRegistrations {
 }
 exports.EventRegistrations = EventRegistrations;
 
-},{"./I18n":3}],21:[function(require,module,exports){
+},{"./I18n":3}],22:[function(require,module,exports){
 "use strict";
 // file: viewlib.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -6341,4 +6396,4 @@ class MessageBox extends Dialog {
 }
 exports.MessageBox = MessageBox;
 
-},{"./I18n":3,"./utils":20}]},{},[19]);
+},{"./I18n":3,"./utils":21}]},{},[20]);

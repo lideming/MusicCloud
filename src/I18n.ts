@@ -189,6 +189,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Converting \\"{0}\\"...", "正在转换 \\"{0}\\"..."],
     ["Error converting \\"{0}\\".", "转换 \\"{0}\\" 时发生错误."],
     ["Edit", "编辑"],
+    ["Discard", "放弃更改"],
     ["Save", "保存"],
     ["Saving...", "保存中..."],
     ["Error", "错误"],
@@ -227,6 +228,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
     ["Now Playing", "正在播放"],
     ["Lyrics", "歌词"],
+    ["Edit Lyrics", "编辑歌词"],
     ["Error parsing lyrics", "歌词解析错误"],
     ["Source code", "源代码"],
     ["Music Cloud", "Music Cloud"]

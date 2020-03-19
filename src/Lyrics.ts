@@ -255,6 +255,7 @@ export class Parser {
                         // unknown tag at the beginning of the line, so skip this line.
                         this.skipLine();
                         this.lines.push({
+                            startTime: this.curTime,
                             spans: null,
                             rawLine: lex.str.substring(beginTag.pos, lex.peek().pos)
                         });

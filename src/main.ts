@@ -25,6 +25,7 @@ import { msgcli } from "./MessageClient";
 import { nowPlaying } from "./NowPlaying";
 import { search } from "./Search";
 import Lyrics = require("./Lyrics");
+import { lyricsEdit } from "./LyricsEdit";
 
 ui.init();
 playerCore.init();
@@ -33,7 +34,7 @@ export var listIndex = new ListIndex();
 
 var app = window['app'] = {
     settings, settingsUI,
-    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying,
+    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying, lyricsEdit,
     Toast, ToastsContainer, Lyrics,
     msgcli,
     init() {
