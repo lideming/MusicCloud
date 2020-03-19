@@ -32,6 +32,7 @@ class DataBackedListView<T extends DataBackedListViewItem, TData> extends ListVi
     }
 
     protected postCreateDom() {
+        super.postCreateDom();
         this.dataList.forEach(data => this.add(this.createListViewItem(data)));
     }
 }
@@ -89,7 +90,7 @@ export class ListContentView extends ContentView {
     }
 
     protected appendListView() {
-        this.listView = new ListView({ tag: 'div' });
+        this.listView = new ListView({ tag: 'ul' });
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
             this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;

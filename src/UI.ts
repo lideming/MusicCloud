@@ -5,15 +5,19 @@ import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, Dialog
 export class SidebarItem extends ListViewItem {
     text: string;
     onclick: Action<Event>;
-    constructor(init: Partial<SidebarItem>) {
+    constructor(init?: Partial<SidebarItem>) {
         super();
         utils.objectApply(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
-            tag: 'div.item.no-selection',
+            tag: 'li.item.no-selection',
+            tabIndex: 0,
             text: () => this.text,
-            onclick: (e) => this.onclick?.(e)
+            onclick: (e) => this.onclick?.(e),
+            onkeydown: (e) => {
+                if (e.keyCode == 13) this.onclick?.(e);
+            }
         };
     }
     bindContentView(viewFunc: Func<ContentView>) {
@@ -412,14 +416,16 @@ export const ui = new class {
     };
     sidebarLogin = new class {
         container = document.getElementById('sidebar-login');
-        loginState = document.getElementById('login-state');
+        loginState = new SidebarItem();
         init() {
-            this.loginState.addEventListener('click', (ev) => {
+            this.container.appendView(this.loginState);
+            this.loginState.dom.id = 'login-state';
+            this.loginState.onactive = (ev) => {
                 user.openUI();
-            });
+            };
         }
         update() {
-            var text = this.loginState.textContent;
+            var text = this.loginState.text;
             var username = user.pendingInfo?.username ?? user.info.username;
             if (username) {
                 text = username;
@@ -430,7 +436,7 @@ export const ui = new class {
                 if (user.state == 'logging') text = I`(logging...)`;
                 else text = I`Guest (click to login)`;
             }
-            this.loginState.textContent = text;
+            this.loginState.updateWith({ text });
         }
     };
     sidebarList = new class {

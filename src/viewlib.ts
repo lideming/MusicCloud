@@ -54,6 +54,38 @@ export class View {
     }
     appendView(view: View) { return this.dom.appendView(view); }
     getDOM() { return this.dom; }
+
+    _onactive: Action = undefined;
+    _onActiveCbs: Action<any>[] = undefined;
+    get onactive() { return this._onactive; }
+    set onactive(val) {
+        if (!!this._onactive !== !!val) {
+            if (val) {
+                this._onActiveCbs = [
+                    (e: MouseEvent) => {
+                        this._onactive();
+                    },
+                    (e: KeyboardEvent) => {
+                        this.handleKeyDown(e, this._onactive);
+                    }
+                ];
+                this.dom.addEventListener('click', this._onActiveCbs[0]);
+                this.dom.addEventListener('keydown', this._onActiveCbs[1]);
+            } else {
+                this.dom.removeEventListener('click', this._onActiveCbs[0]);
+                this.dom.removeEventListener('keydown', this._onActiveCbs[1]);
+                this._onActiveCbs = undefined;
+            }
+        }
+        this._onactive = val;
+    }
+
+    handleKeyDown(e: KeyboardEvent, onactive: Action) {
+        if (e.code == 'Enter') {
+            onactive();
+            e.preventDefault();
+        }
+    }
 }
 
 declare global {
@@ -184,9 +216,24 @@ export abstract class ListViewItem extends View implements ISelectable {
 
     protected postCreateDom() {
         super.postCreateDom();
+        this.dom.setAttribute('role', 'listitem');
         this.dom.addEventListener('click', (ev) => {
             if (this.listview?.selectionHelper.handleItemClicked(this, ev)) return;
             this.listview?.onItemClicked?.(this);
+        });
+        this.dom.addEventListener('keydown', (ev) => {
+            if (ev.code == 'Enter') {
+                if (this.listview?.selectionHelper.handleItemClicked(this, ev)) return;
+                this.listview?.onItemClicked?.(this);
+                ev.preventDefault();
+            } else if (this.listview && (ev.code == 'ArrowUp' || ev.code == 'ArrowDown')) {
+                var offset = ev.code == 'ArrowUp' ? -1 : 1;
+                var item = this.listview.get(this.position + offset);
+                if (item) {
+                    item.dom.focus();
+                    ev.preventDefault();
+                }
+            }
         });
         this.dom.addEventListener('contextmenu', (ev) => {
             (this.onContextMenu ?? this.listview?.onContextMenu)?.(this, ev);
@@ -323,6 +370,10 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
     constructor(container?: BuildDomExpr) {
         super(container);
         this.selectionHelper.itemProvider = this.get.bind(this);
+    }
+    protected postCreateDom() {
+        super.postCreateDom();
+        this.dom.setAttribute('role', 'list');
     }
     add(item: T, pos?: number) {
         this.addView(item, pos);
@@ -720,7 +771,7 @@ export class Dialog extends View {
     autoFocus: View;
 
     static defaultParent: DialogParent;
-    
+
     get width() { return this.dom.style.width; }
     set width(val) { this.dom.style.width = val; }
 
@@ -739,6 +790,7 @@ export class Dialog extends View {
             _ctx: this,
             _key: 'dialog',
             tag: 'div.dialog',
+            tabIndex: 0,
             style: 'width: 300px',
             child: [
                 {
@@ -823,7 +875,7 @@ export class Dialog extends View {
         this.ensureDom();
         Dialog.defaultParent.onDialogShowing(this);
         this.dom.focus();
-        this.autoFocus?.dom.focus();
+        (this.autoFocus || this).dom.focus();
         this.onShown.invoke();
     }
     private _cancelFadeout: Action;
@@ -879,16 +931,18 @@ export class TabBtn extends View {
     }
     createDom(): BuildDomExpr {
         return {
-            tag: 'span.tab.no-selection',
-            tabIndex: 0,
-            onclick: () => {
-                this.onclick?.();
-                this.onClick.invoke();
-            }
+            tag: 'span.tab.no-selection'
+        };
+    }
+    postCreateDom() {
+        this.onactive = () => {
+            this.onclick?.();
+            this.onClick.invoke();
         };
     }
     updateDom() {
         this.dom.textContent = this.text;
+        this.dom.tabIndex = this.clickable ? 0 : -1;
         this.toggleClass('clickable', this.clickable);
         this.toggleClass('active', this.active);
         this.dom.style.float = this.right ? 'right' : 'left';
@@ -923,7 +977,8 @@ export class TextView extends View {
 
 export class ButtonView extends TextView {
     disabled: boolean = false;
-    onclick: Action = null;
+    get onclick() { return this.onactive; }
+    set onclick(val) { this.onactive = val; }
     type: 'normal' | 'big' = 'normal';
     constructor(init?: Partial<ButtonView>) {
         super();
@@ -932,10 +987,6 @@ export class ButtonView extends TextView {
     }
     createDom(): BuildDomExpr {
         return { tag: 'div.btn', tabIndex: 0 };
-    }
-    postCreateDom() {
-        super.postCreateDom();
-        this.dom.addEventListener('click', () => this.onclick?.());
     }
     updateDom() {
         super.updateDom();

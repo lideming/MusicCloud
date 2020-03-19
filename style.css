@@ -41,6 +41,12 @@ body.dark {
     --color-bg-cc: #333333;
 }
 
+ul, li {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+}
+
 .no-transition, .no-transition * {
     transition: none !important;
 }
@@ -56,7 +62,7 @@ body.dark {
 }
 
 :focus {
-    outline: none;
+    outline: solid 2px var(--color-primary-light);
 }
 
 ::selection {
@@ -823,6 +829,11 @@ textarea.input-text {
     user-select: none;
     position: relative;
     overflow: hidden;
+}
+
+.btn:focus {
+    outline: solid 2px var(--color-primary-dark);
+    background: var(--color-primary-darker);
 }
 
 .btn:hover {

@@ -17,7 +17,7 @@ export class ListIndex {
     loadIndicator = new LoadingIndicator();
     playing: TrackList;
     constructor() {
-        this.listView = new ListView();
+        this.listView = new ListView({ tag: 'ul' });
         this.listView.dragging = true;
         this.listView.moveByDragging = true;
         this.listView.onItemMoved = (item, from) => {
@@ -210,8 +210,9 @@ export class ListIndexViewItem extends SidebarItem {
     }
     protected createDom(): BuildDomExpr {
         return {
-            tag: 'div.item.no-selection',
+            tag: 'li.item.no-selection',
             style: 'display: flex',
+            tabIndex: 0,
             child: [
                 { tag: 'span.name.flex-1', text: () => this.listInfo?.name ?? this.text },
                 {

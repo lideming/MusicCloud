@@ -714,6 +714,7 @@ class DataBackedListView extends viewlib_1.ListView {
         return new DataBackedListViewItem(data);
     }
     postCreateDom() {
+        super.postCreateDom();
         this.dataList.forEach(data => this.add(this.createListViewItem(data)));
     }
 }
@@ -752,7 +753,7 @@ class ListContentView extends UI_1.ContentView {
         this.dom.appendView(this.header);
     }
     appendListView() {
-        this.listView = new viewlib_1.ListView({ tag: 'div' });
+        this.listView = new viewlib_1.ListView({ tag: 'ul' });
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
             this.selectBtn.text = this.listView.selectionHelper.enabled ? utils_1.I `Cancel` : utils_1.I `Select`;
@@ -841,7 +842,7 @@ class ListIndex {
         this.loadedList = {};
         this.loadIndicator = new viewlib_1.LoadingIndicator();
         this.nextId = -100;
-        this.listView = new viewlib_1.ListView();
+        this.listView = new viewlib_1.ListView({ tag: 'ul' });
         this.listView.dragging = true;
         this.listView.moveByDragging = true;
         this.listView.onItemMoved = (item, from) => {
@@ -1058,8 +1059,9 @@ class ListIndexViewItem extends UI_1.SidebarItem {
     }
     createDom() {
         return {
-            tag: 'div.item.no-selection',
+            tag: 'li.item.no-selection',
             style: 'display: flex',
+            tabIndex: 0,
             child: [
                 { tag: 'span.name.flex-1', text: () => { var _a, _b; return (_b = (_a = this.listInfo) === null || _a === void 0 ? void 0 : _a.name) !== null && _b !== void 0 ? _b : this.text; } },
                 {
@@ -3086,7 +3088,8 @@ class TrackViewItem extends viewlib_1.ListViewItem {
     createDom() {
         var track = this.track;
         return {
-            tag: 'div.item.trackitem.no-selection',
+            tag: 'li.item.trackitem.no-selection',
+            tabIndex: 0,
             child: [
                 {
                     tag: 'span.pos', update: (dompos) => {
@@ -3137,9 +3140,15 @@ class SidebarItem extends viewlib_1.ListViewItem {
     }
     createDom() {
         return {
-            tag: 'div.item.no-selection',
+            tag: 'li.item.no-selection',
+            tabIndex: 0,
             text: () => this.text,
-            onclick: (e) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e); }
+            onclick: (e) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e); },
+            onkeydown: (e) => {
+                var _a;
+                if (e.keyCode == 13)
+                    (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e);
+            }
         };
     }
     bindContentView(viewFunc) {
@@ -3519,16 +3528,18 @@ exports.ui = new class {
         this.sidebarLogin = new class {
             constructor() {
                 this.container = document.getElementById('sidebar-login');
-                this.loginState = document.getElementById('login-state');
+                this.loginState = new SidebarItem();
             }
             init() {
-                this.loginState.addEventListener('click', (ev) => {
+                this.container.appendView(this.loginState);
+                this.loginState.dom.id = 'login-state';
+                this.loginState.onactive = (ev) => {
                     User_1.user.openUI();
-                });
+                };
             }
             update() {
                 var _a, _b;
-                var text = this.loginState.textContent;
+                var text = this.loginState.text;
                 var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username) !== null && _b !== void 0 ? _b : User_1.user.info.username;
                 if (username) {
                     text = username;
@@ -3545,7 +3556,7 @@ exports.ui = new class {
                     else
                         text = I18n_1.I `Guest (click to login)`;
                 }
-                this.loginState.textContent = text;
+                this.loginState.updateWith({ text });
             }
         };
         this.sidebarList = new class {
@@ -5321,6 +5332,8 @@ class View {
         this._position = undefined;
         this.domctx = new utils_1.BuildDOMCtx();
         this._dom = undefined;
+        this._onactive = undefined;
+        this._onActiveCbs = undefined;
         if (dom)
             this.domExprCreated(dom);
     }
@@ -5363,6 +5376,35 @@ class View {
     }
     appendView(view) { return this.dom.appendView(view); }
     getDOM() { return this.dom; }
+    get onactive() { return this._onactive; }
+    set onactive(val) {
+        if (!!this._onactive !== !!val) {
+            if (val) {
+                this._onActiveCbs = [
+                    (e) => {
+                        this._onactive();
+                    },
+                    (e) => {
+                        this.handleKeyDown(e, this._onactive);
+                    }
+                ];
+                this.dom.addEventListener('click', this._onActiveCbs[0]);
+                this.dom.addEventListener('keydown', this._onActiveCbs[1]);
+            }
+            else {
+                this.dom.removeEventListener('click', this._onActiveCbs[0]);
+                this.dom.removeEventListener('keydown', this._onActiveCbs[1]);
+                this._onActiveCbs = undefined;
+            }
+        }
+        this._onactive = val;
+    }
+    handleKeyDown(e, onactive) {
+        if (e.code == 'Enter') {
+            onactive();
+            e.preventDefault();
+        }
+    }
 }
 exports.View = View;
 HTMLElement.prototype.getDOM = function () { return this; };
@@ -5490,11 +5532,29 @@ class ListViewItem extends View {
     }
     postCreateDom() {
         super.postCreateDom();
+        this.dom.setAttribute('role', 'listitem');
         this.dom.addEventListener('click', (ev) => {
             var _a, _b, _c;
             if ((_a = this.listview) === null || _a === void 0 ? void 0 : _a.selectionHelper.handleItemClicked(this, ev))
                 return;
             (_c = (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
+        });
+        this.dom.addEventListener('keydown', (ev) => {
+            var _a, _b, _c;
+            if (ev.code == 'Enter') {
+                if ((_a = this.listview) === null || _a === void 0 ? void 0 : _a.selectionHelper.handleItemClicked(this, ev))
+                    return;
+                (_c = (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
+                ev.preventDefault();
+            }
+            else if (this.listview && (ev.code == 'ArrowUp' || ev.code == 'ArrowDown')) {
+                var offset = ev.code == 'ArrowUp' ? -1 : 1;
+                var item = this.listview.get(this.position + offset);
+                if (item) {
+                    item.dom.focus();
+                    ev.preventDefault();
+                }
+            }
         });
         this.dom.addEventListener('contextmenu', (ev) => {
             var _a, _b, _c;
@@ -5627,6 +5687,10 @@ class ListView extends ContainerView {
         this.moveByDragging = false;
         this.selectionHelper = new SelectionHelper();
         this.selectionHelper.itemProvider = this.get.bind(this);
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.setAttribute('role', 'list');
     }
     add(item, pos) {
         this.addView(item, pos);
@@ -6042,6 +6106,7 @@ class Dialog extends View {
             _ctx: this,
             _key: 'dialog',
             tag: 'div.dialog',
+            tabIndex: 0,
             style: 'width: 300px',
             child: [
                 {
@@ -6123,7 +6188,7 @@ class Dialog extends View {
         return { x, y };
     }
     show() {
-        var _a, _b;
+        var _a;
         if (this.shown)
             return;
         this.shown = true;
@@ -6131,7 +6196,7 @@ class Dialog extends View {
         this.ensureDom();
         Dialog.defaultParent.onDialogShowing(this);
         this.dom.focus();
-        (_b = this.autoFocus) === null || _b === void 0 ? void 0 : _b.dom.focus();
+        (this.autoFocus || this).dom.focus();
         this.onShown.invoke();
     }
     close() {
@@ -6185,17 +6250,19 @@ class TabBtn extends View {
     }
     createDom() {
         return {
-            tag: 'span.tab.no-selection',
-            tabIndex: 0,
-            onclick: () => {
-                var _a;
-                (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this);
-                this.onClick.invoke();
-            }
+            tag: 'span.tab.no-selection'
+        };
+    }
+    postCreateDom() {
+        this.onactive = () => {
+            var _a;
+            (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this);
+            this.onClick.invoke();
         };
     }
     updateDom() {
         this.dom.textContent = this.text;
+        this.dom.tabIndex = this.clickable ? 0 : -1;
         this.toggleClass('clickable', this.clickable);
         this.toggleClass('active', this.active);
         this.dom.style.float = this.right ? 'right' : 'left';
@@ -6232,17 +6299,14 @@ class ButtonView extends TextView {
     constructor(init) {
         super();
         this.disabled = false;
-        this.onclick = null;
         this.type = 'normal';
         utils_1.utils.objectApply(this, init);
         this.updateDom();
     }
+    get onclick() { return this.onactive; }
+    set onclick(val) { this.onactive = val; }
     createDom() {
         return { tag: 'div.btn', tabIndex: 0 };
-    }
-    postCreateDom() {
-        super.postCreateDom();
-        this.dom.addEventListener('click', () => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this); });
     }
     updateDom() {
         super.updateDom();

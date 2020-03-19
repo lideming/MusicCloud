@@ -323,7 +323,8 @@ export class TrackViewItem extends ListViewItem {
     createDom(): BuildDomExpr {
         var track = this.track;
         return {
-            tag: 'div.item.trackitem.no-selection',
+            tag: 'li.item.trackitem.no-selection',
+            tabIndex: 0,
             child: [
                 {
                     tag: 'span.pos', update: (dompos) => {
