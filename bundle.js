@@ -3653,6 +3653,12 @@ exports.ui = new class {
                 });
             }
         });
+        document.addEventListener('keydown', (e) => {
+            document.body.classList.add('keyboard-input');
+        }, true);
+        ['mousedown', 'touchstart'].forEach(evt => document.addEventListener(evt, (e) => {
+            document.body.classList.remove('keyboard-input');
+        }, true));
     }
     endPreload() {
         setTimeout(() => {

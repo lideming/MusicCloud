@@ -62,6 +62,10 @@ ul, li {
 }
 
 :focus {
+    outline: none;
+}
+
+.keyboard-input :focus {
     outline: solid 2px var(--color-primary-light);
 }
 
@@ -831,7 +835,7 @@ textarea.input-text {
     overflow: hidden;
 }
 
-.btn:focus {
+.keyboard-input .btn:focus {
     outline: solid 2px var(--color-primary-dark);
     background: var(--color-primary-darker);
 }
