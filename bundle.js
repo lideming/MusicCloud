@@ -1293,10 +1293,11 @@ class Parser {
                             spans.push(lastSpan = { text: '', ruby: null, startTime: curTime, timeStamp });
                         }
                         timeStamp = ts;
-                        if (ts.time != -1)
+                        if (ts.time != -1) {
                             curTime = ts.time;
-                        if (startTime == null)
-                            startTime = ts.time;
+                            if (startTime == null)
+                                startTime = ts.time;
+                        }
                     }
                     continue;
                 }
@@ -1642,7 +1643,7 @@ class LyricsView extends viewlib_1.View {
             line = hint;
             for (let i = hint.position + 1; i < this.lines.length; i++) {
                 let x = this.lines.get(i);
-                if (x.line.startTime >= 0) {
+                if (x.line.startTime != null) {
                     if (x.line.startTime <= time) {
                         line = x;
                     }
@@ -1655,7 +1656,7 @@ class LyricsView extends viewlib_1.View {
         else {
             line = null;
             this.lines.forEach(x => {
-                if (x.line.startTime >= 0 && x.line.startTime <= time)
+                if (x.line.startTime != null && x.line.startTime <= time)
                     line = x;
             });
         }

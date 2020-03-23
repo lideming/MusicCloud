@@ -107,7 +107,7 @@ export class LyricsView extends View {
             line = hint;
             for (let i = hint.position + 1; i < this.lines.length; i++) {
                 let x = this.lines.get(i);
-                if (x.line.startTime >= 0) {
+                if (x.line.startTime != null) {
                     if (x.line.startTime <= time) {
                         line = x;
                     } else {
@@ -118,7 +118,7 @@ export class LyricsView extends View {
         } else {
             line = null;
             this.lines.forEach(x => {
-                if (x.line.startTime >= 0 && x.line.startTime <= time) line = x;
+                if (x.line.startTime != null && x.line.startTime <= time) line = x;
             });
         }
         return line;

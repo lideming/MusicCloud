@@ -225,8 +225,10 @@ export class Parser {
                             spans.push(lastSpan = { text: '', ruby: null, startTime: curTime, timeStamp });
                         }
                         timeStamp = ts;
-                        if (ts.time != -1) curTime = ts.time;
-                        if (startTime == null) startTime = ts.time;
+                        if (ts.time != -1) {
+                            curTime = ts.time;
+                            if (startTime == null) startTime = ts.time;
+                        }
                     }
                     continue;
                 }
