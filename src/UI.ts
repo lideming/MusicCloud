@@ -330,6 +330,7 @@ export const ui = new class {
                         || e.type === 'touch') {
                         call(e.point.pageX - this.progbar.getBoundingClientRect().left);
                     }
+                if (e.action == 'down') return 'track';
             });
         }
     };
@@ -536,6 +537,7 @@ class VolumeButton extends ProgressButton {
                 startX = e.point.pageX;
                 this.dom.classList.add('btn-down');
                 this.fill.dom.style.transition = 'none';
+                return 'track';
             } else if (e.action == 'move') {
                 var deltaX = e.point.pageX - startX;
                 startX = e.point.pageX;

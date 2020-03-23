@@ -135,49 +135,49 @@ export var utils = new class Utils {
         };
     }
 
-    listenPointerEvents(element: HTMLElement, callback: Action<PtrEvent>) {
+    listenPointerEvents(element: HTMLElement, callback: (e: PtrEvent) => void | 'track') {
         element.addEventListener('mousedown', function (e) {
-            var mousemove = function (e: MouseEvent) {
-                callback({ type: 'mouse', ev: e, point: e, action: 'move' });
-            };
-            var mouseup = function (e: MouseEvent) {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
-                callback({ type: 'mouse', ev: e, point: e, action: 'up' });
-            };
-            document.addEventListener('mousemove', mousemove);
-            document.addEventListener('mouseup', mouseup);
-            callback({ type: 'mouse', ev: e, point: e, action: 'down' });
+            if (callback({ type: 'mouse', ev: e, point: e, action: 'down' }) == 'track') {
+                var mousemove = function (e: MouseEvent) {
+                    callback({ type: 'mouse', ev: e, point: e, action: 'move' });
+                };
+                var mouseup = function (e: MouseEvent) {
+                    document.removeEventListener('mousemove', mousemove, true);
+                    document.removeEventListener('mouseup', mouseup, true);
+                    callback({ type: 'mouse', ev: e, point: e, action: 'up' });
+                };
+                document.addEventListener('mousemove', mousemove, true);
+                document.addEventListener('mouseup', mouseup, true);
+            }
         });
         var touchDown = false;
         element.addEventListener('touchstart', function (e) {
-            var touchmove = function (e: TouchEvent) {
-                var ct = e.changedTouches[0];
-                callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
-            };
-            var touchend = function (e: TouchEvent) {
-                if (e.touches.length == 0) {
-                    touchDown = false;
-                    element.removeEventListener('touchmove', touchmove);
-                    element.removeEventListener('touchend', touchend);
-                }
-                var ct = e.changedTouches[0];
-                callback({
-                    type: 'touch', touch: 'end', ev: e, point: ct,
-                    action: touchDown ? 'move' : 'up'
-                });
-            };
-            var alreadyDown = touchDown;
-            if (!touchDown) {
+            var ct = e.changedTouches[0];
+            var ret = callback({
+                type: 'touch', touch: 'start', ev: e, point: ct,
+                action: touchDown ? 'move' : 'down'
+            });
+            if (!touchDown && ret == 'track') {
                 touchDown = true;
+                var touchmove = function (e: TouchEvent) {
+                    var ct = e.changedTouches[0];
+                    callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
+                };
+                var touchend = function (e: TouchEvent) {
+                    if (e.touches.length == 0) {
+                        touchDown = false;
+                        element.removeEventListener('touchmove', touchmove);
+                        element.removeEventListener('touchend', touchend);
+                    }
+                    var ct = e.changedTouches[0];
+                    callback({
+                        type: 'touch', touch: 'end', ev: e, point: ct,
+                        action: touchDown ? 'move' : 'up'
+                    });
+                };
                 element.addEventListener('touchmove', touchmove);
                 element.addEventListener('touchend', touchend);
             }
-            var ct = e.changedTouches[0];
-            callback({
-                type: 'touch', touch: 'start', ev: e, point: ct,
-                action: alreadyDown ? 'move' : 'down'
-            });
         });
     }
 
@@ -320,7 +320,8 @@ export type PtrEvent = ({
 };
 
 
-// Some interesting types:
+// Some interesting function types:
+export type AnyFunc = (...args: any) => any;
 export type Action<T = void> = (arg: T) => void;
 export type Func<TRet> = () => TRet;
 export type AsyncFunc<T> = Func<Promise<T>>;
@@ -550,10 +551,10 @@ interface SiType<T> {
     deserialize: (str: string) => T;
 }
 
-export class Callbacks<T extends CallableFunction> {
+export class Callbacks<T extends AnyFunc = Action> {
     list = [] as T[];
-    invoke(...args) {
-        this.list.forEach((x) => x(...args));
+    invoke(...args: Parameters<T>) {
+        this.list.forEach((x) => x.apply(this, args));
     }
     add(callback: T) {
         this.list.push(callback);
@@ -676,8 +677,8 @@ export class DataUpdatingHelper<T extends IId, TData extends IId = T> {
 }
 
 export class EventRegistrations {
-    list: { event: Callbacks<CallableFunction>; func: CallableFunction; }[] = [];
-    add<T extends CallableFunction>(event: Callbacks<T>, func: T) {
+    list: { event: Callbacks; func: AnyFunc; }[] = [];
+    add<T extends AnyFunc>(event: Callbacks<T>, func: T) {
         this.list.push({ event, func });
         event.add(func);
         return func;

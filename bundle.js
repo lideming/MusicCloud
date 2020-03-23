@@ -3424,6 +3424,8 @@ exports.ui = new class {
                             || e.type === 'touch') {
                             call(e.point.pageX - this.progbar.getBoundingClientRect().left);
                         }
+                    if (e.action == 'down')
+                        return 'track';
                 });
             }
         };
@@ -3697,6 +3699,7 @@ class VolumeButton extends ProgressButton {
                 startX = e.point.pageX;
                 this.dom.classList.add('btn-down');
                 this.fill.dom.style.transition = 'none';
+                return 'track';
             }
             else if (e.action == 'move') {
                 var deltaX = e.point.pageX - startX;
@@ -4790,47 +4793,47 @@ exports.utils = new class Utils {
     }
     listenPointerEvents(element, callback) {
         element.addEventListener('mousedown', function (e) {
-            var mousemove = function (e) {
-                callback({ type: 'mouse', ev: e, point: e, action: 'move' });
-            };
-            var mouseup = function (e) {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
-                callback({ type: 'mouse', ev: e, point: e, action: 'up' });
-            };
-            document.addEventListener('mousemove', mousemove);
-            document.addEventListener('mouseup', mouseup);
-            callback({ type: 'mouse', ev: e, point: e, action: 'down' });
+            if (callback({ type: 'mouse', ev: e, point: e, action: 'down' }) == 'track') {
+                var mousemove = function (e) {
+                    callback({ type: 'mouse', ev: e, point: e, action: 'move' });
+                };
+                var mouseup = function (e) {
+                    document.removeEventListener('mousemove', mousemove, true);
+                    document.removeEventListener('mouseup', mouseup, true);
+                    callback({ type: 'mouse', ev: e, point: e, action: 'up' });
+                };
+                document.addEventListener('mousemove', mousemove, true);
+                document.addEventListener('mouseup', mouseup, true);
+            }
         });
         var touchDown = false;
         element.addEventListener('touchstart', function (e) {
-            var touchmove = function (e) {
-                var ct = e.changedTouches[0];
-                callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
-            };
-            var touchend = function (e) {
-                if (e.touches.length == 0) {
-                    touchDown = false;
-                    element.removeEventListener('touchmove', touchmove);
-                    element.removeEventListener('touchend', touchend);
-                }
-                var ct = e.changedTouches[0];
-                callback({
-                    type: 'touch', touch: 'end', ev: e, point: ct,
-                    action: touchDown ? 'move' : 'up'
-                });
-            };
-            var alreadyDown = touchDown;
-            if (!touchDown) {
+            var ct = e.changedTouches[0];
+            var ret = callback({
+                type: 'touch', touch: 'start', ev: e, point: ct,
+                action: touchDown ? 'move' : 'down'
+            });
+            if (!touchDown && ret == 'track') {
                 touchDown = true;
+                var touchmove = function (e) {
+                    var ct = e.changedTouches[0];
+                    callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
+                };
+                var touchend = function (e) {
+                    if (e.touches.length == 0) {
+                        touchDown = false;
+                        element.removeEventListener('touchmove', touchmove);
+                        element.removeEventListener('touchend', touchend);
+                    }
+                    var ct = e.changedTouches[0];
+                    callback({
+                        type: 'touch', touch: 'end', ev: e, point: ct,
+                        action: touchDown ? 'move' : 'up'
+                    });
+                };
                 element.addEventListener('touchmove', touchmove);
                 element.addEventListener('touchend', touchend);
             }
-            var ct = e.changedTouches[0];
-            callback({
-                type: 'touch', touch: 'start', ev: e, point: ct,
-                action: alreadyDown ? 'move' : 'down'
-            });
         });
     }
     addEvent(element, event, handler) {
@@ -5163,7 +5166,7 @@ class Callbacks {
         this.list = [];
     }
     invoke(...args) {
-        this.list.forEach((x) => x(...args));
+        this.list.forEach((x) => x.apply(this, args));
     }
     add(callback) {
         this.list.push(callback);
@@ -6183,26 +6186,32 @@ class Dialog extends View {
                 }
             }
         });
-        this.domheader.addEventListener('mousedown', (ev) => {
-            if (ev.target !== this.domheader && ev.target !== this.btnTitle.dom)
-                return;
-            ev.preventDefault();
-            const { x: sX, y: sY } = this.getOffset();
-            const sPageX = ev.pageX, sPageY = ev.pageY;
-            var mousemove = (ev) => {
-                const rect = this.overlay.dom.getBoundingClientRect();
-                var pageX = utils_1.utils.numLimit(ev.pageX, rect.left, rect.right);
-                var pageY = utils_1.utils.numLimit(ev.pageY, rect.top, rect.bottom);
-                ;
-                this.setOffset(sX + pageX - sPageX, sY + pageY - sPageY);
-            };
-            var mouseup = (ev) => {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
-            };
-            document.addEventListener('mousemove', mousemove);
-            document.addEventListener('mouseup', mouseup);
-        });
+        // title bar pointer event handler:
+        {
+            let s;
+            let sPage;
+            utils_1.utils.listenPointerEvents(this.domheader, (e) => {
+                if (e.action == 'down') {
+                    if (e.ev.target !== this.domheader && e.ev.target !== this.btnTitle.dom)
+                        return;
+                    e.ev.preventDefault();
+                    s = this.getOffset();
+                    sPage = {
+                        x: e.point.pageX,
+                        y: e.point.pageY
+                    };
+                    return 'track';
+                }
+                else if (e.action == 'move') {
+                    e.ev.preventDefault();
+                    const rect = this.overlay.dom.getBoundingClientRect();
+                    const pageX = utils_1.utils.numLimit(e.point.pageX, rect.left, rect.right);
+                    const pageY = utils_1.utils.numLimit(e.point.pageY, rect.top, rect.bottom);
+                    ;
+                    this.setOffset(s.x + pageX - sPage.x, s.y + pageY - sPage.y);
+                }
+            });
+        }
         this.dom.addEventListener('resize', () => {
             if (this.dom.style.width)
                 this.width = this.dom.style.width;

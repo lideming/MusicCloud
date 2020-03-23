@@ -867,24 +867,31 @@ export class Dialog extends View {
                 }
             }
         });
-        this.domheader.addEventListener('mousedown', (ev) => {
-            if (ev.target !== this.domheader && ev.target !== this.btnTitle.dom) return;
-            ev.preventDefault();
-            const { x: sX, y: sY } = this.getOffset();
-            const sPageX = ev.pageX, sPageY = ev.pageY;
-            var mousemove = (ev) => {
-                const rect = this.overlay.dom.getBoundingClientRect();
-                var pageX = utils.numLimit(ev.pageX, rect.left, rect.right);
-                var pageY = utils.numLimit(ev.pageY, rect.top, rect.bottom);;
-                this.setOffset(sX + pageX - sPageX, sY + pageY - sPageY);
-            };
-            var mouseup = (ev) => {
-                document.removeEventListener('mousemove', mousemove);
-                document.removeEventListener('mouseup', mouseup);
-            };
-            document.addEventListener('mousemove', mousemove);
-            document.addEventListener('mouseup', mouseup);
-        });
+
+        // title bar pointer event handler:
+        {
+            let s: { x: number; y: number; };
+            let sPage: { x: number; y: number; };
+            utils.listenPointerEvents(this.domheader, (e) => {
+                if (e.action == 'down') {
+                    if (e.ev.target !== this.domheader && e.ev.target !== this.btnTitle.dom) return;
+                    e.ev.preventDefault();
+                    s = this.getOffset();
+                    sPage = {
+                        x: e.point.pageX,
+                        y: e.point.pageY
+                    };
+                    return 'track';
+                } else if (e.action == 'move') {
+                    e.ev.preventDefault();
+                    const rect = this.overlay.dom.getBoundingClientRect();
+                    const pageX = utils.numLimit(e.point.pageX, rect.left, rect.right);
+                    const pageY = utils.numLimit(e.point.pageY, rect.top, rect.bottom);;
+                    this.setOffset(s.x + pageX - sPage.x, s.y + pageY - sPage.y);
+                }
+            });
+        }
+
         this.dom.addEventListener('resize', () => {
             if (this.dom.style.width)
                 this.width = this.dom.style.width;
