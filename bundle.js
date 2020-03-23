@@ -1071,8 +1071,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
                         dom.hidden = !dom.textContent;
                     },
                 }
-            ],
-            onclick: (ev) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, ev); }
+            ]
         };
     }
 }
@@ -3139,17 +3138,13 @@ class SidebarItem extends viewlib_1.ListViewItem {
         super();
         utils_1.utils.objectApply(this, init);
     }
+    get onclick() { return this.onactive; }
+    set onclick(val) { this.onactive = val; }
     createDom() {
         return {
             tag: 'li.item.no-selection',
             tabIndex: 0,
-            text: () => this.text,
-            onclick: (e) => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e); },
-            onkeydown: (e) => {
-                var _a;
-                if (e.keyCode == 13)
-                    (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, e);
-            }
+            text: () => this.text
         };
     }
     bindContentView(viewFunc) {

@@ -4,7 +4,8 @@ import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, Dialog
 
 export class SidebarItem extends ListViewItem {
     text: string;
-    onclick: Action<Event>;
+    get onclick() { return this.onactive; }
+    set onclick(val) { this.onactive = val; }
     constructor(init?: Partial<SidebarItem>) {
         super();
         utils.objectApply(this, init);
@@ -13,11 +14,7 @@ export class SidebarItem extends ListViewItem {
         return {
             tag: 'li.item.no-selection',
             tabIndex: 0,
-            text: () => this.text,
-            onclick: (e) => this.onclick?.(e),
-            onkeydown: (e) => {
-                if (e.keyCode == 13) this.onclick?.(e);
-            }
+            text: () => this.text
         };
     }
     bindContentView(viewFunc: Func<ContentView>) {

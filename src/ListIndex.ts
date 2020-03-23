@@ -222,8 +222,7 @@ export class ListIndexViewItem extends SidebarItem {
                         dom.hidden = !dom.textContent;
                     },
                 }
-            ],
-            onclick: (ev) => this.onclick?.(ev)
+            ]
         };
     }
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
