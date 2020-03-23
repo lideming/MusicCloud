@@ -67,7 +67,7 @@ ul, li {
     outline: none;
 }
 
-.keyboard-input :focus {
+.keyboard-input :focus, .input-text:focus {
     outline: solid 2px var(--color-primary-light);
 }
 
