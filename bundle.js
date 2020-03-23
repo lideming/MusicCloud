@@ -2534,6 +2534,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const viewlib_1 = require("./viewlib");
 const Api_1 = require("./Api");
+const LyricsEdit_1 = require("./LyricsEdit");
 /** A track binding with list */
 class Track {
     constructor(init) {
@@ -2569,7 +2570,7 @@ class Track {
     }
     startEdit() {
         var dialog = new TrackDialog();
-        dialog.fillInfo(this.infoObj);
+        dialog.setTrack(this);
         dialog.show();
     }
     requestFileUrl(file) {
@@ -2597,6 +2598,7 @@ class TrackDialog extends viewlib_1.Dialog {
         this.inputArtist = new viewlib_1.LabeledInput({ label: utils_1.I `Artist` });
         this.inputLyrics = new viewlib_1.LabeledInput({ label: utils_1.I `Lyrics` });
         this.btnSave = new viewlib_1.TabBtn({ text: utils_1.I `Save`, right: true });
+        this.btnEditLyrics = new viewlib_1.TabBtn({ text: utils_1.I `Edit Lyrics`, right: true });
         this.autoFocus = this.inputName.input;
         this.resizable = true;
         this.contentFlex = true;
@@ -2607,20 +2609,25 @@ class TrackDialog extends viewlib_1.Dialog {
         [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
         this.addBtn(this.btnSave);
         this.btnSave.onClick.add(() => this.save());
+        this.addBtn(this.btnEditLyrics);
+        this.btnEditLyrics.onClick.add(() => {
+            this.close();
+            LyricsEdit_1.lyricsEdit.startEdit(this.track);
+        });
         this.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 13
+            if (ev.code == 'Enter'
                 && (ev.ctrlKey || ev.target !== this.inputLyrics.dominput)) {
                 ev.preventDefault();
                 this.save();
             }
         });
     }
-    fillInfo(t) {
-        this.trackId = t.id;
+    setTrack(t) {
+        this.track = t;
         this.title = utils_1.I `Track ID` + ' ' + t.id;
         this.inputName.updateWith({ value: t.name });
         this.inputArtist.updateWith({ value: t.artist });
-        this.inputLyrics.updateWith({ value: t.lyrics });
+        this.inputLyrics.updateWith({ value: t.infoObj.lyrics });
         this.updateDom();
     }
     save() {
@@ -2630,15 +2637,15 @@ class TrackDialog extends viewlib_1.Dialog {
             this.btnSave.updateWith({ clickable: false, text: utils_1.I `Saving...` });
             try {
                 var newinfo = yield Api_1.api.put({
-                    path: 'tracks/' + this.trackId,
+                    path: 'tracks/' + this.track.id,
                     obj: {
-                        id: this.trackId,
+                        id: this.track.id,
                         name: this.inputName.value,
                         artist: this.inputArtist.value,
                         lyrics: this.inputLyrics.value
                     }
                 });
-                if (newinfo.id != this.trackId)
+                if (newinfo.id != this.track.id)
                     throw new Error('Bad ID in response');
                 Api_1.api.onTrackInfoChanged.invoke(newinfo);
                 this.close();
@@ -2654,7 +2661,7 @@ class TrackDialog extends viewlib_1.Dialog {
 }
 exports.TrackDialog = TrackDialog;
 
-},{"./Api":1,"./utils":21,"./viewlib":22}],16:[function(require,module,exports){
+},{"./Api":1,"./LyricsEdit":7,"./utils":21,"./viewlib":22}],16:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {

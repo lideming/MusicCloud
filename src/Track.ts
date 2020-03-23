@@ -3,11 +3,12 @@ import { Toast, Dialog, LabeledInput, TabBtn } from "./viewlib";
 import { Api } from "./apidef";
 import { api } from "./Api";
 import { TrackList } from "./TrackList";
+import { lyricsEdit } from "./LyricsEdit";
 
 /** A track binding with list */
 export class Track {
     infoObj: Api.Track = null;
-    get id(): number { return this.infoObj.id; }
+    get id() { return this.infoObj.id; }
     get name() { return this.infoObj.name; }
     get artist() { return this.infoObj.artist; }
     get url() { return this.infoObj.url; }
@@ -41,7 +42,7 @@ export class Track {
     }
     startEdit() {
         var dialog = new TrackDialog();
-        dialog.fillInfo(this.infoObj);
+        dialog.setTrack(this);
         dialog.show();
     }
     async requestFileUrl(file: Api.TrackFile) {
@@ -61,11 +62,12 @@ export class Track {
 
 export class TrackDialog extends Dialog {
     width = '500px';
-    trackId: number;
+    track: Track;
     inputName = new LabeledInput({ label: I`Name` });
     inputArtist = new LabeledInput({ label: I`Artist` });
     inputLyrics = new LabeledInput({ label: I`Lyrics` });
     btnSave = new TabBtn({ text: I`Save`, right: true });
+    btnEditLyrics = new TabBtn({ text: I`Edit Lyrics`, right: true });
     autoFocus = this.inputName.input;
     constructor() {
         super();
@@ -78,20 +80,25 @@ export class TrackDialog extends Dialog {
         [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
         this.addBtn(this.btnSave);
         this.btnSave.onClick.add(() => this.save());
+        this.addBtn(this.btnEditLyrics);
+        this.btnEditLyrics.onClick.add(() => {
+            this.close();
+            lyricsEdit.startEdit(this.track);
+        });
         this.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 13
+            if (ev.code == 'Enter'
                 && (ev.ctrlKey || ev.target !== this.inputLyrics.dominput)) {
                 ev.preventDefault();
                 this.save();
             }
         });
     }
-    fillInfo(t: Api.Track) {
-        this.trackId = t.id;
+    setTrack(t: Track) {
+        this.track = t;
         this.title = I`Track ID` + ' ' + t.id;
         this.inputName.updateWith({ value: t.name });
         this.inputArtist.updateWith({ value: t.artist });
-        this.inputLyrics.updateWith({ value: t.lyrics });
+        this.inputLyrics.updateWith({ value: t.infoObj.lyrics });
         this.updateDom();
     }
     async save() {
@@ -100,15 +107,15 @@ export class TrackDialog extends Dialog {
         this.btnSave.updateWith({ clickable: false, text: I`Saving...` });
         try {
             var newinfo = await api.put({
-                path: 'tracks/' + this.trackId,
+                path: 'tracks/' + this.track.id,
                 obj: {
-                    id: this.trackId,
+                    id: this.track.id,
                     name: this.inputName.value,
                     artist: this.inputArtist.value,
                     lyrics: this.inputLyrics.value
                 }
             }) as Api.Track;
-            if (newinfo.id != this.trackId) throw new Error('Bad ID in response');
+            if (newinfo.id != this.track.id) throw new Error('Bad ID in response');
             api.onTrackInfoChanged.invoke(newinfo);
             this.close();
         } catch (error) {
