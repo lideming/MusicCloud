@@ -1,25 +1,23 @@
 const browserify = require("browserify");
 const tsify = require("tsify");
 const fs = require("fs");
-const subcmd = process.argv[2];
+
+const spaces = / {4}/g;
+
+const subcmd = process.argv[2] || 'help';
+
 if (subcmd === 'build') {
-    browserify()
-        .add("src/main.ts")
-        .plugin("tsify", { noImplicitAny: false })
+    createBrowserify()
         .bundle()
         .pipe(fs.createWriteStream('bundle.js'));
 } else if (subcmd === 'watch') {
-    const watchify = require("watchify")
-    const b = browserify({
-        entries: ["src/main.ts"],
-        cache: {},
-        packageCache: {},
-        plugin: [watchify, tsify]
-    });
-    b.on('update', bundle);
-    b.on('log', function (msg) {
-        console.log(msg);
-    })
+    const watchify = require("watchify");
+    const b = createBrowserify(watchify)
+        .plugin(watchify)
+        .on('update', bundle)
+        .on('log', function (msg) {
+            console.log(msg);
+        });
     bundle();
 
     function bundle(id) {
@@ -29,9 +27,32 @@ if (subcmd === 'build') {
         console.info('building...');
         b.bundle()
             .on('error', console.error)
-            .pipe(fs.createWriteStream('./bundle.js'))
-            ;
+            .pipe(fs.createWriteStream('./bundle.js'));
     }
+} else if (subcmd === 'help') {
+    printHelp();
 } else {
-    console.error(`unknown sub-command '${subcmd}'`)
+    console.error(`unknown sub-command '${subcmd}'.\n`);
+    printHelp();
+}
+
+function printHelp() {
+    console.error(`Available sub-commands:
+    build, watch, help`);
+}
+
+function createBrowserify() {
+    return browserify({
+        entries: ["src/main.ts"],
+        // required by watchify:
+        cache: {},
+        packageCache: {}
+    })
+        .plugin(tsify, { noImplicitAny: false })
+        .transform((file) => {
+            var through = require("through2");
+            return through(function write(chunk, enc, next) {
+                next(null, chunk.toString().replace(spaces, '\t'));
+            });
+        });
 }
