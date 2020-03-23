@@ -13,6 +13,7 @@ body {
     --color-bg: white;
     --color-text: black;
     --color-text-gray: gray;
+    --color-bg-selection: hsl(5, 100%, 85%);
     --color-primary: hsl(5, 100%, 67%);
     --color-primary-darker: hsl(5, 100%, 60%);
     --color-primary-dark: hsl(5, 100%, 40%);
@@ -32,6 +33,7 @@ body {
 body.dark {
     --color-bg: black;
     --color-text: #ccc;
+    --color-bg-selection: hsl(5, 100%, 20%);
     --color-fg-11: #eeeeee;
     --color-fg-22: #dddddd;
     --color-fg-33: #cccccc;
@@ -70,11 +72,7 @@ ul, li {
 }
 
 ::selection {
-    background: hsl(5, 100%, 85%);
-}
-
-.dark ::selection {
-    background: hsl(5, 100%, 30%);
+    background: var(--color-bg-selection);
 }
 
 
