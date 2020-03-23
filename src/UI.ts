@@ -98,17 +98,14 @@ export class ContentHeader extends View {
 }
 
 export class ActionBtn extends TextView {
-    onclick: Action = null;
+    get onclick() { return this.onactive; }
+    set onclick(val) { this.onactive = val; }
     constructor(init?: Partial<ActionBtn>) {
         super();
         utils.objectApply(this, init);
     }
-    createDom() {
-        return { tag: 'span.action.clickable.no-selection' };
-    }
-    postCreateDom() {
-        super.postCreateDom();
-        this.dom.addEventListener('click', () => this.onclick?.());
+    createDom(): BuildDomExpr {
+        return { tag: 'span.action.clickable.no-selection', tabIndex: 0 };
     }
 }
 

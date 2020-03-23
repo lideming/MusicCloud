@@ -223,8 +223,17 @@ export abstract class ListViewItem extends View implements ISelectable {
         });
         this.dom.addEventListener('keydown', (ev) => {
             if (ev.code == 'Enter') {
-                if (this.listview?.selectionHelper.handleItemClicked(this, ev)) return;
-                this.listview?.onItemClicked?.(this);
+                if (ev.altKey) {
+                    const rect = this.dom.getBoundingClientRect();
+                    const mouseev = new MouseEvent('contextmenu', {
+                        clientX: rect.left, clientY: rect.top,
+                        relatedTarget: this.dom
+                    });
+                    (this.onContextMenu ?? this.listview?.onContextMenu)?.(this, mouseev);
+                } else {
+                    if (this.listview?.selectionHelper.handleItemClicked(this, ev)) return;
+                    this.listview?.onItemClicked?.(this);
+                }
                 ev.preventDefault();
             } else if (this.listview && (ev.code == 'ArrowUp' || ev.code == 'ArrowDown')) {
                 var offset = ev.code == 'ArrowUp' ? -1 : 1;
@@ -521,11 +530,13 @@ export class Section extends View {
         dom.appendChild(view.getDOM());
     }
     addAction(arg: SectionActionOptions) {
-        this.titleDom.parentElement.appendChild(utils.buildDOM({
+        var view = new View({
             tag: 'div.section-action.clickable',
-            textContent: arg.text,
-            onclick: arg.onclick
-        }));
+            text: arg.text,
+            tabIndex: 0
+        });
+        view.onactive = arg.onclick;
+        this.titleDom.parentElement.appendChild(view.dom);
     }
 }
 
@@ -644,7 +655,7 @@ export class EditableHelper {
 export class MenuItem extends ListViewItem {
     text: string = '';
     cls: 'normal' | 'dangerous' = 'normal';
-    onclick: (ev: Event) => void;
+    onclick: Action;
     constructor(init: Partial<MenuItem>) {
         super();
         utils.objectApply(this, init);
@@ -652,12 +663,16 @@ export class MenuItem extends ListViewItem {
     createDom(): BuildDomExpr {
         return {
             tag: 'div.item.no-selection',
-            onclick: (ev) => {
-                if (this.parentView instanceof ContextMenu) {
-                    if (!this.parentView.keepOpen) this.parentView.close();
-                }
-                this.onclick?.(ev);
+            tabIndex: 0
+        };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.onactive = () => {
+            if (this.parentView instanceof ContextMenu) {
+                if (!this.parentView.keepOpen) this.parentView.close();
             }
+            this.onclick?.();
         };
     }
     private _lastcls;
@@ -714,6 +729,8 @@ export class ContextMenu extends ListView {
     private _visible = false;
     get visible() { return this._visible; };
     overlay: Overlay = null;
+    private _onclose: Action = null;
+    private _originalFocused: Element;
     constructor(items?: MenuItem[]) {
         super({ tag: 'div.context-menu', tabIndex: 0 });
         items?.forEach(x => this.add(x));
@@ -734,9 +751,23 @@ export class ContextMenu extends ListView {
             document.body.appendChild(this.overlay.dom);
         }
         document.body.appendChild(this.dom);
+        this._originalFocused = document.activeElement;
         this.dom.focus();
-        this.dom.addEventListener('focusout',
-            (e) => !this.dom.contains(e.relatedTarget as HTMLElement) && this.close());
+        var onfocusout = (e) => {
+            !this.dom.contains(e.relatedTarget as HTMLElement) && this.close();
+        };
+        var onkeydown = (e: KeyboardEvent) => {
+            if (e.key == 'Escape') {
+                e.preventDefault();
+                this.close();
+            }
+        };
+        this.dom.addEventListener('focusout', onfocusout);
+        this.dom.addEventListener('keydown', onkeydown);
+        this._onclose = () => {
+            this.dom.removeEventListener('focusout', onfocusout);
+            this.dom.removeEventListener('keydown', onkeydown);
+        };
         var width = this.dom.offsetWidth, height = this.dom.offsetHeight;
         if (arg.x + width > document.body.offsetWidth) arg.x -= width;
         if (arg.y + height > document.body.offsetHeight) arg.y -= height;
@@ -748,6 +779,10 @@ export class ContextMenu extends ListView {
     close() {
         if (this._visible) {
             this._visible = false;
+            this._onclose();
+            this._onclose = null;
+            this._originalFocused['focus'] && this._originalFocused['focus']();
+            this._originalFocused = null;
             if (this.overlay) utils.fadeout(this.overlay.dom);
             utils.fadeout(this.dom);
         }
@@ -769,6 +804,8 @@ export class Dialog extends View {
     onShown = new Callbacks<Action>();
     onClose = new Callbacks<Action>();
     autoFocus: View;
+
+    focusTrap = new View({ tag: 'div.focustrap', tabIndex: 0 });
 
     static defaultParent: DialogParent;
 
@@ -800,7 +837,8 @@ export class Dialog extends View {
                         { tag: 'div', style: 'clear: both;' }
                     ]
                 },
-                this.content.dom
+                this.content.dom,
+                this.focusTrap.dom
             ]
         };
     }
@@ -818,8 +856,15 @@ export class Dialog extends View {
         });
         this.overlay.dom.addEventListener('keydown', (ev) => {
             if (this.allowClose && ev.keyCode == 27) { // ESC
-                this.close();
                 ev.preventDefault();
+                this.close();
+            } else if (ev.target === this.dom && ev.key == 'Tab' && ev.shiftKey) {
+                ev.preventDefault();
+                let tabables = this.dom.querySelectorAll('a, [tabindex]');
+                if (tabables.length >= 2 && tabables[tabables.length - 2]['focus']) {
+                    // the last tabable is `focusTrap`, so the index used here is `length - 2`
+                    tabables[tabables.length - 2]['focus']();
+                }
             }
         });
         this.domheader.addEventListener('mousedown', (ev) => {
@@ -843,6 +888,9 @@ export class Dialog extends View {
         this.dom.addEventListener('resize', () => {
             if (this.dom.style.width)
                 this.width = this.dom.style.width;
+        });
+        this.focusTrap.dom.addEventListener('focus', (ev) => {
+            this.dom.focus();
         });
     }
     updateDom() {

@@ -3229,17 +3229,14 @@ class ContentHeader extends viewlib_1.View {
 }
 exports.ContentHeader = ContentHeader;
 class ActionBtn extends viewlib_1.TextView {
+    get onclick() { return this.onactive; }
+    set onclick(val) { this.onactive = val; }
     constructor(init) {
         super();
-        this.onclick = null;
         utils_1.utils.objectApply(this, init);
     }
     createDom() {
-        return { tag: 'span.action.clickable.no-selection' };
-    }
-    postCreateDom() {
-        super.postCreateDom();
-        this.dom.addEventListener('click', () => { var _a; return (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this); });
+        return { tag: 'span.action.clickable.no-selection', tabIndex: 0 };
     }
 }
 exports.ActionBtn = ActionBtn;
@@ -5547,11 +5544,21 @@ class ListViewItem extends View {
             (_c = (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
         });
         this.dom.addEventListener('keydown', (ev) => {
-            var _a, _b, _c;
+            var _a, _b, _c, _d, _e, _f;
             if (ev.code == 'Enter') {
-                if ((_a = this.listview) === null || _a === void 0 ? void 0 : _a.selectionHelper.handleItemClicked(this, ev))
-                    return;
-                (_c = (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onItemClicked) === null || _c === void 0 ? void 0 : _c.call(_b, this);
+                if (ev.altKey) {
+                    const rect = this.dom.getBoundingClientRect();
+                    const mouseev = new MouseEvent('contextmenu', {
+                        clientX: rect.left, clientY: rect.top,
+                        relatedTarget: this.dom
+                    });
+                    (_c = ((_a = this.onContextMenu) !== null && _a !== void 0 ? _a : (_b = this.listview) === null || _b === void 0 ? void 0 : _b.onContextMenu)) === null || _c === void 0 ? void 0 : _c(this, mouseev);
+                }
+                else {
+                    if ((_d = this.listview) === null || _d === void 0 ? void 0 : _d.selectionHelper.handleItemClicked(this, ev))
+                        return;
+                    (_f = (_e = this.listview) === null || _e === void 0 ? void 0 : _e.onItemClicked) === null || _f === void 0 ? void 0 : _f.call(_e, this);
+                }
                 ev.preventDefault();
             }
             else if (this.listview && (ev.code == 'ArrowUp' || ev.code == 'ArrowDown')) {
@@ -5847,11 +5854,13 @@ class Section extends View {
         dom.appendChild(view.getDOM());
     }
     addAction(arg) {
-        this.titleDom.parentElement.appendChild(utils_1.utils.buildDOM({
+        var view = new View({
             tag: 'div.section-action.clickable',
-            textContent: arg.text,
-            onclick: arg.onclick
-        }));
+            text: arg.text,
+            tabIndex: 0
+        });
+        view.onactive = arg.onclick;
+        this.titleDom.parentElement.appendChild(view.dom);
     }
 }
 exports.Section = Section;
@@ -5976,14 +5985,18 @@ class MenuItem extends ListViewItem {
     createDom() {
         return {
             tag: 'div.item.no-selection',
-            onclick: (ev) => {
-                var _a;
-                if (this.parentView instanceof ContextMenu) {
-                    if (!this.parentView.keepOpen)
-                        this.parentView.close();
-                }
-                (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this, ev);
+            tabIndex: 0
+        };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.onactive = () => {
+            var _a;
+            if (this.parentView instanceof ContextMenu) {
+                if (!this.parentView.keepOpen)
+                    this.parentView.close();
             }
+            (_a = this.onclick) === null || _a === void 0 ? void 0 : _a.call(this);
         };
     }
     updateDom() {
@@ -6041,6 +6054,7 @@ class ContextMenu extends ListView {
         this.useOverlay = true;
         this._visible = false;
         this.overlay = null;
+        this._onclose = null;
         items === null || items === void 0 ? void 0 : items.forEach(x => this.add(x));
     }
     get visible() { return this._visible; }
@@ -6064,8 +6078,23 @@ class ContextMenu extends ListView {
             document.body.appendChild(this.overlay.dom);
         }
         document.body.appendChild(this.dom);
+        this._originalFocused = document.activeElement;
         this.dom.focus();
-        this.dom.addEventListener('focusout', (e) => !this.dom.contains(e.relatedTarget) && this.close());
+        var onfocusout = (e) => {
+            !this.dom.contains(e.relatedTarget) && this.close();
+        };
+        var onkeydown = (e) => {
+            if (e.key == 'Escape') {
+                e.preventDefault();
+                this.close();
+            }
+        };
+        this.dom.addEventListener('focusout', onfocusout);
+        this.dom.addEventListener('keydown', onkeydown);
+        this._onclose = () => {
+            this.dom.removeEventListener('focusout', onfocusout);
+            this.dom.removeEventListener('keydown', onkeydown);
+        };
         var width = this.dom.offsetWidth, height = this.dom.offsetHeight;
         if (arg.x + width > document.body.offsetWidth)
             arg.x -= width;
@@ -6081,6 +6110,10 @@ class ContextMenu extends ListView {
     close() {
         if (this._visible) {
             this._visible = false;
+            this._onclose();
+            this._onclose = null;
+            this._originalFocused['focus'] && this._originalFocused['focus']();
+            this._originalFocused = null;
             if (this.overlay)
                 utils_1.utils.fadeout(this.overlay.dom);
             utils_1.utils.fadeout(this.dom);
@@ -6100,6 +6133,7 @@ class Dialog extends View {
         this.showCloseButton = true;
         this.onShown = new utils_1.Callbacks();
         this.onClose = new utils_1.Callbacks();
+        this.focusTrap = new View({ tag: 'div.focustrap', tabIndex: 0 });
         this.btnClose.onClick.add(() => this.allowClose && this.close());
     }
     get width() { return this.dom.style.width; }
@@ -6123,7 +6157,8 @@ class Dialog extends View {
                         { tag: 'div', style: 'clear: both;' }
                     ]
                 },
-                this.content.dom
+                this.content.dom,
+                this.focusTrap.dom
             ]
         };
     }
@@ -6141,8 +6176,16 @@ class Dialog extends View {
         });
         this.overlay.dom.addEventListener('keydown', (ev) => {
             if (this.allowClose && ev.keyCode == 27) { // ESC
-                this.close();
                 ev.preventDefault();
+                this.close();
+            }
+            else if (ev.target === this.dom && ev.key == 'Tab' && ev.shiftKey) {
+                ev.preventDefault();
+                let tabables = this.dom.querySelectorAll('a, [tabindex]');
+                if (tabables.length >= 2 && tabables[tabables.length - 2]['focus']) {
+                    // the last tabable is `focusTrap`, so the index used here is `length - 2`
+                    tabables[tabables.length - 2]['focus']();
+                }
             }
         });
         this.domheader.addEventListener('mousedown', (ev) => {
@@ -6168,6 +6211,9 @@ class Dialog extends View {
         this.dom.addEventListener('resize', () => {
             if (this.dom.style.width)
                 this.width = this.dom.style.width;
+        });
+        this.focusTrap.dom.addEventListener('focus', (ev) => {
+            this.dom.focus();
         });
     }
     updateDom() {
