@@ -47,7 +47,7 @@ export const msgcli = new class {
         var [_, _, protocol, _, host, pathroot, path] = match;
         protocol = protocol || window.location.protocol;
         host = host || window.location.host;
-        protocol = protocol == 'https:' ? 'wss://' : 'ws://';
+        protocol = protocol === 'https:' ? 'wss://' : 'ws://';
         path = pathroot ? '/' + path : window.location.pathname + path;
         return protocol + host + path + 'ws';
     }

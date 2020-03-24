@@ -100,7 +100,7 @@ class CommentsContentView extends ListContentView {
         this.editorNew.onsubmit = (editor) => {
             var content = editor.content;
             editor.content = '';
-            if (content == '') return;
+            if (content === '') return;
             this.comments.post(content);
         };
         this.refreshBtn.onclick = () => {
@@ -222,7 +222,7 @@ class CommentEditor extends View {
     }
     postCreateDom() {
         this.domcontent.addEventListener('keydown', (ev) => {
-            if (ev.ctrlKey && ev.keyCode == 13) {
+            if (ev.ctrlKey && ev.keyCode === 13) {
                 this.onsubmit(this);
             }
         });

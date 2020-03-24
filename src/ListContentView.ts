@@ -124,13 +124,13 @@ export class ListContentView extends ContentView {
 
     updateView() {
         if (!this.rendered) return;
-        if (this.listView.length == 0) {
+        if (this.listView.length === 0) {
             if (!this.loadingIndicator) {
                 this.emptyIndicator = this.emptyIndicator || new LoadingIndicator({ state: 'normal', content: I`(Empty)` });
                 this.useLoadingIndicator(this.emptyIndicator);
             }
         } else {
-            if (this.emptyIndicator && this.loadingIndicator == this.emptyIndicator) {
+            if (this.emptyIndicator && this.loadingIndicator === this.emptyIndicator) {
                 this.useLoadingIndicator(null);
             }
         }

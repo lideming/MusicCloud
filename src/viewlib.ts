@@ -81,7 +81,7 @@ export class View implements IDOM {
     }
 
     handleKeyDown(e: KeyboardEvent, onactive: Action) {
-        if (e.code == 'Enter') {
+        if (e.code === 'Enter') {
             onactive();
             e.preventDefault();
         }
@@ -222,7 +222,7 @@ export abstract class ListViewItem extends View implements ISelectable {
             this.listview?.onItemClicked?.(this);
         });
         this.dom.addEventListener('keydown', (ev) => {
-            if (ev.code == 'Enter') {
+            if (ev.code === 'Enter') {
                 if (ev.altKey) {
                     const rect = this.dom.getBoundingClientRect();
                     const mouseev = new MouseEvent('contextmenu', {
@@ -235,8 +235,8 @@ export abstract class ListViewItem extends View implements ISelectable {
                     this.listview?.onItemClicked?.(this);
                 }
                 ev.preventDefault();
-            } else if (this.listview && (ev.code == 'ArrowUp' || ev.code == 'ArrowDown')) {
-                var offset = ev.code == 'ArrowUp' ? -1 : 1;
+            } else if (this.listview && (ev.code === 'ArrowUp' || ev.code === 'ArrowDown')) {
+                var offset = ev.code === 'ArrowUp' ? -1 : 1;
                 var item = this.listview.get(this.position + offset);
                 if (item) {
                     item.dom.focus();
@@ -423,7 +423,7 @@ export class SelectionHelper<TItem extends ISelectable> {
     _enabled: boolean = false;
     get enabled() { return this._enabled; }
     set enabled(val) {
-        if (!!val == !!this._enabled) return;
+        if (!!val === !!this._enabled) return;
         this._enabled = val;
         while (this.selectedItems.length)
             this.toggleItemSelection(this.selectedItems[0], false);
@@ -551,7 +551,7 @@ export class LoadingIndicator extends View {
     get state() { return this._status; }
     set state(val: LoadingIndicatorState) {
         this._status = val;
-        ['running', 'error', 'normal'].forEach(x => this.toggleClass(x, val == x));
+        ['running', 'error', 'normal'].forEach(x => this.toggleClass(x, val === x));
     }
     private _text: string;
     private _textdom: HTMLElement;
@@ -639,7 +639,7 @@ export class EditableHelper {
         };
         var events = [
             utils.addEvent(input, 'keydown', (evv) => {
-                if (evv.keyCode == 13) {
+                if (evv.code === 'Enter') {
                     stopEdit();
                     evv.preventDefault();
                 }
@@ -757,7 +757,7 @@ export class ContextMenu extends ListView {
             !this.dom.contains(e.relatedTarget as HTMLElement) && this.close();
         };
         var onkeydown = (e: KeyboardEvent) => {
-            if (e.key == 'Escape') {
+            if (e.code === 'Escape') {
                 e.preventDefault();
                 this.close();
             }
@@ -855,10 +855,10 @@ export class Dialog extends View {
             }
         });
         this.overlay.dom.addEventListener('keydown', (ev) => {
-            if (this.allowClose && ev.keyCode == 27) { // ESC
+            if (this.allowClose && ev.keyCode === 27) { // ESC
                 ev.preventDefault();
                 this.close();
-            } else if (ev.target === this.dom && ev.key == 'Tab' && ev.shiftKey) {
+            } else if (ev.target === this.dom && ev.code === 'Tab' && ev.shiftKey) {
                 ev.preventDefault();
                 let tabables = this.dom.querySelectorAll('a, [tabindex]');
                 if (tabables.length >= 2 && tabables[tabables.length - 2]['focus']) {
@@ -873,7 +873,7 @@ export class Dialog extends View {
             let s: { x: number; y: number; };
             let sPage: { x: number; y: number; };
             utils.listenPointerEvents(this.domheader, (e) => {
-                if (e.action == 'down') {
+                if (e.action === 'down') {
                     if (e.ev.target !== this.domheader && e.ev.target !== this.btnTitle.dom) return;
                     e.ev.preventDefault();
                     s = this.getOffset();
@@ -882,7 +882,7 @@ export class Dialog extends View {
                         y: e.point.pageY
                     };
                     return 'track';
-                } else if (e.action == 'move') {
+                } else if (e.action === 'move') {
                     e.ev.preventDefault();
                     const rect = this.overlay.dom.getBoundingClientRect();
                     const pageX = utils.numLimit(e.point.pageX, rect.left, rect.right);

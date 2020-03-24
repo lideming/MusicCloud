@@ -291,7 +291,7 @@ class CommentsContentView extends ListContentView_1.ListContentView {
 		this.editorNew.onsubmit = (editor) => {
 			var content = editor.content;
 			editor.content = '';
-			if (content == '')
+			if (content === '')
 				return;
 			this.comments.post(content);
 		};
@@ -409,7 +409,7 @@ class CommentEditor extends viewlib_1.View {
 	}
 	postCreateDom() {
 		this.domcontent.addEventListener('keydown', (ev) => {
-			if (ev.ctrlKey && ev.keyCode == 13) {
+			if (ev.ctrlKey && ev.keyCode === 13) {
 				this.onsubmit(this);
 			}
 		});
@@ -481,7 +481,7 @@ class I18n {
 		console.log('i18n elements rendering');
 		elements.forEach(x => {
 			for (const node of x.childNodes) {
-				if (node.nodeType == Node.TEXT_NODE) {
+				if (node.nodeType === Node.TEXT_NODE) {
 					// console.log('node', node);
 					var r = this.get2(node.beforeI18n || node.textContent);
 					if (r) {
@@ -526,7 +526,7 @@ class I18n {
 exports.I18n = I18n;
 exports.i18n = new I18n();
 function I(literals, ...placeholders) {
-	if (placeholders.length == 0) {
+	if (placeholders.length === 0) {
 		return exports.i18n.get(literals[0]);
 	}
 	// Generate format string from template string:
@@ -786,14 +786,14 @@ class ListContentView extends UI_1.ContentView {
 	updateView() {
 		if (!this.rendered)
 			return;
-		if (this.listView.length == 0) {
+		if (this.listView.length === 0) {
 			if (!this.loadingIndicator) {
 				this.emptyIndicator = this.emptyIndicator || new viewlib_1.LoadingIndicator({ state: 'normal', content: utils_1.I `(Empty)` });
 				this.useLoadingIndicator(this.emptyIndicator);
 			}
 		}
 		else {
-			if (this.emptyIndicator && this.loadingIndicator == this.emptyIndicator) {
+			if (this.emptyIndicator && this.loadingIndicator === this.emptyIndicator) {
 				this.useLoadingIndicator(null);
 			}
 		}
@@ -980,7 +980,7 @@ class ListIndex {
 		return list;
 	}
 	getViewItem(id) {
-		return this.listView.find(lvi => lvi.listInfo.id == id);
+		return this.listView.find(lvi => lvi.listInfo.id === id);
 	}
 	showTracklist(id) {
 		Router_1.router.nav(['list', id.toString()]);
@@ -1020,7 +1020,7 @@ class ListIndex {
 			var id = this.nextId--;
 			var list = {
 				id,
-				name: utils_1.utils.createName((x) => x ? utils_1.I `New Playlist (${x + 1})` : utils_1.I `New Playlist`, (x) => !!this.listView.find((l) => l.listInfo.name == x))
+				name: utils_1.utils.createName((x) => x ? utils_1.I `New Playlist (${x + 1})` : utils_1.I `New Playlist`, (x) => !!this.listView.find((l) => l.listInfo.name === x))
 			};
 			this.addListInfo(list);
 			var listview = this.getList(id);
@@ -1148,7 +1148,7 @@ class Lexer {
 		var begin = this.cur;
 		var cur = this.cur;
 		try {
-			if (cur == str.length)
+			if (cur === str.length)
 				return new Token(7 /* eof */, 'eof', cur);
 			while (true) {
 				var ch = str.charCodeAt(cur);
@@ -1221,7 +1221,7 @@ var TokenTypeEnum;
 class Token {
 	constructor(type, val, pos) {
 		this.type = type;
-		this.val = typeof val == 'number' ? String.fromCharCode(val) : val;
+		this.val = typeof val === 'number' ? String.fromCharCode(val) : val;
 		this.pos = pos;
 	}
 	toString() {
@@ -1294,13 +1294,13 @@ class Parser {
 						timeStamp = ts;
 						if (ts.time != -1) {
 							curTime = ts.time;
-							if (startTime == null)
+							if (startTime === null)
 								startTime = ts.time;
 						}
 					}
 					continue;
 				}
-				if (text == null)
+				if (text === null)
 					continue;
 				if (lex.tryExpectSeq([2 /* tagEnd */, 3 /* bracketBegin */])) {
 					lex.consume();
@@ -1458,7 +1458,7 @@ function serialize(lyrics) {
 							str += '/' + s.timeStamp.beatsDiv;
 						str += ']';
 					}
-					else if (s.timeStamp.time == -1) {
+					else if (s.timeStamp.time === -1) {
 						str += '[]';
 					}
 					else {
@@ -1617,7 +1617,7 @@ class LyricsView extends viewlib_1.View {
 		var line = this.getLineByTime(time, prev);
 		line === null || line === void 0 ? void 0 : line.setCurrentTime(time);
 		this.curLine.set(line);
-		if (scroll && line && (prev !== line || scroll == 'force')) {
+		if (scroll && line && (prev !== line || scroll === 'force')) {
 			line.dom.scrollIntoView({
 				behavior: scroll === 'smooth' ? 'smooth' : undefined,
 				block: 'center'
@@ -1796,7 +1796,7 @@ exports.msgcli = new class {
 		var [_, _, protocol, _, host, pathroot, path] = match;
 		protocol = protocol || window.location.protocol;
 		host = host || window.location.host;
-		protocol = protocol == 'https:' ? 'wss://' : 'ws://';
+		protocol = protocol === 'https:' ? 'wss://' : 'ws://';
 		path = pathroot ? '/' + path : window.location.pathname + path;
 		return protocol + host + path + 'ws';
 	}
@@ -2430,7 +2430,7 @@ class SearchBar extends viewlib_1.View {
 	postCreateDom() {
 		super.postCreateDom();
 		this.input.dom.addEventListener('keydown', (ev) => {
-			if (ev.keyCode == 13) {
+			if (ev.code === 'Enter') {
 				ev.preventDefault();
 				this.onSearch.invoke();
 			}
@@ -2462,7 +2462,7 @@ class SettingsDialog extends viewlib_1.Dialog {
 		this.reloadShown = false;
 		this.addContent(this.btnSwitchTheme);
 		this.btnSwitchTheme.onclick = () => {
-			UI_1.ui.theme.set((UI_1.ui.theme.current == 'light') ? 'dark' : 'light');
+			UI_1.ui.theme.set((UI_1.ui.theme.current === 'light') ? 'dark' : 'light');
 			this.updateDom();
 		};
 		this.addContent(this.btnSwitchLang);
@@ -2623,7 +2623,7 @@ class TrackDialog extends viewlib_1.Dialog {
 			LyricsEdit_1.lyricsEdit.startEdit(this.track);
 		});
 		this.dom.addEventListener('keydown', (ev) => {
-			if (ev.code == 'Enter'
+			if (ev.code === 'Enter'
 				&& (ev.ctrlKey || ev.target !== this.inputLyrics.dominput)) {
 				ev.preventDefault();
 				this.save();
@@ -2877,10 +2877,10 @@ class TrackList {
 			position = this.tracks.findIndex(x => x.id === track.id);
 		if (position == null || position < 0)
 			return null;
-		if (loopMode == 'list-seq') {
+		if (loopMode === 'list-seq') {
 			return (_d = this.tracks[position + offset]) !== null && _d !== void 0 ? _d : null;
 		}
-		else if (loopMode == 'list-loop') {
+		else if (loopMode === 'list-loop') {
 			return (_e = this.tracks[utils_1.utils.mod(position + offset, this.tracks.length)]) !== null && _e !== void 0 ? _e : null;
 		}
 		else if (loopMode == 'track-loop') {
@@ -3272,7 +3272,7 @@ exports.ui = new class {
 							utils_1.utils.toggleClass(document.body, 'changing-theme', true);
 						utils_1.utils.toggleClass(document.body, 'dark', theme === 'dark');
 						var meta = document.getElementById('meta-theme-color');
-						meta.content = theme == 'dark' ? 'black' : '';
+						meta.content = theme === 'dark' ? 'black' : '';
 						if (this.rendered)
 							this.timer.timeout(500);
 					}
@@ -3330,15 +3330,15 @@ exports.ui = new class {
 			init() {
 				var bar = this.container;
 				bar.addEventListener('transitionstart', (e) => {
-					if (e.target === bar && e.propertyName == 'transform')
+					if (e.target === bar && e.propertyName === 'transform')
 						this.inTransition = true;
 				});
 				bar.addEventListener('transitionend', (e) => {
-					if (e.target === bar && e.propertyName == 'transform')
+					if (e.target === bar && e.propertyName === 'transform')
 						this.inTransition = false;
 				});
 				bar.addEventListener('transitioncancel', (e) => {
-					if (e.target === bar && e.propertyName == 'transform')
+					if (e.target === bar && e.propertyName === 'transform')
 						this.inTransition = false;
 				});
 				bar.addEventListener('mouseenter', () => {
@@ -3434,14 +3434,14 @@ exports.ui = new class {
 				utils_1.utils.listenPointerEvents(this.progbar, (e) => {
 					e.ev.preventDefault();
 					if (e.action != 'move') {
-						utils_1.utils.toggleClass(this.progbar, 'btn-down', e.action == 'down');
+						utils_1.utils.toggleClass(this.progbar, 'btn-down', e.action === 'down');
 					}
 					if (exports.ui.bottomBar.shown && !exports.ui.bottomBar.inTransition)
-						if ((e.type === 'mouse' && e.ev.buttons == 1)
+						if ((e.type === 'mouse' && e.ev.buttons === 1)
 							|| e.type === 'touch') {
 							call(e.point.pageX - this.progbar.getBoundingClientRect().left);
 						}
-					if (e.action == 'down')
+					if (e.action === 'down')
 						return 'track';
 				});
 			}
@@ -3503,7 +3503,7 @@ exports.ui = new class {
 				this.toggleFloat(width < 800);
 			}
 			toggleFloat(float) {
-				if (float !== undefined && !!float == this._float)
+				if (float !== undefined && !!float === this._float)
 					return;
 				this._float = utils_1.utils.toggleClass(document.body, 'float-sidebar', float);
 				if (this._float) {
@@ -3555,15 +3555,15 @@ exports.ui = new class {
 				var username = (_b = (_a = User_1.user.pendingInfo) === null || _a === void 0 ? void 0 : _a.username) !== null && _b !== void 0 ? _b : User_1.user.info.username;
 				if (username) {
 					text = username;
-					if (User_1.user.state == 'logging')
+					if (User_1.user.state === 'logging')
 						text += I18n_1.I ` (logging in...)`;
-					if (User_1.user.state == 'error')
+					if (User_1.user.state === 'error')
 						text += I18n_1.I ` (error!)`;
-					if (User_1.user.state == 'none')
+					if (User_1.user.state === 'none')
 						text += I18n_1.I ` (not logged in)`;
 				}
 				else {
-					if (User_1.user.state == 'logging')
+					if (User_1.user.state === 'logging')
 						text = I18n_1.I `(logging...)`;
 					else
 						text = I18n_1.I `Guest (click to login)`;
@@ -3646,7 +3646,7 @@ exports.ui = new class {
 			var files = ev.dataTransfer.files;
 			if (files.length) {
 				new viewlib_1.MessageBox().setTitle(I18n_1.I `Question`)
-					.addText(files.length == 1
+					.addText(files.length === 1
 					? I18n_1.I `Did you mean to upload 1 file?`
 					: I18n_1.I `Did you mean to upload ${files.length} files?`)
 					.addResultBtns(['no', 'yes'])
@@ -3709,10 +3709,10 @@ class VolumeButton extends ProgressButton {
 		});
 		var startX;
 		utils_1.utils.listenPointerEvents(this.dom, (e) => {
-			if (e.type == 'mouse' && e.action == 'down' && e.ev.buttons != 1)
+			if (e.type === 'mouse' && e.action === 'down' && e.ev.buttons != 1)
 				return;
 			e.ev.preventDefault();
-			if (e.action == 'down') {
+			if (e.action === 'down') {
 				startX = e.point.pageX;
 				this.dom.classList.add('btn-down');
 				this.fill.dom.style.transition = 'none';
@@ -3811,7 +3811,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
 				this.uploadArea = new UploadArea({ onfile: (file) => exports.uploads.uploadFile(file) });
 				this.dom.appendView(this.uploadArea);
 				this.trackActionHandler.onTrackRemove = (items) => {
-					if (items.length == 1) {
+					if (items.length === 1) {
 						this.removeTrack(items[0]);
 					}
 					else {
@@ -4112,7 +4112,7 @@ class UploadViewItem extends TrackList_1.TrackViewItem {
 			else {
 				this.domstate.textContent = I18n_1.i18n.get('uploads_' + newState);
 			}
-			this.dragging = newState == 'done';
+			this.dragging = newState === 'done';
 		}
 	}
 }
@@ -4275,7 +4275,7 @@ exports.user = new class User {
 				catch (err) {
 					if (this.state !== 'logged')
 						this.setState('error');
-					if (err.message == 'user_not_found')
+					if (err.message === 'user_not_found')
 						throw new Error(utils_1.I `Username or password is not correct.`);
 					throw err;
 				}
@@ -4298,7 +4298,7 @@ exports.user = new class User {
 				});
 				if (resp.error) {
 					this.setState('error');
-					if (resp.error == 'dup_user')
+					if (resp.error === 'dup_user')
 						throw new Error(utils_1.I `A user with the same username exists`);
 					throw new Error(resp.error);
 				}
@@ -4376,9 +4376,9 @@ exports.user = new class User {
 	waitLogin(throwOnFail) {
 		return __awaiter(this, void 0, void 0, function* () {
 			do {
-				if (this.state == 'logged')
+				if (this.state === 'logged')
 					return true;
-				if (this.state == 'logging') {
+				if (this.state === 'logging') {
 					try {
 						yield this.loggingin;
 						if (this.state != 'logged')
@@ -4488,7 +4488,7 @@ class LoginDialog extends viewlib_1.Dialog {
 			child: [this.viewStatus, this.btn]
 		}));
 		dig.dom.addEventListener('keydown', (ev) => {
-			if (ev.keyCode == 13) { // Enter
+			if (ev.code === 'Enter') {
 				this.btnClicked();
 				ev.preventDefault();
 			}
@@ -4810,7 +4810,7 @@ exports.utils = new class Utils {
 	}
 	listenPointerEvents(element, callback) {
 		element.addEventListener('mousedown', function (e) {
-			if (callback({ type: 'mouse', ev: e, point: e, action: 'down' }) == 'track') {
+			if (callback({ type: 'mouse', ev: e, point: e, action: 'down' }) === 'track') {
 				var mousemove = function (e) {
 					callback({ type: 'mouse', ev: e, point: e, action: 'move' });
 				};
@@ -4830,14 +4830,14 @@ exports.utils = new class Utils {
 				type: 'touch', touch: 'start', ev: e, point: ct,
 				action: touchDown ? 'move' : 'down'
 			});
-			if (!touchDown && ret == 'track') {
+			if (!touchDown && ret === 'track') {
 				touchDown = true;
 				var touchmove = function (e) {
 					var ct = e.changedTouches[0];
 					callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
 				};
 				var touchend = function (e) {
-					if (e.touches.length == 0) {
+					if (e.touches.length === 0) {
 						touchDown = false;
 						element.removeEventListener('touchmove', touchmove);
 						element.removeEventListener('touchend', touchend);
@@ -5025,10 +5025,10 @@ exports.utils.buildDOM = (() => {
 		while (match = reg.exec(tag)) {
 			var val = match[0];
 			var ch = val[0];
-			if (ch == '.') {
+			if (ch === '.') {
 				ele.classList.add(val.substr(1));
 			}
-			else if (ch == '#') {
+			else if (ch === '#') {
 				ele.id = val.substr(1);
 			}
 			else {
@@ -5055,7 +5055,7 @@ exports.utils.buildDOM = (() => {
 		for (var key in obj) {
 			if (obj.hasOwnProperty(key)) {
 				var val = obj[key];
-				if (key == 'child') {
+				if (key === 'child') {
 					if (val instanceof Array) {
 						val.forEach(function (x) {
 							node.appendChild(buildDomCore(x, ttl, ctx));
@@ -5096,7 +5096,7 @@ exports.utils.buildDOM = (() => {
 class SettingItem {
 	constructor(key, type, initial) {
 		this.key = key;
-		type = this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+		type = this.type = typeof type === 'string' ? SettingItem.types[type] : type;
 		if (!type || !type.serialize || !type.deserialize)
 			throw new Error("invalid 'type' arugment");
 		this.readFromStorage(initial);
@@ -5159,7 +5159,7 @@ class SettingItem {
 	;
 	loop(arr) {
 		var curData = this.data;
-		var oldIndex = arr.findIndex(function (x) { return x == curData; });
+		var oldIndex = arr.findIndex(function (x) { return x === curData; });
 		var newData = arr[(oldIndex + 1) % arr.length];
 		this.set(newData);
 	}
@@ -5169,7 +5169,7 @@ exports.SettingItem = SettingItem;
 SettingItem.types = {
 	bool: {
 		serialize: function (data) { return data ? 'true' : 'false'; },
-		deserialize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
+		deserialize: function (str) { return str === 'true' ? true : str === 'false' ? false : undefined; }
 	},
 	str: {
 		serialize: function (x) { return x; },
@@ -5222,7 +5222,7 @@ class Semaphore {
 		exports.utils.objectApply(this, init);
 	}
 	enter() {
-		if (this.runningCount == this.maxCount) {
+		if (this.runningCount === this.maxCount) {
 			var resolve;
 			var prom = new Promise((res) => { resolve = res; });
 			this.queue.push(resolve);
@@ -5234,7 +5234,7 @@ class Semaphore {
 		}
 	}
 	exit() {
-		if (this.runningCount == this.maxCount && this.queue.length) {
+		if (this.runningCount === this.maxCount && this.queue.length) {
 			try {
 				this.queue.shift()();
 			}
@@ -5422,7 +5422,7 @@ class View {
 		this._onactive = val;
 	}
 	handleKeyDown(e, onactive) {
-		if (e.code == 'Enter') {
+		if (e.code === 'Enter') {
 			onactive();
 			e.preventDefault();
 		}
@@ -5563,7 +5563,7 @@ class ListViewItem extends View {
 		});
 		this.dom.addEventListener('keydown', (ev) => {
 			var _a, _b, _c, _d, _e, _f;
-			if (ev.code == 'Enter') {
+			if (ev.code === 'Enter') {
 				if (ev.altKey) {
 					const rect = this.dom.getBoundingClientRect();
 					const mouseev = new MouseEvent('contextmenu', {
@@ -5579,8 +5579,8 @@ class ListViewItem extends View {
 				}
 				ev.preventDefault();
 			}
-			else if (this.listview && (ev.code == 'ArrowUp' || ev.code == 'ArrowDown')) {
-				var offset = ev.code == 'ArrowUp' ? -1 : 1;
+			else if (this.listview && (ev.code === 'ArrowUp' || ev.code === 'ArrowDown')) {
+				var offset = ev.code === 'ArrowUp' ? -1 : 1;
 				var item = this.listview.get(this.position + offset);
 				if (item) {
 					item.dom.focus();
@@ -5768,7 +5768,7 @@ class SelectionHelper {
 	}
 	get enabled() { return this._enabled; }
 	set enabled(val) {
-		if (!!val == !!this._enabled)
+		if (!!val === !!this._enabled)
 			return;
 		this._enabled = val;
 		while (this.selectedItems.length)
@@ -5892,7 +5892,7 @@ class LoadingIndicator extends View {
 	get state() { return this._status; }
 	set state(val) {
 		this._status = val;
-		['running', 'error', 'normal'].forEach(x => this.toggleClass(x, val == x));
+		['running', 'error', 'normal'].forEach(x => this.toggleClass(x, val === x));
 	}
 	get content() { return this._text; }
 	set content(val) { this._text = val; this.ensureDom(); this._textdom.textContent = val; }
@@ -5980,7 +5980,7 @@ class EditableHelper {
 		};
 		var events = [
 			utils_1.utils.addEvent(input, 'keydown', (evv) => {
-				if (evv.keyCode == 13) {
+				if (evv.code === 'Enter') {
 					stopEdit();
 					evv.preventDefault();
 				}
@@ -6102,7 +6102,7 @@ class ContextMenu extends ListView {
 			!this.dom.contains(e.relatedTarget) && this.close();
 		};
 		var onkeydown = (e) => {
-			if (e.key == 'Escape') {
+			if (e.code === 'Escape') {
 				e.preventDefault();
 				this.close();
 			}
@@ -6193,11 +6193,11 @@ class Dialog extends View {
 			}
 		});
 		this.overlay.dom.addEventListener('keydown', (ev) => {
-			if (this.allowClose && ev.keyCode == 27) { // ESC
+			if (this.allowClose && ev.keyCode === 27) { // ESC
 				ev.preventDefault();
 				this.close();
 			}
-			else if (ev.target === this.dom && ev.key == 'Tab' && ev.shiftKey) {
+			else if (ev.target === this.dom && ev.code === 'Tab' && ev.shiftKey) {
 				ev.preventDefault();
 				let tabables = this.dom.querySelectorAll('a, [tabindex]');
 				if (tabables.length >= 2 && tabables[tabables.length - 2]['focus']) {
@@ -6211,7 +6211,7 @@ class Dialog extends View {
 			let s;
 			let sPage;
 			utils_1.utils.listenPointerEvents(this.domheader, (e) => {
-				if (e.action == 'down') {
+				if (e.action === 'down') {
 					if (e.ev.target !== this.domheader && e.ev.target !== this.btnTitle.dom)
 						return;
 					e.ev.preventDefault();
@@ -6222,7 +6222,7 @@ class Dialog extends View {
 					};
 					return 'track';
 				}
-				else if (e.action == 'move') {
+				else if (e.action === 'move') {
 					e.ev.preventDefault();
 					const rect = this.overlay.dom.getBoundingClientRect();
 					const pageX = utils_1.utils.numLimit(e.point.pageX, rect.left, rect.right);

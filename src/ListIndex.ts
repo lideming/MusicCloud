@@ -146,7 +146,7 @@ export class ListIndex {
         return list;
     }
     getViewItem(id: number) {
-        return this.listView.find(lvi => lvi.listInfo.id == id);
+        return this.listView.find(lvi => lvi.listInfo.id === id);
     }
     showTracklist(id: number) {
         router.nav(['list', id.toString()]);
@@ -188,7 +188,7 @@ export class ListIndex {
             id,
             name: utils.createName(
                 (x) => x ? I`New Playlist (${x + 1})` : I`New Playlist`,
-                (x) => !!this.listView.find((l) => l.listInfo.name == x))
+                (x) => !!this.listView.find((l) => l.listInfo.name === x))
         };
         this.addListInfo(list);
         var listview = this.getList(id);

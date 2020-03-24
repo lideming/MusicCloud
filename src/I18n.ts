@@ -62,7 +62,7 @@ export class I18n {
         console.log('i18n elements rendering');
         elements.forEach(x => {
             for (const node of x.childNodes) {
-                if (node.nodeType == Node.TEXT_NODE) {
+                if (node.nodeType === Node.TEXT_NODE) {
                     // console.log('node', node);
                     var r = this.get2(node.beforeI18n || node.textContent);
                     if (r) {
@@ -108,7 +108,7 @@ export class I18n {
 export var i18n = new I18n();
 
 export function I(literals: TemplateStringsArray, ...placeholders: any[]) {
-    if (placeholders.length == 0) {
+    if (placeholders.length === 0) {
         return i18n.get(literals[0]);
     }
     // Generate format string from template string:

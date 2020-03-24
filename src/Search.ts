@@ -95,7 +95,7 @@ class SearchBar extends View {
     postCreateDom() {
         super.postCreateDom();
         this.input.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 13) {
+            if (ev.code === 'Enter') {
                 ev.preventDefault();
                 this.onSearch.invoke();
             }

@@ -82,7 +82,7 @@ export var user = new class User {
                     }) as Api.UserInfo;
             } catch (err) {
                 if (this.state !== 'logged') this.setState('error');
-                if (err.message == 'user_not_found')
+                if (err.message === 'user_not_found')
                     throw new Error(I`Username or password is not correct.`);
                 throw err;
             } finally {
@@ -102,7 +102,7 @@ export var user = new class User {
             });
             if (resp.error) {
                 this.setState('error');
-                if (resp.error == 'dup_user') throw new Error(I`A user with the same username exists`);
+                if (resp.error === 'dup_user') throw new Error(I`A user with the same username exists`);
                 throw new Error(resp.error);
             }
             await this.handleLoginResult(resp);
@@ -170,8 +170,8 @@ export var user = new class User {
      */
     async waitLogin(throwOnFail?: boolean): Promise<boolean> {
         do {
-            if (this.state == 'logged') return true;
-            if (this.state == 'logging') {
+            if (this.state === 'logged') return true;
+            if (this.state === 'logging') {
                 try {
                     await this.loggingin;
                     if (this.state as any != 'logged') break;
@@ -274,7 +274,7 @@ class LoginDialog extends Dialog {
             child: [this.viewStatus, this.btn]
         }) as any);
         dig.dom.addEventListener('keydown', (ev) => {
-            if (ev.keyCode == 13) { // Enter
+            if (ev.code === 'Enter') {
                 this.btnClicked();
                 ev.preventDefault();
             }

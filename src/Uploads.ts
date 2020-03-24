@@ -93,7 +93,7 @@ export var uploads = new class extends TrackList {
             this.dom.appendView(this.uploadArea);
 
             this.trackActionHandler.onTrackRemove = (items: UploadViewItem[]) => {
-                if (items.length == 1) {
+                if (items.length === 1) {
                     this.removeTrack(items[0]);
                 } else {
                     new MessageBox()
@@ -336,7 +336,7 @@ class UploadViewItem extends TrackViewItem {
             } else {
                 this.domstate.textContent = i18n.get('uploads_' + newState);
             }
-            this.dragging = newState == 'done';
+            this.dragging = newState === 'done';
         }
     }
 }

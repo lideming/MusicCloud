@@ -22,7 +22,7 @@ class SettingsDialog extends Dialog {
         super();
         this.addContent(this.btnSwitchTheme);
         this.btnSwitchTheme.onclick = () => {
-            ui.theme.set((ui.theme.current == 'light') ? 'dark' : 'light');
+            ui.theme.set((ui.theme.current === 'light') ? 'dark' : 'light');
             this.updateDom();
         };
         this.addContent(this.btnSwitchLang);

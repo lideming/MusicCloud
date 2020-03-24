@@ -70,7 +70,7 @@ class Lexer {
         var begin = this.cur;
         var cur = this.cur;
         try {
-            if (cur == str.length)
+            if (cur === str.length)
                 return new Token(T.eof, 'eof', cur);
             while (true) {
                 var ch = str.charCodeAt(cur);
@@ -154,7 +154,7 @@ class Token {
     pos: number;
     constructor(type: TokenType, val: string | number, pos: number) {
         this.type = type;
-        this.val = typeof val == 'number' ? String.fromCharCode(val) : val;
+        this.val = typeof val === 'number' ? String.fromCharCode(val) : val;
         this.pos = pos;
     }
     toString() {
@@ -227,12 +227,12 @@ export class Parser {
                         timeStamp = ts;
                         if (ts.time != -1) {
                             curTime = ts.time;
-                            if (startTime == null) startTime = ts.time;
+                            if (startTime === null) startTime = ts.time;
                         }
                     }
                     continue;
                 }
-                if (text == null) continue;
+                if (text === null) continue;
                 if (lex.tryExpectSeq([T.tagEnd, T.bracketBegin])) {
                     lex.consume(); lex.consume();
                     let ruby = lex.expectAndConsume(T.text).val;
@@ -402,7 +402,7 @@ export function serialize(lyrics: Lyrics) {
                         if (s.timeStamp.beatsDiv != 1)
                             str += '/' + s.timeStamp.beatsDiv;
                         str += ']';
-                    } else if (s.timeStamp.time == -1) {
+                    } else if (s.timeStamp.time === -1) {
                         str += '[]';
                     } else {
                         str += '[' + s.startTime.toFixed(3) + ']';

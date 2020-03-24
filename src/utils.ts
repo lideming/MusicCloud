@@ -137,7 +137,7 @@ export var utils = new class Utils {
 
     listenPointerEvents(element: HTMLElement, callback: (e: PtrEvent) => void | 'track') {
         element.addEventListener('mousedown', function (e) {
-            if (callback({ type: 'mouse', ev: e, point: e, action: 'down' }) == 'track') {
+            if (callback({ type: 'mouse', ev: e, point: e, action: 'down' }) === 'track') {
                 var mousemove = function (e: MouseEvent) {
                     callback({ type: 'mouse', ev: e, point: e, action: 'move' });
                 };
@@ -157,14 +157,14 @@ export var utils = new class Utils {
                 type: 'touch', touch: 'start', ev: e, point: ct,
                 action: touchDown ? 'move' : 'down'
             });
-            if (!touchDown && ret == 'track') {
+            if (!touchDown && ret === 'track') {
                 touchDown = true;
                 var touchmove = function (e: TouchEvent) {
                     var ct = e.changedTouches[0];
                     callback({ type: 'touch', touch: 'move', ev: e, point: ct, action: 'move' });
                 };
                 var touchend = function (e: TouchEvent) {
-                    if (e.touches.length == 0) {
+                    if (e.touches.length === 0) {
                         touchDown = false;
                         element.removeEventListener('touchmove', touchmove);
                         element.removeEventListener('touchend', touchend);
@@ -413,9 +413,9 @@ utils.buildDOM = (() => {
         while (match = reg.exec(tag)) {
             var val = match[0];
             var ch = val[0];
-            if (ch == '.') {
+            if (ch === '.') {
                 ele.classList.add(val.substr(1));
-            } else if (ch == '#') {
+            } else if (ch === '#') {
                 ele.id = val.substr(1);
             } else {
                 if (ele) throw new Error('unexpected multiple tags');
@@ -435,7 +435,7 @@ utils.buildDOM = (() => {
         for (var key in obj) {
             if (obj.hasOwnProperty(key)) {
                 var val = obj[key];
-                if (key == 'child') {
+                if (key === 'child') {
                     if (val instanceof Array) {
                         val.forEach(function (x) {
                             node.appendChild(buildDomCore(x, ttl, ctx));
@@ -478,7 +478,7 @@ export class SettingItem<T> {
     onRender: (obj: T) => void;
     constructor(key: string, type: 'bool' | 'str' | 'json' | SiType<T>, initial: T) {
         this.key = key;
-        type = this.type = typeof type == 'string' ? SettingItem.types[type] : type;
+        type = this.type = typeof type === 'string' ? SettingItem.types[type] : type;
         if (!type || !type.serialize || !type.deserialize) throw new Error("invalid 'type' arugment");
         this.readFromStorage(initial);
     }
@@ -530,7 +530,7 @@ export class SettingItem<T> {
     };
     loop(arr) {
         var curData = this.data;
-        var oldIndex = arr.findIndex(function (x) { return x == curData; });
+        var oldIndex = arr.findIndex(function (x) { return x === curData; });
         var newData = arr[(oldIndex + 1) % arr.length];
         this.set(newData);
     };
@@ -538,7 +538,7 @@ export class SettingItem<T> {
     static types = {
         bool: {
             serialize: function (data) { return data ? 'true' : 'false'; },
-            deserialize: function (str) { return str == 'true' ? true : str == 'false' ? false : undefined; }
+            deserialize: function (str) { return str === 'true' ? true : str === 'false' ? false : undefined; }
         },
         str: {
             serialize: function (x) { return x; },
@@ -597,7 +597,7 @@ export class Semaphore {
         utils.objectApply(this, init);
     }
     enter(): Promise<any> {
-        if (this.runningCount == this.maxCount) {
+        if (this.runningCount === this.maxCount) {
             var resolve: Action;
             var prom = new Promise((res) => { resolve = res; });
             this.queue.push(resolve);
@@ -608,7 +608,7 @@ export class Semaphore {
         }
     }
     exit() {
-        if (this.runningCount == this.maxCount && this.queue.length) {
+        if (this.runningCount === this.maxCount && this.queue.length) {
             try { this.queue.shift()(); } catch { }
         } else {
             this.runningCount--;

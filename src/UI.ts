@@ -140,7 +140,7 @@ export const ui = new class {
             var files = ev.dataTransfer.files;
             if (files.length) {
                 new MessageBox().setTitle(I`Question`)
-                    .addText(files.length == 1
+                    .addText(files.length === 1
                         ? I`Did you mean to upload 1 file?`
                         : I`Did you mean to upload ${files.length} files?`)
                     .addResultBtns(['no', 'yes'])
@@ -183,7 +183,7 @@ export const ui = new class {
                     if (this.rendered) utils.toggleClass(document.body, 'changing-theme', true);
                     utils.toggleClass(document.body, 'dark', theme === 'dark');
                     var meta = document.getElementById('meta-theme-color') as HTMLMetaElement;
-                    meta.content = theme == 'dark' ? 'black' : '';
+                    meta.content = theme === 'dark' ? 'black' : '';
                     if (this.rendered) this.timer.timeout(500);
                 }
                 this.rendered = true;
@@ -233,13 +233,13 @@ export const ui = new class {
         init() {
             var bar = this.container;
             bar.addEventListener('transitionstart', (e) => {
-                if (e.target === bar && e.propertyName == 'transform') this.inTransition = true;
+                if (e.target === bar && e.propertyName === 'transform') this.inTransition = true;
             });
             bar.addEventListener('transitionend', (e) => {
-                if (e.target === bar && e.propertyName == 'transform') this.inTransition = false;
+                if (e.target === bar && e.propertyName === 'transform') this.inTransition = false;
             });
             bar.addEventListener('transitioncancel', (e) => {
-                if (e.target === bar && e.propertyName == 'transform') this.inTransition = false;
+                if (e.target === bar && e.propertyName === 'transform') this.inTransition = false;
             });
             bar.addEventListener('mouseenter', () => {
                 this.hideTimer.tryCancel();
@@ -325,14 +325,14 @@ export const ui = new class {
             utils.listenPointerEvents(this.progbar, (e) => {
                 e.ev.preventDefault();
                 if (e.action != 'move') {
-                    utils.toggleClass(this.progbar, 'btn-down', e.action == 'down');
+                    utils.toggleClass(this.progbar, 'btn-down', e.action === 'down');
                 }
                 if (ui.bottomBar.shown && !ui.bottomBar.inTransition)
-                    if ((e.type === 'mouse' && e.ev.buttons == 1)
+                    if ((e.type === 'mouse' && e.ev.buttons === 1)
                         || e.type === 'touch') {
                         call(e.point.pageX - this.progbar.getBoundingClientRect().left);
                     }
-                if (e.action == 'down') return 'track';
+                if (e.action === 'down') return 'track';
             });
         }
     };
@@ -388,7 +388,7 @@ export const ui = new class {
             this.toggleFloat(width < 800);
         }
         toggleFloat(float?) {
-            if (float !== undefined && !!float == this._float) return;
+            if (float !== undefined && !!float === this._float) return;
             this._float = utils.toggleClass(document.body, 'float-sidebar', float);
             if (this._float) {
                 this.btnShow = this.btnShow || new SidebarToggle();
@@ -434,11 +434,11 @@ export const ui = new class {
             var username = user.pendingInfo?.username ?? user.info.username;
             if (username) {
                 text = username;
-                if (user.state == 'logging') text += I` (logging in...)`;
-                if (user.state == 'error') text += I` (error!)`;
-                if (user.state == 'none') text += I` (not logged in)`;
+                if (user.state === 'logging') text += I` (logging in...)`;
+                if (user.state === 'error') text += I` (error!)`;
+                if (user.state === 'none') text += I` (not logged in)`;
             } else {
-                if (user.state == 'logging') text = I`(logging...)`;
+                if (user.state === 'logging') text = I`(logging...)`;
                 else text = I`Guest (click to login)`;
             }
             this.loginState.updateWith({ text });
@@ -533,18 +533,18 @@ class VolumeButton extends ProgressButton {
         });
         var startX: number;
         utils.listenPointerEvents(this.dom, (e) => {
-            if (e.type == 'mouse' && e.action == 'down' && e.ev.buttons != 1) return;
+            if (e.type === 'mouse' && e.action === 'down' && e.ev.buttons != 1) return;
             e.ev.preventDefault();
-            if (e.action == 'down') {
+            if (e.action === 'down') {
                 startX = e.point.pageX;
                 this.dom.classList.add('btn-down');
                 this.fill.dom.style.transition = 'none';
                 return 'track';
-            } else if (e.action == 'move') {
+            } else if (e.action === 'move') {
                 var deltaX = e.point.pageX - startX;
                 startX = e.point.pageX;
                 this.onChanging.invoke(deltaX * 0.01);
-            } else if (e.action == 'up') {
+            } else if (e.action === 'up') {
                 this.dom.classList.remove('btn-down');
                 this.fill.dom.style.transition = '';
             }

@@ -170,11 +170,11 @@ export class TrackList {
         position = position ?? this.tracks.indexOf(track);
         if (position == null || position < 0) position = this.tracks.findIndex(x => x.id === track.id);
         if (position == null || position < 0) return null;
-        if (loopMode == 'list-seq') {
+        if (loopMode === 'list-seq') {
             return this.tracks[position + offset] ?? null;
-        } else if (loopMode == 'list-loop') {
+        } else if (loopMode === 'list-loop') {
             return this.tracks[utils.mod(position + offset, this.tracks.length)] ?? null;
-        } else if (loopMode == 'track-loop') {
+        } else if (loopMode === 'track-loop') {
             return track;
         } else {
             console.warn('unknown loopMode', loopMode);
