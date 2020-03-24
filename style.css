@@ -296,6 +296,7 @@ a.item {
 .clickable, .item {
     cursor: pointer;
     transition: transform .3s;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .item:hover, .dragover {
@@ -315,6 +316,10 @@ a.item {
 .clickable:active, .item:active {
     transition: transform .07s;
     transform: scale(.97);
+}
+
+.item:active {
+    background: var(--color-bg-dd);
 }
 
 .item.no-transform:active {

@@ -70,6 +70,7 @@ export class LyricsView extends View {
                 this.lines.addView(new LineView(l, this));
             }
         });
+        this.resize();
     }
     setCurrentTime(time: number, scroll?: boolean | 'smooth' | 'force') {
         if (!(time >= 0)) time = 0;
@@ -86,7 +87,13 @@ export class LyricsView extends View {
     }
     resize() {
         if (this.domCreated) {
-            this.lines.dom.style.margin = (this.dom.offsetHeight / 2) + 'px 0';
+            const boxHeight = this.dom.offsetHeight;
+            const contentHeight = this.lines.dom.scrollHeight;
+            if (contentHeight > boxHeight / 2) {
+                this.lines.dom.style.margin = (boxHeight / 2) + 'px 0';
+            } else {
+                this.lines.dom.style.margin = ((boxHeight - contentHeight) / 2) + 'px 0';
+            }
         }
     }
 
