@@ -330,7 +330,11 @@ export type FuncOrVal<T> = T | Func<T>;
 
 
 // BuildDOM types & implementation:
-export type BuildDomExpr = string | BuildDomNode | HTMLElement | Node;
+export type BuildDomExpr = string | BuildDomNode | HTMLElement | Node | IDOM;
+
+export interface IDOM {
+    getDOM(): HTMLElement;
+}
 
 export type BuildDomTag = string;
 
@@ -425,6 +429,7 @@ utils.buildDOM = (() => {
         if (ttl-- < 0) throw new Error('ran out of TTL');
         if (typeof (obj) === 'string') { return document.createTextNode(obj); }
         if (Node && obj instanceof Node) return obj as Node;
+        if (obj['getDOM']) return obj['getDOM']();
         var node = createElementFromTag((obj as BuildDomNode).tag);
         if (obj['_ctx']) ctx = BuildDOMCtx.EnsureCtx(obj['_ctx'], ctx);
         for (var key in obj) {

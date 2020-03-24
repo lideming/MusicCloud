@@ -87,8 +87,8 @@ class SearchBar extends View {
         return {
             tag: 'div.searchbar',
             child: [
-                this.input.dom,
-                this.btn.dom
+                this.input,
+                this.btn
             ]
         };
     }

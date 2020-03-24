@@ -56,7 +56,7 @@ class PlayingView extends ContentView {
         return {
             tag: 'div.playingview',
             child: [
-                this.header.dom,
+                this.header,
                 { tag: 'div.name', text: () => playerCore.track?.name },
                 { tag: 'div.artist', text: () => playerCore.track?.artist },
                 // {
@@ -65,7 +65,7 @@ class PlayingView extends ContentView {
                 //         { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
                 //     ]
                 // },
-                this.lyricsView.dom
+                this.lyricsView
             ]
         };
     }

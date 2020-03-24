@@ -1522,8 +1522,8 @@ class LyricsEditContentView extends UI_1.ContentView {
 		return {
 			tag: 'div.lyricsedit',
 			child: [
-				this.header.dom,
-				this.lyrics.dom
+				this.header,
+				this.lyrics
 			]
 		};
 	}
@@ -1548,7 +1548,7 @@ class LyricsView extends viewlib_1.View {
 		return {
 			tag: 'div.lyricsview',
 			child: [
-				this.lines.dom
+				this.lines
 			]
 		};
 	}
@@ -1990,7 +1990,7 @@ class PlayingView extends UI_1.ContentView {
 		return {
 			tag: 'div.playingview',
 			child: [
-				this.header.dom,
+				this.header,
 				{ tag: 'div.name', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.name; } },
 				{ tag: 'div.artist', text: () => { var _a; return (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.artist; } },
 				// {
@@ -1999,7 +1999,7 @@ class PlayingView extends UI_1.ContentView {
 				//		 { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
 				//	 ]
 				// },
-				this.lyricsView.dom
+				this.lyricsView
 			]
 		};
 	}
@@ -2414,8 +2414,8 @@ class SearchBar extends viewlib_1.View {
 		return {
 			tag: 'div.searchbar',
 			child: [
-				this.input.dom,
-				this.btn.dom
+				this.input,
+				this.btn
 			]
 		};
 	}
@@ -3207,7 +3207,7 @@ class ContentHeader extends viewlib_1.View {
 						this.updateDom();
 					})
 				},
-				this.actions.dom
+				this.actions
 			]
 		});
 		if (init)
@@ -3220,7 +3220,7 @@ class ContentHeader extends viewlib_1.View {
 		return {
 			tag: 'div.content-header',
 			child: [
-				this.titlebar.dom
+				this.titlebar
 			]
 		};
 	}
@@ -4475,7 +4475,7 @@ class LoginDialog extends viewlib_1.Dialog {
 		[this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
 		dig.addContent(utils_1.utils.buildDOM({
 			tag: 'div',
-			child: [this.viewStatus.dom, this.btn.dom]
+			child: [this.viewStatus, this.btn]
 		}));
 		dig.dom.addEventListener('keydown', (ev) => {
 			if (ev.keyCode == 13) { // Enter
@@ -5037,6 +5037,8 @@ exports.utils.buildDOM = (() => {
 		}
 		if (Node && obj instanceof Node)
 			return obj;
+		if (obj['getDOM'])
+			return obj['getDOM']();
 		var node = createElementFromTag(obj.tag);
 		if (obj['_ctx'])
 			ctx = BuildDOMCtx.EnsureCtx(obj['_ctx'], ctx);
@@ -5346,6 +5348,7 @@ class View {
 		if (dom)
 			this.domExprCreated(dom);
 	}
+	static getView(obj) { return obj instanceof View ? obj : new View(obj); }
 	get position() { return this._position; }
 	get domCreated() { return !!this._dom; }
 	get dom() {
@@ -6162,8 +6165,8 @@ class Dialog extends View {
 						{ tag: 'div', style: 'clear: both;' }
 					]
 				},
-				this.content.dom,
-				this.focusTrap.dom
+				this.content,
+				this.focusTrap
 			]
 		};
 	}
@@ -6240,7 +6243,7 @@ class Dialog extends View {
 		this.ensureDom();
 		if (replace)
 			this.content.removeAllView();
-		this.content.appendView(view instanceof View ? view : new View(view));
+		this.content.appendView(View.getView(view));
 	}
 	setOffset(x, y) {
 		this.dom.style.left = x ? x + 'px' : '';
@@ -6396,7 +6399,7 @@ class LabeledInput extends View {
 			tag: 'div.labeled-input',
 			child: [
 				{ tag: 'div.input-label', text: () => this.label },
-				this.input.dom
+				this.input
 			]
 		};
 	}

@@ -1,14 +1,14 @@
 // file: viewlib.ts
 
-import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode, Timer, BuildDOMCtx } from "./utils";
+import { BuildDomExpr, utils, Action, I, Callbacks, BuildDomNode, Timer, BuildDOMCtx, IDOM } from "./utils";
 import { i18n } from "./I18n";
 
-export type ViewArg = View | HTMLElement;
-
-export class View {
+export class View implements IDOM {
     constructor(dom?: BuildDomExpr) {
         if (dom) this.domExprCreated(dom);
     }
+
+    static getView(obj: IDOM) { return obj instanceof View ? obj : new View(obj); }
 
     public parentView?: ContainerView<View> = undefined;
     public _position?: number = undefined;
@@ -408,7 +408,7 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
         this.removeAll();
         utils.clearChildren(this.dom);
     }
-    ReplaceChild(dom: ViewArg) {
+    ReplaceChild(dom: IDOM) {
         this.clear();
         this.dom.appendChild(dom.getDOM());
     }
@@ -496,7 +496,7 @@ type SectionActionOptions = { text: string, onclick: Action; };
 
 export class Section extends View {
     titleDom: HTMLSpanElement;
-    constructor(arg?: { title?: string, content?: ViewArg, actions?: SectionActionOptions[]; }) {
+    constructor(arg?: { title?: string, content?: IDOM, actions?: SectionActionOptions[]; }) {
         super();
         this.ensureDom();
         if (arg) {
@@ -523,7 +523,7 @@ export class Section extends View {
     setTitle(text: string) {
         this.titleDom.textContent = text;
     }
-    setContent(view: ViewArg) {
+    setContent(view: IDOM) {
         var dom = this.dom;
         var firstChild = dom.firstChild;
         while (dom.lastChild !== firstChild) dom.removeChild(dom.lastChild);
@@ -837,8 +837,8 @@ export class Dialog extends View {
                         { tag: 'div', style: 'clear: both;' }
                     ]
                 },
-                this.content.dom,
-                this.focusTrap.dom
+                this.content,
+                this.focusTrap
             ]
         };
     }
@@ -909,10 +909,10 @@ export class Dialog extends View {
         this.ensureDom();
         this.domheader.insertBefore(btn.dom, this.domheader.lastChild);
     }
-    addContent(view: ViewArg, replace?: boolean) {
+    addContent(view: IDOM, replace?: boolean) {
         this.ensureDom();
         if (replace) this.content.removeAllView();
-        this.content.appendView(view instanceof View ? view : new View(view));
+        this.content.appendView(View.getView(view));
     }
     setOffset(x: number, y: number) {
         this.dom.style.left = x ? x + 'px' : '';
@@ -1067,7 +1067,7 @@ export class LabeledInput extends View {
             tag: 'div.labeled-input',
             child: [
                 { tag: 'div.input-label', text: () => this.label },
-                this.input.dom
+                this.input
             ]
         };
     }

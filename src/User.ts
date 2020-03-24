@@ -271,7 +271,7 @@ class LoginDialog extends Dialog {
         [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
         dig.addContent(utils.buildDOM({
             tag: 'div',
-            child: [this.viewStatus.dom, this.btn.dom]
+            child: [this.viewStatus, this.btn]
         }) as any);
         dig.dom.addEventListener('keydown', (ev) => {
             if (ev.keyCode == 13) { // Enter

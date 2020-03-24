@@ -44,8 +44,8 @@ class LyricsEditContentView extends ContentView {
         return {
             tag: 'div.lyricsedit',
             child: [
-                this.header.dom,
-                this.lyrics.dom
+                this.header,
+                this.lyrics
             ]
         };
     }

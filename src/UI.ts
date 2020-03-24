@@ -59,7 +59,7 @@ export class ContentHeader extends View {
         return {
             tag: 'div.content-header',
             child: [
-                this.titlebar.dom
+                this.titlebar
             ]
         };
     }
@@ -85,7 +85,7 @@ export class ContentHeader extends View {
                     this.updateDom();
                 }
             },
-            this.actions.dom
+            this.actions
         ]
     });
     updateDom() {

@@ -12,7 +12,7 @@ export class LyricsView extends View {
         return {
             tag: 'div.lyricsview',
             child: [
-                this.lines.dom
+                this.lines
             ]
         };
     }
