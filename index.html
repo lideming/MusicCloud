@@ -7,6 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta id="meta-theme-color" name="theme-color" content="">
     <title>Music Cloud</title>
     <!-- Preload style and script -->
     <style>
@@ -83,6 +84,7 @@
                 preload.update();
                 if (localStorage.getItem('mcloud-theme') === 'dark') {
                     document.body.classList.add('dark');
+                    document.getElementById('meta-theme-color').content = 'black';
                 }
             });
             var onerror = function () {

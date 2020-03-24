@@ -182,6 +182,8 @@ export const ui = new class {
                     this.current = theme;
                     if (this.rendered) utils.toggleClass(document.body, 'changing-theme', true);
                     utils.toggleClass(document.body, 'dark', theme === 'dark');
+                    var meta = document.getElementById('meta-theme-color') as HTMLMetaElement;
+                    meta.content = theme == 'dark' ? 'black' : '';
                     if (this.rendered) this.timer.timeout(500);
                 }
                 this.rendered = true;

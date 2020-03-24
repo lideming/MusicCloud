@@ -3263,6 +3263,8 @@ exports.ui = new class {
 						if (this.rendered)
 							utils_1.utils.toggleClass(document.body, 'changing-theme', true);
 						utils_1.utils.toggleClass(document.body, 'dark', theme === 'dark');
+						var meta = document.getElementById('meta-theme-color');
+						meta.content = theme == 'dark' ? 'black' : '';
 						if (this.rendered)
 							this.timer.timeout(500);
 					}
