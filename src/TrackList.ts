@@ -55,6 +55,7 @@ export class TrackList {
     addTrack(t: Api.Track, pos?: number) {
         var track: Track = this.addTrack_NoUpdating(t, pos);
         if (pos !== undefined && pos !== this.tracks.length - 1) this.updateTracksState();
+        this.contentView?.updateView();
         return track;
     }
     private addTrack_NoUpdating(t: Api.Track, pos: number) {
@@ -66,8 +67,7 @@ export class TrackList {
             }
         });
         utils.arrayInsert(this.tracks, track, pos);
-        if (this.contentView)
-            this.contentView.addItem(track, pos);
+        this.contentView?.addItem(track, pos, false);
         return track;
     }
 
@@ -265,7 +265,7 @@ export class TrackListView extends ListContentView {
         if (this.list.canEdit) lv.moveByDragging = true;
         lv.onItemMoved = () => this.list.updateTracksFromListView();
         lv.onItemClicked = (item) => playerCore.playTrack(item.track);
-        this.list.tracks.forEach(t => this.addItem(t));
+        this.list.tracks.forEach(t => this.addItem(t, undefined, false));
         this.updateItems();
         if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);
         this.updateView();
@@ -274,11 +274,11 @@ export class TrackListView extends ListContentView {
         // update active state of items
         this.trackChanged();
     }
-    addItem(t: Track, pos?: number) {
+    addItem(t: Track, pos?: number, updateView?: boolean) {
         var item = this.createViewItem(t);
         this.listView.add(item, pos);
         this.updateCurPlaying(item);
-        this.updateView();
+        if (updateView == null || updateView) this.updateView();
     }
     protected createViewItem(t: Track) {
         var view = new TrackViewItem(t);

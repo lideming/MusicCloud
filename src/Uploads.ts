@@ -164,9 +164,9 @@ export var uploads = new class extends TrackList {
             }
         }
     }(this);
-    private insertTrack(t: UploadTrack, pos = 0) {
+    private insertTrack(t: UploadTrack, pos = 0, updateview?: boolean) {
         this.tracks.splice(pos, 0, t);
-        if (this.view.rendered) this.view.addItem(t, pos);
+        if (this.view.rendered) this.view.addItem(t, pos, updateview);
     }
     remove(track: UploadTrack) {
         var pos = this.tracks.indexOf(track);
@@ -200,7 +200,7 @@ export var uploads = new class extends TrackList {
         const firstPos = doneTracks.length ? this.tracks.indexOf(doneTracks[0]) : 0;
         new class extends DataUpdatingHelper<UploadTrack, UploadTrack>{
             items = doneTracks;
-            addItem(data: UploadTrack, pos: number) { thiz.insertTrack(data, firstPos); }
+            addItem(data: UploadTrack, pos: number) { thiz.insertTrack(data, firstPos, false); }
             updateItem(item: UploadTrack, data: UploadTrack) { item.updateFromApiTrack(data.infoObj); }
             removeItem(item: UploadTrack) { item._upload.view?.remove(); }
         }().update(fetched);

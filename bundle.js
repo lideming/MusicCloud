@@ -2733,12 +2733,15 @@ class TrackList {
 		return this;
 	}
 	addTrack(t, pos) {
+		var _a;
 		var track = this.addTrack_NoUpdating(t, pos);
 		if (pos !== undefined && pos !== this.tracks.length - 1)
 			this.updateTracksState();
+		(_a = this.contentView) === null || _a === void 0 ? void 0 : _a.updateView();
 		return track;
 	}
 	addTrack_NoUpdating(t, pos) {
+		var _a;
 		var track = new Track_1.Track({
 			infoObj: t,
 			_bind: {
@@ -2747,8 +2750,7 @@ class TrackList {
 			}
 		});
 		utils_1.utils.arrayInsert(this.tracks, track, pos);
-		if (this.contentView)
-			this.contentView.addItem(track, pos);
+		(_a = this.contentView) === null || _a === void 0 ? void 0 : _a.addItem(track, pos, false);
 		return track;
 	}
 	loadEmpty() {
@@ -2883,7 +2885,7 @@ class TrackList {
 		else if (loopMode === 'list-loop') {
 			return (_e = this.tracks[utils_1.utils.mod(position + offset, this.tracks.length)]) !== null && _e !== void 0 ? _e : null;
 		}
-		else if (loopMode == 'track-loop') {
+		else if (loopMode === 'track-loop') {
 			return track;
 		}
 		else {
@@ -2978,7 +2980,7 @@ class TrackListView extends ListContentView_1.ListContentView {
 			lv.moveByDragging = true;
 		lv.onItemMoved = () => this.list.updateTracksFromListView();
 		lv.onItemClicked = (item) => PlayerCore_1.playerCore.playTrack(item.track);
-		this.list.tracks.forEach(t => this.addItem(t));
+		this.list.tracks.forEach(t => this.addItem(t, undefined, false));
 		this.updateItems();
 		if (this.list.loadIndicator)
 			this.useLoadingIndicator(this.list.loadIndicator);
@@ -2988,11 +2990,12 @@ class TrackListView extends ListContentView_1.ListContentView {
 		// update active state of items
 		this.trackChanged();
 	}
-	addItem(t, pos) {
+	addItem(t, pos, updateView) {
 		var item = this.createViewItem(t);
 		this.listView.add(item, pos);
 		this.updateCurPlaying(item);
-		this.updateView();
+		if (updateView == null || updateView)
+			this.updateView();
 	}
 	createViewItem(t) {
 		var view = new TrackViewItem(t);
@@ -3933,10 +3936,10 @@ exports.uploads = new class extends TrackList_1.TrackList {
 				this.remove(track);
 		});
 	}
-	insertTrack(t, pos = 0) {
+	insertTrack(t, pos = 0, updateview) {
 		this.tracks.splice(pos, 0, t);
 		if (this.view.rendered)
-			this.view.addItem(t, pos);
+			this.view.addItem(t, pos, updateview);
 	}
 	remove(track) {
 		var _a;
@@ -3977,7 +3980,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
 					super(...arguments);
 					this.items = doneTracks;
 				}
-				addItem(data, pos) { thiz.insertTrack(data, firstPos); }
+				addItem(data, pos) { thiz.insertTrack(data, firstPos, false); }
 				updateItem(item, data) { item.updateFromApiTrack(data.infoObj); }
 				removeItem(item) { var _a; (_a = item._upload.view) === null || _a === void 0 ? void 0 : _a.remove(); }
 			}().update(fetched);
