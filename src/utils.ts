@@ -345,6 +345,7 @@ export interface BuildDomNode {
     child?: BuildDomExpr[] | BuildDomExpr;
     text?: FuncOrVal<string>;
     hidden?: FuncOrVal<boolean>;
+    init?: Action<HTMLElement>;
     update?: Action<HTMLElement>;
     _ctx?: BuildDOMCtx | {};
     _key?: string;
@@ -455,10 +456,14 @@ utils.buildDOM = (() => {
                     ctx.addUpdateAction(['hidden', node, val]);
                 } else if (key === 'update' && typeof val === 'function') {
                     ctx.addUpdateAction(['update', node, val]);
+                } else if (key === 'init') {
+                    // no-op
                 } else {
                     node[key] = val;
                 }
             }
+            const init = obj['init'];
+            if (init) init(node);
         }
 
         return node;

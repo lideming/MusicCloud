@@ -86,8 +86,7 @@ export class TrackDialog extends Dialog {
             lyricsEdit.startEdit(this.track);
         });
         this.dom.addEventListener('keydown', (ev) => {
-            if (ev.code === 'Enter'
-                && (ev.ctrlKey || ev.target !== this.inputLyrics.dominput)) {
+            if (ev.code === 'Enter' && ev.ctrlKey) {
                 ev.preventDefault();
                 this.save();
             }

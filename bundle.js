@@ -2623,8 +2623,7 @@ class TrackDialog extends viewlib_1.Dialog {
 			LyricsEdit_1.lyricsEdit.startEdit(this.track);
 		});
 		this.dom.addEventListener('keydown', (ev) => {
-			if (ev.code === 'Enter'
-				&& (ev.ctrlKey || ev.target !== this.inputLyrics.dominput)) {
+			if (ev.code === 'Enter' && ev.ctrlKey) {
 				ev.preventDefault();
 				this.save();
 			}
@@ -3192,40 +3191,39 @@ class ContentHeader extends viewlib_1.View {
 		super();
 		this.titleEditable = false;
 		this.actions = new viewlib_1.ContainerView({ tag: 'div.actions' });
+		this.titleView = new viewlib_1.View({
+			tag: 'span.title', text: () => this.title,
+			update: (dom) => {
+				utils_1.utils.toggleClass(dom, 'editable', !!this.titleEditable);
+				if (this.titleEditable)
+					dom.title = I18n_1.I `Click to edit`;
+				else
+					dom.removeAttribute('title');
+				dom.tabIndex = this.titleEditable ? 0 : -1;
+			}
+		});
 		this.titlebar = new viewlib_1.View({
 			tag: 'div.titlebar.clearfix',
 			child: [
 				{ tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
-				{
-					tag: 'span.title', text: () => this.title, _key: 'title',
-					update: (domdict) => {
-						utils_1.utils.toggleClass(domdict, 'editable', !!this.titleEditable);
-						if (this.titleEditable)
-							domdict.title = I18n_1.I `Click to edit`;
-						else
-							domdict.removeAttribute('title');
-					},
-					onclick: (ev) => __awaiter(this, void 0, void 0, function* () {
-						if (!this.titleEditable)
-							return;
-						this.editHelper = this.editHelper || new viewlib_1.EditableHelper(this.domdict.title);
-						if (this.editHelper.editing)
-							return;
-						var newName = yield this.editHelper.startEditAsync();
-						if (newName !== this.editHelper.beforeEdit && newName != '') {
-							this.onTitleEdit(newName);
-						}
-						this.updateDom();
-					})
-				},
+				this.titleView,
 				this.actions
 			]
 		});
 		if (init)
 			utils_1.utils.objectApply(this, init);
-	}
-	get domdict() {
-		return this.domctx.dict;
+		this.titleView.onactive = () => __awaiter(this, void 0, void 0, function* () {
+			if (!this.titleEditable)
+				return;
+			this.editHelper = this.editHelper || new viewlib_1.EditableHelper(this.titleView.dom);
+			if (this.editHelper.editing)
+				return;
+			var newName = yield this.editHelper.startEditAsync();
+			if (newName !== this.editHelper.beforeEdit && newName != '') {
+				this.onTitleEdit(newName);
+			}
+			this.updateDom();
+		});
 	}
 	createDom() {
 		return {
@@ -3238,6 +3236,7 @@ class ContentHeader extends viewlib_1.View {
 	updateDom() {
 		super.updateDom();
 		this.titlebar.updateDom();
+		this.titleView.updateDom();
 	}
 }
 exports.ContentHeader = ContentHeader;
@@ -3721,12 +3720,12 @@ class VolumeButton extends ProgressButton {
 				this.fill.dom.style.transition = 'none';
 				return 'track';
 			}
-			else if (e.action == 'move') {
+			else if (e.action === 'move') {
 				var deltaX = e.point.pageX - startX;
 				startX = e.point.pageX;
 				this.onChanging.invoke(deltaX * 0.01);
 			}
-			else if (e.action == 'up') {
+			else if (e.action === 'up') {
 				this.dom.classList.remove('btn-down');
 				this.fill.dom.style.transition = '';
 			}
@@ -3974,7 +3973,9 @@ exports.uploads = new class extends TrackList_1.TrackList {
 			}
 			const thiz = this;
 			var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
-			const firstPos = doneTracks.length ? this.tracks.indexOf(doneTracks[0]) : 0;
+			var firstPos = this.tracks.findIndex(t => t._upload.state !== 'done');
+			if (firstPos === -1)
+				firstPos = 0;
 			new class extends utils_1.DataUpdatingHelper {
 				constructor() {
 					super(...arguments);
@@ -5085,10 +5086,16 @@ exports.utils.buildDOM = (() => {
 				else if (key === 'update' && typeof val === 'function') {
 					ctx.addUpdateAction(['update', node, val]);
 				}
+				else if (key === 'init') {
+					// no-op
+				}
 				else {
 					node[key] = val;
 				}
 			}
+			const init = obj['init'];
+			if (init)
+				init(node);
 		}
 		return node;
 	};

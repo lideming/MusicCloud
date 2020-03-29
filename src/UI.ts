@@ -46,14 +46,21 @@ export class ContentHeader extends View {
     title: string;
     titleEditable = false;
     editHelper: EditableHelper;
-    get domdict(): { catalog?: HTMLSpanElement; title?: HTMLSpanElement; } {
-        return this.domctx.dict;
-    }
     actions = new ContainerView({ tag: 'div.actions' });
     onTitleEdit: (title: string) => void;
     constructor(init?: Partial<ContentHeader>) {
         super();
         if (init) utils.objectApply(this, init);
+        this.titleView.onactive = async () => {
+            if (!this.titleEditable) return;
+            this.editHelper = this.editHelper || new EditableHelper(this.titleView.dom);
+            if (this.editHelper.editing) return;
+            var newName = await this.editHelper.startEditAsync();
+            if (newName !== this.editHelper.beforeEdit && newName != '') {
+                this.onTitleEdit(newName);
+            }
+            this.updateDom();
+        };
     }
     createDom(): BuildDomExpr {
         return {
@@ -63,34 +70,27 @@ export class ContentHeader extends View {
             ]
         };
     }
+    titleView = new View({
+        tag: 'span.title', text: () => this.title,
+        update: (dom) => {
+            utils.toggleClass(dom, 'editable', !!this.titleEditable);
+            if (this.titleEditable) dom.title = I`Click to edit`;
+            else dom.removeAttribute('title');
+            dom.tabIndex = this.titleEditable ? 0 : -1;
+        }
+    });
     titlebar = new View({
         tag: 'div.titlebar.clearfix',
         child: [
             { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
-            {
-                tag: 'span.title', text: () => this.title, _key: 'title',
-                update: (domdict) => {
-                    utils.toggleClass(domdict, 'editable', !!this.titleEditable);
-                    if (this.titleEditable) domdict.title = I`Click to edit`;
-                    else domdict.removeAttribute('title');
-                },
-                onclick: async (ev) => {
-                    if (!this.titleEditable) return;
-                    this.editHelper = this.editHelper || new EditableHelper(this.domdict.title);
-                    if (this.editHelper.editing) return;
-                    var newName = await this.editHelper.startEditAsync();
-                    if (newName !== this.editHelper.beforeEdit && newName != '') {
-                        this.onTitleEdit(newName);
-                    }
-                    this.updateDom();
-                }
-            },
+            this.titleView,
             this.actions
         ]
     });
     updateDom() {
         super.updateDom();
         this.titlebar.updateDom();
+        this.titleView.updateDom();
     }
 }
 

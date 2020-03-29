@@ -197,7 +197,8 @@ export var uploads = new class extends TrackList {
         }
         const thiz = this;
         var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
-        const firstPos = doneTracks.length ? this.tracks.indexOf(doneTracks[0]) : 0;
+        var firstPos = this.tracks.findIndex(t => t._upload.state !== 'done');
+        if (firstPos === -1) firstPos = 0;
         new class extends DataUpdatingHelper<UploadTrack, UploadTrack>{
             items = doneTracks;
             addItem(data: UploadTrack, pos: number) { thiz.insertTrack(data, firstPos, false); }
