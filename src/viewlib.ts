@@ -286,16 +286,16 @@ export abstract class ListViewItem extends View implements ISelectable {
     private enterctr = 0;
     private dragoverPlaceholder: HTMLElement;
     dragHandler(ev: DragEvent, type: string) {
-        var item = dragManager.currentItem;
-        var items = dragManager.currentArray;
-        var drop = type === 'drop';
+        const item = dragManager.currentItem;
+        let items = dragManager.currentArray;
+        const drop = type === 'drop';
+        const arg: DragArg<ListViewItem> = {
+            source: item, target: this,
+            sourceItems: items,
+            event: ev, drop: drop,
+            accept: false
+        };
         if (item instanceof ListViewItem) {
-            var arg: DragArg<ListViewItem> = {
-                source: item, target: this,
-                sourceItems: items,
-                event: ev, drop: drop,
-                accept: false
-            };
             if (this.listview?.moveByDragging && item.listview === this.listview) {
                 ev.preventDefault();
                 if (!drop) {
@@ -313,16 +313,16 @@ export abstract class ListViewItem extends View implements ISelectable {
                     }
                 }
             }
-            var onDragover = this.onDragover ?? this.listview?.onDragover;
-            if (!arg.accept && onDragover) {
-                onDragover(arg);
-                if (drop || arg.accept) ev.preventDefault();
-            }
-            var onContextMenu = this.onContextMenu ?? this.listview?.onContextMenu;
-            if (!arg.accept && item === this && onContextMenu) {
-                if (drop) onContextMenu(this, ev);
-                else ev.preventDefault();
-            }
+        }
+        const onDragover = this.onDragover ?? this.listview?.onDragover;
+        if (!arg.accept && onDragover) {
+            onDragover(arg);
+            if (drop || arg.accept) ev.preventDefault();
+        }
+        const onContextMenu = this.onContextMenu ?? this.listview?.onContextMenu;
+        if (!arg.accept && item === this && onContextMenu) {
+            if (drop) onContextMenu(this, ev);
+            else ev.preventDefault();
         }
         if (type === 'dragenter' || type === 'dragleave' || drop) {
             if (type === 'dragenter') {
@@ -372,7 +372,7 @@ export class ListView<T extends ListViewItem = ListViewItem> extends ContainerVi
 
     onItemMoved: (item: T, from: number) => void;
     /** 
-     * When an item from another list is dragover or drop
+     * When dragover or drop
      */
     onDragover: (arg: DragArg<T>) => void;
     onContextMenu: (item: ListViewItem, ev: MouseEvent) => void;

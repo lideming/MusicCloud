@@ -9,6 +9,7 @@ import { router } from "./Router";
 import { ui, SidebarItem } from "./UI";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
+import { uploads } from "./Uploads";
 
 export class ListIndex {
     loadedList: { [x: number]: TrackList; } = {};
@@ -25,12 +26,12 @@ export class ListIndex {
         };
         this.listView.onDragover = (arg) => {
             const src = arg.source;
+            const data = arg.event.dataTransfer;
             if (src instanceof TrackViewItem) {
                 arg.accept = true;
-                arg.event.dataTransfer.dropEffect = 'copy';
+                data.dropEffect = 'copy';
                 if (arg.drop) {
-                    var listinfo = arg.target.listInfo;
-                    var list = this.getList(listinfo.id);
+                    const list = this.getList(arg.target.listInfo.id);
                     if (list.fetching) list.fetching.then(r => {
                         for (const item of arg.sourceItems as TrackViewItem[]) {
                             list.addTrack(item.track.toApiTrack(), arg.event.altKey ? undefined : 0);
@@ -39,6 +40,22 @@ export class ListIndex {
                     }).catch(err => {
                         console.error('error adding track:', err);
                     });
+                }
+            } else if (data.files.length > 0) {
+                data.effectAllowed = 'copy';
+                arg.accept = true;
+                if (arg.drop) {
+                    const list = this.getList(arg.target.listInfo.id);
+                    for (let i = 0; i < data.files.length; i++) {
+                        const file = data.files[i];
+                        uploads.uploadFile(file).then(async track => {
+                            if (list.fetching) await list.fetching;
+                            list.addTrack(track.toApiTrack(), arg.event.altKey ? undefined : 0);
+                            await list.put();
+                        }).catch(err => {
+                            console.error('error adding track:', err);
+                        });
+                    }
                 }
             }
         };

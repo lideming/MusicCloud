@@ -136,6 +136,7 @@ export const ui = new class {
             ev.preventDefault();
         });
         document.addEventListener('drop', (ev) => {
+            if (ev.defaultPrevented) return;
             ev.preventDefault();
             var files = ev.dataTransfer.files;
             if (files.length) {

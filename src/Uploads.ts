@@ -197,8 +197,7 @@ export var uploads = new class extends TrackList {
         }
         const thiz = this;
         var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
-        var firstPos = this.tracks.findIndex(t => t._upload.state !== 'done');
-        if (firstPos === -1) firstPos = 0;
+        var firstPos = this.tracks.findIndex(t => t._upload.state !== 'done') + 1;
         new class extends DataUpdatingHelper<UploadTrack, UploadTrack>{
             items = doneTracks;
             addItem(data: UploadTrack, pos: number) { thiz.insertTrack(data, firstPos, false); }
@@ -238,6 +237,7 @@ export var uploads = new class extends TrackList {
             this.uploadSemaphore.exit();
         }
         if (this.view.rendered) this.view.updateUsage();
+        return track;
     }
 
     private async uploadCore(apitrack: Api.Track, track: UploadTrack, file: File) {

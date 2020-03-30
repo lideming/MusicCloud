@@ -837,6 +837,7 @@ const Router_1 = require("./Router");
 const UI_1 = require("./UI");
 const PlayerCore_1 = require("./PlayerCore");
 const Api_1 = require("./Api");
+const Uploads_1 = require("./Uploads");
 class ListIndex {
 	constructor() {
 		this.loadedList = {};
@@ -850,12 +851,12 @@ class ListIndex {
 		};
 		this.listView.onDragover = (arg) => {
 			const src = arg.source;
+			const data = arg.event.dataTransfer;
 			if (src instanceof TrackList_1.TrackViewItem) {
 				arg.accept = true;
-				arg.event.dataTransfer.dropEffect = 'copy';
+				data.dropEffect = 'copy';
 				if (arg.drop) {
-					var listinfo = arg.target.listInfo;
-					var list = this.getList(listinfo.id);
+					const list = this.getList(arg.target.listInfo.id);
 					if (list.fetching)
 						list.fetching.then(r => {
 							for (const item of arg.sourceItems) {
@@ -865,6 +866,24 @@ class ListIndex {
 						}).catch(err => {
 							console.error('error adding track:', err);
 						});
+				}
+			}
+			else if (data.files.length > 0) {
+				data.effectAllowed = 'copy';
+				arg.accept = true;
+				if (arg.drop) {
+					const list = this.getList(arg.target.listInfo.id);
+					for (let i = 0; i < data.files.length; i++) {
+						const file = data.files[i];
+						Uploads_1.uploads.uploadFile(file).then((track) => __awaiter(this, void 0, void 0, function* () {
+							if (list.fetching)
+								yield list.fetching;
+							list.addTrack(track.toApiTrack(), arg.event.altKey ? undefined : 0);
+							yield list.put();
+						})).catch(err => {
+							console.error('error adding track:', err);
+						});
+					}
 				}
 			}
 		};
@@ -1077,7 +1096,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":1,"./PlayerCore":11,"./Router":12,"./TrackList":16,"./UI":17,"./User":19,"./utils":21,"./viewlib":22}],6:[function(require,module,exports){
+},{"./Api":1,"./PlayerCore":11,"./Router":12,"./TrackList":16,"./UI":17,"./Uploads":18,"./User":19,"./utils":21,"./viewlib":22}],6:[function(require,module,exports){
 "use strict";
 // file: Lyrics.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -3644,6 +3663,8 @@ exports.ui = new class {
 			ev.preventDefault();
 		});
 		document.addEventListener('drop', (ev) => {
+			if (ev.defaultPrevented)
+				return;
 			ev.preventDefault();
 			var files = ev.dataTransfer.files;
 			if (files.length) {
@@ -3973,9 +3994,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
 			}
 			const thiz = this;
 			var doneTracks = this.tracks.filter(t => t._upload.state === 'done');
-			var firstPos = this.tracks.findIndex(t => t._upload.state !== 'done');
-			if (firstPos === -1)
-				firstPos = 0;
+			var firstPos = this.tracks.findIndex(t => t._upload.state !== 'done') + 1;
 			new class extends utils_1.DataUpdatingHelper {
 				constructor() {
 					super(...arguments);
@@ -4023,6 +4042,7 @@ exports.uploads = new class extends TrackList_1.TrackList {
 			}
 			if (this.view.rendered)
 				this.view.updateUsage();
+			return track;
 		});
 	}
 	uploadCore(apitrack, track, file) {
@@ -5641,16 +5661,16 @@ class ListViewItem extends View {
 	}
 	dragHandler(ev, type) {
 		var _a, _b, _c, _d, _e;
-		var item = exports.dragManager.currentItem;
-		var items = exports.dragManager.currentArray;
-		var drop = type === 'drop';
+		const item = exports.dragManager.currentItem;
+		let items = exports.dragManager.currentArray;
+		const drop = type === 'drop';
+		const arg = {
+			source: item, target: this,
+			sourceItems: items,
+			event: ev, drop: drop,
+			accept: false
+		};
 		if (item instanceof ListViewItem) {
-			var arg = {
-				source: item, target: this,
-				sourceItems: items,
-				event: ev, drop: drop,
-				accept: false
-			};
 			if (((_a = this.listview) === null || _a === void 0 ? void 0 : _a.moveByDragging) && item.listview === this.listview) {
 				ev.preventDefault();
 				if (!drop) {
@@ -5671,19 +5691,19 @@ class ListViewItem extends View {
 					}
 				}
 			}
-			var onDragover = (_b = this.onDragover) !== null && _b !== void 0 ? _b : (_c = this.listview) === null || _c === void 0 ? void 0 : _c.onDragover;
-			if (!arg.accept && onDragover) {
-				onDragover(arg);
-				if (drop || arg.accept)
-					ev.preventDefault();
-			}
-			var onContextMenu = (_d = this.onContextMenu) !== null && _d !== void 0 ? _d : (_e = this.listview) === null || _e === void 0 ? void 0 : _e.onContextMenu;
-			if (!arg.accept && item === this && onContextMenu) {
-				if (drop)
-					onContextMenu(this, ev);
-				else
-					ev.preventDefault();
-			}
+		}
+		const onDragover = (_b = this.onDragover) !== null && _b !== void 0 ? _b : (_c = this.listview) === null || _c === void 0 ? void 0 : _c.onDragover;
+		if (!arg.accept && onDragover) {
+			onDragover(arg);
+			if (drop || arg.accept)
+				ev.preventDefault();
+		}
+		const onContextMenu = (_d = this.onContextMenu) !== null && _d !== void 0 ? _d : (_e = this.listview) === null || _e === void 0 ? void 0 : _e.onContextMenu;
+		if (!arg.accept && item === this && onContextMenu) {
+			if (drop)
+				onContextMenu(this, ev);
+			else
+				ev.preventDefault();
 		}
 		if (type === 'dragenter' || type === 'dragleave' || drop) {
 			if (type === 'dragenter') {
