@@ -614,7 +614,11 @@ export class Semaphore {
     }
     exit() {
         if (this.runningCount === this.maxCount && this.queue.length) {
-            try { this.queue.shift()(); } catch { }
+            if (window.queueMicrotask) {
+                window.queueMicrotask(this.queue.shift() as any);
+            } else {
+                setTimeout(this.queue.shift(), 0);
+            }
         } else {
             this.runningCount--;
         }

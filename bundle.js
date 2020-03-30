@@ -763,6 +763,7 @@ class ListContentView extends UI_1.ContentView {
 		this.dom.appendView(this.listView);
 	}
 	onShow() {
+		super.onShow();
 		this.ensureDom();
 	}
 	onRemove() {
@@ -2294,7 +2295,7 @@ exports.router = new class {
 		this.routes.push(arg);
 		if (arg.sidebarItem)
 			arg.sidebarItem().onclick = () => {
-				if (arg.contentView && arg.contentView() === UI_1.ui.content.current)
+				if (arg.contentView && arg.contentView().isVisible)
 					return;
 				this.nav([...arg.path]);
 			};
@@ -3196,10 +3197,18 @@ class SidebarItem extends viewlib_1.ListViewItem {
 }
 exports.SidebarItem = SidebarItem;
 class ContentView extends viewlib_1.View {
-	onShow() { }
+	constructor() {
+		super(...arguments);
+		this._isVisible = false;
+	}
+	get isVisible() { return this._isVisible; }
+	onShow() {
+		this._isVisible = true;
+	}
 	onDomInserted() { }
 	onRemove() {
 		var _a;
+		this._isVisible = false;
 		(_a = this._shownEvents) === null || _a === void 0 ? void 0 : _a.removeAll();
 	}
 	get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new utils_1.EventRegistrations()); }
@@ -3822,6 +3831,8 @@ exports.uploads = new class extends TrackList_1.TrackList {
 		this.tracks = [];
 		this.state = false;
 		this.canEdit = false;
+		this.inprogress = 0;
+		this.unreadError = false;
 		this.uploadSemaphore = new utils_1.Semaphore({ maxCount: 2 });
 		this.view = new class extends TrackList_1.TrackListView {
 			constructor() {
@@ -3858,6 +3869,13 @@ exports.uploads = new class extends TrackList_1.TrackList {
 				});
 				header.titlebar.appendView(this.usage);
 				return header;
+			}
+			onShow() {
+				super.onShow();
+				if (exports.uploads.unreadError) {
+					exports.uploads.unreadError = false;
+					exports.uploads.updateSidebarItem();
+				}
 			}
 			appendListView() {
 				super.appendListView();
@@ -4025,6 +4043,8 @@ exports.uploads = new class extends TrackList_1.TrackList {
 			this.insertTrack(track);
 			yield this.uploadSemaphore.enter();
 			try {
+				this.inprogress++;
+				this.updateSidebarItem();
 				if (track._upload.state === 'cancelled')
 					return;
 				yield this.uploadCore(apitrack, track, file);
@@ -4035,9 +4055,15 @@ exports.uploads = new class extends TrackList_1.TrackList {
 				track.setState('error');
 				viewlib_1.Toast.show(I18n_1.I `Failed to upload file "${file.name}".` + '\n' + err, 3000);
 				console.log('uploads failed: ', file.name, err);
+				if (exports.uploads.view.isVisible == false) {
+					this.unreadError = true;
+					// will update sidebarItem later
+				}
 				throw err;
 			}
 			finally {
+				this.inprogress--;
+				this.updateSidebarItem();
 				this.uploadSemaphore.exit();
 			}
 			if (this.view.rendered)
@@ -4110,6 +4136,12 @@ exports.uploads = new class extends TrackList_1.TrackList {
 			track.infoObj = respTrack;
 			track.setState('done');
 		});
+	}
+	updateSidebarItem() {
+		this.sidebarItem.text = this.inprogress ? I18n_1.I `My Uploads` + ` (${this.inprogress})` : I18n_1.I `My Uploads`;
+		if (this.unreadError)
+			this.sidebarItem.text += ' (!!)';
+		this.sidebarItem.updateDom();
 	}
 };
 class UploadViewItem extends TrackList_1.TrackViewItem {
@@ -5265,10 +5297,12 @@ class Semaphore {
 	}
 	exit() {
 		if (this.runningCount === this.maxCount && this.queue.length) {
-			try {
-				this.queue.shift()();
+			if (window.queueMicrotask) {
+				window.queueMicrotask(this.queue.shift());
 			}
-			catch (_a) { }
+			else {
+				setTimeout(this.queue.shift(), 0);
+			}
 		}
 		else {
 			this.runningCount--;

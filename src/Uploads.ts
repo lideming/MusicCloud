@@ -41,6 +41,8 @@ export var uploads = new class extends TrackList {
     tracks: UploadTrack[] = [];
     state: false | 'waiting' | 'fetching' | 'fetched' = false;
     canEdit = false;
+    inprogress = 0;
+    unreadError = false;
     private uploadSemaphore = new Semaphore({ maxCount: 2 });
     init() {
         this.sidebarItem = new ListIndexViewItem({ text: I`My Uploads` });
@@ -115,6 +117,13 @@ export var uploads = new class extends TrackList {
             });
             header.titlebar.appendView(this.usage);
             return header;
+        }
+        onShow() {
+            super.onShow();
+            if (uploads.unreadError) {
+                uploads.unreadError = false;
+                uploads.updateSidebarItem();
+            }
         }
         protected appendListView() {
             super.appendListView();
@@ -224,6 +233,9 @@ export var uploads = new class extends TrackList {
 
         await this.uploadSemaphore.enter();
         try {
+            this.inprogress++;
+            this.updateSidebarItem();
+
             if (track._upload.state === 'cancelled') return;
 
             await this.uploadCore(apitrack, track, file);
@@ -232,8 +244,14 @@ export var uploads = new class extends TrackList {
             track.setState('error');
             Toast.show(I`Failed to upload file "${file.name}".` + '\n' + err, 3000);
             console.log('uploads failed: ', file.name, err);
+            if (uploads.view.isVisible == false) {
+                this.unreadError = true;
+                // will update sidebarItem later
+            }
             throw err;
         } finally {
+            this.inprogress--;
+            this.updateSidebarItem();
             this.uploadSemaphore.exit();
         }
         if (this.view.rendered) this.view.updateUsage();
@@ -308,6 +326,12 @@ export var uploads = new class extends TrackList {
         }
         track.infoObj = respTrack;
         track.setState('done');
+    }
+
+    updateSidebarItem() {
+        this.sidebarItem.text = this.inprogress ? I`My Uploads` + ` (${this.inprogress})` : I`My Uploads`;
+        if (this.unreadError) this.sidebarItem.text += ' (!!)';
+        this.sidebarItem.updateDom();
     }
 };
 

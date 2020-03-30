@@ -29,7 +29,7 @@ export var router = new class {
     addRoute(arg: Route) {
         this.routes.push(arg);
         if (arg.sidebarItem) arg.sidebarItem().onclick = () => {
-            if (arg.contentView && arg.contentView() === ui.content.current) return;
+            if (arg.contentView && arg.contentView().isVisible) return;
             this.nav([...arg.path]);
         };
     }

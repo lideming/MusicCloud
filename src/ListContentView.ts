@@ -101,6 +101,7 @@ export class ListContentView extends ContentView {
     }
 
     onShow() {
+        super.onShow();
         this.ensureDom();
     }
     onRemove() {

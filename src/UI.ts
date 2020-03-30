@@ -30,9 +30,16 @@ export class SidebarItem extends ListViewItem {
 
 export class ContentView extends View {
     dom: HTMLElement;
-    onShow() { }
+
+    private _isVisible = false;
+    public get isVisible() { return this._isVisible; }
+
+    onShow() {
+        this._isVisible = true;
+    }
     onDomInserted() { }
     onRemove() {
+        this._isVisible = false;
         this._shownEvents?.removeAll();
     }
     contentViewState?: ContentViewState;
