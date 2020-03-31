@@ -84,7 +84,7 @@ class PlayingView extends ContentView {
     }
     onDomInserted() {
         this.lyricsView.setCurrentTime(playerCore.currentTime);
-        if (this.lyricsScrollPos && playerCore.state !== 'playing') {
+        if (this.lyricsScrollPos) {
             this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
         }
         requestAnimationFrame(this.onResize);
