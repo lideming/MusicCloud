@@ -4015,7 +4015,13 @@ exports.playerCore = new class PlayerCore {
 	}
 	get currentTime() { var _a; return (_a = this.audio) === null || _a === void 0 ? void 0 : _a.currentTime; }
 	set currentTime(val) { this.audio.currentTime = val; }
-	get duration() { var _a; return (_a = this.audio) === null || _a === void 0 ? void 0 : _a.duration; }
+	get duration() {
+		var _a;
+		if (this.audio && this.audioLoaded && this.audio.readyState >= HTMLMediaElement.HAVE_METADATA)
+			return this.audio.duration;
+		else
+			return (_a = this.track) === null || _a === void 0 ? void 0 : _a.length;
+	}
 	get volume() { var _a, _b; return (_b = (_a = this.audio) === null || _a === void 0 ? void 0 : _a.volume) !== null && _b !== void 0 ? _b : 1; }
 	set volume(val) {
 		this.audio.volume = val;
@@ -4092,11 +4098,12 @@ exports.playerCore = new class PlayerCore {
 		var _a;
 		var oldTrack = this.track;
 		this.track = track;
-		this.onTrackChanged.invoke();
 		if ((oldTrack === null || oldTrack === void 0 ? void 0 : oldTrack.url) !== ((_a = this.track) === null || _a === void 0 ? void 0 : _a.url)
 			|| ((track === null || track === void 0 ? void 0 : track.blob) && track.blob !== (oldTrack === null || oldTrack === void 0 ? void 0 : oldTrack.blob)))
 			this.loadUrl(null);
 		this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
+		this.onTrackChanged.invoke();
+		this.onProgressChanged.invoke();
 	}
 	playTrack(track, forceStart) {
 		if (track !== this.track)
@@ -4131,16 +4138,19 @@ exports.playerCore = new class PlayerCore {
 				}
 				this.loadUrl(Api_1.api.processUrl(cur.url));
 			}
-			return true;
 		});
 	}
 	play() {
 		return __awaiter(this, void 0, void 0, function* () {
+			yield this.ensureLoaded();
+			this.audio.play();
+		});
+	}
+	ensureLoaded() {
+		return __awaiter(this, void 0, void 0, function* () {
 			var track = this.track;
 			if (track && !this.audioLoaded)
-				if (!(yield this.loadTrack(this.track)))
-					return;
-			this.audio.play();
+				yield this.loadTrack(this.track);
 		});
 	}
 	pause() {
@@ -5313,7 +5323,9 @@ exports.ui = new class {
 				})();
 				PlayerCore_1.playerCore.onProgressChanged.add(() => this.setProg(PlayerCore_1.playerCore.currentTime, PlayerCore_1.playerCore.duration));
 				this.onProgressSeeking((percent) => {
-					PlayerCore_1.playerCore.currentTime = percent * PlayerCore_1.playerCore.duration;
+					PlayerCore_1.playerCore.ensureLoaded().then(() => {
+						PlayerCore_1.playerCore.currentTime = percent * PlayerCore_1.playerCore.duration;
+					});
 				});
 				this.onPlayButtonClicked(() => {
 					var state = PlayerCore_1.playerCore.state;

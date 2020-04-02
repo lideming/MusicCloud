@@ -288,7 +288,9 @@ export const ui = new class {
             })();
             playerCore.onProgressChanged.add(() => this.setProg(playerCore.currentTime, playerCore.duration));
             this.onProgressSeeking((percent) => {
-                playerCore.currentTime = percent * playerCore.duration;
+                playerCore.ensureLoaded().then(() => {
+                    playerCore.currentTime = percent * playerCore.duration;
+                });
             });
             this.onPlayButtonClicked(() => {
                 var state = playerCore.state;

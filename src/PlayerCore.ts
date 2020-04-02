@@ -38,7 +38,12 @@ export var playerCore = new class PlayerCore {
 
     get currentTime() { return this.audio?.currentTime; }
     set currentTime(val) { this.audio.currentTime = val; }
-    get duration() { return this.audio?.duration; }
+    get duration() {
+        if (this.audio && this.audioLoaded && this.audio.readyState >= HTMLMediaElement.HAVE_METADATA)
+            return this.audio.duration;
+        else
+            return this.track?.length;
+    }
     onProgressChanged = new Callbacks<Action>();
 
     get volume() { return this.audio?.volume ?? 1; }
@@ -117,11 +122,12 @@ export var playerCore = new class PlayerCore {
     setTrack(track: Track) {
         var oldTrack = this.track;
         this.track = track;
-        this.onTrackChanged.invoke();
         if (oldTrack?.url !== this.track?.url
             || (track?.blob && track.blob !== oldTrack?.blob))
             this.loadUrl(null);
         this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
+        this.onTrackChanged.invoke();
+        this.onProgressChanged.invoke();
     }
     playTrack(track: Track, forceStart?: boolean) {
         if (track !== this.track) this.setTrack(track);
@@ -152,13 +158,15 @@ export var playerCore = new class PlayerCore {
             }
             this.loadUrl(api.processUrl(cur.url));
         }
-        return true;
     }
     async play() {
+        await this.ensureLoaded();
+        this.audio.play();
+    }
+    async ensureLoaded() {
         var track = this.track;
         if (track && !this.audioLoaded)
-            if (!await this.loadTrack(this.track)) return;
-        this.audio.play();
+            await this.loadTrack(this.track);
     }
     pause() {
         this.audio.pause();
