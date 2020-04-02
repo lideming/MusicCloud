@@ -78,7 +78,7 @@ export class ContentHeader extends View {
         };
     }
     titleView = new View({
-        tag: 'span.title', text: () => this.title,
+        tag: 'span.title.no-selection', text: () => this.title,
         update: (dom) => {
             utils.toggleClass(dom, 'editable', !!this.titleEditable);
             if (this.titleEditable) dom.title = I`Click to edit`;
@@ -89,7 +89,7 @@ export class ContentHeader extends View {
     titlebar = new View({
         tag: 'div.titlebar.clearfix',
         child: [
-            { tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
+            { tag: 'span.catalog.no-selection', text: () => this.catalog, hidden: () => !this.catalog },
             this.titleView,
             this.actions
         ]

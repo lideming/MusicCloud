@@ -5134,7 +5134,7 @@ class ContentHeader extends viewlib_1.View {
 		this.titleEditable = false;
 		this.actions = new viewlib_1.ContainerView({ tag: 'div.actions' });
 		this.titleView = new viewlib_1.View({
-			tag: 'span.title', text: () => this.title,
+			tag: 'span.title.no-selection', text: () => this.title,
 			update: (dom) => {
 				utils_1.utils.toggleClass(dom, 'editable', !!this.titleEditable);
 				if (this.titleEditable)
@@ -5147,7 +5147,7 @@ class ContentHeader extends viewlib_1.View {
 		this.titlebar = new viewlib_1.View({
 			tag: 'div.titlebar.clearfix',
 			child: [
-				{ tag: 'span.catalog', text: () => this.catalog, hidden: () => !this.catalog },
+				{ tag: 'span.catalog.no-selection', text: () => this.catalog, hidden: () => !this.catalog },
 				this.titleView,
 				this.actions
 			]
