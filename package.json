@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/lideming/MusicCloud",
   "dependencies": {
-    "@yuuza/webfx": "^1.0.1"
+    "@yuuza/webfx": "^1.0.2"
   },
   "devDependencies": {
     "browserify": "^16.5.1",

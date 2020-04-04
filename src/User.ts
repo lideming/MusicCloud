@@ -303,7 +303,7 @@ class LoginDialog extends Dialog {
     }
 
     show() {
-        this.setOffset(0, 0);
+        this.center();
         super.show();
     }
 

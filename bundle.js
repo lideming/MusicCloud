@@ -103,7 +103,6 @@ class I18n {
     }
 }
 exports.I18n = I18n;
-exports.i18n = new I18n();
 function createStringBuilder(i18n) {
     return function (literals, ...placeholders) {
         if (placeholders.length === 0) {
@@ -126,26 +125,8 @@ function createStringBuilder(i18n) {
     };
 }
 exports.createStringBuilder = createStringBuilder;
-function I(literals, ...placeholders) {
-    if (placeholders.length === 0) {
-        return exports.i18n.get(literals[0]);
-    }
-    // Generate format string from template string:
-    var formatString = '';
-    for (var i = 0; i < literals.length; i++) {
-        var lit = literals[i];
-        formatString += lit;
-        if (i < placeholders.length) {
-            formatString += '{' + i + '}';
-        }
-    }
-    var r = exports.i18n.get(formatString);
-    for (var i = 0; i < placeholders.length; i++) {
-        r = r.replace('{' + i + '}', placeholders[i]);
-    }
-    return r;
-}
-exports.I = I;
+exports.i18n = new I18n();
+exports.I = createStringBuilder(exports.i18n);
 
 },{}],2:[function(require,module,exports){
 "use strict";
@@ -1689,17 +1670,17 @@ class Dialog extends View {
         });
         // title bar pointer event handler:
         {
-            let s;
-            let sPage;
+            let offset;
             utils_1.utils.listenPointerEvents(this.domheader, (e) => {
                 if (e.action === 'down') {
                     if (e.ev.target !== this.domheader && e.ev.target !== this.btnTitle.dom)
                         return;
                     e.ev.preventDefault();
-                    s = this.getOffset();
-                    sPage = {
-                        x: e.point.pageX,
-                        y: e.point.pageY
+                    const rectOverlay = this.overlay.dom.getBoundingClientRect();
+                    const rect = this.dom.getBoundingClientRect();
+                    offset = {
+                        x: e.point.pageX - rectOverlay.x - rect.x,
+                        y: e.point.pageY - rectOverlay.y - rect.y
                     };
                     return 'track';
                 }
@@ -1708,8 +1689,7 @@ class Dialog extends View {
                     const rect = this.overlay.dom.getBoundingClientRect();
                     const pageX = utils_1.utils.numLimit(e.point.pageX, rect.left, rect.right);
                     const pageY = utils_1.utils.numLimit(e.point.pageY, rect.top, rect.bottom);
-                    ;
-                    this.setOffset(s.x + pageX - sPage.x, s.y + pageY - sPage.y);
+                    this.setOffset(pageX - offset.x, pageY - offset.y);
                 }
             });
         }
@@ -1739,11 +1719,16 @@ class Dialog extends View {
     setOffset(x, y) {
         this.dom.style.left = x ? x + 'px' : '';
         this.dom.style.top = y ? y + 'px' : '';
+        this.overlay.setCenterChild(false);
     }
     getOffset() {
         var x = this.dom.style.left ? parseFloat(this.dom.style.left) : 0;
         var y = this.dom.style.top ? parseFloat(this.dom.style.top) : 0;
         return { x, y };
+    }
+    center() {
+        this.setOffset(0, 0);
+        this.overlay.setCenterChild(true);
     }
     show() {
         var _a;
@@ -6677,7 +6662,7 @@ class LoginDialog extends viewlib_1.Dialog {
 		}));
 	}
 	show() {
-		this.setOffset(0, 0);
+		this.center();
 		super.show();
 	}
 	btnClicked() {
