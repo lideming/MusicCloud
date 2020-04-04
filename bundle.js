@@ -2441,16 +2441,13 @@ class CommentEditor extends viewlib_1.View {
 
 },{"./Api":4,"./ListContentView":7,"./MessageClient":12,"./Router":15,"./UI":20,"./User":22,"./utils":24,"./viewlib":25}],6:[function(require,module,exports){
 "use strict";
-function __export(m) {
-	for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
 Object.defineProperty(exports, "__esModule", { value: true });
 const I18n_1 = require("@yuuza/webfx/lib/I18n");
-__export(require("@yuuza/webfx/lib/I18n"));
-exports.i18n = new I18n_1.I18n();
-exports.I = I18n_1.createStringBuilder(exports.i18n);
+exports.I18n = I18n_1.I18n;
+exports.i18n = I18n_1.i18n;
+exports.I = I18n_1.I;
 // Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
-exports.i18n.add2dArray(JSON.parse(`[
+I18n_1.i18n.add2dArray(JSON.parse(`[
 	["en", "zh"],
 	["English", "中文"],
 	["Language: {0}", "语言：{0}"],
@@ -2555,7 +2552,7 @@ exports.i18n.add2dArray(JSON.parse(`[
 	["Source code", "源代码"],
 	["Music Cloud", "Music Cloud"]
 ]`));
-exports.i18n.add2dArray([
+I18n_1.i18n.add2dArray([
 	["_key_", "en", "zh"],
 	["uploads_pending", "Pending", "队列中"],
 	["uploads_uploading", "Uploading", "上传中"],

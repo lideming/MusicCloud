@@ -1,10 +1,6 @@
-import { I18n, createStringBuilder } from "@yuuza/webfx/lib/I18n";
+import { I18n, i18n, I } from "@yuuza/webfx/lib/I18n";
 
-export * from "@yuuza/webfx/lib/I18n"
-
-export const i18n = new I18n();
-
-export const I = createStringBuilder(i18n);
+export { I18n, i18n, I };
 
 // Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
 i18n.add2dArray(JSON.parse(`[
