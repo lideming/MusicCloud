@@ -43,8 +43,8 @@ class PlayingView extends ContentView {
             this.si.save();
             this.centerLyrics();
         });
-        this.lyricsView.onSpanClick.add((span) => {
-            if (span.startTime >= 0) playerCore.currentTime = span.startTime;
+        this.lyricsView.onSpanClick.add((s) => {
+            if (s.span.startTime >= 0) playerCore.currentTime = s.span.startTime;
         });
         this.header.actions.addView(this.editBtn = new ActionBtn({
             text: I`Edit`, onclick: () => {

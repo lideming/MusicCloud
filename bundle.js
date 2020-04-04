@@ -3157,7 +3157,7 @@ class Parser {
 		this.lines = [];
 		this.bpm = null;
 		this.offset = 0;
-		this.curTime = 0;
+		this.curTime = null;
 		this.lang = '';
 		this.tlang = '';
 		this.lex = new Lexer(str);
@@ -3176,7 +3176,9 @@ class Parser {
 				lex.error('parseLine() doesn\'t consume tokens');
 			}
 		}
-		this.lines.sort((a, b) => a.startTime - b.startTime);
+		this.lines.sort((a, b) => {
+			return a.orderTime - b.orderTime;
+		});
 		return {
 			lines: this.lines,
 			lang: this.lang,
@@ -3185,13 +3187,14 @@ class Parser {
 		};
 	}
 	parseLine() {
+		var _a;
 		var lex = this.lex;
 		var startTime = null;
 		var duplicateTime = [];
 		var spans = [];
 		var trans = null;
 		var lastSpan = null;
-		var curTime = -1;
+		var curTime = null;
 		var timeStamp = null;
 		while (true) {
 			if (lex.tryExpect(1 /* tagBegin */)) {
@@ -3203,13 +3206,13 @@ class Parser {
 				}
 				else {
 					text = lex.expectAndConsume(5 /* text */).val;
-					ts = this.parseTimestamp(text, curTime >= 0 ? curTime : this.curTime);
+					ts = this.parseTimestamp(text, curTime >= 0 ? curTime : ((_a = this.curTime) !== null && _a !== void 0 ? _a : 0));
 					if (ts != null)
 						lex.expectAndConsume(2 /* tagEnd */);
 				}
 				if (ts != null) {
 					if (!lastSpan && startTime != null) {
-						duplicateTime.push(ts.time);
+						duplicateTime.push(ts);
 					}
 					else {
 						if (timeStamp) {
@@ -3255,7 +3258,8 @@ class Parser {
 						// unknown tag at the beginning of the line, so skip this line.
 						this.skipLine();
 						this.lines.push({
-							startTime: this.curTime,
+							startTime,
+							orderTime: startTime !== null && startTime !== void 0 ? startTime : this.curTime,
 							spans: null,
 							rawLine: lex.str.substring(beginTag.pos, lex.peek().pos)
 						});
@@ -3302,14 +3306,26 @@ class Parser {
 			this.curTime = curTime;
 		this.lines.push({
 			startTime,
+			orderTime: startTime !== null && startTime !== void 0 ? startTime : this.curTime,
 			translation: trans,
 			spans
 		});
 		duplicateTime.forEach(t => {
+			var offset = t.time - startTime;
 			this.lines.push({
-				startTime: t,
+				startTime: t.time,
+				orderTime: t.time,
 				translation: trans,
-				spans: spans.map(s => (Object.assign(Object.assign({}, s), { startTime: t - startTime + s.startTime })))
+				spans: spans.map(s => ({
+					text: s.text,
+					ruby: s.ruby,
+					startTime: s.startTime >= 0 ? s.startTime + offset : s.startTime,
+					timeStamp: !s.timeStamp ? null : {
+						time: s.timeStamp.time >= 0 ? s.timeStamp.time + offset : s.timeStamp.time,
+						beats: s.timeStamp.beats,
+						beatsDiv: s.timeStamp.beatsDiv
+					}
+				}))
 			});
 		});
 	}
@@ -3333,6 +3349,8 @@ class Parser {
 			if (match[4])
 				result += parseFloat(match[4]);
 			result += this.offset;
+			if (result < 0)
+				result = 0;
 			return { time: result, beats: null, beatsDiv: null };
 		}
 		else if (match = /^b([\d\.]+)?(\/(\d+))?$/.exec(str)) {
@@ -3386,7 +3404,7 @@ function serialize(lyrics) {
 						str += '[]';
 					}
 					else {
-						str += '[' + s.startTime.toFixed(3) + ']';
+						str += '[' + s.timeStamp.time.toFixed(3) + ']';
 					}
 				}
 				if (s.ruby != null) {
@@ -3408,8 +3426,12 @@ exports.serialize = serialize;
 Object.defineProperty(exports, "__esModule", { value: true });
 const UI_1 = require("./UI");
 const I18n_1 = require("./I18n");
+const utils_1 = require("./utils");
 const LyricsView_1 = require("./LyricsView");
 const Router_1 = require("./Router");
+const Lyrics_1 = require("./Lyrics");
+const PlayerCore_1 = require("./PlayerCore");
+const utils_2 = require("@yuuza/webfx/lib/utils");
 exports.lyricsEdit = new class {
 	startEdit(track) {
 		if (!this.view) {
@@ -3423,6 +3445,7 @@ exports.lyricsEdit = new class {
 			});
 		}
 		this.sidebarItem.hidden = false;
+		this.view.setTrack(track);
 		Router_1.router.nav('lyricsEdit');
 	}
 };
@@ -3430,30 +3453,193 @@ class LyricsEditContentView extends UI_1.ContentView {
 	constructor() {
 		super();
 		this.header = new UI_1.ContentHeader({ title: I18n_1.I `Edit Lyrics` });
-		this.lyrics = new LyricsView_1.LyricsView();
+		this.lyricsView = new EditableLyricsView();
+		this.track = null;
+		this.lyricsScrollPos = 0;
+		this.timer = new utils_1.Timer(() => this.onProgressChanged());
+		this.lastTime = 0;
+		this.lastChangedRealTime = 0;
+		this.onProgressChanged = () => {
+			if (!this.isTrackPlaying())
+				return;
+			var time = PlayerCore_1.playerCore.currentTime;
+			var realTime = new Date().getTime();
+			var timerOn = true;
+			if (time != this.lastTime) {
+				this.lastChangedRealTime = realTime;
+				this.lyricsView.setCurrentTime(time, 'smooth');
+			}
+			if (realTime - this.lastChangedRealTime < 500)
+				this.timer.timeout(16);
+		};
+		this.onResize = () => {
+			this.lyricsView.resize();
+			this.centerLyrics();
+		};
 		this.header.actions.addView(new UI_1.ActionBtn({
 			text: I18n_1.I `Discard`,
 			onclick: () => {
-				exports.lyricsEdit.sidebarItem.hidden = true;
-				window.history.back();
+				this.close();
 			}
 		}));
 		this.header.actions.addView(new UI_1.ActionBtn({
-			text: I18n_1.I `Save`
+			text: I18n_1.I `Save`,
+			onclick: () => {
+				this.track.infoObj.lyrics = Lyrics_1.serialize(this.lyricsView.lyrics);
+				this.close();
+				this.track.startEdit();
+			}
 		}));
+	}
+	close() {
+		exports.lyricsEdit.sidebarItem.hidden = true;
+		window.history.back();
 	}
 	createDom() {
 		return {
 			tag: 'div.lyricsedit',
 			child: [
 				this.header,
-				this.lyrics
+				this.lyricsView
 			]
 		};
 	}
+	setTrack(track) {
+		this.track = track;
+		this.lyricsView.setLyrics(track.lyrics);
+	}
+	onShow() {
+		this.ensureDom();
+		this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, this.onProgressChanged);
+	}
+	onDomInserted() {
+		if (this.isTrackPlaying())
+			this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime);
+		if (this.lyricsScrollPos) {
+			this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
+		}
+		requestAnimationFrame(this.onResize);
+		window.addEventListener('resize', this.onResize);
+	}
+	onRemove() {
+		super.onRemove();
+		window.removeEventListener('resize', this.onResize);
+		this.timer.tryCancel();
+		this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
+	}
+	isTrackPlaying() {
+		return PlayerCore_1.playerCore.track && PlayerCore_1.playerCore.track === this.track && PlayerCore_1.playerCore.track.id === this.track.id;
+	}
+	centerLyrics() {
+		if (PlayerCore_1.playerCore.state === 'playing')
+			this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'force');
+	}
+}
+class EditableLyricsView extends LyricsView_1.LyricsView {
+	constructor() {
+		super();
+		this.nextSpans = [];
+		this.onLyricsChanged.add(() => {
+			this.lines.forEach(l => {
+				var _a;
+				if ((_a = l.spans) === null || _a === void 0 ? void 0 : _a.length) {
+					let firstSpan = l.spans[0].span;
+					if (!firstSpan.timeStamp) {
+						firstSpan.timeStamp = { time: -1 };
+					}
+					l.spans.forEach(s => {
+						s.timeStamp && s.toggleClass('ts', true);
+					});
+				}
+			});
+			this.setNextSpans(this.getSpans());
+		});
+		this.onSpanClick.add((s) => {
+			PlayerCore_1.playerCore.currentTime = utils_2.utils.numLimit(s.span.startTime - 3, 0, Infinity);
+			this.setNextSpans(this.getSpans(s, 'here'));
+		});
+		this.dom.addEventListener('keydown', (ev) => {
+			if (ev.code == 'ArrowRight' || ev.code == 'F' || ev.code == 'D') {
+				ev.preventDefault();
+				if (this.nextSpans.length) {
+					const now = PlayerCore_1.playerCore.currentTime;
+					this.nextSpans[0].timeStamp.time = now;
+					this.nextSpans.forEach(s => {
+						s.startTime = now;
+					});
+					if (this.nextSpans[0].position === 0) {
+						this.nextSpans[0].lineView.line.startTime = now;
+					}
+				}
+				let spans = this.getSpans(null, 'forward');
+				if (spans.length)
+					this.setNextSpans(spans);
+			}
+			else if (ev.code == 'ArrowLeft') {
+				ev.preventDefault();
+				let spans = this.getSpans(null, 'backward');
+				if (spans.length)
+					this.setNextSpans(spans);
+			}
+		});
+		this.toggleClass('edit', true);
+	}
+	getSpans(span, go) {
+		if (!span) {
+			if (this.nextSpans.length) {
+				span = this.nextSpans[go === 'backward' ? 0 : this.nextSpans.length - 1];
+			}
+			else {
+				span = this.lines.get(0).spans[0];
+			}
+		}
+		var colPos = span.position;
+		var line = span.lineView;
+		if (go == null || go === 'here') {
+			while (line.spans && !line.spans[colPos].timeStamp) {
+				if (colPos-- === 0) {
+					line = this.lines.get(line.position - 1);
+					colPos = line.length - 1;
+				}
+			}
+		}
+		else if (go === 'forward') {
+			do {
+				if (line && ++colPos === line.length) {
+					line = this.lines.get(line.position + 1);
+					colPos = 0;
+				}
+			} while (line && (line.spans && !line.spans[colPos].timeStamp));
+		}
+		else if (go === 'backward') {
+			do {
+				if (line && colPos-- === 0) {
+					line = this.lines.get(line.position - 1);
+					colPos = line.length - 1;
+				}
+			} while (line && (line.spans && !line.spans[colPos].timeStamp));
+		}
+		var spans = [];
+		if (line) {
+			do {
+				spans.push(line.spans[colPos]);
+				colPos++;
+			} while (colPos < line.length && !line.spans[colPos].timeStamp);
+		}
+		return spans;
+	}
+	setNextSpans(spans) {
+		while (this.nextSpans.length) {
+			this.nextSpans.pop().isNext = false;
+		}
+		spans.forEach(s => {
+			s.isNext = true;
+			this.nextSpans.push(s);
+		});
+	}
 }
 
-},{"./I18n":6,"./LyricsView":11,"./Router":15,"./UI":20}],11:[function(require,module,exports){
+},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":24,"@yuuza/webfx/lib/utils":2}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -3466,11 +3652,13 @@ class LyricsView extends viewlib_1.View {
 		this.curLine = new viewlib_1.ItemActiveHelper();
 		this.onSpanClick = new utils_1.Callbacks();
 		this.onFontSizeChanged = new utils_1.Callbacks();
+		this.onLyricsChanged = new utils_1.Callbacks();
 		this._fontSize = 100;
 	}
 	createDom() {
 		return {
 			tag: 'div.lyricsview',
+			tabIndex: 0,
 			child: [
 				this.lines
 			]
@@ -3517,6 +3705,7 @@ class LyricsView extends viewlib_1.View {
 			console.error(error);
 			lyrics = {
 				lines: [{
+						orderTime: 0,
 						spans: [{
 								text: utils_1.I `Error parsing lyrics`
 							}]
@@ -3532,6 +3721,7 @@ class LyricsView extends viewlib_1.View {
 				this.lines.addView(new LineView(l, this));
 			}
 		});
+		this.onLyricsChanged.invoke();
 		this.resize();
 	}
 	setCurrentTime(time, scroll) {
@@ -3595,22 +3785,15 @@ class LyricsView extends viewlib_1.View {
 	}
 }
 exports.LyricsView = LyricsView;
-class LineView extends viewlib_1.View {
+class LineView extends viewlib_1.ContainerView {
 	constructor(line, lyricsView) {
-		super();
+		var _a;
+		super({ tag: 'p.line' });
 		this.line = line;
 		this.lyricsView = lyricsView;
-		this.spans = this.line.spans.map(s => new SpanView(s, this));
-	}
-	createDom() {
-		return {
-			tag: 'p.line',
-			child: this.spans.map(x => x.dom)
-		};
-	}
-	postCreateDom() {
-		var _a;
-		super.postCreateDom();
+		this.line.spans.forEach(s => {
+			this.addView(new SpanView(s, this));
+		});
 		if (this.line.translation) {
 			var lyrics = (_a = this.lyricsView) === null || _a === void 0 ? void 0 : _a.lyrics;
 			var tlang = lyrics && lyrics.translationLang || lyrics.lang;
@@ -3621,18 +3804,26 @@ class LineView extends viewlib_1.View {
 			}));
 		}
 	}
+	get spans() { return this.items; }
 	setCurrentTime(time) {
 		this.spans.forEach(s => {
 			s.toggleClass('active', s.span.startTime <= time);
 		});
 	}
 }
+exports.LineView = LineView;
 class SpanView extends viewlib_1.View {
 	constructor(span, lineView) {
 		super();
 		this.span = span;
 		this.lineView = lineView;
 	}
+	get timeStamp() { return this.span.timeStamp; }
+	set timeStamp(val) { this.span.timeStamp = val; }
+	get startTime() { return this.span.startTime; }
+	set startTime(val) { this.span.startTime = val; }
+	get isNext() { return this.dom.classList.contains('next'); }
+	set isNext(val) { this.toggleClass('next', val); }
 	createDom() {
 		var s = this.span;
 		if (!s.ruby) {
@@ -3665,11 +3856,12 @@ class SpanView extends viewlib_1.View {
 		this.dom.addEventListener('click', (ev) => {
 			if (Math.abs(ev.offsetX - startX) <= 3 && Math.abs(ev.offsetY - startY) <= 3) {
 				ev.preventDefault();
-				this.lineView.lyricsView.onSpanClick.invoke(this.span);
+				this.lineView.lyricsView.onSpanClick.invoke(this);
 			}
 		});
 	}
 }
+exports.SpanView = SpanView;
 
 },{"./Lyrics":9,"./utils":24,"./viewlib":25}],12:[function(require,module,exports){
 "use strict";
@@ -3908,9 +4100,9 @@ class PlayingView extends UI_1.ContentView {
 			this.si.save();
 			this.centerLyrics();
 		});
-		this.lyricsView.onSpanClick.add((span) => {
-			if (span.startTime >= 0)
-				PlayerCore_1.playerCore.currentTime = span.startTime;
+		this.lyricsView.onSpanClick.add((s) => {
+			if (s.span.startTime >= 0)
+				PlayerCore_1.playerCore.currentTime = s.span.startTime;
 		});
 		this.header.actions.addView(this.editBtn = new UI_1.ActionBtn({
 			text: utils_1.I `Edit`, onclick: () => {
@@ -4492,6 +4684,7 @@ class Track {
 	get files() { return this.infoObj.files; }
 	get length() { return this.infoObj.length; }
 	get size() { return this.infoObj.size; }
+	get lyrics() { return this.infoObj.lyrics; }
 	get displayName() { return this.artist + ' - ' + this.name; }
 	get canEdit() { return true; }
 	toString() {

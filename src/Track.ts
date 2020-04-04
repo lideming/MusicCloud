@@ -15,6 +15,7 @@ export class Track {
     get files() { return this.infoObj.files; }
     get length() { return this.infoObj.length; }
     get size() { return this.infoObj.size; }
+    get lyrics() { return this.infoObj.lyrics; }
     get displayName() { return this.artist + ' - ' + this.name; }
     blob?: Blob = null;
     _bind?: {

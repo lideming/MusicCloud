@@ -6,11 +6,13 @@ export class LyricsView extends View {
     lines = new ContainerView<LineView>({ tag: 'div.lyrics' });
     lyrics: Lyrics;
     curLine = new ItemActiveHelper<LineView>();
-    onSpanClick = new Callbacks<Action<Span>>();
+    onSpanClick = new Callbacks<Action<SpanView>>();
     onFontSizeChanged = new Callbacks<Action>();
+    onLyricsChanged = new Callbacks<Action>();
     createDom(): BuildDomExpr {
         return {
             tag: 'div.lyricsview',
+            tabIndex: 0,
             child: [
                 this.lines
             ]
@@ -55,6 +57,7 @@ export class LyricsView extends View {
             console.error(error);
             lyrics = {
                 lines: [{
+                    orderTime: 0,
                     spans: [{
                         text: I`Error parsing lyrics`
                     }]
@@ -70,6 +73,7 @@ export class LyricsView extends View {
                 this.lines.addView(new LineView(l, this));
             }
         });
+        this.onLyricsChanged.invoke();
         this.resize();
     }
     setCurrentTime(time: number, scroll?: boolean | 'smooth' | 'force') {
@@ -132,24 +136,17 @@ export class LyricsView extends View {
     }
 }
 
-class LineView extends View {
+export class LineView extends ContainerView<SpanView> {
     line: Line;
-    spans: SpanView[];
+    get spans() { return this.items; }
     lyricsView: LyricsView;
     constructor(line: Line, lyricsView: LyricsView) {
-        super();
+        super({ tag: 'p.line' });
         this.line = line;
         this.lyricsView = lyricsView;
-        this.spans = this.line.spans.map(s => new SpanView(s, this));
-    }
-    createDom() {
-        return {
-            tag: 'p.line',
-            child: this.spans.map(x => x.dom)
-        };
-    }
-    postCreateDom() {
-        super.postCreateDom();
+        this.line.spans.forEach(s => {
+            this.addView(new SpanView(s, this));
+        });
         if (this.line.translation) {
             var lyrics = this.lyricsView?.lyrics;
             var tlang = lyrics && lyrics.translationLang || lyrics.lang;
@@ -167,9 +164,16 @@ class LineView extends View {
     }
 }
 
-class SpanView extends View {
+export class SpanView extends View {
     span: Span;
     lineView: LineView;
+    get timeStamp() { return this.span.timeStamp; }
+    set timeStamp(val) { this.span.timeStamp = val; }
+    get startTime() { return this.span.startTime; }
+    set startTime(val) { this.span.startTime = val; }
+    get isNext() { return this.dom.classList.contains('next'); }
+    set isNext(val) { this.toggleClass('next', val); }
+
     constructor(span: Span, lineView: LineView) {
         super();
         this.span = span;
@@ -206,7 +210,7 @@ class SpanView extends View {
         this.dom.addEventListener('click', (ev) => {
             if (Math.abs(ev.offsetX - startX) <= 3 && Math.abs(ev.offsetY - startY) <= 3) {
                 ev.preventDefault();
-                this.lineView.lyricsView.onSpanClick.invoke(this.span);
+                this.lineView.lyricsView.onSpanClick.invoke(this);
             }
         });
     }
