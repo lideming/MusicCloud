@@ -706,7 +706,8 @@ a.item {
     right: 0;
     bottom: 0;
     animation: fadein .3s;
-    z-index: 10000;
+    z-index: 10001;
+    overflow: hidden;
 }
 
 .dark .overlay {

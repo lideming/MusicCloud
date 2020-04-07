@@ -1568,9 +1568,12 @@ class ContextMenu extends ListView {
                     this.close();
                 });
             }
+            this.overlay.appendView(this);
             document.body.appendChild(this.overlay.dom);
         }
-        document.body.appendChild(this.dom);
+        else {
+            document.body.appendChild(this.dom);
+        }
         this._originalFocused = document.activeElement;
         this.dom.focus();
         var onfocusout = (e) => {
@@ -6802,7 +6805,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-07T03:16:15.159Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-07T03:34:54.130Z"}',
 	buildDate: '',
 	version: '',
 };
