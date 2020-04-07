@@ -11,6 +11,7 @@ import { uploads } from "./Uploads";
 import { TrackList } from "./TrackList";
 import { Track } from "./Track";
 import { settingsUI } from "./SettingsUI";
+import { TextCompositionWatcher } from "@yuuza/webfx/lib/utils";
 
 export var user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
@@ -259,6 +260,7 @@ class LoginDialog extends Dialog {
     viewStatus = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
     btn = new ButtonView({ text: I`Login`, type: 'big' });
     isRegistering = false;
+    compositionWatcher: TextCompositionWatcher;
     constructor() {
         super();
         var dig = this;
@@ -273,15 +275,9 @@ class LoginDialog extends Dialog {
             tag: 'div',
             child: [this.viewStatus, this.btn]
         }) as any);
-        var compositing = false;
-        this.dom.addEventListener('compositionstart', (ev) => {
-            compositing = true;
-        });
-        this.dom.addEventListener('compositionend', (ev) => {
-            compositing = false;
-        });
+        this.compositionWatcher = new TextCompositionWatcher(this.dom);
         dig.dom.addEventListener('keydown', (ev) => {
-            if (!compositing && ev.code === 'Enter') {
+            if (!this.compositionWatcher.isCompositing && ev.code === 'Enter') {
                 this.btnClicked();
                 ev.preventDefault();
             }

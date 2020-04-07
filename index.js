@@ -3,6 +3,11 @@ const tsify = require("tsify");
 const fs = require("fs");
 
 const spaces = / {4}/g;
+const buildInfoMathcer = /__mc_build_info__/g;
+const buildInfo = JSON.stringify({
+    version: require('./package.json').version,
+    buildDate: new Date().toISOString()
+});
 
 const subcmd = process.argv[2] || 'help';
 
@@ -53,6 +58,12 @@ function createBrowserify() {
             var through = require("through2");
             return through(function write(chunk, enc, next) {
                 next(null, chunk.toString().replace(spaces, '\t'));
+            });
+        })
+        .transform((file) => {
+            var through = require("through2");
+            return through(function write(chunk, enc, next) {
+                next(null, chunk.toString().replace(buildInfoMathcer, buildInfo));
             });
         });
 }

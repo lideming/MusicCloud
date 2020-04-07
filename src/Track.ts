@@ -1,4 +1,4 @@
-import { utils, I } from "./utils";
+import { utils, I, TextCompositionWatcher } from "./utils";
 import { Toast, Dialog, LabeledInput, TabBtn } from "./viewlib";
 import { Api } from "./apidef";
 import { api } from "./Api";
@@ -71,6 +71,7 @@ export class TrackDialog extends Dialog {
     btnSave = new TabBtn({ text: I`Save`, right: true });
     btnEditLyrics = new TabBtn({ text: I`Edit Lyrics`, right: true });
     autoFocus = this.inputName.input;
+    compositionWatcher: TextCompositionWatcher;
     constructor() {
         super();
         this.resizable = true;
@@ -87,15 +88,9 @@ export class TrackDialog extends Dialog {
             this.close();
             lyricsEdit.startEdit(this.track, this.inputLyrics.value);
         });
-        var compositing = false;
-        this.dom.addEventListener('compositionstart', (ev) => {
-            compositing = true;
-        });
-        this.dom.addEventListener('compositionend', (ev) => {
-            compositing = false;
-        });
+        this.compositionWatcher = new TextCompositionWatcher(this.dom);
         this.dom.addEventListener('keydown', (ev) => {
-            if (!compositing
+            if (!this.compositionWatcher.isCompositing
                 && ev.code === 'Enter'
                 && (ev.ctrlKey || ev.target !== this.inputLyrics.dom)) {
                 ev.preventDefault();

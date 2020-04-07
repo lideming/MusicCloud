@@ -2,6 +2,7 @@ import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
 import { I, i18n } from "./I18n";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
+import { buildInfo } from "./buildInfo";
 
 export var settingsUI = new class {
     dialog: SettingsDialog;
@@ -49,11 +50,15 @@ class SettingsDialog extends Dialog {
         });
         this.addContent(this.bottom = new View({
             tag: 'div',
-            style: 'margin: 5px 0;',
+            style: 'margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;',
             child: [
-                { tag: 'span', text: 'MusicCloud' },
                 {
-                    tag: 'a.clickable', style: 'float: right; color: inherit;',
+                    tag: 'div', style: 'width: 100%; color: var(--color-text-gray);',
+                    text: buildInfo.buildDate
+                },
+                { tag: 'div', text: 'MusicCloud ' + buildInfo.version },
+                {
+                    tag: 'a.clickable', style: 'color: inherit;',
                     text: () => I`Source code`, href: 'https://github.com/lideming/MusicCloud',
                     target: '_blank'
                 },

@@ -793,6 +793,19 @@ class EventRegistrations {
     }
 }
 exports.EventRegistrations = EventRegistrations;
+class TextCompositionWatcher {
+    constructor(dom) {
+        this.isCompositing = false;
+        this.dom = dom.getDOM();
+        this.dom.addEventListener('compositionstart', (ev) => {
+            this.isCompositing = true;
+        });
+        this.dom.addEventListener('compositionend', (ev) => {
+            this.isCompositing = false;
+        });
+    }
+}
+exports.TextCompositionWatcher = TextCompositionWatcher;
 
 },{"./I18n":1}],3:[function(require,module,exports){
 "use strict";
@@ -2178,7 +2191,7 @@ exports.api = new class {
 	}
 };
 
-},{"./main":23,"./utils":24}],5:[function(require,module,exports){
+},{"./main":24,"./utils":25}],5:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2424,7 +2437,7 @@ class CommentEditor extends viewlib_1.View {
 	}
 }
 
-},{"./Api":4,"./ListContentView":7,"./MessageClient":12,"./Router":15,"./UI":20,"./User":22,"./utils":24,"./viewlib":25}],6:[function(require,module,exports){
+},{"./Api":4,"./ListContentView":7,"./MessageClient":12,"./Router":15,"./UI":20,"./User":22,"./utils":25,"./viewlib":26}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const I18n_1 = require("@yuuza/webfx/lib/I18n");
@@ -2704,7 +2717,7 @@ class ListContentView extends UI_1.ContentView {
 exports.ListContentView = ListContentView;
 ;
 
-},{"./UI":20,"./utils":24,"./viewlib":25}],8:[function(require,module,exports){
+},{"./UI":20,"./utils":25,"./viewlib":26}],8:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -2984,7 +2997,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 }
 exports.ListIndexViewItem = ListIndexViewItem;
 
-},{"./Api":4,"./PlayerCore":14,"./Router":15,"./TrackList":19,"./UI":20,"./Uploads":21,"./User":22,"./utils":24,"./viewlib":25}],9:[function(require,module,exports){
+},{"./Api":4,"./PlayerCore":14,"./Router":15,"./TrackList":19,"./UI":20,"./Uploads":21,"./User":22,"./utils":25,"./viewlib":26}],9:[function(require,module,exports){
 "use strict";
 // file: Lyrics.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -3625,7 +3638,7 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 	}
 }
 
-},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":24,"@yuuza/webfx/lib/utils":2}],11:[function(require,module,exports){
+},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"@yuuza/webfx/lib/utils":2}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -3849,7 +3862,7 @@ class SpanView extends viewlib_1.View {
 }
 exports.SpanView = SpanView;
 
-},{"./Lyrics":9,"./utils":24,"./viewlib":25}],12:[function(require,module,exports){
+},{"./Lyrics":9,"./utils":25,"./viewlib":26}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const User_1 = require("./User");
@@ -4012,7 +4025,7 @@ exports.msgcli = new class {
 	}
 };
 
-},{"./Api":4,"./User":22,"./utils":24}],13:[function(require,module,exports){
+},{"./Api":4,"./User":22,"./utils":25}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Router_1 = require("./Router");
@@ -4147,7 +4160,7 @@ class PlayingView extends UI_1.ContentView {
 	}
 }
 
-},{"./Api":4,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":24}],14:[function(require,module,exports){
+},{"./Api":4,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25}],14:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -4362,7 +4375,7 @@ window.addEventListener('beforeunload', (ev) => {
 	return ev.returnValue = 'The player is running. Are you sure to leave?';
 });
 
-},{"./Api":4,"./utils":24,"./viewlib":25}],15:[function(require,module,exports){
+},{"./Api":4,"./utils":25,"./viewlib":26}],15:[function(require,module,exports){
 "use strict";
 // file: Router.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -4427,7 +4440,7 @@ function parsePath(path) {
 	return path.split('/');
 }
 
-},{"./UI":20,"./utils":24}],16:[function(require,module,exports){
+},{"./UI":20,"./utils":25}],16:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
 	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -4550,13 +4563,14 @@ class SearchBar extends viewlib_1.View {
 	}
 }
 
-},{"./Api":4,"./ListContentView":7,"./PlayerCore":14,"./Router":15,"./Track":18,"./TrackList":19,"./UI":20,"./utils":24,"./viewlib":25}],17:[function(require,module,exports){
+},{"./Api":4,"./ListContentView":7,"./PlayerCore":14,"./Router":15,"./Track":18,"./TrackList":19,"./UI":20,"./utils":25,"./viewlib":26}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const I18n_1 = require("./I18n");
 const UI_1 = require("./UI");
 const PlayerCore_1 = require("./PlayerCore");
+const buildInfo_1 = require("./buildInfo");
 exports.settingsUI = new class {
 	openUI() {
 		if (!this.dialog)
@@ -4602,11 +4616,15 @@ class SettingsDialog extends viewlib_1.Dialog {
 		});
 		this.addContent(this.bottom = new viewlib_1.View({
 			tag: 'div',
-			style: 'margin: 5px 0;',
+			style: 'margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;',
 			child: [
-				{ tag: 'span', text: 'MusicCloud' },
 				{
-					tag: 'a.clickable', style: 'float: right; color: inherit;',
+					tag: 'div', style: 'width: 100%; color: var(--color-text-gray);',
+					text: buildInfo_1.buildInfo.buildDate
+				},
+				{ tag: 'div', text: 'MusicCloud ' + buildInfo_1.buildInfo.version },
+				{
+					tag: 'a.clickable', style: 'color: inherit;',
 					text: () => I18n_1.I `Source code`, href: 'https://github.com/lideming/MusicCloud',
 					target: '_blank'
 				},
@@ -4639,7 +4657,7 @@ class SettingsDialog extends viewlib_1.Dialog {
 	}
 }
 
-},{"./I18n":6,"./PlayerCore":14,"./UI":20,"./viewlib":25}],18:[function(require,module,exports){
+},{"./I18n":6,"./PlayerCore":14,"./UI":20,"./buildInfo":23,"./viewlib":26}],18:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
 	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -4736,15 +4754,9 @@ class TrackDialog extends viewlib_1.Dialog {
 			this.close();
 			LyricsEdit_1.lyricsEdit.startEdit(this.track, this.inputLyrics.value);
 		});
-		var compositing = false;
-		this.dom.addEventListener('compositionstart', (ev) => {
-			compositing = true;
-		});
-		this.dom.addEventListener('compositionend', (ev) => {
-			compositing = false;
-		});
+		this.compositionWatcher = new utils_1.TextCompositionWatcher(this.dom);
 		this.dom.addEventListener('keydown', (ev) => {
-			if (!compositing
+			if (!this.compositionWatcher.isCompositing
 				&& ev.code === 'Enter'
 				&& (ev.ctrlKey || ev.target !== this.inputLyrics.dom)) {
 				ev.preventDefault();
@@ -4791,7 +4803,7 @@ class TrackDialog extends viewlib_1.Dialog {
 }
 exports.TrackDialog = TrackDialog;
 
-},{"./Api":4,"./LyricsEdit":10,"./utils":24,"./viewlib":25}],19:[function(require,module,exports){
+},{"./Api":4,"./LyricsEdit":10,"./utils":25,"./viewlib":26}],19:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -5259,7 +5271,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
 }
 exports.TrackViewItem = TrackViewItem;
 
-},{"./Api":4,"./ListContentView":7,"./PlayerCore":14,"./Router":15,"./Track":18,"./UI":20,"./User":22,"./main":23,"./utils":24,"./viewlib":25}],20:[function(require,module,exports){
+},{"./Api":4,"./ListContentView":7,"./PlayerCore":14,"./Router":15,"./Track":18,"./UI":20,"./User":22,"./main":24,"./utils":25,"./viewlib":26}],20:[function(require,module,exports){
 "use strict";
 // file: UI.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -5892,7 +5904,7 @@ class SidebarToggle extends viewlib_1.View {
 	}
 }
 
-},{"./I18n":6,"./PlayerCore":14,"./Router":15,"./Uploads":21,"./User":22,"./utils":24,"./viewlib":25}],21:[function(require,module,exports){
+},{"./I18n":6,"./PlayerCore":14,"./Router":15,"./Uploads":21,"./User":22,"./utils":25,"./viewlib":26}],21:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -6342,7 +6354,7 @@ var BlockFormat = {
 	}
 };
 
-},{"./Api":4,"./I18n":6,"./ListIndex":8,"./PlayerCore":14,"./Router":15,"./Track":18,"./TrackList":19,"./UI":20,"./User":22,"./utils":24,"./viewlib":25}],22:[function(require,module,exports){
+},{"./Api":4,"./I18n":6,"./ListIndex":8,"./PlayerCore":14,"./Router":15,"./Track":18,"./TrackList":19,"./UI":20,"./User":22,"./utils":25,"./viewlib":26}],22:[function(require,module,exports){
 "use strict";
 // file: User.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -6363,6 +6375,7 @@ const Api_1 = require("./Api");
 const PlayerCore_1 = require("./PlayerCore");
 const Uploads_1 = require("./Uploads");
 const SettingsUI_1 = require("./SettingsUI");
+const utils_2 = require("@yuuza/webfx/lib/utils");
 exports.user = new class User {
 	constructor() {
 		this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
@@ -6648,15 +6661,9 @@ class LoginDialog extends viewlib_1.Dialog {
 			tag: 'div',
 			child: [this.viewStatus, this.btn]
 		}));
-		var compositing = false;
-		this.dom.addEventListener('compositionstart', (ev) => {
-			compositing = true;
-		});
-		this.dom.addEventListener('compositionend', (ev) => {
-			compositing = false;
-		});
+		this.compositionWatcher = new utils_2.TextCompositionWatcher(this.dom);
 		dig.dom.addEventListener('keydown', (ev) => {
-			if (!compositing && ev.code === 'Enter') {
+			if (!this.compositionWatcher.isCompositing && ev.code === 'Enter') {
 				this.btnClicked();
 				ev.preventDefault();
 			}
@@ -6790,7 +6797,24 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 	}
 }
 
-},{"./Api":4,"./PlayerCore":14,"./SettingsUI":17,"./UI":20,"./Uploads":21,"./main":23,"./utils":24,"./viewlib":25}],23:[function(require,module,exports){
+},{"./Api":4,"./PlayerCore":14,"./SettingsUI":17,"./UI":20,"./Uploads":21,"./main":24,"./utils":25,"./viewlib":26,"@yuuza/webfx/lib/utils":2}],23:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@yuuza/webfx/lib/utils");
+exports.buildInfo = {
+	raw: '{"version":"1.0.0","buildDate":"2020-04-07T03:16:15.159Z"}',
+	buildDate: '',
+	version: '',
+};
+if (exports.buildInfo.raw !== '__mc_bui' + 'ld_info__') {
+	const obj = JSON.parse(exports.buildInfo.raw);
+	utils_1.utils.objectApply(exports.buildInfo, obj, ['buildDate', 'version']);
+}
+else {
+	exports.buildInfo.raw = '';
+}
+
+},{"@yuuza/webfx/lib/utils":2}],24:[function(require,module,exports){
 "use strict";
 // file: main.ts
 // TypeScript 3.7 is required.
@@ -6842,7 +6866,7 @@ var app = window['app'] = {
 app.init();
 window['preload'].jsOk();
 
-},{"./Api":4,"./Discussion":5,"./ListIndex":8,"./Lyrics":9,"./LyricsEdit":10,"./MessageClient":12,"./NowPlaying":13,"./PlayerCore":14,"./Router":15,"./Search":16,"./SettingsUI":17,"./UI":20,"./Uploads":21,"./User":22,"./viewlib":25}],24:[function(require,module,exports){
+},{"./Api":4,"./Discussion":5,"./ListIndex":8,"./Lyrics":9,"./LyricsEdit":10,"./MessageClient":12,"./NowPlaying":13,"./PlayerCore":14,"./Router":15,"./Search":16,"./SettingsUI":17,"./UI":20,"./Uploads":21,"./User":22,"./viewlib":26}],25:[function(require,module,exports){
 "use strict";
 function __export(m) {
 	for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
@@ -6850,7 +6874,7 @@ function __export(m) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __export(require("@yuuza/webfx/lib/utils"));
 
-},{"@yuuza/webfx/lib/utils":2}],25:[function(require,module,exports){
+},{"@yuuza/webfx/lib/utils":2}],26:[function(require,module,exports){
 "use strict";
 function __export(m) {
 	for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
@@ -6858,4 +6882,4 @@ function __export(m) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __export(require("@yuuza/webfx/lib/viewlib"));
 
-},{"@yuuza/webfx/lib/viewlib":3}]},{},[23]);
+},{"@yuuza/webfx/lib/viewlib":3}]},{},[24]);

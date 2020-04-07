@@ -6,7 +6,8 @@
         "jsx": "preserve",
         "lib": ["dom", "es2015"],
         "sourceMap": false,
-        "downlevelIteration": true
+        "downlevelIteration": true,
+        "noImplicitThis": true
     },
     "exclude": [
         "node_modules",
