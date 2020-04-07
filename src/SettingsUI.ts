@@ -8,7 +8,7 @@ export var settingsUI = new class {
     openUI() {
         if (!this.dialog)
             this.dialog = new SettingsDialog();
-        this.dialog.setOffset(0, 0);
+        this.dialog.center();
         this.dialog.show();
     }
 };

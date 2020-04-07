@@ -87,8 +87,17 @@ export class TrackDialog extends Dialog {
             this.close();
             lyricsEdit.startEdit(this.track, this.inputLyrics.value);
         });
+        var compositing = false;
+        this.dom.addEventListener('compositionstart', (ev) => {
+            compositing = true;
+        });
+        this.dom.addEventListener('compositionend', (ev) => {
+            compositing = false;
+        });
         this.dom.addEventListener('keydown', (ev) => {
-            if (ev.code === 'Enter' && ev.ctrlKey) {
+            if (!compositing
+                && ev.code === 'Enter'
+                && (ev.ctrlKey || ev.target !== this.inputLyrics.dom)) {
                 ev.preventDefault();
                 this.save();
             }

@@ -273,8 +273,15 @@ class LoginDialog extends Dialog {
             tag: 'div',
             child: [this.viewStatus, this.btn]
         }) as any);
+        var compositing = false;
+        this.dom.addEventListener('compositionstart', (ev) => {
+            compositing = true;
+        });
+        this.dom.addEventListener('compositionend', (ev) => {
+            compositing = false;
+        });
         dig.dom.addEventListener('keydown', (ev) => {
-            if (ev.code === 'Enter') {
+            if (!compositing && ev.code === 'Enter') {
                 this.btnClicked();
                 ev.preventDefault();
             }

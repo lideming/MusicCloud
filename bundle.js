@@ -4561,7 +4561,7 @@ exports.settingsUI = new class {
 	openUI() {
 		if (!this.dialog)
 			this.dialog = new SettingsDialog();
-		this.dialog.setOffset(0, 0);
+		this.dialog.center();
 		this.dialog.show();
 	}
 };
@@ -4736,8 +4736,17 @@ class TrackDialog extends viewlib_1.Dialog {
 			this.close();
 			LyricsEdit_1.lyricsEdit.startEdit(this.track, this.inputLyrics.value);
 		});
+		var compositing = false;
+		this.dom.addEventListener('compositionstart', (ev) => {
+			compositing = true;
+		});
+		this.dom.addEventListener('compositionend', (ev) => {
+			compositing = false;
+		});
 		this.dom.addEventListener('keydown', (ev) => {
-			if (ev.code === 'Enter' && ev.ctrlKey) {
+			if (!compositing
+				&& ev.code === 'Enter'
+				&& (ev.ctrlKey || ev.target !== this.inputLyrics.dom)) {
 				ev.preventDefault();
 				this.save();
 			}
@@ -6639,8 +6648,15 @@ class LoginDialog extends viewlib_1.Dialog {
 			tag: 'div',
 			child: [this.viewStatus, this.btn]
 		}));
+		var compositing = false;
+		this.dom.addEventListener('compositionstart', (ev) => {
+			compositing = true;
+		});
+		this.dom.addEventListener('compositionend', (ev) => {
+			compositing = false;
+		});
 		dig.dom.addEventListener('keydown', (ev) => {
-			if (ev.code === 'Enter') {
+			if (!compositing && ev.code === 'Enter') {
 				this.btnClicked();
 				ev.preventDefault();
 			}
