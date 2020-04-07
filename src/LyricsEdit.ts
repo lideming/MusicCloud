@@ -11,7 +11,7 @@ import { utils } from '@yuuza/webfx/lib/utils';
 export var lyricsEdit = new class {
     sidebarItem: SidebarItem;
     view: LyricsEditContentView;
-    startEdit(track: Track) {
+    startEdit(track: Track, lyrics: string) {
         if (!this.view) {
             this.sidebarItem = new SidebarItem({ text: I`Edit Lyrics` });
             this.view = new LyricsEditContentView();
@@ -23,7 +23,7 @@ export var lyricsEdit = new class {
             });
         }
         this.sidebarItem.hidden = false;
-        this.view.setTrack(track);
+        this.view.setTrack(track, lyrics);
         router.nav('lyricsEdit');
     }
 };
@@ -32,6 +32,7 @@ class LyricsEditContentView extends ContentView {
     header = new ContentHeader({ title: I`Edit Lyrics` });
     lyricsView = new EditableLyricsView();
     track: Track = null;
+    lyricsString: string = null;
 
     constructor() {
         super();
@@ -42,11 +43,10 @@ class LyricsEditContentView extends ContentView {
             }
         }));
         this.header.actions.addView(new ActionBtn({
-            text: I`Save`,
+            text: I`Done`,
             onclick: () => {
-                this.track.infoObj.lyrics = serialize(this.lyricsView.lyrics);
+                this.lyricsString = serialize(this.lyricsView.lyrics);
                 this.close();
-                this.track.startEdit();
             }
         }));
     }
@@ -54,6 +54,8 @@ class LyricsEditContentView extends ContentView {
     close() {
         lyricsEdit.sidebarItem.hidden = true;
         window.history.back();
+        var trackDialog = this.track.startEdit();
+        trackDialog.inputLyrics.value = this.lyricsString;
     }
 
     createDom(): BuildDomExpr {
@@ -65,9 +67,10 @@ class LyricsEditContentView extends ContentView {
             ]
         };
     }
-    setTrack(track: Track) {
+    setTrack(track: Track, lyrics: string) {
         this.track = track;
-        this.lyricsView.setLyrics(track.lyrics);
+        this.lyricsString = lyrics;
+        this.lyricsView.setLyrics(lyrics);
     }
     lyricsScrollPos: number = 0;
     onShow() {

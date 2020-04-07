@@ -45,6 +45,7 @@ export class Track {
         var dialog = new TrackDialog();
         dialog.setTrack(this);
         dialog.show();
+        return dialog;
     }
     async requestFileUrl(file: Api.TrackFile) {
         if (!file.url) {
@@ -84,7 +85,7 @@ export class TrackDialog extends Dialog {
         this.addBtn(this.btnEditLyrics);
         this.btnEditLyrics.onClick.add(() => {
             this.close();
-            lyricsEdit.startEdit(this.track);
+            lyricsEdit.startEdit(this.track, this.inputLyrics.value);
         });
         this.dom.addEventListener('keydown', (ev) => {
             if (ev.code === 'Enter' && ev.ctrlKey) {

@@ -65,6 +65,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Error converting \\"{0}\\".", "转换 \\"{0}\\" 时发生错误."],
     ["Edit", "编辑"],
     ["Discard", "放弃更改"],
+    ["Done", "完成"],
     ["Save", "保存"],
     ["Saving...", "保存中..."],
     ["Error", "错误"],

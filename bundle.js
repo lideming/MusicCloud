@@ -2494,6 +2494,7 @@ I18n_1.i18n.add2dArray(JSON.parse(`[
 	["Error converting \\"{0}\\".", "转换 \\"{0}\\" 时发生错误."],
 	["Edit", "编辑"],
 	["Discard", "放弃更改"],
+	["Done", "完成"],
 	["Save", "保存"],
 	["Saving...", "保存中..."],
 	["Error", "错误"],
@@ -3415,7 +3416,7 @@ const Lyrics_1 = require("./Lyrics");
 const PlayerCore_1 = require("./PlayerCore");
 const utils_2 = require("@yuuza/webfx/lib/utils");
 exports.lyricsEdit = new class {
-	startEdit(track) {
+	startEdit(track, lyrics) {
 		if (!this.view) {
 			this.sidebarItem = new UI_1.SidebarItem({ text: I18n_1.I `Edit Lyrics` });
 			this.view = new LyricsEditContentView();
@@ -3427,7 +3428,7 @@ exports.lyricsEdit = new class {
 			});
 		}
 		this.sidebarItem.hidden = false;
-		this.view.setTrack(track);
+		this.view.setTrack(track, lyrics);
 		Router_1.router.nav('lyricsEdit');
 	}
 };
@@ -3437,6 +3438,7 @@ class LyricsEditContentView extends UI_1.ContentView {
 		this.header = new UI_1.ContentHeader({ title: I18n_1.I `Edit Lyrics` });
 		this.lyricsView = new EditableLyricsView();
 		this.track = null;
+		this.lyricsString = null;
 		this.lyricsScrollPos = 0;
 		this.timer = new utils_1.Timer(() => this.onProgressChanged());
 		this.lastTime = 0;
@@ -3465,17 +3467,18 @@ class LyricsEditContentView extends UI_1.ContentView {
 			}
 		}));
 		this.header.actions.addView(new UI_1.ActionBtn({
-			text: I18n_1.I `Save`,
+			text: I18n_1.I `Done`,
 			onclick: () => {
-				this.track.infoObj.lyrics = Lyrics_1.serialize(this.lyricsView.lyrics);
+				this.lyricsString = Lyrics_1.serialize(this.lyricsView.lyrics);
 				this.close();
-				this.track.startEdit();
 			}
 		}));
 	}
 	close() {
 		exports.lyricsEdit.sidebarItem.hidden = true;
 		window.history.back();
+		var trackDialog = this.track.startEdit();
+		trackDialog.inputLyrics.value = this.lyricsString;
 	}
 	createDom() {
 		return {
@@ -3486,9 +3489,10 @@ class LyricsEditContentView extends UI_1.ContentView {
 			]
 		};
 	}
-	setTrack(track) {
+	setTrack(track, lyrics) {
 		this.track = track;
-		this.lyricsView.setLyrics(track.lyrics);
+		this.lyricsString = lyrics;
+		this.lyricsView.setLyrics(lyrics);
 	}
 	onShow() {
 		this.ensureDom();
@@ -4689,6 +4693,7 @@ class Track {
 		var dialog = new TrackDialog();
 		dialog.setTrack(this);
 		dialog.show();
+		return dialog;
 	}
 	requestFileUrl(file) {
 		return __awaiter(this, void 0, void 0, function* () {
@@ -4729,7 +4734,7 @@ class TrackDialog extends viewlib_1.Dialog {
 		this.addBtn(this.btnEditLyrics);
 		this.btnEditLyrics.onClick.add(() => {
 			this.close();
-			LyricsEdit_1.lyricsEdit.startEdit(this.track);
+			LyricsEdit_1.lyricsEdit.startEdit(this.track, this.inputLyrics.value);
 		});
 		this.dom.addEventListener('keydown', (ev) => {
 			if (ev.code === 'Enter' && ev.ctrlKey) {
