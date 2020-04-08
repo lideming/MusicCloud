@@ -145,8 +145,8 @@ export const ui = new class {
         document.addEventListener('drop', (ev) => {
             if (ev.defaultPrevented) return;
             ev.preventDefault();
-            var files = ev.dataTransfer.files;
-            if (files.length) {
+            const files = ev.dataTransfer?.files;
+            if (files && files.length) {
                 new MessageBox().setTitle(I`Question`)
                     .addText(files.length === 1
                         ? I`Did you mean to upload 1 file?`
@@ -177,7 +177,7 @@ export const ui = new class {
     endPreload() {
         setTimeout(() => {
             ui.mainContainer.dom.classList.remove('no-transition');
-            utils.fadeout(document.getElementById('preload-overlay'));
+            utils.fadeout(document.getElementById('preload-overlay')!);
         }, 1);
     }
     theme = new class {
@@ -220,8 +220,8 @@ export const ui = new class {
         }
     };
     bottomBar = new class {
-        container: HTMLElement = document.getElementById("bottombar");
-        btnPin: HTMLElement = document.getElementById('btnPin');
+        container: HTMLElement = document.getElementById("bottombar")!;
+        btnPin: HTMLElement = document.getElementById('btnPin')!;
         siPin: SettingItem<boolean>;
         private pinned = true;
         hideTimer = new utils.Timer(() => { this.toggle(false); });
@@ -264,12 +264,12 @@ export const ui = new class {
         }
     };
     playerControl = new class {
-        progbar = document.getElementById('progressbar');
-        fill = document.getElementById('progressbar-fill');
-        labelCur = document.getElementById('progressbar-label-cur');
-        labelTotal = document.getElementById('progressbar-label-total');
-        btnPlay = new TextView(document.getElementById('btn-play'));
-        btnLoop = new TextView(document.getElementById('btn-loop'));
+        progbar = document.getElementById('progressbar')!;
+        fill = document.getElementById('progressbar-fill')!;
+        labelCur = document.getElementById('progressbar-label-cur')!;
+        labelTotal = document.getElementById('progressbar-label-total')!;
+        btnPlay = new TextView(document.getElementById('btn-play')!);
+        btnLoop = new TextView(document.getElementById('btn-loop')!);
         btnVolume: VolumeButton;
 
         state: typeof playerCore['state'];
@@ -289,7 +289,7 @@ export const ui = new class {
             playerCore.onProgressChanged.add(() => this.setProg(playerCore.currentTime, playerCore.duration));
             this.onProgressSeeking((percent) => {
                 playerCore.ensureLoaded().then(() => {
-                    playerCore.currentTime = percent * playerCore.duration;
+                    playerCore.currentTime = percent * playerCore.duration!;
                 });
             });
             this.onPlayButtonClicked(() => {
@@ -297,7 +297,7 @@ export const ui = new class {
                 if (state === 'paused') playerCore.play();
                 else playerCore.pause();
             });
-            this.btnVolume = new VolumeButton(document.getElementById('btn-volume'));
+            this.btnVolume = new VolumeButton(document.getElementById('btn-volume')!);
             this.btnVolume.text = I`Volume`;
             this.btnVolume.bindToPlayer();
         }
@@ -316,12 +316,12 @@ export const ui = new class {
             }
             this.state = state;
         }
-        setProg(cur: number, total: number) {
-            var prog = cur / total;
+        setProg(cur: number | undefined, total: number | undefined) {
+            var prog = cur! / total!;
             prog = utils.numLimit(prog, 0, 1);
             this.fill.style.width = (prog * 100) + '%';
-            this.labelCur.textContent = utils.formatTime(cur);
-            this.labelTotal.textContent = utils.formatTime(total);
+            this.labelCur.textContent = utils.formatTime(cur!);
+            this.labelTotal.textContent = utils.formatTime(total!);
         }
         setLoopMode(str: PlayingLoopMode) {
             this.btnLoop.hidden = false;
@@ -347,11 +347,11 @@ export const ui = new class {
         }
     };
     trackinfo = new class {
-        element = document.getElementById('bottombar-trackinfo');
+        element = document.getElementById('bottombar-trackinfo')!;
         init() {
             playerCore.onTrackChanged.add(() => this.setTrack(playerCore.track));
         }
-        setTrack(track: Track) {
+        setTrack(track: Track | null) {
             if (track) {
                 utils.replaceChild(this.element, utils.buildDOM({
                     tag: 'span',
@@ -368,12 +368,12 @@ export const ui = new class {
         }
     };
     mainContainer = new class {
-        dom = document.getElementById('main-container');
+        dom = document.getElementById('main-container')!;
     };
     sidebar = new class {
-        dom = document.getElementById('sidebar');
+        dom = document.getElementById('sidebar')!;
         btnShow: SidebarToggle;
-        overlay?: Overlay;
+        overlay: Overlay | null;
         _float = false;
         get float() { return this._float; }
         _hide = false;
@@ -402,7 +402,7 @@ export const ui = new class {
             this._float = utils.toggleClass(document.body, 'float-sidebar', float);
             if (this._float) {
                 this.btnShow = this.btnShow || new SidebarToggle();
-                this.dom.parentElement.appendChild(this.btnShow.dom);
+                this.dom.parentElement!.appendChild(this.btnShow.dom);
             } else {
                 this.btnShow.dom.remove();
             }
@@ -423,14 +423,14 @@ export const ui = new class {
                     });
                     ui.mainContainer.dom.appendView(this.overlay);
                 } else {
-                    utils.fadeout(this.overlay.dom);
+                    utils.fadeout(this.overlay!.dom);
                     this.overlay = null;
                 }
             }
         }
     };
     sidebarLogin = new class {
-        container = document.getElementById('sidebar-login');
+        container = document.getElementById('sidebar-login')!;
         loginState = new SidebarItem();
         init() {
             this.container.appendView(this.loginState);
@@ -455,15 +455,15 @@ export const ui = new class {
         }
     };
     sidebarList = new class {
-        container = document.getElementById('sidebar-list');
+        container = document.getElementById('sidebar-list')!;
         listview = new ListView(this.container);
 
-        features = document.getElementById('sidebar-features');
+        features = document.getElementById('sidebar-features')!;
         featuresListview = new ListView(this.features);
 
         currentActive = new ItemActiveHelper<ListViewItem>();
 
-        setActive(item: ListViewItem) {
+        setActive(item: ListViewItem | null) {
             this.currentActive.set(item);
         }
         addItem(item: ListViewItem) {
@@ -474,17 +474,17 @@ export const ui = new class {
         }
     };
     content = new class {
-        container = document.getElementById('content-outer');
-        current: ContentView = null;
+        container = document.getElementById('content-outer')!;
+        current: ContentView | null = null;
         removeCurrent() {
             const cur = this.current;
             this.current = null;
             if (!cur) return;
-            cur.contentViewState.scrollTop = this.container.scrollTop;
+            cur.contentViewState!.scrollTop = this.container.scrollTop;
             cur.onRemove();
             if (cur.dom) this.container.removeChild(cur.dom);
         }
-        setCurrent(arg: ContentView) {
+        setCurrent(arg: ContentView | null) {
             if (arg === this.current) return;
             this.removeCurrent();
             if (arg) {
@@ -536,7 +536,7 @@ class VolumeButton extends ProgressButton {
 
     constructor(dom?: HTMLElement) {
         super(dom);
-        dom.addEventListener('wheel', (ev) => {
+        this.dom.addEventListener('wheel', (ev) => {
             ev.preventDefault();
             var delta = Math.sign(ev.deltaY) * -0.1;
             this.onChanging.invoke(delta);

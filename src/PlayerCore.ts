@@ -9,7 +9,7 @@ import { Api } from "./apidef";
 /** 播放器核心：控制播放逻辑 */
 export var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
-    track: Track;
+    track: Track | null;
     audioLoaded = false;
     onTrackChanged = new Callbacks<Action>();
 
@@ -61,7 +61,7 @@ export var playerCore = new class PlayerCore {
     get canPlay() { return this.audio.readyState >= 2; }
     init() {
         // migration
-        var siLoop = new SettingItem<PlayingLoopMode>('mcloud-loop', 'str', null);
+        var siLoop = new SettingItem<PlayingLoopMode>('mcloud-loop', 'str', null!);
         if (siLoop.data !== null) {
             this.loopMode = siLoop.data;
             siLoop.remove();
@@ -107,7 +107,7 @@ export var playerCore = new class PlayerCore {
         else
             this.setTrack(null);
     }
-    loadUrl(src: string) {
+    loadUrl(src: string | null) {
         // Getting `this.audio.src` is very slow when a blob is loaded,
         // so we add this property:
         this.audioLoaded = !!src;
@@ -119,7 +119,7 @@ export var playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
-    setTrack(track: Track) {
+    setTrack(track: Track | null) {
         var oldTrack = this.track;
         this.track = track;
         if (oldTrack?.url !== this.track?.url
@@ -156,7 +156,7 @@ export var playerCore = new class PlayerCore {
                 await track.requestFileUrl(cur);
                 ct.throwIfCancelled();
             }
-            this.loadUrl(api.processUrl(cur.url));
+            this.loadUrl(api.processUrl(cur.url!));
         }
     }
     async play() {
@@ -166,7 +166,7 @@ export var playerCore = new class PlayerCore {
     async ensureLoaded() {
         var track = this.track;
         if (track && !this.audioLoaded)
-            await this.loadTrack(this.track);
+            await this.loadTrack(track!);
     }
     pause() {
         this.audio.pause();

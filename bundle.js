@@ -83,7 +83,7 @@ class I18n {
      * @param langs Available languages
      */
     static detectLanguage(langs) {
-        var cur;
+        var cur = null;
         var curIdx = -1;
         var languages = [];
         // ['en-US'] -> ['en-US', 'en']
@@ -99,7 +99,7 @@ class I18n {
                 curIdx = idx;
             }
         });
-        return cur;
+        return cur || langs[0];
     }
 }
 exports.I18n = I18n;
@@ -161,7 +161,7 @@ exports.utils = new class Utils {
     formatTime(sec) {
         if (typeof sec !== 'number' || isNaN(sec))
             return '--:--';
-        var sec = Math.round(sec);
+        sec = Math.round(sec);
         var min = Math.floor(sec / 60);
         sec %= 60;
         return this.strPadLeft(min.toString(), 2, '0') + ':' + this.strPadLeft(sec.toString(), 2, '0');
@@ -352,6 +352,7 @@ exports.utils = new class Utils {
             if (func(item, idx++))
                 return item;
         }
+        return null;
     }
     arraySum(arr, func) {
         var sum = 0;
@@ -501,9 +502,12 @@ exports.utils.buildDOM = (() => {
         }
         if (Node && obj instanceof Node)
             return obj;
-        if (obj['getDOM'])
-            return obj['getDOM']();
-        var node = createElementFromTag(obj.tag);
+        if ('getDOM' in obj)
+            return obj.getDOM();
+        const tag = obj.tag;
+        if (!tag)
+            throw new Error('no tag');
+        var node = createElementFromTag(tag);
         if (obj['_ctx'])
             ctx = BuildDOMCtx.EnsureCtx(obj['_ctx'], ctx);
         for (var key in obj) {
@@ -929,7 +933,7 @@ class ContainerView extends View {
         }
         else {
             items.splice(pos, 0, view);
-            this.dom.insertBefore(view.dom, (_a = items[pos + 1]) === null || _a === void 0 ? void 0 : _a.dom);
+            this.dom.insertBefore(view.dom, ((_a = items[pos + 1]) === null || _a === void 0 ? void 0 : _a.dom) || null);
             for (let i = pos; i < items.length; i++) {
                 items[i]._position = i;
             }
@@ -938,9 +942,9 @@ class ContainerView extends View {
     removeView(view) {
         view = this._ensureItem(view);
         view.dom.remove();
-        this.items.splice(view._position, 1);
         var pos = view._position;
-        view.parentView = view._position = null;
+        view.parentView = view._position = undefined;
+        this.items.splice(pos, 1);
         for (let i = pos; i < this.items.length; i++) {
             this.items[i]._position = i;
         }
@@ -1012,6 +1016,7 @@ class ListViewItem extends View {
         this.onSelectedChanged = new utils_1.Callbacks();
         // https://stackoverflow.com/questions/7110353
         this.enterctr = 0;
+        this.dragoverPlaceholder = null;
     }
     get listview() { return this.parentView; }
     get selectionHelper() { return this.listview.selectionHelper; }
@@ -1240,6 +1245,8 @@ class SelectionHelper {
         this.ctrlForceSelect = false;
         this.selectedItems = [];
         this.onSelectedItemsChanged = new utils_1.Callbacks();
+        /** For shift-click */
+        this.lastToggledItem = null;
     }
     get enabled() { return this._enabled; }
     set enabled(val) {
@@ -1259,7 +1266,7 @@ class SelectionHelper {
                 return false;
             this.enabled = true;
         }
-        if (ev.shiftKey && this.lastToggledItem) {
+        if (ev.shiftKey && this.lastToggledItem && this.itemProvider) {
             var toSelect = !!this.lastToggledItem.selected;
             var start = item.position, end = this.lastToggledItem.position;
             if (start > end)
@@ -1361,6 +1368,7 @@ class LoadingIndicator extends View {
     constructor(init) {
         super();
         this._status = 'running';
+        this.onclick = null;
         if (init)
             utils_1.utils.objectApply(this, init);
     }
@@ -1427,6 +1435,8 @@ exports.Overlay = Overlay;
 class EditableHelper {
     constructor(element) {
         this.editing = false;
+        this.beforeEdit = null;
+        this.onComplete = null;
         this.element = element;
     }
     startEdit(onComplete) {
@@ -1548,15 +1558,17 @@ class ContextMenu extends ListView {
         this._visible = false;
         this.overlay = null;
         this._onclose = null;
+        this._originalFocused = null;
         items === null || items === void 0 ? void 0 : items.forEach(x => this.add(x));
     }
     get visible() { return this._visible; }
     ;
     show(arg) {
-        if (arg.ev) {
-            arg.x = arg.ev.pageX;
-            arg.y = arg.ev.pageY;
-        }
+        if ('ev' in arg)
+            arg = {
+                x: arg.ev.pageX,
+                y: arg.ev.pageY
+            };
         this.close();
         this._visible = true;
         if (this.useOverlay) {
@@ -1604,11 +1616,12 @@ class ContextMenu extends ListView {
         this.dom.style.top = arg.y + 'px';
     }
     close() {
+        var _a, _b, _c;
         if (this._visible) {
             this._visible = false;
-            this._onclose();
+            (_a = this._onclose) === null || _a === void 0 ? void 0 : _a.call(this);
             this._onclose = null;
-            this._originalFocused['focus'] && this._originalFocused['focus']();
+            (_c = (_b = this._originalFocused) === null || _b === void 0 ? void 0 : _b['focus']) === null || _c === void 0 ? void 0 : _c.call(_b);
             this._originalFocused = null;
             if (this.overlay)
                 utils_1.utils.fadeout(this.overlay.dom);
@@ -1935,7 +1948,6 @@ class Toast extends View {
     constructor(init) {
         super();
         this.text = '';
-        this.container = null;
         this.shown = false;
         this.timer = new utils_1.Timer(() => this.close());
         utils_1.utils.objectApply(this, init);
@@ -2039,6 +2051,7 @@ exports.api = new class {
 	constructor() {
 		this.storageUrlBase = '';
 		this.debugSleep = main_1.settings.debug ? main_1.settings.apiDebugDelay : 0;
+		this.defaultAuth = null;
 		this.onTrackInfoChanged = new utils_1.Callbacks();
 		this.onTrackDeleted = new utils_1.Callbacks();
 	}
@@ -2118,7 +2131,7 @@ exports.api = new class {
 			xhr.onerror = ev => reject("XHR error");
 			xhr.onabort = ev => reject("XHR abort");
 		});
-		xhr.upload.onprogress = arg.onprogerss;
+		xhr.upload.onprogress = arg.onprogerss || null;
 		xhr.open(arg.method, this.processUrl(arg.url));
 		if (arg.auth)
 			xhr.setRequestHeader('Authorization', arg.auth);
@@ -2746,6 +2759,7 @@ class ListIndex {
 	constructor() {
 		this.loadedList = {};
 		this.loadIndicator = new viewlib_1.LoadingIndicator();
+		this.playing = null;
 		this.nextId = -100;
 		this.listView = new viewlib_1.ListView({ tag: 'ul' });
 		this.listView.dragging = true;
@@ -2756,6 +2770,8 @@ class ListIndex {
 		this.listView.onDragover = (arg) => {
 			const src = arg.source;
 			const data = arg.event.dataTransfer;
+			if (!data)
+				return;
 			if (src instanceof TrackList_1.TrackViewItem) {
 				arg.accept = true;
 				data.dropEffect = 'copy';
@@ -2780,6 +2796,8 @@ class ListIndex {
 					for (let i = 0; i < data.files.length; i++) {
 						const file = data.files[i];
 						Uploads_1.uploads.uploadFile(file).then((track) => __awaiter(this, void 0, void 0, function* () {
+							if (!track)
+								return;
 							if (list.fetching)
 								yield list.fetching;
 							list.addTrack(track.toApiTrack(), arg.event.altKey ? undefined : 0);
@@ -2810,13 +2828,13 @@ class ListIndex {
 	}
 	init() {
 		PlayerCore_1.playerCore.onTrackChanged.add(() => {
-			var _a, _b, _c, _d;
-			var curPlaying = (_b = (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list;
+			var _a, _b, _c, _d, _e, _f;
+			var curPlaying = (_c = (_b = (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) !== null && _c !== void 0 ? _c : null;
 			if (curPlaying != this.playing) {
-				if (curPlaying)
-					(_c = this.getViewItem(curPlaying.id)) === null || _c === void 0 ? void 0 : _c.updateWith({ playing: true });
-				if (this.playing)
-					(_d = this.getViewItem(this.playing.id)) === null || _d === void 0 ? void 0 : _d.updateWith({ playing: false });
+				if (curPlaying === null || curPlaying === void 0 ? void 0 : curPlaying.id)
+					(_d = this.getViewItem(curPlaying.id)) === null || _d === void 0 ? void 0 : _d.updateWith({ playing: true });
+				if ((_e = this.playing) === null || _e === void 0 ? void 0 : _e.id)
+					(_f = this.getViewItem(this.playing.id)) === null || _f === void 0 ? void 0 : _f.updateWith({ playing: false });
 				this.playing = curPlaying;
 			}
 		});
@@ -2891,7 +2909,10 @@ class ListIndex {
 		var list = this.loadedList[id];
 		if (!list) {
 			list = new TrackList_1.TrackList();
-			list.loadInfo(this.getListInfo(id));
+			const listInfo = this.getListInfo(id);
+			if (!listInfo)
+				throw new Error('cannot find list info');
+			list.loadInfo(listInfo);
 			if (list.apiid) {
 				list.fetch();
 			}
@@ -3157,7 +3178,7 @@ class Parser {
 		this.lines = [];
 		this.bpm = null;
 		this.offset = 0;
-		this.curTime = null;
+		this.curTime = 0;
 		this.lang = '';
 		this.tlang = '';
 		this.lex = new Lexer(str);
@@ -3202,11 +3223,11 @@ class Parser {
 				let text = null;
 				let ts;
 				if (lex.tryExpectAndConsume(2 /* tagEnd */)) {
-					ts = { time: -1 };
+					ts = { time: -1, beats: null, beatsDiv: null };
 				}
 				else {
 					text = lex.expectAndConsume(5 /* text */).val;
-					ts = this.parseTimestamp(text, curTime >= 0 ? curTime : ((_a = this.curTime) !== null && _a !== void 0 ? _a : 0));
+					ts = this.parseTimestamp(text, (curTime != null && curTime >= 0) ? curTime : ((_a = this.curTime) !== null && _a !== void 0 ? _a : 0));
 					if (ts != null)
 						lex.expectAndConsume(2 /* tagEnd */);
 				}
@@ -3260,13 +3281,14 @@ class Parser {
 						this.lines.push({
 							startTime,
 							orderTime: startTime !== null && startTime !== void 0 ? startTime : this.curTime,
+							translation: null,
 							spans: null,
 							rawLine: lex.str.substring(beginTag.pos, lex.peek().pos)
 						});
 						return;
 					}
 					else {
-						spans.push(lastSpan = { text: '[' + text + ']', ruby: null, startTime: curTime });
+						spans.push(lastSpan = { text: '[' + text + ']', ruby: null, startTime: curTime, timeStamp: null });
 						if (lex.tryExpect(2 /* tagEnd */))
 							lex.consume();
 					}
@@ -3308,7 +3330,8 @@ class Parser {
 			startTime,
 			orderTime: startTime !== null && startTime !== void 0 ? startTime : this.curTime,
 			translation: trans,
-			spans
+			spans,
+			rawLine: null
 		});
 		duplicateTime.forEach(t => {
 			var offset = t.time - startTime;
@@ -3325,7 +3348,8 @@ class Parser {
 						beats: s.timeStamp.beats,
 						beatsDiv: s.timeStamp.beatsDiv
 					}
-				}))
+				})),
+				rawLine: null
 			});
 		});
 	}
@@ -3340,6 +3364,8 @@ class Parser {
 	}
 	parseTimestamp(str, curTime) {
 		var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
+		if (!curTime)
+			curTime = 0;
 		if (match) {
 			let result = 0;
 			if (match[2])
@@ -3366,6 +3392,7 @@ class Parser {
 			result.time += curTime;
 			return result;
 		}
+		return null;
 	}
 }
 exports.Parser = Parser;
@@ -3389,7 +3416,7 @@ function serialize(lyrics) {
 		if (l.rawLine) {
 			str += l.rawLine;
 		}
-		else {
+		else if (l.spans) {
 			l.spans.forEach(s => {
 				if (s.timeStamp) {
 					if (s.timeStamp.beats != null) {
@@ -3548,7 +3575,7 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 				if ((_a = l.spans) === null || _a === void 0 ? void 0 : _a.length) {
 					let firstSpan = l.spans[0].span;
 					if (!firstSpan.timeStamp) {
-						firstSpan.timeStamp = { time: -1 };
+						firstSpan.timeStamp = { time: -1, beats: null, beatsDiv: null };
 					}
 					l.spans.forEach(s => {
 						s.timeStamp && s.toggleClass('ts', true);
@@ -3717,7 +3744,10 @@ class LyricsView extends viewlib_1.View {
 		}
 		this.lyrics = lyrics;
 		this.curLine.set(null);
-		this.lines.dom.lang = lyrics.lang;
+		if (lyrics.lang)
+			this.lines.dom.lang = lyrics.lang;
+		else
+			this.lines.dom.removeAttribute('lang');
 		this.lines.removeAllView();
 		lyrics.lines.forEach(l => {
 			if (l.spans) {
@@ -3874,6 +3904,7 @@ const Api_1 = require("./Api");
 const utils_1 = require("./utils");
 exports.msgcli = new class {
 	constructor() {
+		this.ws = null;
 		this.loginState = '';
 		this.onConnected = new utils_1.Callbacks();
 		this.onLogin = new utils_1.Callbacks();
@@ -3885,7 +3916,7 @@ exports.msgcli = new class {
 	get connected() { var _a; return ((_a = this.ws) === null || _a === void 0 ? void 0 : _a.readyState) === WebSocket.OPEN; }
 	init() {
 		User_1.user.onSwitchedUser.add(() => {
-			if (this.connected)
+			if (this.connected && Api_1.api.defaultAuth)
 				this.login(Api_1.api.defaultAuth);
 		});
 		this.onConnected.add(() => {
@@ -3912,6 +3943,8 @@ exports.msgcli = new class {
 	}
 	getUrl() {
 		var match = Api_1.api.baseUrl.match(/^(((https?):)?\/\/([\w\-\.:]))?(\/)?(.*)$/);
+		if (!match)
+			throw new Error('cannot generate websocket URL');
 		var [_, _, protocol, _, host, pathroot, path] = match;
 		protocol = protocol || window.location.protocol;
 		host = host || window.location.host;
@@ -4072,7 +4105,7 @@ class PlayingView extends UI_1.ContentView {
 			var _a;
 			this.updateDom();
 			this.editBtn.hidden = !PlayerCore_1.playerCore.track;
-			var newLyrics = ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.infoObj.lyrics) || '';
+			var newLyrics = ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.lyrics) || '';
 			if (this.loadedLyrics != newLyrics) {
 				this.loadedLyrics = newLyrics;
 				this.lyricsView.setLyrics(newLyrics);
@@ -4104,12 +4137,13 @@ class PlayingView extends UI_1.ContentView {
 			this.centerLyrics();
 		});
 		this.lyricsView.onSpanClick.add((s) => {
-			if (s.span.startTime >= 0)
+			if (s.span.startTime && s.span.startTime >= 0)
 				PlayerCore_1.playerCore.currentTime = s.span.startTime;
 		});
 		this.header.actions.addView(this.editBtn = new UI_1.ActionBtn({
 			text: utils_1.I `Edit`, onclick: () => {
-				PlayerCore_1.playerCore.track.startEdit();
+				var _a;
+				(_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.startEdit();
 			}
 		}));
 	}
@@ -4345,7 +4379,7 @@ exports.playerCore = new class PlayerCore {
 		return __awaiter(this, void 0, void 0, function* () {
 			var track = this.track;
 			if (track && !this.audioLoaded)
-				yield this.loadTrack(this.track);
+				yield this.loadTrack(track);
 		});
 	}
 	pause() {
@@ -4533,7 +4567,7 @@ class SearchView extends ListContentView_1.ListContentView {
 	updatePlaying() {
 		var playing = PlayerCore_1.playerCore.track;
 		this.listView.forEach(t => {
-			t.updateWith({ playing: playing && t.track.id === playing.id });
+			t.updateWith({ playing: !!playing && t.track.id === playing.id });
 		});
 	}
 	;
@@ -4682,7 +4716,7 @@ class Track {
 	constructor(init) {
 		this.infoObj = null;
 		this.blob = null;
-		this._bind = null;
+		this._bind = undefined;
 		utils_1.utils.objectApply(this, init);
 	}
 	get id() { return this.infoObj.id; }
@@ -4773,7 +4807,7 @@ class TrackDialog extends viewlib_1.Dialog {
 		this.title = utils_1.I `Track ID` + ' ' + t.id;
 		this.inputName.updateWith({ value: t.name });
 		this.inputArtist.updateWith({ value: t.artist });
-		this.inputLyrics.updateWith({ value: t.infoObj.lyrics });
+		this.inputLyrics.updateWith({ value: t.lyrics });
 		this.updateDom();
 	}
 	save() {
@@ -4850,7 +4884,7 @@ class TrackList {
 	}
 	loadInfo(info) {
 		this.id = info.id;
-		this.apiid = this.id > 0 ? this.id : undefined;
+		this.apiid = this.id > 0 ? this.id : null;
 		this.name = info.name;
 	}
 	loadFromGetResult(obj) {
@@ -4906,13 +4940,14 @@ class TrackList {
 		return this.posting = this.posting || this._post();
 	}
 	_post() {
+		var _a;
 		return __awaiter(this, void 0, void 0, function* () {
 			yield User_1.user.waitLogin();
 			if (this.apiid !== undefined)
 				throw new Error('cannot post: apiid exists');
 			var obj = {
 				id: 0,
-				name: this.name,
+				name: (_a = this.name) !== null && _a !== void 0 ? _a : '',
 				trackids: this.tracks.map(t => t.id)
 			};
 			var resp = yield Api_1.api.post({
@@ -4936,6 +4971,7 @@ class TrackList {
 		this.putDelaying = this.putCore();
 	}
 	putCore() {
+		var _a;
 		return __awaiter(this, void 0, void 0, function* () {
 			try {
 				if (this.putInProgress)
@@ -4946,7 +4982,7 @@ class TrackList {
 					yield this.fetching;
 				if (this.posting)
 					yield this.posting;
-				if (this.apiid === undefined)
+				if (this.apiid == null)
 					throw new Error('cannot put: no apiid');
 			}
 			catch (error) {
@@ -4957,7 +4993,7 @@ class TrackList {
 				[this.putInProgress, this.putDelaying] = [this.putDelaying, null];
 				var obj = {
 					id: this.apiid,
-					name: this.name,
+					name: (_a = this.name) !== null && _a !== void 0 ? _a : '',
 					trackids: this.tracks.map(t => t.id)
 				};
 				var resp = yield Api_1.api.put({
@@ -4977,14 +5013,17 @@ class TrackList {
 	}
 	fetchImpl() {
 		return __awaiter(this, void 0, void 0, function* () {
-			this.setLoadIndicator(new viewlib_1.LoadingIndicator());
+			const li = new viewlib_1.LoadingIndicator();
+			this.setLoadIndicator(li);
 			try {
-				var obj = yield Api_1.api.getListAsync(this.apiid);
+				if (this.apiid == null)
+					throw new Error('Cannot fetch: no apiid');
+				const obj = yield Api_1.api.getListAsync(this.apiid);
 				this.loadFromGetResult(obj);
 				this.setLoadIndicator(null);
 			}
 			catch (err) {
-				this.loadIndicator.error(err, () => this.fetch(true));
+				li.error(err, () => this.fetch(true));
 				throw err;
 			}
 		});
@@ -5007,6 +5046,8 @@ class TrackList {
 		var _a, _b, _c, _d, _e;
 		offset = offset !== null && offset !== void 0 ? offset : 1;
 		var bind = track._bind;
+		if (!bind)
+			return null;
 		var position = bind.position;
 		if ((bind === null || bind === void 0 ? void 0 : bind.list) !== this)
 			return null;
@@ -5063,7 +5104,9 @@ class TrackList {
 	}
 	remove_NoUpdating(track) {
 		var pos = track._bind.position;
-		track._bind = null;
+		if (pos == null)
+			return;
+		track._bind = undefined;
 		this.tracks.splice(pos, 1);
 		if (this.listView)
 			this.listView.remove(pos);
@@ -5087,9 +5130,10 @@ class TrackListView extends ListContentView_1.ListContentView {
 		}
 	}
 	createHeader() {
+		var _a;
 		return new UI_1.ContentHeader({
 			catalog: utils_1.I `Playlist`,
-			title: this.list.name,
+			title: (_a = this.list.name) !== null && _a !== void 0 ? _a : '',
 			titleEditable: !!this.list.rename,
 			onTitleEdit: (newName) => this.list.rename(newName)
 		});
@@ -5142,18 +5186,18 @@ class TrackListView extends ListContentView_1.ListContentView {
 	}
 	updateCurPlaying(item) {
 		var _a, _b, _c;
-		var playing = PlayerCore_1.playerCore.track;
+		const playing = PlayerCore_1.playerCore.track;
 		if (item === undefined) {
 			if (playing) {
-				item = (((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) : (_b = (playing && this.listView.find(x => x.track === playing))) !== null && _b !== void 0 ? _b : this.listView.find(x => x.track.id === playing.id);
+				const identical = (((_a = playing._bind) === null || _a === void 0 ? void 0 : _a.list) === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) : (_b = (playing && this.listView.find(x => x.track === playing))) !== null && _b !== void 0 ? _b : this.listView.find(x => x.track.id === playing.id);
+				this.curPlaying.set(identical);
 			}
 			else {
-				item = null;
+				this.curPlaying.set(null);
 			}
-			this.curPlaying.set(item);
 		}
 		else if (playing) {
-			var track = item.track;
+			const track = item.track;
 			if ((((_c = playing._bind) === null || _c === void 0 ? void 0 : _c.list) === this.list && track === playing)
 				|| (!this.curPlaying && track.id === playing.id)) {
 				this.curPlaying.set(item);
@@ -5793,11 +5837,12 @@ exports.ui = new class {
 			ev.preventDefault();
 		});
 		document.addEventListener('drop', (ev) => {
+			var _a;
 			if (ev.defaultPrevented)
 				return;
 			ev.preventDefault();
-			var files = ev.dataTransfer.files;
-			if (files.length) {
+			const files = (_a = ev.dataTransfer) === null || _a === void 0 ? void 0 : _a.files;
+			if (files && files.length) {
 				new viewlib_1.MessageBox().setTitle(I18n_1.I `Question`)
 					.addText(files.length === 1
 					? I18n_1.I `Did you mean to upload 1 file?`
@@ -5855,7 +5900,7 @@ class VolumeButton extends ProgressButton {
 		super(dom);
 		this.onChanging = new utils_1.Callbacks();
 		this.tip = '\n' + I18n_1.I `(Scroll whell or drag to adjust volume)`;
-		dom.addEventListener('wheel', (ev) => {
+		this.dom.addEventListener('wheel', (ev) => {
 			ev.preventDefault();
 			var delta = Math.sign(ev.deltaY) * -0.1;
 			this.onChanging.invoke(delta);
@@ -6167,12 +6212,12 @@ exports.uploads = new class extends TrackList_1.TrackList {
 				this.inprogress++;
 				this.updateSidebarItem();
 				if (track._upload.state === 'cancelled')
-					return;
+					return null;
 				yield this.uploadCore(apitrack, track, file);
 			}
 			catch (err) {
 				if (track._upload.state === 'cancelled')
-					return;
+					return null;
 				track.setState('error');
 				viewlib_1.Toast.show(I18n_1.I `Failed to upload file "${file.name}".` + '\n' + err, 3000);
 				console.log('uploads failed: ', file.name, err);
@@ -6315,12 +6360,15 @@ class UploadArea extends viewlib_1.View {
 	}
 	postCreateDom() {
 		this.domfile.addEventListener('change', (ev) => {
-			this.handleFiles(this.domfile.files);
+			if (this.domfile.files)
+				this.handleFiles(this.domfile.files);
 		});
 		this.dom.addEventListener('click', (ev) => {
 			this.domfile.click();
 		});
 		this.dom.addEventListener('dragover', (ev) => {
+			if (!ev.dataTransfer)
+				return;
 			if (ev.dataTransfer.types.indexOf('Files') >= 0) {
 				ev.preventDefault();
 				ev.stopPropagation();
@@ -6328,6 +6376,8 @@ class UploadArea extends viewlib_1.View {
 			}
 		});
 		this.dom.addEventListener('drop', (ev) => {
+			if (!ev.dataTransfer)
+				return;
 			ev.preventDefault();
 			ev.stopPropagation();
 			if (ev.dataTransfer.types.indexOf('Files') >= 0) {
@@ -6385,10 +6435,14 @@ exports.user = new class User {
 		this.siLogin = new utils_1.SettingItem('mcloud-login', 'json', {
 			id: -1,
 			username: null,
-			passwd: null,
+			passwd: undefined,
 			token: null
 		});
+		this.state = 'none';
 		this.onSwitchedUser = new utils_1.Callbacks();
+		this.loggingin = null;
+		this.pendingInfo = null;
+		this._ignore_track_once = null;
 	}
 	get info() { return this.siLogin.data; }
 	get isAdmin() { return this.role === 'admin'; }
@@ -6488,12 +6542,12 @@ exports.user = new class User {
 	}
 	handleLoginResult(info) {
 		return __awaiter(this, void 0, void 0, function* () {
-			if (!info.username)
+			if (!info.username || !info.id)
 				throw new Error(utils_1.I `iNTernEL eRRoR`);
 			var switchingUser = this.info.username != info.username;
 			this.info.id = info.id;
 			this.info.username = info.username;
-			this.info.passwd = null;
+			this.info.passwd = undefined;
 			if (info.token)
 				this.info.token = info.token;
 			this.role = info.role;
@@ -6507,7 +6561,8 @@ exports.user = new class User {
 			this.setState('logged');
 			this.loggingin = null;
 			this.onSwitchedUser.invoke();
-			this.tryRestorePlaying(info.playing);
+			if (info.playing)
+				this.tryRestorePlaying(info.playing);
 		});
 	}
 	logout() {
@@ -6524,10 +6579,10 @@ exports.user = new class User {
 					return;
 				}
 			}
-			utils_1.utils.objectApply(this.info, { id: -1, username: null, passwd: null, token: null });
-			this.role = null;
+			utils_1.utils.objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
+			this.role = undefined;
 			this.siLogin.save();
-			Api_1.api.defaultAuth = undefined;
+			Api_1.api.defaultAuth = null;
 			UI_1.ui.content.setCurrent(null);
 			ListIndex_1.listIndex.setIndex(null);
 			this.setState('none');
@@ -6595,7 +6650,7 @@ exports.user = new class User {
 				yield list.fetch();
 				var track = list.tracks[playing.position];
 				if ((track === null || track === void 0 ? void 0 : track.id) !== playing.trackid)
-					track = list.tracks.find(x => x.id === playing.trackid);
+					track = list.tracks.find(x => x.id === playing.trackid) || null;
 				this._ignore_track_once = track;
 				PlayerCore_1.playerCore.setTrack(track);
 			}
@@ -6806,7 +6861,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-08T12:51:03.650Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-08T19:26:58.704Z"}',
 	buildDate: '',
 	version: '',
 };

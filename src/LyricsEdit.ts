@@ -31,8 +31,8 @@ export var lyricsEdit = new class {
 class LyricsEditContentView extends ContentView {
     header = new ContentHeader({ title: I`Edit Lyrics` });
     lyricsView = new EditableLyricsView();
-    track: Track = null;
-    lyricsString: string = null;
+    track: Track | null = null;
+    lyricsString: string | null = null;
 
     constructor() {
         super();
@@ -54,8 +54,8 @@ class LyricsEditContentView extends ContentView {
     close() {
         lyricsEdit.sidebarItem.hidden = true;
         window.history.back();
-        var trackDialog = this.track.startEdit();
-        trackDialog.inputLyrics.value = this.lyricsString;
+        var trackDialog = this.track!.startEdit();
+        trackDialog.inputLyrics.value = this.lyricsString!;
     }
 
     createDom(): BuildDomExpr {
@@ -128,7 +128,7 @@ class EditableLyricsView extends LyricsView {
                 if (l.spans?.length) {
                     let firstSpan = l.spans[0].span;
                     if (!firstSpan.timeStamp) {
-                        firstSpan.timeStamp = { time: -1 };
+                        firstSpan.timeStamp = { time: -1, beats: null, beatsDiv: null };
                     }
                     l.spans.forEach(s => {
                         s.timeStamp && s.toggleClass('ts', true);
@@ -138,7 +138,7 @@ class EditableLyricsView extends LyricsView {
             this.setNextSpans(this.getSpans());
         });
         this.onSpanClick.add((s) => {
-            playerCore.currentTime = utils.numLimit(s.span.startTime - 3, 0, Infinity);
+            playerCore.currentTime = utils.numLimit(s.span.startTime! - 3, 0, Infinity);
             this.setNextSpans(this.getSpans(s, 'here'));
         });
         this.dom.addEventListener('keydown', (ev) => {
@@ -146,7 +146,7 @@ class EditableLyricsView extends LyricsView {
                 ev.preventDefault();
                 if (this.nextSpans.length) {
                     const now = playerCore.currentTime;
-                    this.nextSpans[0].timeStamp.time = now;
+                    this.nextSpans[0].timeStamp!.time = now;
                     this.nextSpans.forEach(s => {
                         s.startTime = now;
                     });
@@ -164,7 +164,7 @@ class EditableLyricsView extends LyricsView {
         });
         this.toggleClass('edit', true);
     }
-    getSpans(span?: SpanView, go?: 'here' | 'forward' | 'backward') {
+    getSpans(span?: SpanView | null, go?: 'here' | 'forward' | 'backward') {
         if (!span) {
             if (this.nextSpans.length) {
                 span = this.nextSpans[go === 'backward' ? 0 : this.nextSpans.length - 1];
@@ -172,27 +172,27 @@ class EditableLyricsView extends LyricsView {
                 span = this.lines.get(0).spans[0];
             }
         }
-        var colPos = span.position;
-        var line = span.lineView;
+        var colPos = span.position!;
+        var line = span.lineView!;
 
         if (go == null || go === 'here') {
             while (line.spans && !line.spans[colPos].timeStamp) {
                 if (colPos-- === 0) {
-                    line = this.lines.get(line.position - 1);
+                    line = this.lines.get(line.position! - 1);
                     colPos = line.length - 1;
                 }
             }
         } else if (go === 'forward') {
             do {
                 if (line && ++colPos === line.length) {
-                    line = this.lines.get(line.position + 1);
+                    line = this.lines.get(line.position! + 1);
                     colPos = 0;
                 }
             } while (line && (line.spans && !line.spans[colPos].timeStamp));
         } else if (go === 'backward') {
             do {
                 if (line && colPos-- === 0) {
-                    line = this.lines.get(line.position - 1);
+                    line = this.lines.get(line.position! - 1);
                     colPos = line.length - 1;
                 }
             } while (line && (line.spans && !line.spans[colPos].timeStamp));
@@ -209,7 +209,7 @@ class EditableLyricsView extends LyricsView {
     }
     setNextSpans(spans: SpanView[]) {
         while (this.nextSpans.length) {
-            this.nextSpans.pop().isNext = false;
+            this.nextSpans.pop()!.isNext = false;
         }
         spans.forEach(s => {
             s.isNext = true;

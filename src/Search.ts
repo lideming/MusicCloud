@@ -33,8 +33,8 @@ class SearchView extends ListContentView {
         this.listView.dragging = true;
         this.listView.onItemClicked = (item) => {
             var tempList = new TrackList();
-            this.listView.forEach(t => tempList.addTrack(t.track.infoObj));
-            playerCore.playTrack(tempList.tracks[item.position]);
+            this.listView.forEach(t => tempList.addTrack(t.track.infoObj!));
+            playerCore.playTrack(tempList.tracks[item.position!]);
         };
     }
     appendHeader() {
@@ -72,7 +72,7 @@ class SearchView extends ListContentView {
     updatePlaying() {
         var playing = playerCore.track;
         this.listView.forEach(t => {
-            t.updateWith({ playing: playing && t.track.id === playing.id });
+            t.updateWith({ playing: !!playing && t.track.id === playing.id });
         });
     };
 }

@@ -13,19 +13,19 @@ import { router } from "./Router";
 import { Track } from "./Track";
 
 export class TrackList {
-    info: Api.TrackListInfo = null;
-    id: number = null;
-    apiid: number = null;
-    name: string = null;
+    info: Api.TrackListInfo | null = null;
+    id: number | null = null;
+    apiid: number | null = null;
+    name: string | null = null;
     tracks: Track[] = [];
-    fetching: Promise<void> = null;
-    posting: Promise<void> = null;
+    fetching: Promise<void> | null = null;
+    posting: Promise<void> | null = null;
 
     canEdit = true;
 
     /** Available when loading */
-    loadIndicator: LoadingIndicator;
-    setLoadIndicator(li: LoadingIndicator) {
+    loadIndicator: LoadingIndicator | null;
+    setLoadIndicator(li: LoadingIndicator | null) {
         this.loadIndicator = li;
         if (this.contentView) this.contentView.useLoadingIndicator(li);
     }
@@ -36,7 +36,7 @@ export class TrackList {
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
-        this.apiid = this.id > 0 ? this.id : undefined;
+        this.apiid = this.id > 0 ? this.id : null;
         this.name = info.name;
     }
     loadFromGetResult(obj: Api.TrackListGet) {
@@ -58,7 +58,7 @@ export class TrackList {
         this.contentView?.updateView();
         return track;
     }
-    private addTrack_NoUpdating(t: Api.Track, pos: number) {
+    private addTrack_NoUpdating(t: Api.Track, pos?: number) {
         var track: Track = new Track({
             infoObj: t,
             _bind: {
@@ -87,7 +87,7 @@ export class TrackList {
         if (this.apiid !== undefined) throw new Error('cannot post: apiid exists');
         var obj: Api.TrackListPut = {
             id: 0,
-            name: this.name,
+            name: this.name ?? '',
             trackids: this.tracks.map(t => t.id)
         };
         var resp: Api.TrackListPutResult = await api.post({
@@ -96,17 +96,17 @@ export class TrackList {
         });
         this.apiid = resp.id;
     }
-    async getRealId() {
+    async getRealId(): Promise<number> {
         if (this.apiid) return this.apiid;
         await this.postToUser();
-        return this.apiid;
+        return this.apiid!;
     }
     put() {
         if (this.putDelaying) return this.putDelaying;
         this.putDelaying = this.putCore();
     }
-    putDelaying: Promise<void> = null;
-    putInProgress: Promise<void> = null;
+    putDelaying: Promise<void> | null = null;
+    putInProgress: Promise<void> | null = null;
     private async putCore() {
         try {
             if (this.putInProgress) await this.putInProgress;
@@ -114,7 +114,7 @@ export class TrackList {
             await user.waitLogin(true);
             if (this.fetching) await this.fetching;
             if (this.posting) await this.posting;
-            if (this.apiid === undefined) throw new Error('cannot put: no apiid');
+            if (this.apiid == null) throw new Error('cannot put: no apiid');
         } catch (error) {
             this.putDelaying = null;
             console.error(error);
@@ -122,8 +122,8 @@ export class TrackList {
         try {
             [this.putInProgress, this.putDelaying] = [this.putDelaying, null];
             var obj: Api.TrackListPut = {
-                id: this.apiid,
-                name: this.name,
+                id: this.apiid!,
+                name: this.name ?? '',
                 trackids: this.tracks.map(t => t.id)
             };
             var resp: Api.TrackListPutResult = await api.put({
@@ -139,13 +139,15 @@ export class TrackList {
         }
     }
     async fetchImpl() {
-        this.setLoadIndicator(new LoadingIndicator());
+        const li = new LoadingIndicator();
+        this.setLoadIndicator(li);
         try {
-            var obj = await api.getListAsync(this.apiid);
+            if (this.apiid == null) throw new Error('Cannot fetch: no apiid');
+            const obj = await api.getListAsync(this.apiid);
             this.loadFromGetResult(obj);
             this.setLoadIndicator(null);
         } catch (err) {
-            this.loadIndicator.error(err, () => this.fetch(true));
+            li.error(err, () => this.fetch(true));
             throw err;
         }
     }
@@ -153,15 +155,16 @@ export class TrackList {
         this.name = newName;
         var header = this.contentView?.header;
         if (header) header.updateWith({ title: this.name });
-        listIndex.onrename(this.id, newName);
+        listIndex.onrename(this.id!, newName);
         await this.put();
     }
     createView(): ContentView {
         return this.contentView = this.contentView || new TrackListView(this);
     }
-    getNextTrack(track: Track, loopMode: PlayingLoopMode, offset?: number): Track {
+    getNextTrack(track: Track, loopMode: PlayingLoopMode, offset?: number): Track | null {
         offset = offset ?? 1;
         var bind = track._bind;
+        if (!bind) return null;
         var position = bind.position;
         if (bind?.list !== this) return null;
         if (this.listView)
@@ -189,18 +192,18 @@ export class TrackList {
         if (this.listView) {
             // if the listview exists, update `this.tracks` as well as the DOM.
             this.tracks = this.listView.map(lvi => {
-                lvi.track._bind.position = lvi.position;
+                lvi.track._bind!.position = lvi.position;
                 lvi.updateDom();
                 return lvi.track;
             });
         } else {
-            this.tracks.forEach((t, i) => t._bind.position = i);
+            this.tracks.forEach((t, i) => t._bind!.position = i);
         }
     }
 
     updateTrackInfo(track: Track, newInfo: Api.Track) {
         track.updateFromApiTrack(newInfo);
-        if (this.listView) this.listView.get(track._bind.position).updateDom();
+        if (this.listView) this.listView.get(track._bind!.position!).updateDom();
     }
     remove(track: Track, put?: boolean) {
         this.remove_NoUpdating(track);
@@ -210,8 +213,9 @@ export class TrackList {
     }
 
     private remove_NoUpdating(track: Track) {
-        var pos = track._bind.position;
-        track._bind = null;
+        var pos = track._bind!.position;
+        if (pos == null) return;
+        track._bind = undefined;
         this.tracks.splice(pos, 1);
         if (this.listView)
             this.listView.remove(pos);
@@ -237,7 +241,7 @@ export class TrackListView extends ListContentView {
     createHeader() {
         return new ContentHeader({
             catalog: I`Playlist`,
-            title: this.list.name,
+            title: this.list.name ?? '',
             titleEditable: !!this.list.rename,
             onTitleEdit: (newName) => this.list.rename(newName)
         });
@@ -286,18 +290,18 @@ export class TrackListView extends ListContentView {
         return view;
     }
     protected updateCurPlaying(item?: TrackViewItem) {
-        var playing = playerCore.track;
+        const playing = playerCore.track;
         if (item === undefined) {
             if (playing) {
-                item = (playing._bind?.list === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
+                const identical = (playing._bind?.list === this.list && playing._bind.position != undefined) ? this.listView.get(playing._bind.position) :
                     (playing && this.listView.find(x => x.track === playing))
                     ?? this.listView.find(x => x.track.id === playing.id);
+                this.curPlaying.set(identical);
             } else {
-                item = null;
+                this.curPlaying.set(null);
             }
-            this.curPlaying.set(item);
         } else if (playing) {
-            var track = item.track;
+            const track = item.track;
             if ((playing._bind?.list === this.list && track === playing)
                 || (!this.curPlaying && track.id === playing.id)) {
                 this.curPlaying.set(item);
@@ -312,7 +316,7 @@ export class TrackListView extends ListContentView {
 export class TrackViewItem extends ListViewItem {
     track: Track;
     dom: HTMLDivElement;
-    actionHandler: TrackActionHandler<this> = null;
+    actionHandler: TrackActionHandler<this> | null = null;
     noPos: boolean = false;
     playing: boolean = false;
     constructor(item: Track) {
@@ -391,22 +395,22 @@ export class TrackViewItem extends ListViewItem {
         }));
         if (this.actionHandler?.onTrackRemove) m.add(new MenuItem({
             text: I`Remove`, cls: 'dangerous',
-            onclick: () => this.actionHandler.onTrackRemove?.([this])
+            onclick: () => this.actionHandler!.onTrackRemove?.([this])
         }));
         if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1)
             m.add(new MenuItem({
                 text: I`Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
                 onclick: () => {
-                    this.actionHandler.onTrackRemove?.([...this.selectionHelper.selectedItems]);
+                    this.actionHandler!.onTrackRemove?.([...this.selectionHelper.selectedItems]);
                 }
             }));
         m.add(new MenuInfoItem({
             text: I`Track ID` + ': ' +
                 selected.map(x => x.track.id).join(', ') + '\n'
                 + I`Duration` + ': ' +
-                utils.formatTime(utils.arraySum(selected, x => x.track.length)) + '\n'
+                utils.formatTime(utils.arraySum(selected, x => x.track.length!)) + '\n'
                 + I`Size` + ': ' +
-                utils.formatFileSize(utils.arraySum(selected, x => x.track.size))
+                utils.formatFileSize(utils.arraySum(selected, x => x.track.size!))
         }));
         m.show({ ev: ev });
     };

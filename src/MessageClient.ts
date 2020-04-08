@@ -3,7 +3,7 @@ import { api } from './Api';
 import { Callbacks, Action } from './utils';
 
 export const msgcli = new class {
-    ws: WebSocket;
+    ws: WebSocket | null = null;
 
     get connected() { return this.ws?.readyState === WebSocket.OPEN; }
     loginState: '' | 'sent' | 'done' = '';
@@ -18,18 +18,18 @@ export const msgcli = new class {
 
     init() {
         user.onSwitchedUser.add(() => {
-            if (this.connected)
-                this.login(api.defaultAuth);
+            if (this.connected && api.defaultAuth)
+                this.login(api.defaultAuth!);
         });
         this.onConnected.add(() => {
             if (user.state === 'logged')
-                this.login(api.defaultAuth);
+                this.login(api.defaultAuth!);
             this.listenPermEvents();
         });
         this.connect();
     }
     private listenPermEvents() {
-        var eventlist = [];
+        var eventlist: string[] = [];
         for (const key in this.permEvents) {
             if (this.permEvents.hasOwnProperty(key)) {
                 this.events[key] = this.permEvents[key];
@@ -44,6 +44,7 @@ export const msgcli = new class {
     }
     private getUrl() {
         var match = api.baseUrl.match(/^(((https?):)?\/\/([\w\-\.:]))?(\/)?(.*)$/);
+        if (!match) throw new Error('cannot generate websocket URL');
         var [_, _, protocol, _, host, pathroot, path] = match;
         protocol = protocol || window.location.protocol;
         host = host || window.location.host;
@@ -120,7 +121,7 @@ export const msgcli = new class {
             }
         });
     }
-    sendQuery(obj: any, callback?: Action<QueryAnswer>) {
+    sendQuery(obj: any, callback?: Action<QueryAnswer> | null) {
         if (!this.connected) throw new Error('not connected');
         var queryId = ++this.lastQueryId;
         obj = {
@@ -128,7 +129,7 @@ export const msgcli = new class {
             ...obj
         };
         console.log('ws send', obj);
-        this.ws.send(JSON.stringify(obj));
+        this.ws!.send(JSON.stringify(obj));
         if (callback) {
             this.queries[queryId] = callback;
         }

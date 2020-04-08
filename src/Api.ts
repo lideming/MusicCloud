@@ -10,7 +10,7 @@ export var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     storageUrlBase = '';
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;
-    defaultAuth: string;
+    defaultAuth: string | null = null;
 
     onTrackInfoChanged = new Callbacks<Action<Api.Track>>();
     onTrackDeleted = new Callbacks<Action<Api.Track>>();
@@ -92,7 +92,7 @@ export var api = new class {
             xhr.onerror = ev => reject("XHR error");
             xhr.onabort = ev => reject("XHR abort");
         });
-        xhr.upload.onprogress = arg.onprogerss;
+        xhr.upload.onprogress = arg.onprogerss || null;
 
         xhr.open(arg.method, this.processUrl(arg.url));
 
@@ -105,7 +105,7 @@ export var api = new class {
                 await whenXhrComplete;
             } finally {
                 if (ct) {
-                    ct.onCancelled.remove(cb);
+                    ct.onCancelled.remove(cb!);
                     ct.throwIfCancelled();
                 }
             }

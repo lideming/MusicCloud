@@ -147,7 +147,7 @@ export var uploads = new class extends TrackList {
             const track = item.track;
             if (track._upload.state === 'uploading' || track._upload.state === 'pending') {
                 track._upload.state = 'cancelled';
-                track._upload.cancelToken.cancel();
+                track._upload.cancelToken!.cancel();
                 uploads.remove(track);
             } else if (track._upload.state === 'error') {
                 uploads.remove(track);
@@ -210,7 +210,7 @@ export var uploads = new class extends TrackList {
         new class extends DataUpdatingHelper<UploadTrack, UploadTrack>{
             items = doneTracks;
             addItem(data: UploadTrack, pos: number) { thiz.insertTrack(data, firstPos, false); }
-            updateItem(item: UploadTrack, data: UploadTrack) { item.updateFromApiTrack(data.infoObj); }
+            updateItem(item: UploadTrack, data: UploadTrack) { item.updateFromApiTrack(data.infoObj!); }
             removeItem(item: UploadTrack) { item._upload.view?.remove(); }
         }().update(fetched);
         this.view.useLoadingIndicator(null);
@@ -218,7 +218,7 @@ export var uploads = new class extends TrackList {
     }
     async uploadFile(file: File) {
         var apitrack: Api.Track = {
-            id: undefined, url: undefined,
+            id: undefined!, url: undefined!,
             artist: 'Unknown', name: file.name
         };
         var track = new UploadTrack({
@@ -236,11 +236,11 @@ export var uploads = new class extends TrackList {
             this.inprogress++;
             this.updateSidebarItem();
 
-            if (track._upload.state === 'cancelled') return;
+            if (track._upload.state === 'cancelled') return null;
 
             await this.uploadCore(apitrack, track, file);
         } catch (err) {
-            if (track._upload.state === 'cancelled') return;
+            if (track._upload.state === 'cancelled') return null;
             track.setState('error');
             Toast.show(I`Failed to upload file "${file.name}".` + '\n' + err, 3000);
             console.log('uploads failed: ', file.name, err);
@@ -261,7 +261,7 @@ export var uploads = new class extends TrackList {
     private async uploadCore(apitrack: Api.Track, track: UploadTrack, file: File) {
         track.setState('uploading');
 
-        const ct = track._upload.cancelToken;
+        const ct = track._upload.cancelToken!;
 
         const uploadReq = await api.post({
             path: 'tracks/uploadrequest',
@@ -292,7 +292,7 @@ export var uploads = new class extends TrackList {
                 method: 'POST',
                 url: 'tracks/newfile',
                 body: finalBlob,
-                auth: api.defaultAuth,
+                auth: api.defaultAuth!,
                 contentType: 'application/x-mcloud-upload',
                 cancelToken: ct,
                 onprogerss
@@ -390,12 +390,14 @@ class UploadArea extends View {
     }
     postCreateDom() {
         this.domfile.addEventListener('change', (ev) => {
-            this.handleFiles(this.domfile.files);
+            if (this.domfile.files)
+                this.handleFiles(this.domfile.files);
         });
         this.dom.addEventListener('click', (ev) => {
             this.domfile.click();
         });
         this.dom.addEventListener('dragover', (ev) => {
+            if (!ev.dataTransfer) return;
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {
                 ev.preventDefault();
                 ev.stopPropagation();
@@ -403,6 +405,7 @@ class UploadArea extends View {
             }
         });
         this.dom.addEventListener('drop', (ev) => {
+            if (!ev.dataTransfer) return;
             ev.preventDefault();
             ev.stopPropagation();
             if (ev.dataTransfer.types.indexOf('Files') >= 0) {

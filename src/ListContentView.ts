@@ -47,7 +47,7 @@ export class ListContentView extends ContentView {
     selectBtn: ActionBtn;
 
     listView: ListView<ListViewItem>;
-    loadingIndicator: LoadingIndicator;
+    loadingIndicator: LoadingIndicator | null;
     emptyIndicator: LoadingIndicator;
 
     get rendered() { return this.domCreated; }
@@ -108,7 +108,7 @@ export class ListContentView extends ContentView {
         super.onRemove();
     }
 
-    useLoadingIndicator(li: LoadingIndicator) {
+    useLoadingIndicator(li: LoadingIndicator | null) {
         if (li !== this.loadingIndicator) {
             if (this.rendered) {
                 if (this.loadingIndicator) this.loadingIndicator.dom.remove();

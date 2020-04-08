@@ -16,9 +16,9 @@ import { TextCompositionWatcher } from "@yuuza/webfx/lib/utils";
 export var user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
         id: -1,
-        username: null as string,
-        passwd: null as string,
-        token: null as string
+        username: null! as string,
+        passwd: undefined as (string | undefined),
+        token: null! as string
     });
     loginDialog: LoginDialog;
     get info() { return this.siLogin.data; }
@@ -26,10 +26,10 @@ export var user = new class User {
     role?: Api.UserInfo['role'];
     get isAdmin() { return this.role === 'admin'; }
 
-    state: 'none' | 'logging' | 'error' | 'logged';
+    state: 'none' | 'logging' | 'error' | 'logged' = 'none';
     onSwitchedUser = new Callbacks<Action>();
-    loggingin: Promise<void>;
-    pendingInfo: User['info'];
+    loggingin: Promise<void> | null = null;
+    pendingInfo: User['info'] | null = null;
     setState(state: User['state']) {
         this.state = state;
         ui.sidebarLogin.update();
@@ -112,11 +112,11 @@ export var user = new class User {
         await promise;
     }
     async handleLoginResult(info: Api.UserInfo) {
-        if (!info.username) throw new Error(I`iNTernEL eRRoR`);
+        if (!info.username || !info.id) throw new Error(I`iNTernEL eRRoR`);
         var switchingUser = this.info.username != info.username;
         this.info.id = info.id;
         this.info.username = info.username;
-        this.info.passwd = null;
+        this.info.passwd = undefined;
         if (info.token) this.info.token = info.token;
         this.role = info.role;
         this.siLogin.save();
@@ -131,7 +131,7 @@ export var user = new class User {
         this.loggingin = null;
         this.onSwitchedUser.invoke();
 
-        this.tryRestorePlaying(info.playing);
+        if (info.playing) this.tryRestorePlaying(info.playing);
     }
     async logout() {
         if (this.info.token) {
@@ -145,10 +145,10 @@ export var user = new class User {
                 return;
             }
         }
-        utils.objectApply(this.info, { id: -1, username: null, passwd: null, token: null });
-        this.role = null;
+        utils.objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
+        this.role = undefined;
         this.siLogin.save();
-        api.defaultAuth = undefined;
+        api.defaultAuth = null;
         ui.content.setCurrent(null);
         listIndex.setIndex(null);
         this.setState('none');
@@ -186,7 +186,7 @@ export var user = new class User {
         return false;
     }
 
-    _ignore_track_once: Track;
+    _ignore_track_once: Track | null = null;
     playingTrackChanged() {
         var track = playerCore.track;
         if (track && this._ignore_track_once === track) {
@@ -206,9 +206,9 @@ export var user = new class User {
         if (playing.trackid) {
             var list: TrackList = playing.listid ? listIndex.getList(playing.listid) : uploads;
             await list.fetch();
-            var track = list.tracks[playing.position];
+            var track: Track | null = list.tracks[playing.position];
             if (track?.id !== playing.trackid)
-                track = list.tracks.find(x => x.id === playing.trackid);
+                track = list.tracks.find(x => x.id === playing.trackid) || null;
             this._ignore_track_once = track;
             playerCore.setTrack(track);
         }
@@ -312,7 +312,7 @@ class LoginDialog extends Dialog {
 
     btnClicked() {
         if (this.btn.dom.classList.contains('disabled')) return;
-        var precheckErr = [];
+        var precheckErr: string[] = [];
         if (!this.inputUser.value) precheckErr.push(I`Please input the username!`);
         if (!this.inputPasswd.value) precheckErr.push(I`Please input the password!`);
         else if (this.isRegistering && this.inputPasswd.value !== this.inputPasswd2.value)

@@ -16,7 +16,7 @@ export class ListIndex {
     listView: ListView<ListIndexViewItem>;
     section: Section;
     loadIndicator = new LoadingIndicator();
-    playing: TrackList;
+    playing: TrackList | null = null;
     constructor() {
         this.listView = new ListView({ tag: 'ul' });
         this.listView.dragging = true;
@@ -27,6 +27,7 @@ export class ListIndex {
         this.listView.onDragover = (arg) => {
             const src = arg.source;
             const data = arg.event.dataTransfer;
+            if (!data) return;
             if (src instanceof TrackViewItem) {
                 arg.accept = true;
                 data.dropEffect = 'copy';
@@ -49,6 +50,7 @@ export class ListIndex {
                     for (let i = 0; i < data.files.length; i++) {
                         const file = data.files[i];
                         uploads.uploadFile(file).then(async track => {
+                            if (!track) return;
                             if (list.fetching) await list.fetching;
                             list.addTrack(track.toApiTrack(), arg.event.altKey ? undefined : 0);
                             await list.put();
@@ -77,10 +79,10 @@ export class ListIndex {
     }
     init() {
         playerCore.onTrackChanged.add(() => {
-            var curPlaying = playerCore.track?._bind?.list;
+            var curPlaying = playerCore.track?._bind?.list ?? null;
             if (curPlaying != this.playing) {
-                if (curPlaying) this.getViewItem(curPlaying.id)?.updateWith({ playing: true });
-                if (this.playing) this.getViewItem(this.playing.id)?.updateWith({ playing: false });
+                if (curPlaying?.id) this.getViewItem(curPlaying.id)?.updateWith({ playing: true });
+                if (this.playing?.id) this.getViewItem(this.playing.id)?.updateWith({ playing: false });
                 this.playing = curPlaying;
             }
         });
@@ -129,7 +131,7 @@ export class ListIndex {
             }
         });
     }
-    setIndex(index: Api.TrackListIndex) {
+    setIndex(index: Api.TrackListIndex | null) {
         this.listView.clear();
         for (const item of index?.lists ?? []) {
             this.addListInfo(item);
@@ -152,7 +154,9 @@ export class ListIndex {
         var list = this.loadedList[id];
         if (!list) {
             list = new TrackList();
-            list.loadInfo(this.getListInfo(id));
+            const listInfo = this.getListInfo(id);
+            if (!listInfo) throw new Error('cannot find list info');
+            list.loadInfo(listInfo);
             if (list.apiid) {
                 list.fetch();
             } else {
@@ -169,7 +173,7 @@ export class ListIndex {
         router.nav(['list', id.toString()]);
     }
     onrename(id: number, newName: string) {
-        var lvi = this.getViewItem(id);
+        var lvi = this.getViewItem(id)!;
         lvi.listInfo.name = newName;
         lvi.updateDom();
     }
@@ -210,7 +214,7 @@ export class ListIndex {
         this.addListInfo(list);
         var listview = this.getList(id);
         listview.postToUser().then(() => {
-            list.id = listview.apiid;
+            list.id = listview.apiid!;
         }, (err) => {
             Toast.show(I`Failed to create playlist "${list.name}".` + '\n' + err, 5000);
         });

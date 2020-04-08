@@ -7,21 +7,21 @@ import { lyricsEdit } from "./LyricsEdit";
 
 /** A track binding with list */
 export class Track {
-    infoObj: Api.Track = null;
-    get id() { return this.infoObj.id; }
-    get name() { return this.infoObj.name; }
-    get artist() { return this.infoObj.artist; }
-    get url() { return this.infoObj.url; }
-    get files() { return this.infoObj.files; }
-    get length() { return this.infoObj.length; }
-    get size() { return this.infoObj.size; }
-    get lyrics() { return this.infoObj.lyrics; }
+    infoObj: Api.Track | null = null;
+    get id() { return this.infoObj!.id; }
+    get name() { return this.infoObj!.name; }
+    get artist() { return this.infoObj!.artist; }
+    get url() { return this.infoObj!.url; }
+    get files() { return this.infoObj!.files; }
+    get length() { return this.infoObj!.length; }
+    get size() { return this.infoObj!.size; }
+    get lyrics() { return this.infoObj!.lyrics; }
     get displayName() { return this.artist + ' - ' + this.name; }
-    blob?: Blob = null;
+    blob: Blob | null = null;
     _bind?: {
         position?: number;
         list?: TrackList;
-    } = null;
+    } = undefined;
     get canEdit() { return true; }
     constructor(init: Partial<Track>) {
         utils.objectApply(this, init);
@@ -30,10 +30,10 @@ export class Track {
         return `${I`Track ID`}: ${this.id}\r\n${I`Name`}: ${this.name}\r\n${I`Artist`}: ${this.artist}`;
     }
     toApiTrack(): Api.Track {
-        return this.infoObj;
+        return this.infoObj!;
     }
     getExtensionName() {
-        return /\.([\w\-_]{1,6})$/.exec(this.url)?.[1];
+        return /\.([\w\-_]{1,6})$/.exec(this.url!)?.[1];
     }
     updateFromApiTrack(t: Api.Track) {
         if (this.id !== t.id)
@@ -51,7 +51,7 @@ export class Track {
         if (!file.url) {
             var toast = Toast.show(I`Converting "${this.displayName}"...`);
             try {
-                file.url = (await api.get(file.urlurl))['url'];
+                file.url = (await api.get(file.urlurl!))['url'];
                 toast.close();
             }
             catch (error) {
@@ -103,7 +103,7 @@ export class TrackDialog extends Dialog {
         this.title = I`Track ID` + ' ' + t.id;
         this.inputName.updateWith({ value: t.name });
         this.inputArtist.updateWith({ value: t.artist });
-        this.inputLyrics.updateWith({ value: t.infoObj.lyrics });
+        this.inputLyrics.updateWith({ value: t.lyrics });
         this.updateDom();
     }
     async save() {

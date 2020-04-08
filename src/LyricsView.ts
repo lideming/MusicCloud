@@ -62,17 +62,22 @@ export class LyricsView extends View {
                         text: I`Error parsing lyrics`
                     }]
                 }]
-            };
+            } as any as Lyrics;
         }
+
         this.lyrics = lyrics;
         this.curLine.set(null);
-        this.lines.dom.lang = lyrics.lang;
+
+        if (lyrics.lang) this.lines.dom.lang = lyrics.lang;
+        else this.lines.dom.removeAttribute('lang');
+
         this.lines.removeAllView();
         lyrics.lines.forEach(l => {
             if (l.spans) {
                 this.lines.addView(new LineView(l, this));
             }
         });
+
         this.onLyricsChanged.invoke();
         this.resize();
     }
@@ -112,11 +117,11 @@ export class LyricsView extends View {
     }
 
 
-    getLineByTime(time: number, hint?: LineView) {
-        var line: LineView;
-        if (hint && time >= hint.line.startTime) {
+    getLineByTime(time: number, hint?: LineView | null) {
+        var line: LineView | null;
+        if (hint && time >= hint.line.startTime!) {
             line = hint;
-            for (let i = hint.position + 1; i < this.lines.length; i++) {
+            for (let i = hint.position! + 1; i < this.lines.length; i++) {
                 let x = this.lines.get(i);
                 if (x.line.startTime != null) {
                     if (x.line.startTime <= time) {
@@ -144,7 +149,7 @@ export class LineView extends ContainerView<SpanView> {
         super({ tag: 'p.line' });
         this.line = line;
         this.lyricsView = lyricsView;
-        this.line.spans.forEach(s => {
+        this.line.spans!.forEach(s => {
             this.addView(new SpanView(s, this));
         });
         if (this.line.translation) {
@@ -159,7 +164,7 @@ export class LineView extends ContainerView<SpanView> {
     }
     setCurrentTime(time: number) {
         this.spans.forEach(s => {
-            s.toggleClass('active', s.span.startTime <= time);
+            s.toggleClass('active', s.span.startTime! <= time);
         });
     }
 }

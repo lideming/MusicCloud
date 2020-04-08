@@ -166,9 +166,9 @@ export class Parser {
     lex: Lexer;
     tokens: LookaheadBuffer<Token>;
     lines: Line[] = [];
-    bpm = null;
+    bpm: number | null = null;
     offset = 0;
-    curTime: number = null;
+    curTime: number = 0;
     lang = '';
     tlang = '';
     constructor(str: string) {
@@ -200,23 +200,24 @@ export class Parser {
     }
     parseLine() {
         var lex = this.lex;
-        var startTime: number = null;
+        var startTime: number | null = null;
         var duplicateTime: TimeStamp[] = [];
         var spans: Span[] = [];
-        var trans: string = null;
-        var lastSpan: Span = null;
-        var curTime: number = null;
-        var timeStamp: TimeStamp = null;
+        var trans: string | null = null;
+        var lastSpan: Span | null = null;
+        var curTime: number | null = null;
+        var timeStamp: TimeStamp | null = null;
         while (true) {
             if (lex.tryExpect(T.tagBegin)) {
                 var beginTag = lex.consume();
-                let text: string = null;
-                let ts: TimeStamp;
+                let text: string | null = null;
+                let ts: TimeStamp | null;
                 if (lex.tryExpectAndConsume(T.tagEnd)) {
-                    ts = { time: -1 };
+                    ts = { time: -1, beats: null, beatsDiv: null };
                 } else {
                     text = lex.expectAndConsume(T.text).val;
-                    ts = this.parseTimestamp(text, curTime >= 0 ? curTime : (this.curTime ?? 0));
+                    ts = this.parseTimestamp(text,
+                        (curTime != null && curTime >= 0) ? curTime : (this.curTime ?? 0));
                     if (ts != null) lex.expectAndConsume(T.tagEnd);
                 }
                 if (ts != null) {
@@ -261,12 +262,13 @@ export class Parser {
                         this.lines.push({
                             startTime,
                             orderTime: startTime ?? this.curTime,
+                            translation: null,
                             spans: null,
                             rawLine: lex.str.substring(beginTag.pos, lex.peek().pos)
                         });
                         return;
                     } else {
-                        spans.push(lastSpan = { text: '[' + text + ']', ruby: null, startTime: curTime });
+                        spans.push(lastSpan = { text: '[' + text + ']', ruby: null, startTime: curTime, timeStamp: null });
                         if (lex.tryExpect(T.tagEnd)) lex.consume();
                     }
                 }
@@ -301,10 +303,11 @@ export class Parser {
             startTime,
             orderTime: startTime ?? this.curTime,
             translation: trans,
-            spans
+            spans,
+            rawLine: null
         });
         duplicateTime.forEach(t => {
-            var offset = t.time - startTime;
+            var offset = t.time - startTime!;
             this.lines.push({
                 startTime: t.time,
                 orderTime: t.time,
@@ -312,13 +315,14 @@ export class Parser {
                 spans: spans.map(s => ({
                     text: s.text,
                     ruby: s.ruby,
-                    startTime: s.startTime >= 0 ? s.startTime + offset : s.startTime,
+                    startTime: s.startTime! >= 0 ? s.startTime! + offset : s.startTime,
                     timeStamp: !s.timeStamp ? null : {
                         time: s.timeStamp.time >= 0 ? s.timeStamp.time + offset : s.timeStamp.time,
                         beats: s.timeStamp.beats,
                         beatsDiv: s.timeStamp.beatsDiv
                     }
-                } as Span))
+                } as Span)),
+                rawLine: null
             });
         });
     }
@@ -330,8 +334,9 @@ export class Parser {
         while (this.lex.tryExpect(T.lineFeed))
             this.lex.consume();
     }
-    parseTimestamp(str: string, curTime: number): TimeStamp {
+    parseTimestamp(str: string, curTime: number | null): TimeStamp | null {
         var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
+        if (!curTime) curTime = 0;
         if (match) {
             let result = 0;
             if (match[2]) result += parseInt(match[2]) * 60;
@@ -341,7 +346,7 @@ export class Parser {
             if (result < 0) result = 0;
             return { time: result, beats: null, beatsDiv: null };
         } else if (match = /^b([\d\.]+)?(\/(\d+))?$/.exec(str)) {
-            let result = { time: 60 / this.bpm, beats: 1, beatsDiv: 1 };
+            let result = { time: 60 / this.bpm!, beats: 1, beatsDiv: 1 };
             if (match[1]) {
                 result.beats = parseFloat(match[1]);
                 result.time *= result.beats;
@@ -353,37 +358,38 @@ export class Parser {
             result.time += curTime;
             return result;
         }
+        return null;
     }
 }
 
 export interface TimeStamp {
     /** -1: to be filled */
     time: number;
-    beats?: number;
-    beatsDiv?: number;
+    beats: number | null;
+    beatsDiv: number | null;
 }
 
 export interface Line {
-    startTime?: number;
+    startTime: number | null;
     orderTime: number;
-    spans: Span[];
-    translation?: string;
-    rawLine?: string;
+    spans: Span[] | null;
+    translation: string | null;
+    rawLine: string | null;
 }
 
 export interface Span {
-    startTime?: number;
+    startTime: number | null;
     text: string;
-    ruby?: string;
+    ruby: string | null;
     /** For serializing */
-    timeStamp?: TimeStamp;
+    timeStamp: TimeStamp | null;
 }
 
 export interface Lyrics {
     lines: Line[];
     lang?: string;
     translationLang?: string;
-    bpm?: number;
+    bpm: number | null;
 }
 
 export function serialize(lyrics: Lyrics) {
@@ -406,7 +412,7 @@ export function serialize(lyrics: Lyrics) {
 
         if (l.rawLine) {
             str += l.rawLine;
-        } else {
+        } else if (l.spans) {
             l.spans.forEach(s => {
                 if (s.timeStamp) {
                     if (s.timeStamp.beats != null) {

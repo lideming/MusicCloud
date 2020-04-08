@@ -44,11 +44,11 @@ class PlayingView extends ContentView {
             this.centerLyrics();
         });
         this.lyricsView.onSpanClick.add((s) => {
-            if (s.span.startTime >= 0) playerCore.currentTime = s.span.startTime;
+            if (s.span.startTime && s.span.startTime >= 0) playerCore.currentTime = s.span.startTime;
         });
         this.header.actions.addView(this.editBtn = new ActionBtn({
             text: I`Edit`, onclick: () => {
-                playerCore.track.startEdit();
+                playerCore.track?.startEdit();
             }
         }));
     }
@@ -99,7 +99,7 @@ class PlayingView extends ContentView {
     onTrackChanged = () => {
         this.updateDom();
         this.editBtn.hidden = !playerCore.track;
-        var newLyrics = playerCore.track?.infoObj.lyrics || '';
+        var newLyrics = playerCore.track?.lyrics || '';
         if (this.loadedLyrics != newLyrics) {
             this.loadedLyrics = newLyrics;
             this.lyricsView.setLyrics(newLyrics);
