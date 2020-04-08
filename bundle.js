@@ -4101,17 +4101,6 @@ class PlayingView extends UI_1.ContentView {
 		});
 		this.lyricsScrollPos = 0;
 		this.loadedLyrics = '';
-		this.onTrackChanged = () => {
-			var _a;
-			this.updateDom();
-			this.editBtn.hidden = !PlayerCore_1.playerCore.track;
-			var newLyrics = ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.lyrics) || '';
-			if (this.loadedLyrics != newLyrics) {
-				this.loadedLyrics = newLyrics;
-				this.lyricsView.setLyrics(newLyrics);
-				this.lyricsView.dom.scrollTop = 0;
-			}
-		};
 		this.onResize = () => {
 			this.lyricsView.resize();
 			this.centerLyrics();
@@ -4168,21 +4157,22 @@ class PlayingView extends UI_1.ContentView {
 		super.postCreateDom();
 	}
 	onShow() {
+		super.onShow();
 		this.ensureDom();
-		this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, this.onTrackChanged)();
+	}
+	onDomInserted() {
+		if (!this.checkTrack() && this.lyricsScrollPos) {
+			this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
+		}
+		this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, () => { this.checkTrack(); });
 		this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, this.onProgressChanged);
 		this.shownEvents.add(Api_1.api.onTrackInfoChanged, (track) => {
 			var _a;
 			if (track.id === ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.id)) {
-				this.onTrackChanged();
+				this.checkTrack();
 			}
 		});
-	}
-	onDomInserted() {
 		this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime);
-		if (this.lyricsScrollPos) {
-			this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
-		}
 		requestAnimationFrame(this.onResize);
 		window.addEventListener('resize', this.onResize);
 	}
@@ -4191,6 +4181,19 @@ class PlayingView extends UI_1.ContentView {
 		window.removeEventListener('resize', this.onResize);
 		this.timer.tryCancel();
 		this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
+	}
+	checkTrack() {
+		var _a;
+		this.updateDom();
+		this.editBtn.hidden = !PlayerCore_1.playerCore.track;
+		var newLyrics = ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.lyrics) || '';
+		if (this.loadedLyrics != newLyrics) {
+			this.loadedLyrics = newLyrics;
+			this.lyricsView.setLyrics(newLyrics);
+			this.lyricsView.dom.scrollTop = 0;
+			return true;
+		}
+		return false;
 	}
 	centerLyrics() {
 		if (PlayerCore_1.playerCore.state === 'playing')
@@ -6861,7 +6864,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-08T19:26:58.704Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-08T20:15:26.282Z"}',
 	buildDate: '',
 	version: '',
 };
