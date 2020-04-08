@@ -259,3 +259,5 @@ export class ListIndexViewItem extends SidebarItem {
         }
     };
 }
+
+export var listIndex = new ListIndex();

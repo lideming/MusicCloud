@@ -3,6 +3,8 @@
 
 // Why do we need to use React and Vue.js? ;)
 
+console.time('main init');
+
 export var settings = {
     apiBaseUrl: 'api/',
     // apiBaseUrl: 'http://127.0.0.1:50074/api/',
@@ -11,12 +13,14 @@ export var settings = {
     apiDebugDelay: 0,
 };
 
+console.time('modules importing');
+
 import { Toast, ToastsContainer } from "./viewlib";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { user } from "./User";
-import { ListIndex } from "./ListIndex";
+import { listIndex } from "./ListIndex";
 import { uploads } from "./Uploads";
 import { discussion, notes, comments } from "./Discussion";
 import { router } from "./Router";
@@ -27,10 +31,7 @@ import { search } from "./Search";
 import Lyrics = require("./Lyrics");
 import { lyricsEdit } from "./LyricsEdit";
 
-ui.init();
-playerCore.init();
-
-export var listIndex = new ListIndex();
+console.timeEnd('modules importing');
 
 var app = window['app'] = {
     settings, settingsUI,
@@ -38,6 +39,9 @@ var app = window['app'] = {
     Toast, ToastsContainer, Lyrics,
     msgcli,
     init() {
+        console.time('app.init()');
+        ui.init();
+        playerCore.init();
         user.init();
         uploads.init();
         search.init();
@@ -48,9 +52,12 @@ var app = window['app'] = {
         listIndex.init();
         msgcli.init();
         router.init();
+        console.timeEnd('app.init()');
     }
 };
 
 app.init();
 
 window['preload'].jsOk();
+
+console.timeEnd('main init');

@@ -2999,6 +2999,7 @@ class ListIndexViewItem extends UI_1.SidebarItem {
 	}
 }
 exports.ListIndexViewItem = ListIndexViewItem;
+exports.listIndex = new ListIndex();
 
 },{"./Api":4,"./PlayerCore":14,"./Router":15,"./TrackList":19,"./UI":20,"./Uploads":21,"./User":22,"./utils":25,"./viewlib":26}],9:[function(require,module,exports){
 "use strict";
@@ -4824,7 +4825,7 @@ const viewlib_1 = require("./viewlib");
 const ListContentView_1 = require("./ListContentView");
 const User_1 = require("./User");
 const Api_1 = require("./Api");
-const main_1 = require("./main");
+const ListIndex_1 = require("./ListIndex");
 const UI_1 = require("./UI");
 const PlayerCore_1 = require("./PlayerCore");
 const Router_1 = require("./Router");
@@ -4995,7 +4996,7 @@ class TrackList {
 			var header = (_a = this.contentView) === null || _a === void 0 ? void 0 : _a.header;
 			if (header)
 				header.updateWith({ title: this.name });
-			main_1.listIndex.onrename(this.id, newName);
+			ListIndex_1.listIndex.onrename(this.id, newName);
 			yield this.put();
 		});
 	}
@@ -5274,7 +5275,7 @@ class TrackViewItem extends viewlib_1.ListViewItem {
 }
 exports.TrackViewItem = TrackViewItem;
 
-},{"./Api":4,"./ListContentView":7,"./PlayerCore":14,"./Router":15,"./Track":18,"./UI":20,"./User":22,"./main":24,"./utils":25,"./viewlib":26}],20:[function(require,module,exports){
+},{"./Api":4,"./ListContentView":7,"./ListIndex":8,"./PlayerCore":14,"./Router":15,"./Track":18,"./UI":20,"./User":22,"./utils":25,"./viewlib":26}],20:[function(require,module,exports){
 "use strict";
 // file: UI.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -6371,7 +6372,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
-const main_1 = require("./main");
+const ListIndex_1 = require("./ListIndex");
 const viewlib_1 = require("./viewlib");
 const UI_1 = require("./UI");
 const Api_1 = require("./Api");
@@ -6502,7 +6503,7 @@ exports.user = new class User {
 			Api_1.api.storageUrlBase = info.storageUrlBase || '';
 			Api_1.api.defaultAuth = this.getBearerAuth(this.info.token);
 			UI_1.ui.sidebarLogin.update();
-			main_1.listIndex.setIndex(info);
+			ListIndex_1.listIndex.setIndex(info);
 			this.setState('logged');
 			this.loggingin = null;
 			this.onSwitchedUser.invoke();
@@ -6528,7 +6529,7 @@ exports.user = new class User {
 			this.siLogin.save();
 			Api_1.api.defaultAuth = undefined;
 			UI_1.ui.content.setCurrent(null);
-			main_1.listIndex.setIndex(null);
+			ListIndex_1.listIndex.setIndex(null);
 			this.setState('none');
 			this.loggingin = null;
 			this.onSwitchedUser.invoke();
@@ -6590,7 +6591,7 @@ exports.user = new class User {
 	tryRestorePlaying(playing) {
 		return __awaiter(this, void 0, void 0, function* () {
 			if (playing.trackid) {
-				var list = playing.listid ? main_1.listIndex.getList(playing.listid) : Uploads_1.uploads;
+				var list = playing.listid ? ListIndex_1.listIndex.getList(playing.listid) : Uploads_1.uploads;
 				yield list.fetch();
 				var track = list.tracks[playing.position];
 				if ((track === null || track === void 0 ? void 0 : track.id) !== playing.trackid)
@@ -6800,12 +6801,12 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 	}
 }
 
-},{"./Api":4,"./PlayerCore":14,"./SettingsUI":17,"./UI":20,"./Uploads":21,"./main":24,"./utils":25,"./viewlib":26,"@yuuza/webfx/lib/utils":2}],23:[function(require,module,exports){
+},{"./Api":4,"./ListIndex":8,"./PlayerCore":14,"./SettingsUI":17,"./UI":20,"./Uploads":21,"./utils":25,"./viewlib":26,"@yuuza/webfx/lib/utils":2}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-07T03:34:54.130Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-08T12:51:03.650Z"}',
 	buildDate: '',
 	version: '',
 };
@@ -6823,6 +6824,7 @@ else {
 // TypeScript 3.7 is required.
 Object.defineProperty(exports, "__esModule", { value: true });
 // Why do we need to use React and Vue.js? ;)
+console.time('main init');
 exports.settings = {
 	apiBaseUrl: 'api/',
 	// apiBaseUrl: 'http://127.0.0.1:50074/api/',
@@ -6830,6 +6832,7 @@ exports.settings = {
 	debug: true,
 	apiDebugDelay: 0,
 };
+console.time('modules importing');
 const viewlib_1 = require("./viewlib");
 const UI_1 = require("./UI");
 const PlayerCore_1 = require("./PlayerCore");
@@ -6845,15 +6848,16 @@ const NowPlaying_1 = require("./NowPlaying");
 const Search_1 = require("./Search");
 const Lyrics = require("./Lyrics");
 const LyricsEdit_1 = require("./LyricsEdit");
-UI_1.ui.init();
-PlayerCore_1.playerCore.init();
-exports.listIndex = new ListIndex_1.ListIndex();
+console.timeEnd('modules importing');
 var app = window['app'] = {
 	settings: exports.settings, settingsUI: SettingsUI_1.settingsUI,
-	ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: exports.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes, nowPlaying: NowPlaying_1.nowPlaying, lyricsEdit: LyricsEdit_1.lyricsEdit,
+	ui: UI_1.ui, api: Api_1.api, playerCore: PlayerCore_1.playerCore, router: Router_1.router, listIndex: ListIndex_1.listIndex, user: User_1.user, uploads: Uploads_1.uploads, discussion: Discussion_1.discussion, notes: Discussion_1.notes, nowPlaying: NowPlaying_1.nowPlaying, lyricsEdit: LyricsEdit_1.lyricsEdit,
 	Toast: viewlib_1.Toast, ToastsContainer: viewlib_1.ToastsContainer, Lyrics,
 	msgcli: MessageClient_1.msgcli,
 	init() {
+		console.time('app.init()');
+		UI_1.ui.init();
+		PlayerCore_1.playerCore.init();
 		User_1.user.init();
 		Uploads_1.uploads.init();
 		Search_1.search.init();
@@ -6861,13 +6865,15 @@ var app = window['app'] = {
 		Discussion_1.notes.init();
 		NowPlaying_1.nowPlaying.init();
 		Discussion_1.comments.init();
-		exports.listIndex.init();
+		ListIndex_1.listIndex.init();
 		MessageClient_1.msgcli.init();
 		Router_1.router.init();
+		console.timeEnd('app.init()');
 	}
 };
 app.init();
 window['preload'].jsOk();
+console.timeEnd('main init');
 
 },{"./Api":4,"./Discussion":5,"./ListIndex":8,"./Lyrics":9,"./LyricsEdit":10,"./MessageClient":12,"./NowPlaying":13,"./PlayerCore":14,"./Router":15,"./Search":16,"./SettingsUI":17,"./UI":20,"./Uploads":21,"./User":22,"./viewlib":26}],25:[function(require,module,exports){
 "use strict";

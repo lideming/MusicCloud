@@ -60,11 +60,13 @@
                     this.update();
                 },
                 onJsLoad() {
-                    if (!this.jsLoaded) {
-                        console.error('js loaded without calling callback');
-                        this.jsError = true;
-                        this.update();
-                    }
+                    setTimeout(function(thiz) {
+                        if (!thiz.jsLoaded) {
+                            console.error('js loaded without calling callback');
+                            thiz.jsError = true;
+                            thiz.update();
+                        }
+                    }, 1000, this);
                 },
                 update() {
                     if (!this.domLoaded) return;

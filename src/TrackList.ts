@@ -6,7 +6,7 @@ import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { api } from "./Api";
-import { listIndex } from "./main";
+import { listIndex } from "./ListIndex";
 import { ContentView, ContentHeader } from "./UI";
 import { playerCore, PlayingLoopMode } from "./PlayerCore";
 import { router } from "./Router";
