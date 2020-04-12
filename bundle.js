@@ -3468,7 +3468,7 @@ const LyricsView_1 = require("./LyricsView");
 const Router_1 = require("./Router");
 const Lyrics_1 = require("./Lyrics");
 const PlayerCore_1 = require("./PlayerCore");
-const utils_2 = require("@yuuza/webfx/lib/utils");
+const viewlib_1 = require("./viewlib");
 exports.lyricsEdit = new class {
 	startEdit(track, lyrics) {
 		if (!this.view) {
@@ -3491,6 +3491,8 @@ class LyricsEditContentView extends UI_1.ContentView {
 		super();
 		this.header = new UI_1.ContentHeader({ title: I18n_1.I `Edit Lyrics` });
 		this.lyricsView = new EditableLyricsView();
+		this.sourceView = new LyricsSourceView();
+		this.mode = 'lyrics';
 		this.track = null;
 		this.lyricsString = null;
 		this.lyricsScrollPos = 0;
@@ -3502,7 +3504,6 @@ class LyricsEditContentView extends UI_1.ContentView {
 				return;
 			var time = PlayerCore_1.playerCore.currentTime;
 			var realTime = new Date().getTime();
-			var timerOn = true;
 			if (time != this.lastTime) {
 				this.lastChangedRealTime = realTime;
 				this.lyricsView.setCurrentTime(time, 'smooth');
@@ -3514,6 +3515,16 @@ class LyricsEditContentView extends UI_1.ContentView {
 			this.lyricsView.resize();
 			this.centerLyrics();
 		};
+		this.header.actions.addView(new UI_1.ActionBtn({
+			text: I18n_1.I `Lyrics View`,
+			onclick: () => {
+			}
+		}));
+		this.header.actions.addView(new UI_1.ActionBtn({
+			text: I18n_1.I `Source View`,
+			onclick: () => {
+			}
+		}));
 		this.header.actions.addView(new UI_1.ActionBtn({
 			text: I18n_1.I `Discard`,
 			onclick: () => {
@@ -3595,7 +3606,7 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 			this.setNextSpans(this.getSpans());
 		});
 		this.onSpanClick.add((s) => {
-			PlayerCore_1.playerCore.currentTime = utils_2.utils.numLimit(s.span.startTime - 3, 0, Infinity);
+			PlayerCore_1.playerCore.currentTime = utils_1.utils.numLimit(s.span.startTime - 3, 0, Infinity);
 			this.setNextSpans(this.getSpans(s, 'here'));
 		});
 		this.dom.addEventListener('keydown', (ev) => {
@@ -3678,8 +3689,21 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 		});
 	}
 }
+class LyricsSourceView extends viewlib_1.View {
+	createDom() {
+		return {
+			tag: 'textarea',
+			style: 'height: 100%'
+		};
+	}
+}
+<<<<<<< Updated upstream
 
-},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"@yuuza/webfx/lib/utils":2}],11:[function(require,module,exports){
+},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"./viewlib":26}],11:[function(require,module,exports){
+=======
+
+},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"./viewlib":26}],11:[function(require,module,exports){
+>>>>>>> Stashed changes
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -5448,6 +5472,8 @@ exports.ContentHeader = ContentHeader;
 class ActionBtn extends viewlib_1.TextView {
 	get onclick() { return this.onactive; }
 	set onclick(val) { this.onactive = val; }
+	get active() { return this.dom.classList.contains('active'); }
+	set active(val) { this.toggleClass('active', val); }
 	constructor(init) {
 		super();
 		utils_1.utils.objectApply(this, init);
@@ -6875,7 +6901,11 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-12T02:54:10.929Z"}',
+<<<<<<< Updated upstream
+	raw: '{"version":"1.0.0","buildDate":"2020-04-12T02:59:52.851Z"}',
+=======
+	raw: '{"version":"1.0.0","buildDate":"2020-04-12T02:45:04.447Z"}',
+>>>>>>> Stashed changes
 	buildDate: '',
 	version: '',
 };

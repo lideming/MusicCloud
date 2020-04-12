@@ -281,6 +281,10 @@ html, body {
     margin: 5px;
 }
 
+.titlebar .actions .action.active {
+    color: var(--color-text);
+}
+
 .listcontentview {
     display: flex;
     flex-direction: column;

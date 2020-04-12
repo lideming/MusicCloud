@@ -53,7 +53,7 @@ export class ContentHeader extends View {
     title: string;
     titleEditable = false;
     editHelper: EditableHelper;
-    actions = new ContainerView({ tag: 'div.actions' });
+    actions = new ContainerView<ActionBtn>({ tag: 'div.actions' });
     onTitleEdit: (title: string) => void;
     constructor(init?: Partial<ContentHeader>) {
         super();
@@ -104,6 +104,8 @@ export class ContentHeader extends View {
 export class ActionBtn extends TextView {
     get onclick() { return this.onactive; }
     set onclick(val) { this.onactive = val; }
+    get active() { return this.dom.classList.contains('active'); }
+    set active(val) { this.toggleClass('active', val); }
     constructor(init?: Partial<ActionBtn>) {
         super();
         utils.objectApply(this, init);

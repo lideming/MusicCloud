@@ -1,12 +1,12 @@
 import { Track } from './Track';
 import { ContentView, ContentHeader, SidebarItem, ui, ActionBtn } from './UI';
 import { I } from './I18n';
-import { BuildDomExpr, Timer } from './utils';
+import { BuildDomExpr, Timer, utils } from './utils';
 import { LyricsView, SpanView, LineView } from './LyricsView';
 import { router } from './Router';
 import { Span, Lyrics, serialize } from './Lyrics';
 import { playerCore } from './PlayerCore';
-import { utils } from '@yuuza/webfx/lib/utils';
+import { View } from './viewlib';
 
 export var lyricsEdit = new class {
     sidebarItem: SidebarItem;
@@ -31,11 +31,23 @@ export var lyricsEdit = new class {
 class LyricsEditContentView extends ContentView {
     header = new ContentHeader({ title: I`Edit Lyrics` });
     lyricsView = new EditableLyricsView();
+    sourceView = new LyricsSourceView();
+    mode: 'lyrics' | 'source' = 'lyrics';
     track: Track | null = null;
     lyricsString: string | null = null;
 
     constructor() {
         super();
+        this.header.actions.addView(new ActionBtn({
+            text: I`Lyrics View`,
+            onclick: () => {
+            }
+        }));
+        this.header.actions.addView(new ActionBtn({
+            text: I`Source View`,
+            onclick: () => {
+            }
+        }));
         this.header.actions.addView(new ActionBtn({
             text: I`Discard`,
             onclick: () => {
@@ -98,7 +110,6 @@ class LyricsEditContentView extends ContentView {
         if (!this.isTrackPlaying()) return;
         var time = playerCore.currentTime;
         var realTime = new Date().getTime();
-        var timerOn = true;
         if (time != this.lastTime) {
             this.lastChangedRealTime = realTime;
             this.lyricsView.setCurrentTime(time, 'smooth');
@@ -215,5 +226,14 @@ class EditableLyricsView extends LyricsView {
             s.isNext = true;
             this.nextSpans.push(s);
         });
+    }
+}
+
+class LyricsSourceView extends View {
+    createDom(): BuildDomExpr {
+        return {
+            tag: 'textarea',
+            style: 'height: 100%'
+        }
     }
 }
