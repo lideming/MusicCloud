@@ -92,7 +92,7 @@ export class TrackDialog extends Dialog {
         this.dom.addEventListener('keydown', (ev) => {
             if (!this.compositionWatcher.isCompositing
                 && ev.code === 'Enter'
-                && (ev.ctrlKey || ev.target !== this.inputLyrics.dom)) {
+                && (ev.ctrlKey || ev.target !== this.inputLyrics.input.dom)) {
                 ev.preventDefault();
                 this.save();
             }

@@ -1576,6 +1576,8 @@ class ContextMenu extends ListView {
                 this.overlay = new Overlay();
                 this.overlay.dom.style.background = 'rgba(0, 0, 0, .1)';
                 this.overlay.dom.addEventListener('mousedown', (ev) => {
+                    if (ev.eventPhase !== Event.AT_TARGET)
+                        return;
                     ev.preventDefault();
                     this.close();
                 });
@@ -4808,7 +4810,7 @@ class TrackDialog extends viewlib_1.Dialog {
 		this.dom.addEventListener('keydown', (ev) => {
 			if (!this.compositionWatcher.isCompositing
 				&& ev.code === 'Enter'
-				&& (ev.ctrlKey || ev.target !== this.inputLyrics.dom)) {
+				&& (ev.ctrlKey || ev.target !== this.inputLyrics.input.dom)) {
 				ev.preventDefault();
 				this.save();
 			}
@@ -6873,7 +6875,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-12T00:05:45.743Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-12T02:54:10.929Z"}',
 	buildDate: '',
 	version: '',
 };
