@@ -30,6 +30,7 @@ class SearchView extends ListContentView {
     listView: ListView<TrackViewItem>;
     appendListView() {
         super.appendListView();
+        this.listView.toggleClass('tracklistview', true);
         this.listView.dragging = true;
         this.listView.onItemClicked = (item) => {
             var tempList = new TrackList();

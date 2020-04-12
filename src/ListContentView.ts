@@ -1,6 +1,6 @@
 // file: ListContentView.ts
 
-import { ListViewItem, ListView, LoadingIndicator } from "./viewlib";
+import { View, ListViewItem, ListView, LoadingIndicator } from "./viewlib";
 import { utils, I, EventRegistrations } from "./utils";
 import { ContentView, ContentHeader, ActionBtn } from "./UI";
 
@@ -46,6 +46,7 @@ export class ListContentView extends ContentView {
     selectAllBtn: ActionBtn;
     selectBtn: ActionBtn;
 
+    scrollBox: View;
     listView: ListView<ListViewItem>;
     loadingIndicator: LoadingIndicator | null;
     emptyIndicator: LoadingIndicator;
@@ -61,13 +62,13 @@ export class ListContentView extends ContentView {
     }
 
     createDom() {
-        return utils.buildDOM({ tag: 'div' });
+        return utils.buildDOM({ tag: 'div.listcontentview' });
     }
 
     postCreateDom() {
         super.postCreateDom();
         this.appendHeader();
-        this.appendListView();
+        this.appendScrollBox();
     }
 
     title: string;
@@ -89,15 +90,25 @@ export class ListContentView extends ContentView {
         this.dom.appendView(this.header);
     }
 
+    protected appendScrollBox() {
+        this.scrollBox = this.createScrollBox();
+        this.appendView(this.scrollBox);
+        this.appendListView();
+    }
+
+    protected createScrollBox() {
+        return new View({ tag: 'div.scrollbox' });
+    }
+
     protected appendListView() {
-        this.listView = new ListView({ tag: 'ul' });
+        this.listView = new ListView({ tag: 'ul.listview' });
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
             this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
             this.selectAllBtn.hidden = !this.listView.selectionHelper.enabled;
         })();
         this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
-        this.dom.appendView(this.listView);
+        this.scrollBox.appendView(this.listView);
     }
 
     onShow() {
@@ -120,7 +131,7 @@ export class ListContentView extends ContentView {
     }
 
     protected insertLoadingIndicator(li: LoadingIndicator) {
-        this.dom.insertBefore(li.dom, this.listView.dom);
+        this.scrollBox.dom.insertBefore(li.dom, this.listView.dom);
     }
 
     updateView() {

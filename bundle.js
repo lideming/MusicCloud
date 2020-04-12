@@ -2645,12 +2645,12 @@ class ListContentView extends UI_1.ContentView {
 			this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
 	}
 	createDom() {
-		return utils_1.utils.buildDOM({ tag: 'div' });
+		return utils_1.utils.buildDOM({ tag: 'div.listcontentview' });
 	}
 	postCreateDom() {
 		super.postCreateDom();
 		this.appendHeader();
-		this.appendListView();
+		this.appendScrollBox();
 	}
 	createHeader() {
 		return new UI_1.ContentHeader({ title: this.title });
@@ -2668,15 +2668,23 @@ class ListContentView extends UI_1.ContentView {
 		};
 		this.dom.appendView(this.header);
 	}
+	appendScrollBox() {
+		this.scrollBox = this.createScrollBox();
+		this.appendView(this.scrollBox);
+		this.appendListView();
+	}
+	createScrollBox() {
+		return new viewlib_1.View({ tag: 'div.scrollbox' });
+	}
 	appendListView() {
-		this.listView = new viewlib_1.ListView({ tag: 'ul' });
+		this.listView = new viewlib_1.ListView({ tag: 'ul.listview' });
 		this.listView.selectionHelper.onEnabledChanged.add(() => {
 			this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
 			this.selectBtn.text = this.listView.selectionHelper.enabled ? utils_1.I `Cancel` : utils_1.I `Select`;
 			this.selectAllBtn.hidden = !this.listView.selectionHelper.enabled;
 		})();
 		this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
-		this.dom.appendView(this.listView);
+		this.scrollBox.appendView(this.listView);
 	}
 	onShow() {
 		super.onShow();
@@ -2698,7 +2706,7 @@ class ListContentView extends UI_1.ContentView {
 		this.updateView();
 	}
 	insertLoadingIndicator(li) {
-		this.dom.insertBefore(li.dom, this.listView.dom);
+		this.scrollBox.dom.insertBefore(li.dom, this.listView.dom);
 	}
 	updateView() {
 		if (!this.rendered)
@@ -4525,6 +4533,7 @@ class SearchView extends ListContentView_1.ListContentView {
 	}
 	appendListView() {
 		super.appendListView();
+		this.listView.toggleClass('tracklistview', true);
 		this.listView.dragging = true;
 		this.listView.onItemClicked = (item) => {
 			var tempList = new TrackList_1.TrackList();
@@ -6864,7 +6873,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-08T20:15:26.282Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-12T00:05:45.743Z"}',
 	buildDate: '',
 	version: '',
 };

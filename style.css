@@ -69,8 +69,15 @@ ul, li {
     outline: none;
 }
 
-.keyboard-input :focus, .input-text:focus {
+.keyboard-input :focus, .input-text:focus  {
     outline: solid 2px var(--color-primary-light);
+}
+
+.keyboard-input #sidebar:focus,
+.keyboard-input .listcontentview > .scrollbox:focus,
+.keyboard-input .lyricsview:focus {
+    outline: solid 2px var(--color-primary-light);
+    outline-offset: -2px;
 }
 
 ::selection {
@@ -201,12 +208,10 @@ html, body {
 }
 
 .content-header {
-    /* position: relative; */
-    position: sticky;
+    position: relative;
     top: 0;
     background: var(--color-bg);
     animation: showing-top .3s;
-    z-index: 1;
     cursor: default;
     font-size: 16px;
     line-height: 1.25;
@@ -276,6 +281,17 @@ html, body {
     margin: 5px;
 }
 
+.listcontentview {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.listcontentview > .scrollbox {
+    flex: 1;
+    overflow-y: auto;
+}
+
 .tracklistview {
     padding-bottom: 30px;
 }
@@ -303,6 +319,10 @@ a.item {
 
 .item:hover, .dragover {
     background: var(--color-bg-ee);
+}
+
+.keyboard-input .item:focus {
+    outline-offset: -2px;
 }
 
 .dragover-placeholder {
@@ -843,6 +863,7 @@ textarea.input-text {
 
 .keyboard-input .btn:focus {
     outline: solid 2px var(--color-primary-dark);
+    outline-offset: -2px;
     background: var(--color-primary-darker);
 }
 
