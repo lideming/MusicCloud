@@ -51,6 +51,8 @@ export class ListContentView extends ContentView {
     loadingIndicator: LoadingIndicator | null;
     emptyIndicator: LoadingIndicator;
 
+    _scrollPos = 0;
+
     get rendered() { return this.domCreated; }
 
     private _canMultiSelect: boolean;
@@ -115,7 +117,16 @@ export class ListContentView extends ContentView {
         super.onShow();
         this.ensureDom();
     }
+    onDomInserted() {
+        super.onDomInserted();
+        if (this.scrollBox && this._scrollPos) {
+            this.scrollBox.dom.scrollTop = this._scrollPos;
+        }
+    }
     onRemove() {
+        if (this.scrollBox) {
+            this._scrollPos = this.scrollBox.dom.scrollTop;
+        }
         super.onRemove();
     }
 

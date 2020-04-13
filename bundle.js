@@ -2637,6 +2637,10 @@ class DataBackedListView extends viewlib_1.ListView {
 	}
 }
 class ListContentView extends UI_1.ContentView {
+	constructor() {
+		super(...arguments);
+		this._scrollPos = 0;
+	}
 	get rendered() { return this.domCreated; }
 	get canMultiSelect() { return this._canMultiSelect; }
 	set canMultiSelect(v) {
@@ -2692,7 +2696,16 @@ class ListContentView extends UI_1.ContentView {
 		super.onShow();
 		this.ensureDom();
 	}
+	onDomInserted() {
+		super.onDomInserted();
+		if (this.scrollBox && this._scrollPos) {
+			this.scrollBox.dom.scrollTop = this._scrollPos;
+		}
+	}
 	onRemove() {
+		if (this.scrollBox) {
+			this._scrollPos = this.scrollBox.dom.scrollTop;
+		}
 		super.onRemove();
 	}
 	useLoadingIndicator(li) {
@@ -3564,6 +3577,7 @@ class LyricsEditContentView extends UI_1.ContentView {
 		this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, this.onProgressChanged);
 	}
 	onDomInserted() {
+		super.onDomInserted();
 		if (this.isTrackPlaying())
 			this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime);
 		if (this.lyricsScrollPos) {
@@ -3697,13 +3711,8 @@ class LyricsSourceView extends viewlib_1.View {
 		};
 	}
 }
-<<<<<<< Updated upstream
 
 },{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"./viewlib":26}],11:[function(require,module,exports){
-=======
-
-},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"./viewlib":26}],11:[function(require,module,exports){
->>>>>>> Stashed changes
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -4195,6 +4204,7 @@ class PlayingView extends UI_1.ContentView {
 		this.ensureDom();
 	}
 	onDomInserted() {
+		super.onDomInserted();
 		if (!this.checkTrack() && this.lyricsScrollPos) {
 			this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
 		}
@@ -5401,6 +5411,7 @@ class ContentView extends viewlib_1.View {
 	constructor() {
 		super(...arguments);
 		this._isVisible = false;
+		this._shownEvents = null;
 	}
 	get isVisible() { return this._isVisible; }
 	onShow() {
@@ -5834,7 +5845,6 @@ exports.ui = new class {
 				this.current = null;
 				if (!cur)
 					return;
-				cur.contentViewState.scrollTop = this.container.scrollTop;
 				cur.onRemove();
 				if (cur.dom)
 					this.container.removeChild(cur.dom);
@@ -5849,9 +5859,6 @@ exports.ui = new class {
 						this.container.appendChild(arg.dom);
 						arg.onDomInserted();
 					}
-					if (!arg.contentViewState)
-						arg.contentViewState = { scrollTop: 0 };
-					this.container.scrollTop = arg.contentViewState.scrollTop;
 				}
 				this.current = arg;
 			}
@@ -6901,11 +6908,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-<<<<<<< Updated upstream
-	raw: '{"version":"1.0.0","buildDate":"2020-04-12T02:59:52.851Z"}',
-=======
-	raw: '{"version":"1.0.0","buildDate":"2020-04-12T02:45:04.447Z"}',
->>>>>>> Stashed changes
+	raw: '{"version":"1.0.0","buildDate":"2020-04-13T02:10:24.197Z"}',
 	buildDate: '',
 	version: '',
 };

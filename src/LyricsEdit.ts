@@ -90,6 +90,7 @@ class LyricsEditContentView extends ContentView {
         this.shownEvents.add(playerCore.onProgressChanged, this.onProgressChanged);
     }
     onDomInserted() {
+        super.onDomInserted();
         if (this.isTrackPlaying()) this.lyricsView.setCurrentTime(playerCore.currentTime);
         if (this.lyricsScrollPos) {
             this.lyricsView.dom.scrollTop = this.lyricsScrollPos;

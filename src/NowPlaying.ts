@@ -77,6 +77,7 @@ class PlayingView extends ContentView {
         this.ensureDom();
     }
     onDomInserted() {
+        super.onDomInserted();
         if (!this.checkTrack() && this.lyricsScrollPos) {
             this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
         }

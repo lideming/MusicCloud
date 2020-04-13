@@ -42,9 +42,8 @@ export class ContentView extends View {
         this._isVisible = false;
         this._shownEvents?.removeAll();
     }
-    contentViewState?: ContentViewState;
 
-    _shownEvents: EventRegistrations;
+    _shownEvents: EventRegistrations | null = null;
     get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }
 }
 
@@ -482,7 +481,6 @@ export const ui = new class {
             const cur = this.current;
             this.current = null;
             if (!cur) return;
-            cur.contentViewState!.scrollTop = this.container.scrollTop;
             cur.onRemove();
             if (cur.dom) this.container.removeChild(cur.dom);
         }
@@ -495,8 +493,6 @@ export const ui = new class {
                     this.container.appendChild(arg.dom);
                     arg.onDomInserted();
                 }
-                if (!arg.contentViewState) arg.contentViewState = { scrollTop: 0 };
-                this.container.scrollTop = arg.contentViewState.scrollTop;
             }
             this.current = arg;
         }
