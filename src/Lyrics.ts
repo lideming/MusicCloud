@@ -171,6 +171,7 @@ export class Parser {
     curTime: number = 0;
     lang = '';
     tlang = '';
+    haveReadLyrics = false;
     constructor(str: string) {
         this.lex = new Lexer(str);
         this.tokens = this.lex.buf;
@@ -182,9 +183,8 @@ export class Parser {
         while (lex.peek().type !== T.eof) {
             lastpos = lex.buf.consumed;
             this.parseLine();
-            this.skipLineFeeds();
+            if (!this.haveReadLyrics) this.skipLineFeeds();
             if (lex.buf.consumed === lastpos) {
-                this.parseLine();
                 lex.error('parseLine() doesn\'t consume tokens');
             }
         }
@@ -297,7 +297,14 @@ export class Parser {
             spans.push(lastSpan = { text: '', ruby: null, startTime: curTime, timeStamp });
             timeStamp = null;
         }
-        if (startTime === null && spans.length === 0) return;
+        if (spans.length === 0) {
+            if (this.haveReadLyrics) {
+                spans.push(lastSpan = { text: '', ruby: null, startTime: null, timeStamp: null });
+            } else {
+                return;
+            }
+        }
+        this.haveReadLyrics = true;
         if (curTime != null) this.curTime = curTime;
         this.lines.push({
             startTime,

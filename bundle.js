@@ -3207,6 +3207,7 @@ class Parser {
 		this.curTime = 0;
 		this.lang = '';
 		this.tlang = '';
+		this.haveReadLyrics = false;
 		this.lex = new Lexer(str);
 		this.tokens = this.lex.buf;
 	}
@@ -3217,9 +3218,9 @@ class Parser {
 		while (lex.peek().type !== 7 /* eof */) {
 			lastpos = lex.buf.consumed;
 			this.parseLine();
-			this.skipLineFeeds();
+			if (!this.haveReadLyrics)
+				this.skipLineFeeds();
 			if (lex.buf.consumed === lastpos) {
-				this.parseLine();
 				lex.error('parseLine() doesn\'t consume tokens');
 			}
 		}
@@ -3348,8 +3349,15 @@ class Parser {
 			spans.push(lastSpan = { text: '', ruby: null, startTime: curTime, timeStamp });
 			timeStamp = null;
 		}
-		if (startTime === null && spans.length === 0)
-			return;
+		if (spans.length === 0) {
+			if (this.haveReadLyrics) {
+				spans.push(lastSpan = { text: '', ruby: null, startTime: null, timeStamp: null });
+			}
+			else {
+				return;
+			}
+		}
+		this.haveReadLyrics = true;
 		if (curTime != null)
 			this.curTime = curTime;
 		this.lines.push({
@@ -6987,7 +6995,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-14T04:22:38.227Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-14T09:35:05.263Z"}',
 	buildDate: '',
 	version: '',
 };
