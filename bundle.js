@@ -3546,7 +3546,7 @@ class LyricsEditContentView extends UI_1.ContentView {
 		this.header.actions.addView(new UI_1.ActionBtn({
 			text: I18n_1.I `Done`,
 			onclick: () => {
-				this.getLyricsFromView();
+				this.serializeLyricsFromView();
 				this.close();
 			}
 		}));
@@ -3558,7 +3558,7 @@ class LyricsEditContentView extends UI_1.ContentView {
 			return;
 		try {
 			if (!init)
-				this.getLyricsFromView();
+				this.serializeLyricsFromView();
 			var view = this.currentView;
 			if (mode === 'lyrics') {
 				try {
@@ -3599,9 +3599,10 @@ class LyricsEditContentView extends UI_1.ContentView {
 			view.onShow();
 		}
 	}
-	getLyricsFromView() {
+	serializeLyricsFromView() {
 		if (this.mode === 'lyrics') {
-			this.lyrics = Lyrics_1.serialize(this.lyricsView.lyrics);
+			if (this.lyricsView.modified)
+				this.lyrics = Lyrics_1.serialize(this.lyricsView.lyrics);
 		}
 		else if (this.mode === 'source') {
 			this.lyrics = this.sourceView.value;
@@ -3656,7 +3657,9 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 	constructor() {
 		super();
 		this.nextSpans = [];
+		this.modified = false;
 		this.onLyricsChanged.add(() => {
+			this.modified = false;
 			this.lines.forEach(l => {
 				var _a;
 				if ((_a = l.spans) === null || _a === void 0 ? void 0 : _a.length) {
@@ -3689,6 +3692,7 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 					if (this.nextSpans[0].position === 0) {
 						this.nextSpans[0].lineView.line.startTime = now;
 					}
+					this.modified = true;
 				}
 				let spans = this.getSpans(null, 'forward');
 				if (spans.length)
@@ -6995,7 +6999,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-14T09:35:05.263Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-14T09:53:57.948Z"}',
 	buildDate: '',
 	version: '',
 };

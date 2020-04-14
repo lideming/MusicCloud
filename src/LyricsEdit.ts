@@ -71,7 +71,7 @@ class LyricsEditContentView extends ContentView {
         this.header.actions.addView(new ActionBtn({
             text: I`Done`,
             onclick: () => {
-                this.getLyricsFromView();
+                this.serializeLyricsFromView();
                 this.close();
             }
         }));
@@ -80,7 +80,7 @@ class LyricsEditContentView extends ContentView {
     setMode(mode: this['mode'], init?: boolean) {
         if (!init && mode === this._mode) return;
         try {
-            if (!init) this.getLyricsFromView();
+            if (!init) this.serializeLyricsFromView();
             var view = this.currentView;
             if (mode === 'lyrics') {
                 try {
@@ -119,9 +119,10 @@ class LyricsEditContentView extends ContentView {
         }
     }
 
-    private getLyricsFromView() {
+    private serializeLyricsFromView() {
         if (this.mode === 'lyrics') {
-            this.lyrics = serialize(this.lyricsView.lyrics);
+            if (this.lyricsView.modified)
+                this.lyrics = serialize(this.lyricsView.lyrics);
         } else if (this.mode === 'source') {
             this.lyrics = this.sourceView.value;
         } else {
@@ -173,9 +174,11 @@ class LyricsEditContentView extends ContentView {
 
 class EditableLyricsView extends LyricsView {
     nextSpans: SpanView[] = [];
+    modified = false;
     constructor() {
         super();
         this.onLyricsChanged.add(() => {
+            this.modified = false;
             this.lines.forEach(l => {
                 if (l.spans?.length) {
                     let firstSpan = l.spans[0].span;
@@ -207,6 +210,7 @@ class EditableLyricsView extends LyricsView {
                     if (this.nextSpans[0].position === 0) {
                         this.nextSpans[0].lineView.line.startTime = now;
                     }
+                    this.modified = true;
                 }
                 let spans = this.getSpans(null, 'forward');
                 if (spans.length) this.setNextSpans(spans);
