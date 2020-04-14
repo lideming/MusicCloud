@@ -3933,7 +3933,7 @@ class LyricsView extends viewlib_1.View {
 		this.onFontSizeChanged.invoke();
 	}
 	reset() {
-		this.scrollPos = 0;
+		this.dom.scrollTop = this.scrollPos = 0;
 	}
 	onShow() {
 		this.dom.scrollTop = this.scrollPos;
@@ -6999,7 +6999,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-14T09:53:57.948Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-14T10:01:56.762Z"}',
 	buildDate: '',
 	version: '',
 };

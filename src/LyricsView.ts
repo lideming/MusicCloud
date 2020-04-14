@@ -122,7 +122,7 @@ export class LyricsView extends View {
 
     scrollPos = 0;
     reset() {
-        this.scrollPos = 0;
+        this.dom.scrollTop = this.scrollPos = 0;
     }
     onShow() {
         this.dom.scrollTop = this.scrollPos;
