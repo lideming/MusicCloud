@@ -2525,6 +2525,9 @@ I18n_1.i18n.add2dArray(JSON.parse(`[
 	["Error converting \\"{0}\\".", "转换 \\"{0}\\" 时发生错误."],
 	["Edit", "编辑"],
 	["Discard", "放弃更改"],
+	["Lyrics View", "歌词视图"],
+	["Source View", "源码视图"],
+	["Failed to switch view.", "切换视图失败。"],
 	["Done", "完成"],
 	["Save", "保存"],
 	["Saving...", "保存中..."],
@@ -3482,6 +3485,7 @@ const Router_1 = require("./Router");
 const Lyrics_1 = require("./Lyrics");
 const PlayerCore_1 = require("./PlayerCore");
 const viewlib_1 = require("./viewlib");
+const viewlib_2 = require("@yuuza/webfx/lib/viewlib");
 exports.lyricsEdit = new class {
 	startEdit(track, lyrics) {
 		if (!this.view) {
@@ -3505,99 +3509,138 @@ class LyricsEditContentView extends UI_1.ContentView {
 		this.header = new UI_1.ContentHeader({ title: I18n_1.I `Edit Lyrics` });
 		this.lyricsView = new EditableLyricsView();
 		this.sourceView = new LyricsSourceView();
-		this.mode = 'lyrics';
+		this.currentView = null;
+		this._mode = 'lyrics';
 		this.track = null;
-		this.lyricsString = null;
-		this.lyricsScrollPos = 0;
-		this.timer = new utils_1.Timer(() => this.onProgressChanged());
-		this.lastTime = 0;
-		this.lastChangedRealTime = 0;
-		this.onProgressChanged = () => {
-			if (!this.isTrackPlaying())
-				return;
-			var time = PlayerCore_1.playerCore.currentTime;
-			var realTime = new Date().getTime();
-			if (time != this.lastTime) {
-				this.lastChangedRealTime = realTime;
-				this.lyricsView.setCurrentTime(time, 'smooth');
-			}
-			if (realTime - this.lastChangedRealTime < 500)
-				this.timer.timeout(16);
-		};
-		this.onResize = () => {
-			this.lyricsView.resize();
-			this.centerLyrics();
-		};
-		this.header.actions.addView(new UI_1.ActionBtn({
+		this.lyrics = null;
+		this.originalLyrics = null;
+		this.header.actions.addView(this.btnLyrics = new UI_1.ActionBtn({
 			text: I18n_1.I `Lyrics View`,
 			onclick: () => {
+				this.setMode('lyrics');
 			}
 		}));
-		this.header.actions.addView(new UI_1.ActionBtn({
+		this.header.actions.addView(this.btnSource = new UI_1.ActionBtn({
 			text: I18n_1.I `Source View`,
 			onclick: () => {
+				this.setMode('source');
 			}
 		}));
 		this.header.actions.addView(new UI_1.ActionBtn({
 			text: I18n_1.I `Discard`,
 			onclick: () => {
+				this.lyrics = this.originalLyrics;
 				this.close();
 			}
 		}));
 		this.header.actions.addView(new UI_1.ActionBtn({
 			text: I18n_1.I `Done`,
 			onclick: () => {
-				this.lyricsString = Lyrics_1.serialize(this.lyricsView.lyrics);
+				this.getLyricsFromView();
 				this.close();
 			}
 		}));
 	}
+	get mode() { return this._mode; }
+	set mode(val) { this.setMode(val); }
+	setMode(mode, init) {
+		if (!init && mode === this._mode)
+			return;
+		try {
+			if (!init)
+				this.getLyricsFromView();
+			var view = this.currentView;
+			if (mode === 'lyrics') {
+				try {
+					var parsed = Lyrics_1.parse(this.lyrics);
+				}
+				catch (error) {
+					throw new Error(I18n_1.I `Error parsing lyrics`);
+				}
+				this.lyricsView.setLyrics(parsed);
+				view = this.lyricsView;
+			}
+			else if (mode === 'source') {
+				this.sourceView.value = this.lyrics;
+				view = this.sourceView;
+			}
+			else {
+				throw new Error("unknown mode");
+			}
+			this.setCurrentView(view);
+		}
+		catch (error) {
+			viewlib_2.Toast.show(I18n_1.I `Failed to switch view.` + '\n' + error, 3000);
+			return;
+		}
+		this.btnLyrics.active = mode === 'lyrics';
+		this.btnSource.active = mode === 'source';
+		this._mode = mode;
+	}
+	setCurrentView(view) {
+		if (this.currentView) {
+			this.currentView.onHide();
+			this.currentView.dom.remove();
+			this.currentView = null;
+		}
+		if (view) {
+			this.currentView = view;
+			this.appendView(view);
+			view.onShow();
+		}
+	}
+	getLyricsFromView() {
+		if (this.mode === 'lyrics') {
+			this.lyrics = Lyrics_1.serialize(this.lyricsView.lyrics);
+		}
+		else if (this.mode === 'source') {
+			this.lyrics = this.sourceView.value;
+		}
+		else {
+			throw new Error("unknown mode");
+		}
+	}
 	close() {
+		this.setCurrentView(null);
 		exports.lyricsEdit.sidebarItem.hidden = true;
 		window.history.back();
 		var trackDialog = this.track.startEdit();
-		trackDialog.inputLyrics.value = this.lyricsString;
+		trackDialog.inputLyrics.value = this.lyrics;
 	}
 	createDom() {
 		return {
 			tag: 'div.lyricsedit',
 			child: [
-				this.header,
-				this.lyricsView
+				this.header
 			]
 		};
 	}
 	setTrack(track, lyrics) {
 		this.track = track;
-		this.lyricsString = lyrics;
-		this.lyricsView.setLyrics(lyrics);
+		this.originalLyrics = lyrics;
+		this.lyrics = lyrics;
+		this.lyricsView.reset();
+		this.lyricsView.track = track;
+		this.sourceView.reset();
+		this.setMode(lyrics ? this.mode : 'source', true);
 	}
 	onShow() {
 		this.ensureDom();
-		this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, this.onProgressChanged);
+		this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, () => {
+			if (this.currentView === this.lyricsView) {
+				this.lyricsView.onProgressChanged();
+			}
+		});
 	}
 	onDomInserted() {
+		var _a;
 		super.onDomInserted();
-		if (this.isTrackPlaying())
-			this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime);
-		if (this.lyricsScrollPos) {
-			this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
-		}
-		requestAnimationFrame(this.onResize);
-		window.addEventListener('resize', this.onResize);
+		(_a = this.currentView) === null || _a === void 0 ? void 0 : _a.onShow();
 	}
 	onRemove() {
+		var _a;
 		super.onRemove();
-		window.removeEventListener('resize', this.onResize);
-		this.timer.tryCancel();
-		this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
-	}
-	isTrackPlaying() {
-		return PlayerCore_1.playerCore.track && PlayerCore_1.playerCore.track === this.track && PlayerCore_1.playerCore.track.id === this.track.id;
-	}
-	centerLyrics() {
-		if (PlayerCore_1.playerCore.state === 'playing')
-			this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'force');
+		(_a = this.currentView) === null || _a === void 0 ? void 0 : _a.onHide();
 	}
 }
 class EditableLyricsView extends LyricsView_1.LyricsView {
@@ -3617,10 +3660,12 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 					});
 				}
 			});
+			this.nextSpans = [];
 			this.setNextSpans(this.getSpans());
 		});
 		this.onSpanClick.add((s) => {
-			PlayerCore_1.playerCore.currentTime = utils_1.utils.numLimit(s.span.startTime - 3, 0, Infinity);
+			if (s.span.startTime != null && s.span.startTime >= 0)
+				PlayerCore_1.playerCore.currentTime = utils_1.utils.numLimit(s.span.startTime - 3, 0, Infinity);
 			this.setNextSpans(this.getSpans(s, 'here'));
 		});
 		this.dom.addEventListener('keydown', (ev) => {
@@ -3654,8 +3699,11 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 			if (this.nextSpans.length) {
 				span = this.nextSpans[go === 'backward' ? 0 : this.nextSpans.length - 1];
 			}
-			else {
+			else if (this.lines.length) {
 				span = this.lines.get(0).spans[0];
+			}
+			else {
+				return [];
 			}
 		}
 		var colPos = span.position;
@@ -3704,29 +3752,65 @@ class EditableLyricsView extends LyricsView_1.LyricsView {
 	}
 }
 class LyricsSourceView extends viewlib_1.View {
+	constructor() {
+		super(...arguments);
+		this.scrollPos = 0;
+	}
+	get value() { return this.dom.value; }
+	set value(val) { this.dom.value = val; }
 	createDom() {
 		return {
 			tag: 'textarea',
-			style: 'height: 100%'
+			style: 'height: 100%; overflow: auto; border: none; padding: 10px;'
 		};
+	}
+	reset() {
+		this.scrollPos = 0;
+	}
+	onShow() {
+		this.dom.scrollTop = this.scrollPos;
+	}
+	onHide() {
+		this.scrollPos = this.dom.scrollTop;
 	}
 }
 
-},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"./viewlib":26}],11:[function(require,module,exports){
+},{"./I18n":6,"./Lyrics":9,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25,"./viewlib":26,"@yuuza/webfx/lib/viewlib":3}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const utils_1 = require("./utils");
 const Lyrics_1 = require("./Lyrics");
+const PlayerCore_1 = require("./PlayerCore");
 class LyricsView extends viewlib_1.View {
 	constructor() {
 		super(...arguments);
 		this.lines = new viewlib_1.ContainerView({ tag: 'div.lyrics' });
+		this.track = null;
 		this.curLine = new viewlib_1.ItemActiveHelper();
 		this.onSpanClick = new utils_1.Callbacks();
 		this.onFontSizeChanged = new utils_1.Callbacks();
 		this.onLyricsChanged = new utils_1.Callbacks();
 		this._fontSize = 100;
+		this.scrollPos = 0;
+		this._resize = () => {
+			this.resize();
+		};
+		this.timer = new utils_1.Timer(() => this.onProgressChanged());
+		this.lastTime = 0;
+		this.lastChangedRealTime = 0;
+		this.onProgressChanged = () => {
+			if (!this.isTrackPlaying())
+				return;
+			var time = PlayerCore_1.playerCore.currentTime;
+			var realTime = new Date().getTime();
+			if (time != this.lastTime) {
+				this.lastChangedRealTime = realTime;
+				this.setCurrentTime(time, 'smooth');
+			}
+			if (realTime - this.lastChangedRealTime < 500)
+				this.timer.timeout(16);
+		};
 	}
 	createDom() {
 		return {
@@ -3825,6 +3909,7 @@ class LyricsView extends viewlib_1.View {
 				this.lines.dom.style.margin = ((boxHeight - contentHeight) / 2) + 'px 0';
 			}
 		}
+		this.centerLyrics();
 	}
 	get scale() {
 		return this._fontSize;
@@ -3833,6 +3918,28 @@ class LyricsView extends viewlib_1.View {
 		this._fontSize = v;
 		this.lines.dom.style.fontSize = v + '%';
 		this.onFontSizeChanged.invoke();
+	}
+	reset() {
+		this.scrollPos = 0;
+	}
+	onShow() {
+		this.dom.scrollTop = this.scrollPos;
+		if (this.isTrackPlaying())
+			this.setCurrentTime(PlayerCore_1.playerCore.currentTime);
+		requestAnimationFrame(this._resize);
+		window.addEventListener('resize', this._resize);
+	}
+	onHide() {
+		this.scrollPos = this.dom.scrollTop;
+		window.removeEventListener('resize', this._resize);
+		this.timer.tryCancel();
+	}
+	centerLyrics() {
+		if (PlayerCore_1.playerCore.state === 'playing' && this.isTrackPlaying())
+			this.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'force');
+	}
+	isTrackPlaying() {
+		return PlayerCore_1.playerCore.track && PlayerCore_1.playerCore.track === this.track && PlayerCore_1.playerCore.track.id === this.track.id;
 	}
 	getLineByTime(time, hint) {
 		var line;
@@ -3939,7 +4046,7 @@ class SpanView extends viewlib_1.View {
 }
 exports.SpanView = SpanView;
 
-},{"./Lyrics":9,"./utils":25,"./viewlib":26}],12:[function(require,module,exports){
+},{"./Lyrics":9,"./PlayerCore":14,"./utils":25,"./viewlib":26}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const User_1 = require("./User");
@@ -4142,31 +4249,12 @@ class PlayingView extends UI_1.ContentView {
 		this.si = new utils_1.SettingItem('mcloud-nowplaying', 'json', {
 			lyricsScale: 100
 		});
-		this.lyricsScrollPos = 0;
 		this.loadedLyrics = '';
-		this.onResize = () => {
-			this.lyricsView.resize();
-			this.centerLyrics();
-		};
-		this.timer = new utils_1.Timer(() => this.onProgressChanged());
-		this.lastTime = 0;
-		this.lastChangedRealTime = 0;
-		this.onProgressChanged = () => {
-			var time = PlayerCore_1.playerCore.currentTime;
-			var realTime = new Date().getTime();
-			var timerOn = true;
-			if (time != this.lastTime) {
-				this.lastChangedRealTime = realTime;
-				this.lyricsView.setCurrentTime(time, 'smooth');
-			}
-			if (realTime - this.lastChangedRealTime < 500)
-				this.timer.timeout(16);
-		};
 		this.lyricsView.scale = this.si.data.lyricsScale;
 		this.lyricsView.onFontSizeChanged.add(() => {
 			this.si.data.lyricsScale = this.lyricsView.scale;
 			this.si.save();
-			this.centerLyrics();
+			this.lyricsView.centerLyrics();
 		});
 		this.lyricsView.onSpanClick.add((s) => {
 			if (s.span.startTime && s.span.startTime >= 0)
@@ -4205,43 +4293,33 @@ class PlayingView extends UI_1.ContentView {
 	}
 	onDomInserted() {
 		super.onDomInserted();
-		if (!this.checkTrack() && this.lyricsScrollPos) {
-			this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
-		}
-		this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, () => { this.checkTrack(); });
-		this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, this.onProgressChanged);
+		this.shownEvents.add(PlayerCore_1.playerCore.onTrackChanged, () => { this.checkTrack(); })();
+		this.shownEvents.add(PlayerCore_1.playerCore.onProgressChanged, () => this.lyricsView.onProgressChanged());
 		this.shownEvents.add(Api_1.api.onTrackInfoChanged, (track) => {
 			var _a;
 			if (track.id === ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.id)) {
 				this.checkTrack();
 			}
 		});
-		this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime);
-		requestAnimationFrame(this.onResize);
-		window.addEventListener('resize', this.onResize);
+		this.lyricsView.onShow();
 	}
 	onRemove() {
 		super.onRemove();
-		window.removeEventListener('resize', this.onResize);
-		this.timer.tryCancel();
-		this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
+		this.lyricsView.onHide();
 	}
 	checkTrack() {
 		var _a;
 		this.updateDom();
 		this.editBtn.hidden = !PlayerCore_1.playerCore.track;
 		var newLyrics = ((_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a.lyrics) || '';
+		this.lyricsView.track = PlayerCore_1.playerCore.track;
 		if (this.loadedLyrics != newLyrics) {
 			this.loadedLyrics = newLyrics;
+			this.lyricsView.reset();
 			this.lyricsView.setLyrics(newLyrics);
-			this.lyricsView.dom.scrollTop = 0;
 			return true;
 		}
 		return false;
-	}
-	centerLyrics() {
-		if (PlayerCore_1.playerCore.state === 'playing')
-			this.lyricsView.setCurrentTime(PlayerCore_1.playerCore.currentTime, 'force');
 	}
 }
 
@@ -6908,7 +6986,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-13T02:10:24.197Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-14T04:07:37.087Z"}',
 	buildDate: '',
 	version: '',
 };

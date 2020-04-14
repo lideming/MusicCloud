@@ -33,7 +33,6 @@ class PlayingView extends ContentView {
     si = new SettingItem('mcloud-nowplaying', 'json', {
         lyricsScale: 100
     });
-    lyricsScrollPos: number = 0;
     loadedLyrics: string = '';
     constructor() {
         super();
@@ -41,7 +40,7 @@ class PlayingView extends ContentView {
         this.lyricsView.onFontSizeChanged.add(() => {
             this.si.data.lyricsScale = this.lyricsView.scale;
             this.si.save();
-            this.centerLyrics();
+            this.lyricsView.centerLyrics();
         });
         this.lyricsView.onSpanClick.add((s) => {
             if (s.span.startTime && s.span.startTime >= 0) playerCore.currentTime = s.span.startTime;
@@ -78,59 +77,31 @@ class PlayingView extends ContentView {
     }
     onDomInserted() {
         super.onDomInserted();
-        if (!this.checkTrack() && this.lyricsScrollPos) {
-            this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
-        }
-        this.shownEvents.add(playerCore.onTrackChanged, () => { this.checkTrack(); });
-        this.shownEvents.add(playerCore.onProgressChanged, this.onProgressChanged);
+        this.shownEvents.add(playerCore.onTrackChanged, () => { this.checkTrack(); })();
+        this.shownEvents.add(playerCore.onProgressChanged, () => this.lyricsView.onProgressChanged());
         this.shownEvents.add(api.onTrackInfoChanged, (track) => {
             if (track.id === playerCore.track?.id) {
                 this.checkTrack();
             }
         });
-        this.lyricsView.setCurrentTime(playerCore.currentTime);
-        requestAnimationFrame(this.onResize);
-        window.addEventListener('resize', this.onResize);
+        this.lyricsView.onShow();
     }
     onRemove() {
         super.onRemove();
-        window.removeEventListener('resize', this.onResize);
-        this.timer.tryCancel();
-        this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
+        this.lyricsView.onHide();
     }
     checkTrack() {
         this.updateDom();
         this.editBtn.hidden = !playerCore.track;
         var newLyrics = playerCore.track?.lyrics || '';
+        this.lyricsView.track = playerCore.track;
         if (this.loadedLyrics != newLyrics) {
             this.loadedLyrics = newLyrics;
+            this.lyricsView.reset();
             this.lyricsView.setLyrics(newLyrics);
-            this.lyricsView.dom.scrollTop = 0;
             return true;
         }
         return false;
     }
-    onResize = () => {
-        this.lyricsView.resize();
-        this.centerLyrics();
-    };
-    centerLyrics() {
-        if (playerCore.state === 'playing')
-            this.lyricsView.setCurrentTime(playerCore.currentTime, 'force');
-    }
-
-    timer = new Timer(() => this.onProgressChanged());
-    lastTime = 0;
-    lastChangedRealTime = 0;
-    onProgressChanged = () => {
-        var time = playerCore.currentTime;
-        var realTime = new Date().getTime();
-        var timerOn = true;
-        if (time != this.lastTime) {
-            this.lastChangedRealTime = realTime;
-            this.lyricsView.setCurrentTime(time, 'smooth');
-        }
-        if (realTime - this.lastChangedRealTime < 500) this.timer.timeout(16);
-    };
 
 }

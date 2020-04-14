@@ -4,9 +4,10 @@ import { I } from './I18n';
 import { BuildDomExpr, Timer, utils } from './utils';
 import { LyricsView, SpanView, LineView } from './LyricsView';
 import { router } from './Router';
-import { Span, Lyrics, serialize } from './Lyrics';
+import { Span, Lyrics, serialize, parse } from './Lyrics';
 import { playerCore } from './PlayerCore';
 import { View } from './viewlib';
+import { Toast } from '@yuuza/webfx/lib/viewlib';
 
 export var lyricsEdit = new class {
     sidebarItem: SidebarItem;
@@ -32,103 +33,141 @@ class LyricsEditContentView extends ContentView {
     header = new ContentHeader({ title: I`Edit Lyrics` });
     lyricsView = new EditableLyricsView();
     sourceView = new LyricsSourceView();
-    mode: 'lyrics' | 'source' = 'lyrics';
+    currentView: LyricsSourceView | EditableLyricsView | null = null;
+    btnLyrics: ActionBtn;
+    btnSource: ActionBtn;
+
+    _mode: 'lyrics' | 'source' = 'lyrics';
+    get mode() { return this._mode; }
+    set mode(val) { this.setMode(val); }
+
     track: Track | null = null;
-    lyricsString: string | null = null;
+    lyrics: string | null = null;
+    originalLyrics: string | null = null;
 
     constructor() {
         super();
-        this.header.actions.addView(new ActionBtn({
+        this.header.actions.addView(this.btnLyrics = new ActionBtn({
             text: I`Lyrics View`,
             onclick: () => {
+                this.setMode('lyrics');
             }
         }));
-        this.header.actions.addView(new ActionBtn({
+        this.header.actions.addView(this.btnSource = new ActionBtn({
             text: I`Source View`,
             onclick: () => {
+                this.setMode('source');
             }
         }));
         this.header.actions.addView(new ActionBtn({
             text: I`Discard`,
             onclick: () => {
+                this.lyrics = this.originalLyrics;
                 this.close();
             }
         }));
         this.header.actions.addView(new ActionBtn({
             text: I`Done`,
             onclick: () => {
-                this.lyricsString = serialize(this.lyricsView.lyrics);
+                this.getLyricsFromView();
                 this.close();
             }
         }));
     }
 
+    setMode(mode: this['mode'], init?: boolean) {
+        if (!init && mode === this._mode) return;
+        try {
+            if (!init) this.getLyricsFromView();
+            var view = this.currentView;
+            if (mode === 'lyrics') {
+                try {
+                    var parsed = parse(this.lyrics!);
+                } catch (error) {
+                    throw new Error(I`Error parsing lyrics`);
+                }
+                this.lyricsView.setLyrics(parsed);
+                view = this.lyricsView;
+            } else if (mode === 'source') {
+                this.sourceView.value = this.lyrics!;
+                view = this.sourceView;
+            } else {
+                throw new Error("unknown mode");
+            }
+            this.setCurrentView(view);
+        } catch (error) {
+            Toast.show(I`Failed to switch view.` + '\n' + error, 3000);
+            return;
+        }
+        this.btnLyrics.active = mode === 'lyrics';
+        this.btnSource.active = mode === 'source';
+        this._mode = mode;
+    }
+
+    setCurrentView(view: this['currentView']) {
+        if (this.currentView) {
+            this.currentView.onHide();
+            this.currentView.dom.remove();
+            this.currentView = null;
+        }
+        if (view) {
+            this.currentView = view;
+            this.appendView(view!);
+            view.onShow();
+        }
+    }
+
+    private getLyricsFromView() {
+        if (this.mode === 'lyrics') {
+            this.lyrics = serialize(this.lyricsView.lyrics);
+        } else if (this.mode === 'source') {
+            this.lyrics = this.sourceView.value;
+        } else {
+            throw new Error("unknown mode");
+        }
+    }
+
     close() {
+        this.setCurrentView(null);
         lyricsEdit.sidebarItem.hidden = true;
         window.history.back();
         var trackDialog = this.track!.startEdit();
-        trackDialog.inputLyrics.value = this.lyricsString!;
+        trackDialog.inputLyrics.value = this.lyrics!;
     }
 
     createDom(): BuildDomExpr {
         return {
             tag: 'div.lyricsedit',
             child: [
-                this.header,
-                this.lyricsView
+                this.header
             ]
         };
     }
     setTrack(track: Track, lyrics: string) {
         this.track = track;
-        this.lyricsString = lyrics;
-        this.lyricsView.setLyrics(lyrics);
+        this.originalLyrics = lyrics;
+        this.lyrics = lyrics;
+        this.lyricsView.reset();
+        this.lyricsView.track = track;
+        this.sourceView.reset();
+        this.setMode(lyrics ? this.mode : 'source', true);
     }
-    lyricsScrollPos: number = 0;
     onShow() {
         this.ensureDom();
-        this.shownEvents.add(playerCore.onProgressChanged, this.onProgressChanged);
+        this.shownEvents.add(playerCore.onProgressChanged, () => {
+            if (this.currentView === this.lyricsView) {
+                this.lyricsView.onProgressChanged();
+            }
+        });
     }
     onDomInserted() {
         super.onDomInserted();
-        if (this.isTrackPlaying()) this.lyricsView.setCurrentTime(playerCore.currentTime);
-        if (this.lyricsScrollPos) {
-            this.lyricsView.dom.scrollTop = this.lyricsScrollPos;
-        }
-        requestAnimationFrame(this.onResize);
-        window.addEventListener('resize', this.onResize);
+        this.currentView?.onShow();
     }
     onRemove() {
         super.onRemove();
-        window.removeEventListener('resize', this.onResize);
-        this.timer.tryCancel();
-        this.lyricsScrollPos = this.lyricsView.dom.scrollTop;
+        this.currentView?.onHide();
     }
-    timer = new Timer(() => this.onProgressChanged());
-    lastTime = 0;
-    lastChangedRealTime = 0;
-    onProgressChanged = () => {
-        if (!this.isTrackPlaying()) return;
-        var time = playerCore.currentTime;
-        var realTime = new Date().getTime();
-        if (time != this.lastTime) {
-            this.lastChangedRealTime = realTime;
-            this.lyricsView.setCurrentTime(time, 'smooth');
-        }
-        if (realTime - this.lastChangedRealTime < 500) this.timer.timeout(16);
-    };
-    private isTrackPlaying() {
-        return playerCore.track && playerCore.track === this.track && playerCore.track.id === this.track.id;
-    }
-
-    centerLyrics() {
-        if (playerCore.state === 'playing')
-            this.lyricsView.setCurrentTime(playerCore.currentTime, 'force');
-    }
-    onResize = () => {
-        this.lyricsView.resize();
-        this.centerLyrics();
-    };
 }
 
 class EditableLyricsView extends LyricsView {
@@ -147,10 +186,12 @@ class EditableLyricsView extends LyricsView {
                     });
                 }
             });
+            this.nextSpans = [];
             this.setNextSpans(this.getSpans());
         });
         this.onSpanClick.add((s) => {
-            playerCore.currentTime = utils.numLimit(s.span.startTime! - 3, 0, Infinity);
+            if (s.span.startTime != null && s.span.startTime >= 0)
+                playerCore.currentTime = utils.numLimit(s.span.startTime! - 3, 0, Infinity);
             this.setNextSpans(this.getSpans(s, 'here'));
         });
         this.dom.addEventListener('keydown', (ev) => {
@@ -180,8 +221,10 @@ class EditableLyricsView extends LyricsView {
         if (!span) {
             if (this.nextSpans.length) {
                 span = this.nextSpans[go === 'backward' ? 0 : this.nextSpans.length - 1];
-            } else {
+            } else if (this.lines.length) {
                 span = this.lines.get(0).spans[0];
+            } else {
+                return [];
             }
         }
         var colPos = span.position!;
@@ -231,10 +274,23 @@ class EditableLyricsView extends LyricsView {
 }
 
 class LyricsSourceView extends View {
+    dom: HTMLTextAreaElement;
+    get value() { return this.dom.value; }
+    set value(val) { this.dom.value = val; }
     createDom(): BuildDomExpr {
         return {
             tag: 'textarea',
-            style: 'height: 100%'
-        }
+            style: 'height: 100%; overflow: auto; border: none; padding: 10px;'
+        };
+    }
+    scrollPos = 0;
+    reset() {
+        this.scrollPos = 0;
+    }
+    onShow() {
+        this.dom.scrollTop = this.scrollPos;
+    }
+    onHide() {
+        this.scrollPos = this.dom.scrollTop;
     }
 }
