@@ -3495,10 +3495,12 @@ exports.lyricsEdit = new class {
 			Router_1.router.addRoute({
 				path: ['lyricsEdit'],
 				contentView: () => this.view,
-				sidebarItem: () => this.sidebarItem
+				sidebarItem: () => this.sidebarItem,
+				onNav: () => {
+					this.sidebarItem.hidden = false;
+				}
 			});
 		}
-		this.sidebarItem.hidden = false;
 		this.view.setTrack(track, lyrics);
 		Router_1.router.nav('lyricsEdit');
 	}
@@ -3601,7 +3603,6 @@ class LyricsEditContentView extends UI_1.ContentView {
 		}
 	}
 	close() {
-		this.setCurrentView(null);
 		exports.lyricsEdit.sidebarItem.hidden = true;
 		window.history.back();
 		var trackDialog = this.track.startEdit();
@@ -6986,7 +6987,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-14T04:07:37.087Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-14T04:22:38.227Z"}',
 	buildDate: '',
 	version: '',
 };

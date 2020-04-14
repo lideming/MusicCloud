@@ -20,10 +20,12 @@ export var lyricsEdit = new class {
             router.addRoute({
                 path: ['lyricsEdit'],
                 contentView: () => this.view,
-                sidebarItem: () => this.sidebarItem
+                sidebarItem: () => this.sidebarItem,
+                onNav: () => {
+                    this.sidebarItem.hidden = false;
+                }
             });
         }
-        this.sidebarItem.hidden = false;
         this.view.setTrack(track, lyrics);
         router.nav('lyricsEdit');
     }
@@ -128,7 +130,6 @@ class LyricsEditContentView extends ContentView {
     }
 
     close() {
-        this.setCurrentView(null);
         lyricsEdit.sidebarItem.hidden = true;
         window.history.back();
         var trackDialog = this.track!.startEdit();
