@@ -331,12 +331,19 @@ a.item {
 
 .dragover-placeholder {
     /* border-top: 2px solid gray; */
+    position: relative;
+}
+
+.dragover-placeholder::before {
+    content: "";
+    display: block;
     position: absolute;
     transform: translate(0, -1px);
     height: 2px;
     width: 100%;
     background: gray;
     z-index: 100;
+    pointer-events: none;
 }
 
 .clickable:active, .item:active {

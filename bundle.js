@@ -1110,7 +1110,7 @@ class ListViewItem extends View {
         });
     }
     dragHandler(ev, type) {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g, _h;
         const item = exports.dragManager.currentItem;
         let items = exports.dragManager.currentArray;
         const drop = type === 'drop';
@@ -1123,19 +1123,23 @@ class ListViewItem extends View {
         if (item instanceof ListViewItem) {
             if (((_a = this.listview) === null || _a === void 0 ? void 0 : _a.moveByDragging) && item.listview === this.listview) {
                 ev.preventDefault();
+                arg.accept = (items.indexOf(this) === -1) ? 'move' : true;
+                if (arg.accept === 'move' && ev.clientY - this.dom.getBoundingClientRect().top > this.dom.offsetHeight / 2)
+                    arg.accept = 'move-after';
                 if (!drop) {
                     ev.dataTransfer.dropEffect = 'move';
-                    arg.accept = (items.indexOf(this) === -1) ? 'move' : true;
-                    if (arg.accept === 'move' && this.position > item.position)
-                        arg.accept = 'move-after';
                 }
                 else {
                     if (items.indexOf(this) === -1) {
-                        if (this.position >= item.position)
-                            items = [...items].reverse();
+                        let newpos = this.position;
+                        if (arg.accept == 'move-after')
+                            newpos++;
                         for (const it of items) {
                             if (it !== this) {
-                                this.listview.move(it, this.position);
+                                if (newpos > it.position)
+                                    newpos--;
+                                this.listview.move(it, newpos);
+                                newpos++;
                             }
                         }
                     }
@@ -1155,30 +1159,31 @@ class ListViewItem extends View {
             else
                 ev.preventDefault();
         }
-        if (type === 'dragenter' || type === 'dragleave' || drop) {
+        if (type === 'dragenter' || type == 'dragover' || type === 'dragleave' || drop) {
             if (type === 'dragenter') {
                 this.enterctr++;
             }
             else if (type === 'dragleave') {
                 this.enterctr--;
             }
-            else {
+            else if (type === 'drop') {
                 this.enterctr = 0;
             }
             let hover = this.enterctr > 0;
             this.toggleClass('dragover', hover);
-            let placeholder = hover && !!arg && (arg.accept === 'move' || arg.accept === 'move-after');
-            if (placeholder != !!this.dragoverPlaceholder) {
+            let placeholder = hover && (arg.accept === 'move' || arg.accept === 'move-after') && arg.accept;
+            if (placeholder != ((_g = (_f = this.dragoverPlaceholder) === null || _f === void 0 ? void 0 : _f[1]) !== null && _g !== void 0 ? _g : false)) {
+                (_h = this.dragoverPlaceholder) === null || _h === void 0 ? void 0 : _h[0].remove();
+                this.dragoverPlaceholder = null;
                 if (placeholder) {
-                    this.dragoverPlaceholder = utils_1.utils.buildDOM({ tag: 'div.dragover-placeholder' });
+                    this.dragoverPlaceholder = [
+                        utils_1.utils.buildDOM({ tag: 'div.dragover-placeholder' }),
+                        placeholder
+                    ];
                     var before = this.dom;
                     if (arg.accept === 'move-after')
                         before = before.nextElementSibling;
-                    this.dom.parentElement.insertBefore(this.dragoverPlaceholder, before);
-                }
-                else {
-                    this.dragoverPlaceholder.remove();
-                    this.dragoverPlaceholder = null;
+                    this.dom.parentElement.insertBefore(this.dragoverPlaceholder[0], before);
                 }
             }
         }
@@ -6999,7 +7004,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-14T10:01:56.762Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-25T07:55:12.794Z"}',
 	buildDate: '',
 	version: '',
 };
