@@ -2041,15 +2041,6 @@ exports.MessageBox = MessageBox;
 },{"./I18n":1,"./utils":2}],4:[function(require,module,exports){
 "use strict";
 // file: Api.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const main_1 = require("./main");
 const utils_1 = require("./utils");
@@ -2217,15 +2208,6 @@ exports.api = new class {
 },{"./main":24,"./utils":25}],5:[function(require,module,exports){
 "use strict";
 // file: discussion.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const UI_1 = require("./UI");
 const Api_1 = require("./Api");
@@ -2600,15 +2582,6 @@ I18n_1.i18n.add2dArray([
 },{"@yuuza/webfx/lib/I18n":1}],7:[function(require,module,exports){
 "use strict";
 // file: ListContentView.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const utils_1 = require("./utils");
@@ -2767,15 +2740,6 @@ exports.ListContentView = ListContentView;
 },{"./UI":20,"./utils":25,"./viewlib":26}],8:[function(require,module,exports){
 "use strict";
 // file: ListIndex.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 const utils_1 = require("./utils");
@@ -4344,15 +4308,6 @@ class PlayingView extends UI_1.ContentView {
 },{"./Api":4,"./LyricsView":11,"./PlayerCore":14,"./Router":15,"./UI":20,"./utils":25}],14:[function(require,module,exports){
 "use strict";
 // file: PlayerCore.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const Api_1 = require("./Api");
@@ -4623,15 +4578,6 @@ function parsePath(path) {
 
 },{"./UI":20,"./utils":25}],16:[function(require,module,exports){
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const Router_1 = require("./Router");
 const UI_1 = require("./UI");
@@ -4841,15 +4787,6 @@ class SettingsDialog extends viewlib_1.Dialog {
 
 },{"./I18n":6,"./PlayerCore":14,"./UI":20,"./buildInfo":23,"./viewlib":26}],18:[function(require,module,exports){
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const viewlib_1 = require("./viewlib");
@@ -4988,15 +4925,6 @@ exports.TrackDialog = TrackDialog;
 },{"./Api":4,"./LyricsEdit":10,"./utils":25,"./viewlib":26}],19:[function(require,module,exports){
 "use strict";
 // file: TrackList.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const viewlib_1 = require("./viewlib");
@@ -5466,15 +5394,6 @@ exports.TrackViewItem = TrackViewItem;
 },{"./Api":4,"./ListContentView":7,"./ListIndex":8,"./PlayerCore":14,"./Router":15,"./Track":18,"./UI":20,"./User":22,"./utils":25,"./viewlib":26}],20:[function(require,module,exports){
 "use strict";
 // file: UI.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
 class SidebarItem extends viewlib_1.ListViewItem {
@@ -6099,15 +6018,6 @@ class SidebarToggle extends viewlib_1.View {
 },{"./I18n":6,"./PlayerCore":14,"./Router":15,"./Uploads":21,"./User":22,"./utils":25,"./viewlib":26}],21:[function(require,module,exports){
 "use strict";
 // file: Uploads.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const TrackList_1 = require("./TrackList");
 const Track_1 = require("./Track");
@@ -6554,15 +6464,6 @@ var BlockFormat = {
 },{"./Api":4,"./I18n":6,"./ListIndex":8,"./PlayerCore":14,"./Router":15,"./Track":18,"./TrackList":19,"./UI":20,"./User":22,"./utils":25,"./viewlib":26}],22:[function(require,module,exports){
 "use strict";
 // file: User.ts
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-	return new (P || (P = Promise))(function (resolve, reject) {
-		function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-		function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-		step((generator = generator.apply(thisArg, _arguments || [])).next());
-	});
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("./utils");
 const ListIndex_1 = require("./ListIndex");
@@ -7004,7 +6905,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-25T07:55:12.794Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-25T08:37:02.905Z"}',
 	buildDate: '',
 	version: '',
 };
@@ -7022,6 +6923,25 @@ else {
 // TypeScript 3.7 is required.
 Object.defineProperty(exports, "__esModule", { value: true });
 // Why do we need to use React and Vue.js? ;)
+globalThis.__awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+	function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+	return new (P || (P = Promise))(function (resolve, reject) {
+		function fulfilled(value) { try {
+			step(generator.next(value));
+		}
+		catch (e) {
+			reject(e);
+		} }
+		function rejected(value) { try {
+			step(generator["throw"](value));
+		}
+		catch (e) {
+			reject(e);
+		} }
+		function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+		step((generator = generator.apply(thisArg, _arguments || [])).next());
+	});
+};
 console.time('main init');
 exports.settings = {
 	apiBaseUrl: 'api/',
