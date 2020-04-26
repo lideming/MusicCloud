@@ -5741,7 +5741,8 @@ exports.ui = new class {
 			init() {
 				PlayerCore_1.playerCore.onTrackChanged.add(() => this.setTrack(PlayerCore_1.playerCore.track));
 				this.element.addEventListener('click', (ev) => {
-					Router_1.router.nav('nowplaying');
+					if (Router_1.router.current[0] != 'nowplaying')
+						Router_1.router.nav('nowplaying');
 				});
 			}
 			setTrack(track) {
@@ -6935,7 +6936,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-26T12:04:26.150Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-26T12:08:16.412Z"}',
 	buildDate: '',
 	version: '',
 };

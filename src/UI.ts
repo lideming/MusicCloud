@@ -352,7 +352,8 @@ export const ui = new class {
         init() {
             playerCore.onTrackChanged.add(() => this.setTrack(playerCore.track));
             this.element.addEventListener('click', (ev) => {
-                router.nav('nowplaying');
+                if (router.current[0] != 'nowplaying')
+                    router.nav('nowplaying');
             });
         }
         setTrack(track: Track | null) {
