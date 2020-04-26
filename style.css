@@ -425,6 +425,22 @@ a.item {
     width: calc((100% - 3em - 20px) * .5);
 }
 
+.trackitem.uploads-item .uploads-state {
+    width: calc((100% - 3em - 20px) * .1);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    color: #ff6659;
+}
+
+.trackitem.uploads-item.state-error .uploads-state {
+    color: #f44336;
+}
+
+.trackitem.uploads-item.state-done .uploads-state {
+    color: #66bb6a;
+}
+
 @media only screen and (min-width: 1000px) {
     .trackitem .name {
         width: calc((100% - 3em - 20px - 4.5em) * .6);
@@ -460,22 +476,6 @@ a.item {
     .trackitem.uploads-item.state-done .uploads-state {
         display: none;
     }
-}
-
-.trackitem.uploads-item .uploads-state {
-    width: calc((100% - 3em - 20px) * .1);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    color: #ff6659;
-}
-
-.trackitem.uploads-item.state-error .uploads-state {
-    color: #f44336;
-}
-
-.trackitem.uploads-item.state-done .uploads-state {
-    color: #66bb6a;
 }
 
 .trackitem.selected {
