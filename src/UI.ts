@@ -351,6 +351,9 @@ export const ui = new class {
         element = document.getElementById('bottombar-trackinfo')!;
         init() {
             playerCore.onTrackChanged.add(() => this.setTrack(playerCore.track));
+            this.element.addEventListener('click', (ev) => {
+                router.nav('nowplaying');
+            });
         }
         setTrack(track: Track | null) {
             if (track) {

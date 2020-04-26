@@ -268,7 +268,13 @@ export class TrackListView extends ListContentView {
         lv.dragging = true;
         if (this.list.canEdit) lv.moveByDragging = true;
         lv.onItemMoved = () => this.list.updateTracksFromListView();
-        lv.onItemClicked = (item) => playerCore.playTrack(item.track);
+        lv.onItemClicked = (item) => {
+            if (item.track === playerCore.track && playerCore.isPlaying) {
+                router.nav('nowplaying');
+                return;
+            }
+            playerCore.playTrack(item.track);
+        };
         this.list.tracks.forEach(t => this.addItem(t, undefined, false));
         this.updateItems();
         if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);

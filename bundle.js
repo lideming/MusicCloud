@@ -4588,18 +4588,26 @@ const Api_1 = require("./Api");
 const TrackList_1 = require("./TrackList");
 const Track_1 = require("./Track");
 const PlayerCore_1 = require("./PlayerCore");
+const ListIndex_1 = require("./ListIndex");
 exports.search = new class {
 	constructor() {
 		this.lazyView = new utils_1.Lazy(() => new SearchView());
+		this.checkPlaying = () => {
+			var _a, _b;
+			var thisPlaying = this.lazyView.computed && !!this.view.tempList
+				&& ((_b = (_a = PlayerCore_1.playerCore.track) === null || _a === void 0 ? void 0 : _a._bind) === null || _b === void 0 ? void 0 : _b.list) === this.view.tempList;
+			this.sidebarItem.updateWith({ playing: thisPlaying });
+		};
 	}
 	init() {
-		var sidebarItem = new UI_1.SidebarItem({ text: utils_1.I `Search` });
+		this.sidebarItem = new ListIndex_1.ListIndexViewItem({ text: utils_1.I `Search` });
 		Router_1.router.addRoute({
 			path: ['search'],
 			contentView: () => this.view,
-			sidebarItem: () => sidebarItem
+			sidebarItem: () => this.sidebarItem
 		});
-		UI_1.ui.sidebarList.addFeatureItem(sidebarItem);
+		UI_1.ui.sidebarList.addFeatureItem(this.sidebarItem);
+		PlayerCore_1.playerCore.onTrackChanged.add(this.checkPlaying)();
 	}
 	get view() { return this.lazyView.value; }
 };
@@ -4608,15 +4616,19 @@ class SearchView extends ListContentView_1.ListContentView {
 		super(...arguments);
 		this.title = utils_1.I `Search`;
 		this.searchbar = new SearchBar();
+		this.tempList = null;
 	}
 	appendListView() {
 		super.appendListView();
 		this.listView.toggleClass('tracklistview', true);
 		this.listView.dragging = true;
 		this.listView.onItemClicked = (item) => {
-			var tempList = new TrackList_1.TrackList();
-			this.listView.forEach(t => tempList.addTrack(t.track.infoObj));
-			PlayerCore_1.playerCore.playTrack(tempList.tracks[item.position]);
+			var track = this.getTempList().tracks[item.position];
+			if (PlayerCore_1.playerCore.track === track && PlayerCore_1.playerCore.isPlaying) {
+				Router_1.router.nav('nowplaying');
+				return;
+			}
+			PlayerCore_1.playerCore.playTrack(track);
 		};
 	}
 	appendHeader() {
@@ -4627,6 +4639,13 @@ class SearchView extends ListContentView_1.ListContentView {
 			this.performSearch(this.searchbar.input.value);
 		});
 	}
+	getTempList() {
+		if (!this.tempList) {
+			this.tempList = new TrackList_1.TrackList();
+			this.listView.forEach(t => this.tempList.addTrack(t.track.infoObj));
+		}
+		return this.tempList;
+	}
 	performSearch(query) {
 		return __awaiter(this, void 0, void 0, function* () {
 			this.currentQuery = query;
@@ -4634,6 +4653,8 @@ class SearchView extends ListContentView_1.ListContentView {
 			this.useLoadingIndicator(li);
 			try {
 				var r = yield Api_1.api.get('tracks?query=' + encodeURIComponent(query));
+				this.tempList = null;
+				exports.search.checkPlaying();
 				this.listView.removeAll();
 				r.tracks.forEach(t => {
 					this.listView.add(new TrackList_1.TrackViewItem(new Track_1.Track({ infoObj: t })));
@@ -4691,7 +4712,7 @@ class SearchBar extends viewlib_1.View {
 	}
 }
 
-},{"./Api":4,"./ListContentView":7,"./PlayerCore":14,"./Router":15,"./Track":18,"./TrackList":19,"./UI":20,"./utils":25,"./viewlib":26}],17:[function(require,module,exports){
+},{"./Api":4,"./ListContentView":7,"./ListIndex":8,"./PlayerCore":14,"./Router":15,"./Track":18,"./TrackList":19,"./UI":20,"./utils":25,"./viewlib":26}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const viewlib_1 = require("./viewlib");
@@ -5233,7 +5254,13 @@ class TrackListView extends ListContentView_1.ListContentView {
 		if (this.list.canEdit)
 			lv.moveByDragging = true;
 		lv.onItemMoved = () => this.list.updateTracksFromListView();
-		lv.onItemClicked = (item) => PlayerCore_1.playerCore.playTrack(item.track);
+		lv.onItemClicked = (item) => {
+			if (item.track === PlayerCore_1.playerCore.track && PlayerCore_1.playerCore.isPlaying) {
+				Router_1.router.nav('nowplaying');
+				return;
+			}
+			PlayerCore_1.playerCore.playTrack(item.track);
+		};
 		this.list.tracks.forEach(t => this.addItem(t, undefined, false));
 		this.updateItems();
 		if (this.list.loadIndicator)
@@ -5713,6 +5740,9 @@ exports.ui = new class {
 			}
 			init() {
 				PlayerCore_1.playerCore.onTrackChanged.add(() => this.setTrack(PlayerCore_1.playerCore.track));
+				this.element.addEventListener('click', (ev) => {
+					Router_1.router.nav('nowplaying');
+				});
 			}
 			setTrack(track) {
 				if (track) {
@@ -6905,7 +6935,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-25T08:37:02.905Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-26T12:04:26.150Z"}',
 	buildDate: '',
 	version: '',
 };

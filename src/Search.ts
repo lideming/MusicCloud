@@ -1,5 +1,5 @@
 import { router } from './Router';
-import { SidebarItem, ui } from './UI';
+import { ui } from './UI';
 import { Lazy, I, Callbacks, BuildDomExpr } from './utils';
 import { ListContentView } from './ListContentView';
 import { InputView, View, ButtonView, LoadingIndicator, ListView } from './viewlib';
@@ -8,34 +8,46 @@ import { Api } from './apidef';
 import { TrackViewItem, TrackList } from './TrackList';
 import { Track } from "./Track";
 import { playerCore } from './PlayerCore';
+import { ListIndexViewItem } from './ListIndex';
 
 export var search = new class {
     init() {
-        var sidebarItem = new SidebarItem({ text: I`Search` });
+        this.sidebarItem = new ListIndexViewItem({ text: I`Search` });
         router.addRoute({
             path: ['search'],
             contentView: () => this.view,
-            sidebarItem: () => sidebarItem
+            sidebarItem: () => this.sidebarItem
         });
-        ui.sidebarList.addFeatureItem(sidebarItem);
+        ui.sidebarList.addFeatureItem(this.sidebarItem);
+        playerCore.onTrackChanged.add(this.checkPlaying)();
     }
     get view() { return this.lazyView.value; }
     lazyView = new Lazy(() => new SearchView());
+    sidebarItem: ListIndexViewItem;
+    checkPlaying = () => {
+        var thisPlaying = this.lazyView.computed && !!this.view.tempList
+            && playerCore.track?._bind?.list === this.view.tempList;
+        this.sidebarItem.updateWith({ playing: thisPlaying });
+    };
 };
 
 class SearchView extends ListContentView {
     title = I`Search`;
     searchbar = new SearchBar();
     currentQuery: string;
+    tempList: TrackList | null = null;
     listView: ListView<TrackViewItem>;
     appendListView() {
         super.appendListView();
         this.listView.toggleClass('tracklistview', true);
         this.listView.dragging = true;
         this.listView.onItemClicked = (item) => {
-            var tempList = new TrackList();
-            this.listView.forEach(t => tempList.addTrack(t.track.infoObj!));
-            playerCore.playTrack(tempList.tracks[item.position!]);
+            var track = this.getTempList().tracks[item.position!];
+            if (playerCore.track === track && playerCore.isPlaying) {
+                router.nav('nowplaying');
+                return;
+            }
+            playerCore.playTrack(track);
         };
     }
     appendHeader() {
@@ -46,12 +58,21 @@ class SearchView extends ListContentView {
             this.performSearch(this.searchbar.input.value);
         });
     }
+    getTempList() {
+        if (!this.tempList) {
+            this.tempList = new TrackList();
+            this.listView.forEach(t => this.tempList!.addTrack(t.track.infoObj!));
+        }
+        return this.tempList;
+    }
     async performSearch(query: string) {
         this.currentQuery = query;
         var li = new LoadingIndicator();
         this.useLoadingIndicator(li);
         try {
             var r = await api.get('tracks?query=' + encodeURIComponent(query)) as { tracks: Api.Track[]; };
+            this.tempList = null;
+            search.checkPlaying();
             this.listView.removeAll();
             r.tracks.forEach(t => {
                 this.listView.add(new TrackViewItem(new Track({ infoObj: t })));
