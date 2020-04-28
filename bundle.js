@@ -5995,7 +5995,7 @@ class VolumeButton extends ProgressButton {
 		this.tip = '\n' + I18n_1.I `(Scroll whell or drag to adjust volume)`;
 		this.dom.addEventListener('wheel', (ev) => {
 			ev.preventDefault();
-			var delta = Math.sign(ev.deltaY) * -0.1;
+			var delta = Math.sign(ev.deltaY) * -0.05;
 			this.onChanging.invoke(delta);
 		});
 		var startX;
@@ -6936,7 +6936,7 @@ class ChangePasswordDialog extends viewlib_1.Dialog {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@yuuza/webfx/lib/utils");
 exports.buildInfo = {
-	raw: '{"version":"1.0.0","buildDate":"2020-04-26T12:08:16.412Z"}',
+	raw: '{"version":"1.0.0","buildDate":"2020-04-28T12:45:27.311Z"}',
 	buildDate: '',
 	version: '',
 };

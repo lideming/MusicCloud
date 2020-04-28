@@ -540,7 +540,7 @@ class VolumeButton extends ProgressButton {
         super(dom);
         this.dom.addEventListener('wheel', (ev) => {
             ev.preventDefault();
-            var delta = Math.sign(ev.deltaY) * -0.1;
+            var delta = Math.sign(ev.deltaY) * -0.05;
             this.onChanging.invoke(delta);
         });
         var startX: number;
