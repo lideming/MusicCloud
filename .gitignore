@@ -1,3 +1,4 @@
 storage/
 api/
 node_modules/
+bundle.js
