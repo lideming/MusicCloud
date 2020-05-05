@@ -3,7 +3,7 @@ import { Toast, Dialog, LabeledInput, TabBtn } from "./viewlib";
 import { Api } from "./apidef";
 import { api } from "./Api";
 import { TrackList } from "./TrackList";
-import { lyricsEdit } from "./LyricsEdit";
+import { lyricsEdit, LyricsSourceEditView } from "./LyricsEdit";
 
 /** A track binding with list */
 export class Track {
@@ -76,8 +76,8 @@ export class TrackDialog extends Dialog {
         super();
         this.resizable = true;
         this.contentFlex = true;
-        this.inputLyrics.input.multiline = true;
-        this.inputLyrics.dominput.style.resize = 'none';
+        this.inputLyrics.input = new LyricsSourceEditView();
+        this.inputLyrics.input.dom.style.resize = 'none';
         this.inputLyrics.dom.style.flex = '1';
         this.inputLyrics.dominput.style.minHeight = '5em';
         [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));

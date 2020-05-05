@@ -7,7 +7,7 @@ import { router } from './Router';
 import { Span, Lyrics, serialize, parse } from './Lyrics';
 import { playerCore } from './PlayerCore';
 import { View } from './viewlib';
-import { Toast } from '@yuuza/webfx/lib/viewlib';
+import { Toast, InputView } from '@yuuza/webfx/lib/viewlib';
 
 export var lyricsEdit = new class {
     sidebarItem: SidebarItem;
@@ -278,15 +278,40 @@ class EditableLyricsView extends LyricsView {
     }
 }
 
-class LyricsSourceView extends View {
+export class LyricsSourceEditView extends InputView {
     dom: HTMLTextAreaElement;
     get value() { return this.dom.value; }
     set value(val) { this.dom.value = val; }
     createDom(): BuildDomExpr {
         return {
-            tag: 'textarea',
-            style: 'height: 100%; overflow: auto; border: none; padding: 10px;'
+            tag: 'textarea.input-text'
         };
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.addEventListener('keydown', (ev) => {
+            if (ev.ctrlKey && ev.key === 'r') {
+                ev.preventDefault();
+                const start = this.dom.selectionStart;
+                const end = this.dom.selectionEnd;
+                const origstr = this.dom.value;
+                this.dom.value = origstr.substring(0, start)
+                    + '[' + origstr.substring(start, end) + ']{}'
+                    + origstr.substring(end);
+                const cursorPos = start == end ? start + 1 : end + 3;
+                this.dom.setSelectionRange(cursorPos, cursorPos);
+            }
+        });
+    }
+}
+
+class LyricsSourceView extends LyricsSourceEditView {
+    constructor() {
+        super();
+        this.dom.style.border = 'none';
+        this.dom.style.height = '100%';
+        this.dom.style.padding = '10px';
+        this.dom.style.resize = 'none';
     }
     scrollPos = 0;
     reset() {
