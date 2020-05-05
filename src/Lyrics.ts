@@ -212,15 +212,23 @@ export class Parser {
                 var beginTag = lex.consume();
                 let text: string | null = null;
                 let ts: TimeStamp | null;
-                if (lex.tryExpectAndConsume(T.tagEnd)) {
+                if (lex.tryExpect(T.tagEnd)) {
                     ts = { time: -1, beats: null, beatsDiv: null };
                 } else {
                     text = lex.expectAndConsume(T.text).val;
                     ts = this.parseTimestamp(text,
                         (curTime != null && curTime >= 0) ? curTime : (this.curTime ?? 0));
-                    if (ts != null) lex.expectAndConsume(T.tagEnd);
+                }
+                if (lex.tryExpectSeq([T.tagEnd, T.bracketBegin])) {
+                    lex.consume(); lex.consume();
+                    let ruby = lex.expectAndConsume(T.text).val;
+                    lex.expectAndConsume(T.bracketEnd);
+                    spans.push(lastSpan = { text: text || '', ruby, startTime: curTime, timeStamp });
+                    timeStamp = null;
+                    continue;
                 }
                 if (ts != null) {
+                    lex.expectAndConsume(T.tagEnd);
                     if (!lastSpan && startTime != null) {
                         duplicateTime.push(ts);
                     } else {
@@ -236,13 +244,7 @@ export class Parser {
                     continue;
                 }
                 if (text === null) continue;
-                if (lex.tryExpectSeq([T.tagEnd, T.bracketBegin])) {
-                    lex.consume(); lex.consume();
-                    let ruby = lex.expectAndConsume(T.text).val;
-                    lex.expectAndConsume(T.bracketEnd);
-                    spans.push(lastSpan = { text, ruby, startTime: curTime, timeStamp });
-                    timeStamp = null;
-                } else if (text.startsWith('bpm:')) {
+                if (text.startsWith('bpm:')) {
                     this.bpm = parseFloat(text.substr(4));
                     lex.expectAndConsume(T.tagEnd);
                 } else if (text.startsWith('offset:')) {
@@ -283,6 +285,7 @@ export class Parser {
                     if (nextline.startsWith('/')) {
                         trans = nextline.substr(1);
                         lex.consume();
+                        lex.tryExpectAndConsume(T.eof) || lex.expectAndConsume(T.lineFeed);
                     }
                 }
                 break;
