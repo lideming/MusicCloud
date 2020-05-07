@@ -148,7 +148,7 @@ export class LyricsView extends View {
     onProgressChanged = () => {
         if (!this.isTrackPlaying()) return;
         var time = playerCore.currentTime;
-        var realTime = new Date().getTime();
+        var realTime = Date.now();
         if (time != this.lastTime) {
             this.lastChangedRealTime = realTime;
             this.setCurrentTime(time, 'smooth');

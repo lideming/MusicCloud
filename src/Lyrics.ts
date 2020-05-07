@@ -1,9 +1,9 @@
 // file: Lyrics.ts
 
 export function parse(str: string) {
-    var time = new Date().getTime();
+    var time = Date.now();
     var r = new Parser(str).parse();
-    console.log(`Lyrics: parsed ${str.length} chars in ${new Date().getTime() - time} ms`);
+    console.log(`Lyrics: parsed ${str.length} chars in ${Date.now() - time} ms`);
     console.log(r);
     return r;
 }
