@@ -199,7 +199,7 @@ class EditableLyricsView extends LyricsView {
             this.setNextSpans(this.getSpans(s, 'here'));
         });
         this.dom.addEventListener('keydown', (ev) => {
-            if (ev.code == 'ArrowRight' || ev.code == 'F' || ev.code == 'D') {
+            if (ev.code == 'ArrowRight' || ev.code == 'KeyF' || ev.code == 'KeyD') {
                 ev.preventDefault();
                 if (this.nextSpans.length) {
                     const now = playerCore.currentTime;
