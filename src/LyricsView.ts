@@ -108,7 +108,6 @@ export class LyricsView extends View {
         duration: 300,
         beginTime: -1,
         beginPos: 0,
-        beginT: 0,
         lastPos: 0,
         targetPos: 0,
         rafHandle: -1,
