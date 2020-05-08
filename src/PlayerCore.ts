@@ -56,6 +56,8 @@ export var playerCore = new class PlayerCore {
     }
     onVolumeChanged = new Callbacks<Action>();
 
+    get playbackRate() { return this.audio.playbackRate; }
+
     get isPlaying() { return this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }

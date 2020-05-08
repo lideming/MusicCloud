@@ -9,6 +9,8 @@ export class LyricsView extends View {
     lyrics: Lyrics;
     track: Track | null = null;
     curLine = new ItemActiveHelper<LineView>();
+    curTime = 0;
+    scrollingTarget: LineView | null = null;
     onSpanClick = new Callbacks<Action<SpanView>>();
     onFontSizeChanged = new Callbacks<Action>();
     onLyricsChanged = new Callbacks<Action>();
@@ -86,16 +88,78 @@ export class LyricsView extends View {
     }
     setCurrentTime(time: number, scroll?: boolean | 'smooth' | 'force') {
         if (!(time >= 0)) time = 0;
+        this.curTime = time;
         var prev = this.curLine.current;
         var line = this.getLineByTime(time, prev);
+        var laterLine = this.getLineByTime(time + this.scrollAnimator.duration * 0.0005 * playerCore.playbackRate, line);
         line?.setCurrentTime(time);
         this.curLine.set(line);
-        if (scroll && line && (prev !== line || scroll === 'force')) {
-            line.dom.scrollIntoView({
-                behavior: scroll === 'smooth' ? 'smooth' : undefined,
-                block: 'center'
-            });
+        if (scroll && scroll !== 'smooth' && line && (prev !== line || scroll === 'force')) {
+            this.scrollAnimator.cancel();
+            this.setCenterPos(line.dom.offsetTop + line.dom.offsetHeight / 2);
+        } else if (scroll === 'smooth' && laterLine && laterLine !== this.scrollingTarget) {
+            this.scrollingTarget = laterLine;
+            this.scrollAnimator.duration = 300 / playerCore.playbackRate;
+            this.scrollAnimator.scrollTo(laterLine.dom.offsetTop + laterLine.dom.offsetHeight / 2);
         }
+    }
+    scrollAnimator = {
+        view: this,
+        duration: 300,
+        beginTime: -1,
+        beginPos: 0,
+        beginT: 0,
+        lastPos: 0,
+        targetPos: 0,
+        rafHandle: -1,
+        cancel() {
+            if (this.rafHandle >= 0) {
+                cancelAnimationFrame(this.rafHandle);
+                this.rafHandle = -1;
+            }
+        },
+        scrollTo(pos: number) {
+            this.targetPos = pos;
+            this.lastPos = this.beginPos = this.view.getCenterPos();
+            if (this.rafHandle < 0) {
+                this._startRaf();
+            }
+            this.beginTime = performance.now();
+        },
+        _rafCallback: null as Action<number> | null,
+        _startRaf() {
+            if (!this._rafCallback) {
+                this._rafCallback = (now) => {
+                    if (this._render(now)) {
+                        this.rafHandle = requestAnimationFrame(this._rafCallback!);
+                    } else {
+                        this.rafHandle = -1;
+                    }
+                };
+            }
+            this.rafHandle = requestAnimationFrame(this._rafCallback);
+        },
+        _render(now: number): boolean {
+            if (Math.abs(this.view.getCenterPos() - this.lastPos) > 10) return false;
+
+            const t = utils.numLimit((now - this.beginTime) / this.duration, 0, 1);
+
+            const pos = this.beginPos + (this.targetPos - this.beginPos) * this._easeInOutQuad(t);
+            this.lastPos = pos;
+
+            this.view.setCenterPos(pos);
+
+            return t !== 1;
+        },
+        _easeInOutQuad(t: number) {
+            return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        }
+    };
+    getCenterPos() {
+        return this.dom.scrollTop + this.dom.offsetHeight / 2;
+    }
+    setCenterPos(centerY: number) {
+        this.dom.scrollTop = centerY - this.dom.offsetHeight / 2;
     }
     resize() {
         if (this.domCreated) {
@@ -143,17 +207,16 @@ export class LyricsView extends View {
         this.resize();
     };
     timer = new Timer(() => this.onProgressChanged());
-    lastTime = 0;
     lastChangedRealTime = 0;
     onProgressChanged = () => {
         if (!this.isTrackPlaying()) return;
         var time = playerCore.currentTime;
         var realTime = Date.now();
-        if (time != this.lastTime) {
+        if (time != this.curTime) {
             this.lastChangedRealTime = realTime;
             this.setCurrentTime(time, 'smooth');
         }
-        if (realTime - this.lastChangedRealTime < 500) this.timer.timeout(16);
+        if (realTime - this.lastChangedRealTime < 250) this.timer.timeout(16);
     };
     private isTrackPlaying() {
         return playerCore.track && playerCore.track === this.track && playerCore.track.id === this.track.id;
