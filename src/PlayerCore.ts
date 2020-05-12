@@ -121,20 +121,26 @@ export var playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
-    setTrack(track: Track | null) {
+    async setTrack(track: Track | null, loadNow = false) {
         var oldTrack = this.track;
         this.track = track;
-        if (oldTrack?.url !== this.track?.url
-            || (track?.blob && track.blob !== oldTrack?.blob))
-            this.loadUrl(null);
+        if (oldTrack !== track
+                && (oldTrack?.url !== track?.url
+                || (track?.blob && track.blob !== oldTrack?.blob))) {
+            if (loadNow && track) {
+                await this.loadTrack(track);
+            } else {
+                this.loadUrl(null);
+            }
+        }
         this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
         this.onTrackChanged.invoke();
         this.onProgressChanged.invoke();
     }
-    playTrack(track: Track, forceStart?: boolean) {
-        if (track !== this.track) this.setTrack(track);
+    async playTrack(track: Track, forceStart?: boolean) {
+        if (track !== this.track) await this.setTrack(track, true);
         if (forceStart) this.audio.currentTime = 0;
-        this.play();
+        await this.play();
     }
     private _loadct: CancelToken;
     private async loadTrack(track: Track) {
