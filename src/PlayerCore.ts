@@ -125,7 +125,7 @@ export var playerCore = new class PlayerCore {
         var oldTrack = this.track;
         this.track = track;
         if (oldTrack !== track
-                && (oldTrack?.url !== track?.url
+            && (oldTrack?.url !== track?.url
                 || (track?.blob && track.blob !== oldTrack?.blob))) {
             if (loadNow && track) {
                 await this.loadTrack(track);
@@ -187,9 +187,20 @@ export type PlayingLoopMode = typeof playingLoopModes[number];
 
 // Media Session API
 // https://developers.google.com/web/updates/2017/02/media-session
-declare var MediaMetadata: any;
+interface MediaSession {
+    setActionHandler(
+        type: 'play' | 'pause' | 'seekbackward' | 'seekforward'
+            | 'seekto' | 'skipad' | 'previoustrack' | 'nexttrack',
+        callback: Action
+    ): void;
+    metadata: any;
+    playbackState: 'none' | 'paused' | 'playing';
+    constructor;
+};
+declare var MediaMetadata;
+
 if (navigator['mediaSession']) {
-    let mediaSession = navigator['mediaSession'];
+    let mediaSession = navigator['mediaSession'] as MediaSession;
     playerCore.onTrackChanged.add(() => {
         try {
             var track = playerCore.track;
@@ -198,6 +209,13 @@ if (navigator['mediaSession']) {
                 title: track?.name,
                 artist: track?.artist
             });
+        } catch { }
+    });
+    playerCore.onStateChanged.add(() => {
+        try {
+            mediaSession.playbackState =
+                (playerCore.state === 'playing' || playerCore.state === 'stalled') ? 'playing' :
+                    (playerCore.state === 'none') ? 'none' : 'paused';
         } catch { }
     });
     mediaSession.setActionHandler('play', () => playerCore.play());
