@@ -12,12 +12,13 @@ body {
 
     --color-bg: white;
     --color-text: black;
-    --color-text-gray: gray;
+    --color-text-gray: #666;
     --color-bg-selection: hsl(5, 100%, 85%);
     --color-primary: hsl(5, 100%, 67%);
     --color-primary-darker: hsl(5, 100%, 60%);
     --color-primary-dark: hsl(5, 100%, 40%);
     --color-primary-dark-depends: hsl(5, 100%, 40%);
+    --color-primary-verydark: hsl(5, 100%, 20%);
     --color-primary-light: hsl(5, 100%, 83%);
     --color-primary-lighter: hsl(5, 100%, 70%);
     --color-fg-11: #111111;
@@ -33,7 +34,8 @@ body {
 
 body.dark {
     --color-bg: black;
-    --color-text: #ccc;
+    --color-text: #ddd;
+    --color-text-gray: #aaa;
     --color-bg-selection: hsl(5, 100%, 20%);
     --color-primary-dark-depends: hsl(5, 100%, 83%);
     --color-fg-11: #eeeeee;
@@ -863,6 +865,7 @@ textarea.input-text {
     line-height: 1.5em;
     background: var(--color-primary);
     color: white;
+    text-shadow: 0 0 4px var(--color-primary-verydark);
     box-shadow: 0 0 3px gray;
     cursor: pointer;
     -ms-user-select: none;
