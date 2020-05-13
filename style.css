@@ -1030,11 +1030,11 @@ textarea.input-text {
     animation: showing-right .3s;
 }
 
-.btn-progress {
+.btn-progress, .keyboard-input .btn-progress:focus {
     background: #9a0007;
 }
 
-.btn-progress:hover {
+.btn-progress:hover, .keyboard-input .btn-progress:focus:hover {
     background-color: hsl(5, 100%, 20%);
 }
 

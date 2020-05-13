@@ -222,22 +222,36 @@ export const ui = new class {
     };
     bottomBar = new class {
         container: HTMLElement = document.getElementById("bottombar")!;
-        btnPin: HTMLElement = document.getElementById('btnPin')!;
+        btnPin = new TextView(document.getElementById('btnPin')!);
         siPin: SettingItem<boolean>;
         private pinned = true;
         hideTimer = new utils.Timer(() => { this.toggle(false); });
+        mouseInside = false;
+        focusInside = false;
         shown = false;
         inTransition = false;
         setPinned(val?: boolean) {
             val = val ?? !this.pinned;
             this.pinned = val;
             utils.toggleClass(document.body, 'bottompinned', val);
-            this.btnPin.textContent = val ? I`Unpin` : I`Pin`;
+            this.btnPin.text = val ? I`Unpin` : I`Pin`;
             if (val) this.toggle(true);
         }
         toggle(state?: boolean, hideTimeout?: number) {
             this.shown = utils.toggleClass(this.container, 'show', state);
-            if (!this.pinned && hideTimeout) this.hideTimer.timeout(hideTimeout);
+            if (!this.pinned && !this.mouseInside && hideTimeout) this.hideTimer.timeout(hideTimeout);
+        }
+        private focusStateUpdated() {
+            var showing = this.mouseInside || this.focusInside;
+            if (showing !== this.shown) {
+                if (showing) {
+                    this.hideTimer.tryCancel();
+                    this.toggle(true);
+                } else {
+                    this.hideTimer.tryCancel();
+                    if (!this.pinned) this.hideTimer.timeout(200);
+                }
+            }
         }
         init() {
             var bar = this.container;
@@ -251,17 +265,26 @@ export const ui = new class {
                 if (e.target === bar && e.propertyName === 'transform') this.inTransition = false;
             });
             bar.addEventListener('mouseenter', () => {
-                this.hideTimer.tryCancel();
-                this.toggle(true);
-            });
+                this.mouseInside = true;
+                this.focusStateUpdated();
+            }, true);
             bar.addEventListener('mouseleave', () => {
-                this.hideTimer.tryCancel();
-                if (!this.pinned) this.hideTimer.timeout(200);
-            });
+                this.mouseInside = false;
+                this.focusStateUpdated();
+            }, true);
+            bar.addEventListener('focusin', (e) => {
+                this.focusInside = true;
+                this.focusStateUpdated();
+            }, true);
+            bar.addEventListener('focusout', (e) => {
+                if (e.relatedTarget instanceof Node && bar.contains(e.relatedTarget))
+                    return;
+                this.focusInside = false;
+                this.focusStateUpdated();
+            }, true);
             this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
-                .render(x => this.setPinned(x))
-                .bindToBtn(this.btnPin, ['', '']);
-            // this.btnPin.addEventListener('click', () => this.setPinned());
+                .render(x => this.setPinned(x));
+            this.btnPin.onactive = () => this.setPinned();
         }
     };
     playerControl = new class {
@@ -271,17 +294,26 @@ export const ui = new class {
         labelTotal = document.getElementById('progressbar-label-total')!;
         btnPlay = new TextView(document.getElementById('btn-play')!);
         btnLoop = new TextView(document.getElementById('btn-loop')!);
+        btnPrev = new View(document.getElementById('btn-prevtrack')!);
+        btnNext = new View(document.getElementById('btn-nexttrack')!);
         btnVolume: VolumeButton;
 
         state: typeof playerCore['state'];
 
         init() {
             this.setState('none');
-            this.btnLoop.dom.addEventListener('click', () => {
+            this.btnPlay.onactive = () => {
+                var state = playerCore.state;
+                if (state === 'paused') playerCore.play();
+                else playerCore.pause();
+            };
+            this.btnLoop.onactive = () => {
                 var modes = playingLoopModes;
                 var next = modes[(modes.indexOf(playerCore.loopMode) + 1) % modes.length];
                 playerCore.loopMode = next;
-            });
+            };
+            this.btnPrev.onactive = () => playerCore.prev();
+            this.btnNext.onactive = () => playerCore.next();
             playerCore.onLoopModeChanged.add(() => this.setLoopMode(playerCore.loopMode))();
             playerCore.onStateChanged.add(() => {
                 this.setState(playerCore.state);
@@ -292,11 +324,6 @@ export const ui = new class {
                 playerCore.ensureLoaded().then(() => {
                     playerCore.currentTime = percent * playerCore.duration!;
                 });
-            });
-            this.onPlayButtonClicked(() => {
-                var state = playerCore.state;
-                if (state === 'paused') playerCore.play();
-                else playerCore.pause();
             });
             this.btnVolume = new VolumeButton(document.getElementById('btn-volume')!);
             this.btnVolume.text = I`Volume`;
@@ -327,9 +354,6 @@ export const ui = new class {
         setLoopMode(str: PlayingLoopMode) {
             this.btnLoop.hidden = false;
             this.btnLoop.text = i18n.get('loopmode_' + str);
-        }
-        onPlayButtonClicked(cb: () => void) {
-            this.btnPlay.dom.addEventListener('click', cb);
         }
         onProgressSeeking(cb: (percent: number) => void) {
             var call = (offsetX) => { cb(utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
@@ -548,6 +572,7 @@ class VolumeButton extends ProgressButton {
             if (e.type === 'mouse' && e.action === 'down' && e.ev.buttons != 1) return;
             e.ev.preventDefault();
             if (e.action === 'down') {
+                this.dom.focus();
                 startX = e.point.pageX;
                 this.dom.classList.add('btn-down');
                 this.fill.dom.style.transition = 'none';
@@ -561,6 +586,19 @@ class VolumeButton extends ProgressButton {
                 this.fill.dom.style.transition = '';
             }
         });
+        const mapKeyAdjustment = {
+            "ArrowUp": 0.05,
+            "ArrowDown": -0.05,
+            "ArrowRight": 0.01,
+            "ArrowLeft": -0.01,
+        };
+        this.dom.addEventListener('keydown', (e) => {
+            var adj = mapKeyAdjustment[e.code];
+            if (adj) {
+                e.preventDefault();
+                this.onChanging.invoke(adj);
+            }
+        });
     }
     bindToPlayer() {
         playerCore.onVolumeChanged.add(() => {
@@ -569,6 +607,7 @@ class VolumeButton extends ProgressButton {
         })();
         this.onChanging.add((x) => {
             var r = utils.numLimit(playerCore.volume + x, 0, 1);
+            r = Math.round(r * 100) / 100;
             playerCore.volume = r;
             this.tip = '';
         });
