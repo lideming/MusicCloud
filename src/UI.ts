@@ -247,18 +247,16 @@ export const ui = new class {
         }
         toggle(state?: boolean, hideTimeout?: number) {
             this.shown = utils.toggleClass(this.container, 'show', state);
-            if (this.shown) this.updateState(hideTimeout);
+            if (!state && this.shown && !this.pinned) this.updateState(hideTimeout);
         }
         private updateState(timeout = 200) {
-            var showing = this.mouseInside || (this.focusInside && ui.usingKeyboardInput);
-            if (showing !== this.shown) {
-                if (showing) {
-                    this.hideTimer.tryCancel();
-                    this.toggle(true);
-                } else {
-                    this.hideTimer.tryCancel();
-                    if (!this.pinned) this.hideTimer.timeout(timeout);
-                }
+            var showing = this.pinned || this.mouseInside || (this.focusInside && ui.usingKeyboardInput);
+            if (showing) {
+                this.hideTimer.tryCancel();
+                this.toggle(true);
+            } else {
+                this.hideTimer.tryCancel();
+                if (!this.pinned) this.hideTimer.timeout(timeout);
             }
         }
         init() {
@@ -295,7 +293,7 @@ export const ui = new class {
             bar.addEventListener('keydown', (e) => {
                 this.updateState();
             }, true);
-            this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
+            this.siPin = new SettingItem('mcloud-bottompin', 'bool', false);
             this.siPin.render(x => this.setPinned(x));
             this.btnPin.onactive = () => this.siPin.toggle();
         }
