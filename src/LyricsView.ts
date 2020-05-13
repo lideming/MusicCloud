@@ -6,7 +6,8 @@ import { Track } from "./Track";
 
 export class LyricsView extends View {
     lines = new ContainerView<LineView>({ tag: 'div.lyrics' });
-    lyrics: Lyrics;
+    lyrics: Lyrics | null = null;
+    hasVisibleLyrics: boolean = false;
     track: Track | null = null;
     curLine = new ItemActiveHelper<LineView>();
     curTime = 0;
@@ -14,6 +15,10 @@ export class LyricsView extends View {
     onSpanClick = new Callbacks<Action<SpanView>>();
     onFontSizeChanged = new Callbacks<Action>();
     onLyricsChanged = new Callbacks<Action>();
+    constructor() {
+        super();
+        this.setLyrics('');
+    }
     createDom(): BuildDomExpr {
         return {
             tag: 'div.lyricsview',
@@ -56,37 +61,48 @@ export class LyricsView extends View {
         });
     }
     setLyrics(lyrics: string | Lyrics) {
+        let msg = '';
+        let parsed: Lyrics | null;
         try {
-            if (typeof lyrics === 'string') lyrics = parse(lyrics);
+            if (typeof lyrics === 'string') parsed = parse(lyrics);
+            else parsed = lyrics;
         } catch (error) {
             console.error(error);
-            lyrics = {
-                lines: [{
-                    orderTime: 0,
-                    spans: [{
-                        text: I`Error parsing lyrics`
-                    }]
-                }]
-            } as any as Lyrics;
+            msg = I`Error parsing lyrics`;
+            parsed = null;
         }
 
-        this.lyrics = lyrics;
+        this.lyrics = parsed;
+        this.hasVisibleLyrics = false;
         this.curLine.set(null);
+        this.lines.removeAllView();
 
-        if (lyrics.lang) this.lines.dom.lang = lyrics.lang;
+        if (parsed?.lang) this.lines.dom.lang = parsed.lang;
         else this.lines.dom.removeAttribute('lang');
 
-        this.lines.removeAllView();
-        lyrics.lines.forEach(l => {
-            if (l.spans) {
-                this.lines.addView(new LineView(l, this));
-            }
-        });
+        if (parsed) {
+            parsed.lines.forEach(l => {
+                if (l.spans) {
+                    this.lines.addView(new LineView(l, this));
+                    this.hasVisibleLyrics = true;
+                }
+            });
+        }
+
+        if (!this.hasVisibleLyrics) {
+            this.lines.addView(new LineView({
+                orderTime: 0,
+                spans: [
+                    { text: msg || I`No lyrics` }
+                ]
+            } as any, this));
+        }
 
         this.onLyricsChanged.invoke();
         this.resize();
     }
     setCurrentTime(time: number, scroll?: boolean | 'smooth' | 'force') {
+        if (!this.hasVisibleLyrics) return;
         if (!(time >= 0)) time = 0;
         this.curTime = time;
         var prev = this.curLine.current;
@@ -259,7 +275,7 @@ export class LineView extends ContainerView<SpanView> {
         });
         if (this.line.translation) {
             var lyrics = this.lyricsView?.lyrics;
-            var tlang = lyrics && lyrics.translationLang || lyrics.lang;
+            var tlang = lyrics && (lyrics.translationLang || lyrics.lang);
             this.dom.appendChild(utils.buildDOM({
                 tag: 'div.trans',
                 lang: tlang,

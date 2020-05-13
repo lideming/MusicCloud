@@ -122,7 +122,7 @@ class LyricsEditContentView extends ContentView {
     private serializeLyricsFromView() {
         if (this.mode === 'lyrics') {
             if (this.lyricsView.modified)
-                this.lyrics = serialize(this.lyricsView.lyrics);
+                this.lyrics = serialize(this.lyricsView.lyrics!);
         } else if (this.mode === 'source') {
             this.lyrics = this.sourceView.value;
         } else {
