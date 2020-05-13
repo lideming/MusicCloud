@@ -124,6 +124,7 @@ import { uploads } from "./Uploads";
 
 /** 常驻 UI 元素操作 */
 export const ui = new class {
+    usingKeyboardInput = false;
     init() {
         this.lang.init();
         this.sidebar.init();
@@ -167,10 +168,12 @@ export const ui = new class {
             }
         });
         document.addEventListener('keydown', (e) => {
+            this.usingKeyboardInput = true;
             document.body.classList.add('keyboard-input');
         }, true);
         ['mousedown', 'touchstart'].forEach(evt =>
             document.addEventListener(evt, (e) => {
+                this.usingKeyboardInput = false;
                 document.body.classList.remove('keyboard-input');
             }, true)
         );
@@ -231,25 +234,30 @@ export const ui = new class {
         shown = false;
         inTransition = false;
         setPinned(val?: boolean) {
-            val = val ?? !this.pinned;
-            this.pinned = val;
-            utils.toggleClass(document.body, 'bottompinned', val);
-            this.btnPin.text = val ? I`Unpin` : I`Pin`;
-            if (val) this.toggle(true);
+            if (val === undefined) {
+                this.siPin.toggle();
+            } else if (val !== this.siPin.data) {
+                this.siPin.set(val);
+            } else {
+                this.pinned = val;
+                utils.toggleClass(document.body, 'bottompinned', val);
+                this.btnPin.text = val ? I`Unpin` : I`Pin`;
+                if (val) this.toggle(true);
+            }
         }
         toggle(state?: boolean, hideTimeout?: number) {
             this.shown = utils.toggleClass(this.container, 'show', state);
-            if (!this.pinned && !this.mouseInside && hideTimeout) this.hideTimer.timeout(hideTimeout);
+            if (this.shown) this.updateState(hideTimeout);
         }
-        private focusStateUpdated() {
-            var showing = this.mouseInside || this.focusInside;
+        private updateState(timeout = 200) {
+            var showing = this.mouseInside || (this.focusInside && ui.usingKeyboardInput);
             if (showing !== this.shown) {
                 if (showing) {
                     this.hideTimer.tryCancel();
                     this.toggle(true);
                 } else {
                     this.hideTimer.tryCancel();
-                    if (!this.pinned) this.hideTimer.timeout(200);
+                    if (!this.pinned) this.hideTimer.timeout(timeout);
                 }
             }
         }
@@ -266,25 +274,30 @@ export const ui = new class {
             });
             bar.addEventListener('mouseenter', () => {
                 this.mouseInside = true;
-                this.focusStateUpdated();
+                this.updateState();
             }, true);
-            bar.addEventListener('mouseleave', () => {
+            bar.addEventListener('mouseleave', (e) => {
+                if (e.relatedTarget instanceof Node && bar.contains(e.relatedTarget))
+                    return;
                 this.mouseInside = false;
-                this.focusStateUpdated();
+                this.updateState();
             }, true);
-            bar.addEventListener('focusin', (e) => {
+            bar.addEventListener('focusin', () => {
                 this.focusInside = true;
-                this.focusStateUpdated();
+                this.updateState();
             }, true);
             bar.addEventListener('focusout', (e) => {
                 if (e.relatedTarget instanceof Node && bar.contains(e.relatedTarget))
                     return;
                 this.focusInside = false;
-                this.focusStateUpdated();
+                this.updateState();
+            }, true);
+            bar.addEventListener('keydown', (e) => {
+                this.updateState();
             }, true);
             this.siPin = new SettingItem('mcloud-bottompin', 'bool', false)
-                .render(x => this.setPinned(x));
-            this.btnPin.onactive = () => this.setPinned();
+            this.siPin.render(x => this.setPinned(x));
+            this.btnPin.onactive = () => this.siPin.toggle();
         }
     };
     playerControl = new class {
