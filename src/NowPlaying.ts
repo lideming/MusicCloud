@@ -1,7 +1,6 @@
 import { router } from './Router';
-import { ListContentView } from './ListContentView';
 import { ContentView, SidebarItem, ui, ContentHeader, ActionBtn } from './UI';
-import { Lazy, I, utils, BuildDomExpr, Timer, SettingItem } from './utils';
+import { Lazy, I, BuildDomExpr, SettingItem } from './utils';
 import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
 import { api } from './Api';

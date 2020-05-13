@@ -1,12 +1,11 @@
 import { Track } from './Track';
 import { ContentView, ContentHeader, SidebarItem, ui, ActionBtn } from './UI';
 import { I } from './I18n';
-import { BuildDomExpr, Timer, utils } from './utils';
-import { LyricsView, SpanView, LineView } from './LyricsView';
+import { BuildDomExpr, utils } from './utils';
+import { LyricsView, SpanView } from './LyricsView';
 import { router } from './Router';
-import { Span, Lyrics, serialize, parse } from './Lyrics';
+import { serialize, parse } from './Lyrics';
 import { playerCore } from './PlayerCore';
-import { View } from './viewlib';
 import { Toast, InputView } from '@yuuza/webfx/lib/viewlib';
 
 export var lyricsEdit = new class {

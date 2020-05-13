@@ -1,7 +1,7 @@
 // file: TrackList.ts
 
-import { utils, I, Action, BuildDomExpr, DataUpdatingHelper } from "./utils";
-import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, View, EditableHelper, Toast, ContainerView, TextView, ItemActiveHelper } from "./viewlib";
+import { utils, I, BuildDomExpr, DataUpdatingHelper } from "./utils";
+import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -126,10 +126,6 @@ export class TrackList {
                 name: this.name ?? '',
                 trackids: this.tracks.map(t => t.id)
             };
-            var resp: Api.TrackListPutResult = await api.put({
-                path: 'lists/' + this.apiid,
-                obj: obj
-            });
         } catch (error) {
             console.error('list put() failed', this, error);
             Toast.show(I`Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
@@ -331,7 +327,6 @@ export class TrackViewItem extends ListViewItem {
     }
     get dragData() { return `${this.track.name} - ${this.track.artist}`; }
     createDom(): BuildDomExpr {
-        var track = this.track;
         return {
             tag: 'li.item.trackitem.no-selection',
             tabIndex: 0,
