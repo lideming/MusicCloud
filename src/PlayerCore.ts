@@ -5,6 +5,7 @@ import { Callbacks, Action, SettingItem, I, utils, CancelToken } from "./utils";
 import { api } from "./Api";
 import { Toast } from "./viewlib";
 import { Api } from "./apidef";
+import { Timer } from "./utils";
 
 /** 播放器核心：控制播放逻辑 */
 export var playerCore = new class PlayerCore {
@@ -35,6 +36,11 @@ export var playerCore = new class PlayerCore {
         this.onStateChanged.invoke();
     }
     onStateChanged = new Callbacks<Action>();
+
+    _loadRetryCount = 0;
+    _loadRetryTimer = new Timer(() => {
+        this.play();
+    });
 
     get currentTime() { return this.audio?.currentTime; }
     set currentTime(val) { this.audio.currentTime = val; }
@@ -71,7 +77,10 @@ export var playerCore = new class PlayerCore {
 
         this.audio = document.createElement('audio');
         this.audio.addEventListener('timeupdate', () => this.onProgressChanged.invoke());
-        this.audio.addEventListener('canplay', () => this.onProgressChanged.invoke());
+        this.audio.addEventListener('canplay', () => {
+            this._loadRetryCount = 0;
+            this.onProgressChanged.invoke();
+        });
         this.audio.addEventListener('seeking', () => {
             if (!this.audio.paused)
                 this.state = 'stalled';
@@ -91,8 +100,14 @@ export var playerCore = new class PlayerCore {
         this.audio.addEventListener('error', (e) => {
             console.log(e);
             this.state = 'paused';
-            if (this.audioLoaded) {
-                Toast.show(I`Player error:` + '\n' + e.message, 3000);
+            this.audioLoaded = false;
+            if (this.track && this.track.url) {
+                let msg = I`Player error:` + '\n' + (e.message || I`Unknown error.`);
+                if (this._loadRetryCount++ < 3) {
+                    msg += '\n' + I`Retry after ${3} sec...`;
+                    this._loadRetryTimer.timeout(3000);
+                }
+                Toast.show(msg, 3000);
             }
         });
         this.audio.addEventListener('ended', () => {
@@ -124,6 +139,7 @@ export var playerCore = new class PlayerCore {
     async setTrack(track: Track | null, loadNow = false) {
         var oldTrack = this.track;
         this.track = track;
+        this._loadRetryTimer.tryCancel();
         if (oldTrack !== track
             && (oldTrack?.url !== track?.url
                 || (track?.blob && track.blob !== oldTrack?.blob))) {
