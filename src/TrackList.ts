@@ -126,6 +126,10 @@ export class TrackList {
                 name: this.name ?? '',
                 trackids: this.tracks.map(t => t.id)
             };
+            await api.put({
+                path: 'lists/' + this.apiid,
+                obj: obj
+            });
         } catch (error) {
             console.error('list put() failed', this, error);
             Toast.show(I`Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
