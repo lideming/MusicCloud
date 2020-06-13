@@ -133,6 +133,7 @@ export const ui = new class {
         this.playerControl.init();
         this.sidebarLogin.init();
         this.windowTitle.reset();
+        this.notification.init();
         Dialog.defaultParent = new DialogParent(this.mainContainer.dom);
         ToastsContainer.default.parentDom = this.mainContainer.dom;
         router.addRoute({
@@ -184,6 +185,9 @@ export const ui = new class {
             ui.mainContainer.dom.classList.remove('no-transition');
             utils.fadeout(document.getElementById('preload-overlay')!);
         }, 1);
+    }
+    isVisible() {
+        return !document['hidden'];
     }
     theme = new class {
         current: 'light' | 'dark' = 'light';
@@ -549,6 +553,57 @@ export const ui = new class {
         setFromTrack(track: Track | null) {
             if (!track) this.setTitle(null);
             else this.setTitle(track.name + ' - ' + track.artist);
+        }
+    };
+    notification = new class {
+        siNotification = new SettingItem('mcloud-notif', 'json', {
+            enabled: false,
+            nowPlaying: true
+        });
+        lastNotif: Notification | null = null;
+        get config() { return this.siNotification.data; }
+        isEnabledFor(key: keyof this['config']) {
+            return this.config.enabled && this.config[key as any];
+        }
+        browserSupport() { return ('Notification' in window); };
+        checkPermission() { return (Notification.permission == 'granted'); }
+        async requestPermission(): Promise<boolean> {
+            if (!this.browserSupport()) return false;
+            if (this.checkPermission()) return true;
+            return await Notification.requestPermission() == 'granted';
+        }
+        show(title: string, options?: NotificationOptions, timeout = 5000) {
+            console.info('notification', { title, options, timeout });
+            if (this.lastNotif) this.lastNotif.close();
+            var current = this.lastNotif = new Notification(title, options);
+            if (timeout) {
+                setTimeout(() => {
+                    current.close();
+                }, timeout);
+            }
+            return current;
+        }
+        init() {
+            if (this.config.enabled && (!this.browserSupport() || !this.checkPermission())) {
+                this.config.enabled = false;
+                this.siNotification.save();
+            }
+            playerCore.onTrackChanged.add(() => {
+                if (this.isEnabledFor('nowPlaying') && !ui.isVisible()
+                    && this.config.nowPlaying && playerCore.state == 'playing') {
+                    const track = playerCore.track!;
+                    this.show(track.name, {
+                        body: I`Artist` + ': ' + track?.artist,
+                        requireInteraction: false
+                    });
+                }
+            });
+        }
+        async enable() {
+            if (this.browserSupport() && await this.requestPermission()) {
+                this.config.enabled = true;
+                this.siNotification.save();
+            }
         }
     };
 }; // ui

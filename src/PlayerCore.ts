@@ -6,6 +6,7 @@ import { api } from "./Api";
 import { Toast } from "./viewlib";
 import { Api } from "./apidef";
 import { Timer } from "./utils";
+import { ui } from "./UI";
 
 /** 播放器核心：控制播放逻辑 */
 export var playerCore = new class PlayerCore {
@@ -64,7 +65,7 @@ export var playerCore = new class PlayerCore {
 
     get playbackRate() { return this.audio.playbackRate; }
 
-    get isPlaying() { return this.audio.duration && !this.audio.paused; }
+    get isPlaying() { return !!this.audio.duration && !this.audio.paused; }
     get isPaused() { return this.audio.paused; }
     get canPlay() { return this.audio.readyState >= 2; }
     init() {
@@ -108,6 +109,12 @@ export var playerCore = new class PlayerCore {
                     this._loadRetryTimer.timeout(3000);
                 }
                 Toast.show(msg, 3000);
+                if (!ui.isVisible() && ui.notification.isEnabledFor('nowPlaying')) {
+                    ui.notification.show(I`Music Cloud`, {
+                        body: msg,
+                        requireInteraction: false
+                    });
+                }
             }
         });
         this.audio.addEventListener('ended', () => {
@@ -136,25 +143,29 @@ export var playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
-    async setTrack(track: Track | null, loadNow = false) {
+    async setTrack(track: Track | null, playNow = false) {
         var oldTrack = this.track;
         this.track = track;
         this._loadRetryTimer.tryCancel();
         if (oldTrack !== track
             && (oldTrack?.url !== track?.url
                 || (track?.blob && track.blob !== oldTrack?.blob))) {
-            if (loadNow && track) {
+            if (playNow && track) {
                 await this.loadTrack(track);
             } else {
                 this.loadUrl(null);
             }
         }
-        this.state = !track ? 'none' : this.audio.paused ? 'paused' : 'playing';
+        this.state = !track ? 'none' : playNow ? 'playing' : 'paused';
         this.onTrackChanged.invoke();
         this.onProgressChanged.invoke();
+        if (playNow && track) await this.playTrack(track);
     }
     async playTrack(track: Track, forceStart?: boolean) {
-        if (track !== this.track) await this.setTrack(track, true);
+        if (track !== this.track) {
+            await this.setTrack(track, true);
+            return;
+        }
         if (forceStart) this.audio.currentTime = 0;
         await this.play();
     }
