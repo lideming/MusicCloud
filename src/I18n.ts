@@ -113,6 +113,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Error parsing lyrics", "歌词解析错误"],
     ["No lyrics", "无歌词"],
     ["Source code", "源代码"],
+    ["Client updated:\\nCurrent: {0}\\nPrevious: {1}", "客户端已更新:\\n当前版本: {0}\\n前一版本: {1}"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

@@ -52,6 +52,7 @@ import { nowPlaying } from "./NowPlaying";
 import { search } from "./Search";
 import Lyrics = require("./Lyrics");
 import { lyricsEdit } from "./LyricsEdit";
+import { appVersion } from "./AppVersion";
 
 console.timeEnd('modules importing');
 
@@ -74,6 +75,7 @@ var app = window['app'] = {
         listIndex.init();
         msgcli.init();
         router.init();
+        appVersion.showUpdatedToast();
         console.timeEnd('app.init()');
     }
 };
