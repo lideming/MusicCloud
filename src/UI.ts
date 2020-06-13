@@ -132,6 +132,7 @@ export const ui = new class {
         this.trackinfo.init();
         this.playerControl.init();
         this.sidebarLogin.init();
+        this.windowTitle.reset();
         Dialog.defaultParent = new DialogParent(this.mainContainer.dom);
         ToastsContainer.default.parentDom = this.mainContainer.dom;
         router.addRoute({
@@ -392,6 +393,7 @@ export const ui = new class {
             });
         }
         setTrack(track: Track | null) {
+            ui.windowTitle.setFromTrack(track);
             if (track) {
                 utils.replaceChild(this.element, utils.buildDOM({
                     tag: 'span',
@@ -534,6 +536,19 @@ export const ui = new class {
                 }
             }
             this.current = arg;
+        }
+    };
+    windowTitle = new class {
+        appName = I`Music Cloud`;
+        reset() { this.setTitle(null); }
+        setTitle(title: string | null) {
+            if (title) title += ' - ' + this.appName;
+            else title = this.appName;
+            document.title = title;
+        }
+        setFromTrack(track: Track | null) {
+            if (!track) this.setTitle(null);
+            else this.setTitle(track.name + ' - ' + track.artist);
         }
     };
 }; // ui
