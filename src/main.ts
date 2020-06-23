@@ -25,7 +25,7 @@ globalThis.__exportStar = function(m, exports) {
     for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
 };
 
-console.time('main init');
+console.time('[Main] init');
 
 export var settings = {
     apiBaseUrl: 'api/',
@@ -35,7 +35,7 @@ export var settings = {
     apiDebugDelay: 0,
 };
 
-console.time('modules importing');
+console.time('[Main] modules importing');
 
 import { Toast, ToastsContainer } from "./viewlib";
 import { ui } from "./UI";
@@ -54,7 +54,7 @@ import Lyrics = require("./Lyrics");
 import { lyricsEdit } from "./LyricsEdit";
 import { appVersion } from "./AppVersion";
 
-console.timeEnd('modules importing');
+console.timeEnd('[Main] modules importing');
 
 var app = window['app'] = {
     settings, settingsUI,
@@ -62,7 +62,7 @@ var app = window['app'] = {
     Toast, ToastsContainer, Lyrics,
     msgcli,
     init() {
-        console.time('app.init()');
+        console.time('[Main] app.init()');
         ui.init();
         playerCore.init();
         user.init();
@@ -76,7 +76,7 @@ var app = window['app'] = {
         msgcli.init();
         router.init();
         appVersion.showUpdatedToast();
-        console.timeEnd('app.init()');
+        console.timeEnd('[Main] app.init()');
     }
 };
 
@@ -84,4 +84,4 @@ app.init();
 
 window['preload'].jsOk();
 
-console.timeEnd('main init');
+console.timeEnd('[Main] init');

@@ -3,8 +3,7 @@
 export function parse(str: string) {
     var time = Date.now();
     var r = new Parser(str).parse();
-    console.log(`Lyrics: parsed ${str.length} chars in ${Date.now() - time} ms`);
-    console.log(r);
+    console.log(`[Lyrics] parsed ${str.length} chars in ${Date.now() - time} ms`, r);
     return r;
 }
 

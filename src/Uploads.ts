@@ -168,7 +168,7 @@ export var uploads = new class extends TrackList {
                 }
                 api.onTrackDeleted.invoke(track);
             } else {
-                console.error('Unexpected track._upload.state', track._upload.state);
+                console.error('[Uploads] Unexpected track._upload.state', track._upload.state);
                 return;
             }
         }
@@ -243,7 +243,7 @@ export var uploads = new class extends TrackList {
             if (track._upload.state === 'cancelled') return null;
             track.setState('error');
             Toast.show(I`Failed to upload file "${file.name}".` + '\n' + err, 3000);
-            console.log('uploads failed: ', file.name, err);
+            console.warn('[Uploads] uploads failed: ', file.name, err);
             if (uploads.view.isVisible == false) {
                 this.unreadError = true;
                 // will update sidebarItem later
@@ -300,7 +300,7 @@ export var uploads = new class extends TrackList {
             ct.throwIfCancelled();
             respTrack = JSON.parse(xhr.responseText);
         } else if (uploadReq.mode === 'put-url') {
-            console.info('uploading to url', uploadReq);
+            console.info('[Uploads] uploading to url', uploadReq);
 
             const xhr = await api.upload({
                 method: uploadReq.method,
@@ -310,7 +310,7 @@ export var uploads = new class extends TrackList {
                 onprogerss
             }).complete;
 
-            console.info('posting result to api');
+            console.info('[Uploads] posting result to api');
             track.setState('processing');
             respTrack = await api.post({
                 path: 'tracks/uploadresult',
@@ -416,7 +416,7 @@ class UploadArea extends View {
     private handleFiles(files: FileList) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            console.log('drop file', { name: file.name, size: file.size });
+            console.log('[Uploads] drop file', { name: file.name, size: file.size });
             this.onfile?.(file);
         }
     }

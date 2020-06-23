@@ -67,7 +67,7 @@ export class LyricsView extends View {
             if (typeof lyrics === 'string') parsed = parse(lyrics);
             else parsed = lyrics;
         } catch (error) {
-            console.error(error);
+            console.error('[Lyrics] parsing error', error);
             msg = I`Error parsing lyrics`;
             parsed = null;
         }

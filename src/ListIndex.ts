@@ -39,7 +39,7 @@ export class ListIndex {
                         }
                         return list.put();
                     }).catch(err => {
-                        console.error('error adding track:', err);
+                        console.error('[ListIndex] error adding track:', err);
                     });
                 }
             } else if (data.files.length > 0) {
@@ -55,7 +55,7 @@ export class ListIndex {
                             list.addTrack(track.toApiTrack(), arg.event.altKey ? undefined : 0);
                             await list.put();
                         }).catch(err => {
-                            console.error('error adding track:', err);
+                            console.error('[ListIndex] error adding track:', err);
                         });
                     }
                 }

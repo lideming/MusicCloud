@@ -124,7 +124,7 @@ export class TrackDialog extends Dialog {
             api.onTrackInfoChanged.invoke(newinfo);
             this.close();
         } catch (error) {
-            console.error(error);
+            console.error('[Track] saving error', error);
             this.btnSave.updateWith({ clickable: false, text: I`Error` });
             await utils.sleepAsync(3000);
         }

@@ -58,7 +58,7 @@ export const msgcli = new class {
             this.onConnected.invoke();
         };
         this.ws.onclose = (ev) => {
-            console.warn('ws close', { code: ev.code, reason: ev.reason });
+            console.warn('[MsgCli] ws close', { code: ev.code, reason: ev.reason });
             this.ws = null;
             this.loginState = '';
             this.events = {};
@@ -71,7 +71,7 @@ export const msgcli = new class {
                             resp: 'wsclose'
                         });
                     } catch (error) {
-                        console.error(error);
+                        console.error('[MsgCli] error', error);
                     }
                 }
             }
@@ -81,11 +81,11 @@ export const msgcli = new class {
             }, 10000);
         };
         this.ws.onmessage = (ev) => {
-            // console.debug('ws msg', ev.data);
+            // console.debug('[MsgCli] ws msg', ev.data);
             if (typeof ev.data === 'string') {
                 var json = JSON.parse(ev.data);
                 if (json.resp && json.queryId) {
-                    console.debug('ws query answer', json);
+                    console.debug('[MsgCli] ws query answer', json);
                     if (this.queries[json.queryId]) {
                         this.queries[json.queryId](json);
                         delete this.queries[json.queryId];
@@ -95,13 +95,13 @@ export const msgcli = new class {
                     if (this.events[evt]) {
                         this.events[evt]();
                     } else {
-                        console.debug('ws unknown event', json);
+                        console.debug('[MsgCli] ws unknown event', json);
                     }
                 } else {
-                    console.debug('ws unknown json', json);
+                    console.debug('[MsgCli] ws unknown json', json);
                 }
             } else {
-                console.debug('ws unknwon data', ev.data);
+                console.debug('[MsgCli] ws unknwon data', ev.data);
             }
         };
     }
@@ -112,11 +112,11 @@ export const msgcli = new class {
             token
         }).then(a => {
             if (a.resp === 'ok') {
-                console.log('ws login ok');
+                console.info('[MsgCli] ws login ok');
                 this.loginState = 'done';
                 this.onLogin.invoke();
             } else {
-                console.log('ws login result: ', a.resp);
+                console.warn('[MsgCli] ws login result: ', a.resp);
                 this.loginState = '';
             }
         });
@@ -128,7 +128,7 @@ export const msgcli = new class {
             queryId,
             ...obj
         };
-        console.log('ws send', obj);
+        console.debug('[MsgCli] ws send', obj);
         this.ws!.send(JSON.stringify(obj));
         if (callback) {
             this.queries[queryId] = callback;

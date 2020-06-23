@@ -219,7 +219,7 @@ export const ui = new class {
                 this.curLang = lang;
                 i18n.curLang = lang;
                 document.body.lang = lang;
-                console.log(`Current language: '${i18n.curLang}' - '${I`English`}'`);
+                console.info(`[UI] Current language: '${i18n.curLang}' - '${I`English`}'`);
                 i18n.renderElements(document.querySelectorAll('.i18ne'));
             });
         }
@@ -573,7 +573,7 @@ export const ui = new class {
             return await Notification.requestPermission() == 'granted';
         }
         show(title: string, options?: NotificationOptions, timeout = 5000) {
-            console.info('notification', { title, options, timeout });
+            console.info('[UI] notification', { title, options, timeout });
             if (this.lastNotif) this.lastNotif.close();
             var current = this.lastNotif = new Notification(title, options);
             if (timeout) {

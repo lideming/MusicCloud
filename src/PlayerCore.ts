@@ -34,7 +34,7 @@ export var playerCore = new class PlayerCore {
     get state() { return this._state; }
     set state(val) {
         if (val === this._state) return;
-        console.info(`player state '${this._state}' -> '${val}'`);
+        console.info(`[PlayerCore] state '${this._state}' -> '${val}'`);
         this._state = val;
         this.onStateChanged.invoke();
     }
@@ -101,7 +101,7 @@ export var playerCore = new class PlayerCore {
             this.state = 'paused';
         });
         this.audio.addEventListener('error', (e) => {
-            console.log(e);
+            console.error('[PlayerCore] audio error', e);
             var wasPlaying = this.state !== 'paused' && this.state !== 'stalled';
             this.state = 'paused';
             this.audioLoaded = false;
@@ -147,7 +147,7 @@ export var playerCore = new class PlayerCore {
         this.audio.load();
     }
     async setTrack(track: Track | null, playNow = false) {
-        console.info('player set track: '
+        console.info('[PlayerCore] set track: '
                 + (track ? `id ${track.id}:${track.name} - ${track.artist}` : '(null)'));
         var oldTrack = this.track;
         this.track = track;

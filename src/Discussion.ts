@@ -20,7 +20,7 @@ class CommentsView {
     state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
     async fetch(slient?: boolean) {
         if (this.state === 'fetching' || this.state === 'waiting') {
-            console.warn('another fetch task is running.');
+            console.warn('[Comments] another fetch task is running.');
             return;
         }
         this.state = 'waiting';

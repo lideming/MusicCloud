@@ -117,7 +117,7 @@ export class TrackList {
             if (this.apiid == null) throw new Error('cannot put: no apiid');
         } catch (error) {
             this.putDelaying = null;
-            console.error(error);
+            console.error('[TrackList] pre-put error', error);
         }
         try {
             [this.putInProgress, this.putDelaying] = [this.putDelaying, null];
@@ -131,7 +131,7 @@ export class TrackList {
                 obj: obj
             });
         } catch (error) {
-            console.error('list put() failed', this, error);
+            console.error('[TrackList] put error', this, error);
             Toast.show(I`Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
             throw error;
         } finally {
@@ -180,7 +180,7 @@ export class TrackList {
         } else if (loopMode === 'track-loop') {
             return track;
         } else {
-            console.warn('unknown loopMode', loopMode);
+            console.warn('[TrackList] unknown loopMode', loopMode);
         }
         return null;
     }

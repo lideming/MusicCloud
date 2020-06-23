@@ -199,8 +199,8 @@ export var user = new class User {
             trackid: track?.id ?? 0
         };
         this.postPlaying(tl)
-            .then(() => console.info("post playing OK"),
-                (err) => console.warn('post playing error', err));
+            .then(() => console.info("[User] post playing OK"),
+                (err) => console.warn('[User] post playing error', err));
     }
     async tryRestorePlaying(playing: Api.TrackLocation) {
         if (playing.trackid) {
