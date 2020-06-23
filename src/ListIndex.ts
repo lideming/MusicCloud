@@ -66,16 +66,6 @@ export class ListIndex {
             ui.sidebarList.setActive(item);
             this.showTracklist(item.listInfo.id);
         };
-        this.section = new Section({
-            title: I`Playlists`,
-            content: this.listView,
-            actions: [{
-                text: '➕',
-                onclick: () => {
-                    this.newTracklist();
-                }
-            }]
-        });
     }
     init() {
         playerCore.onTrackChanged.add(() => {
@@ -109,6 +99,16 @@ export class ListIndex {
                     });
                 }
             }
+        });
+        this.section = new Section({
+            title: I`Playlists`,
+            content: this.listView,
+            actions: [{
+                text: '➕',
+                onclick: () => {
+                    this.newTracklist();
+                }
+            }]
         });
         ui.sidebarList.container.appendView(this.section);
         router.addRoute({
