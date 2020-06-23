@@ -33,6 +33,8 @@ export var playerCore = new class PlayerCore {
     private _state: 'none' | 'playing' | 'paused' | 'stalled' = 'none';
     get state() { return this._state; }
     set state(val) {
+        if (val === this._state) return;
+        console.info(`player state '${this._state}' -> '${val}'`);
         this._state = val;
         this.onStateChanged.invoke();
     }
@@ -100,11 +102,12 @@ export var playerCore = new class PlayerCore {
         });
         this.audio.addEventListener('error', (e) => {
             console.log(e);
+            var wasPlaying = this.state !== 'paused' && this.state !== 'stalled';
             this.state = 'paused';
             this.audioLoaded = false;
             if (this.track && this.track.url) {
                 let msg = I`Player error:` + '\n' + (e.message || I`Unknown error.`);
-                if (this._loadRetryCount++ < 3) {
+                if (wasPlaying && this._loadRetryCount++ < 3) {
                     msg += '\n' + I`Retry after ${3} sec...`;
                     this._loadRetryTimer.timeout(3000);
                 }
@@ -144,6 +147,8 @@ export var playerCore = new class PlayerCore {
         this.audio.load();
     }
     async setTrack(track: Track | null, playNow = false) {
+        console.info('player set track: '
+                + (track ? `id ${track.id}:${track.name} - ${track.artist}` : '(null)'));
         var oldTrack = this.track;
         this.track = track;
         this._loadRetryTimer.tryCancel();
