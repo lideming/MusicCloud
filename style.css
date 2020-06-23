@@ -597,6 +597,7 @@ a.item {
     margin: 0 1em;
     text-align: center;
     max-height: 1.5em;
+    line-height: 1.5;
     overflow: hidden;
 }
 
