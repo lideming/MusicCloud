@@ -148,7 +148,7 @@ export var playerCore = new class PlayerCore {
     }
     async setTrack(track: Track | null, playNow = false) {
         console.info('[PlayerCore] set track: '
-                + (track ? `id ${track.id}:${track.name} - ${track.artist}` : '(null)'));
+                + (track ? `id ${track.id}: ${track.name} - ${track.artist}` : '(null)'));
         var oldTrack = this.track;
         this.track = track;
         this._loadRetryTimer.tryCancel();
