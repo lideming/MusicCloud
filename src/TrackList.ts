@@ -362,7 +362,7 @@ export class TrackViewItem extends ListViewItem {
         ev.preventDefault();
         var selected: TrackViewItem[] = this.selected ? this.selectionHelper.selectedItems : [this];
         var m = new ContextMenu();
-        if (item.track.id) m.add(new MenuItem({
+        if (item.track.id && user.serverOptions.trackCommentsEnabled !== false) m.add(new MenuItem({
             text: I`Comments`, onclick: () => {
                 router.nav(['track-comments', item.track.id.toString()]);
             }

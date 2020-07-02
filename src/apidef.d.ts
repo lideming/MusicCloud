@@ -102,6 +102,7 @@ export namespace Api {
         storageUrlBase?: string;
         notesEnabled?: boolean;
         discussionEnabled?: boolean;
+        trackCommentsEnabled?: boolean;
     }
 
     interface Error {
