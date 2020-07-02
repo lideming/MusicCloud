@@ -85,19 +85,23 @@ export namespace Api {
         passwd?: string;
 
         /** When GET me */
-        servermsg?: string;
-
-        /** When GET me */
         playing?: Api.TrackLocation;
 
         /** When GET me */
         role?: 'admin' | 'user';
 
         /** When GET me */
-        storageUrlBase?: string;
+        serverOptions?: ServerOptions;
 
         /** When GET me/login */
         token?: string;
+    }
+
+    interface ServerOptions {
+        msg?: string;
+        storageUrlBase?: string;
+        notesEnabled?: boolean;
+        discussionEnabled?: boolean;
     }
 
     interface Error {

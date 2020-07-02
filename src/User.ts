@@ -26,6 +26,9 @@ export var user = new class User {
     role?: Api.UserInfo['role'];
     get isAdmin() { return this.role === 'admin'; }
 
+    private _serverOptions: Api.ServerOptions = {};
+    get serverOptions() { return this._serverOptions; }
+
     state: 'none' | 'logging' | 'error' | 'logged' = 'none';
     onSwitchedUser = new Callbacks<Action>();
     loggingin: Promise<void> | null = null;
@@ -121,8 +124,11 @@ export var user = new class User {
         this.role = info.role;
         this.siLogin.save();
 
-        if (info.servermsg) Toast.show(I`Server: ` + info.servermsg, 3000);
-        api.storageUrlBase = info.storageUrlBase || '';
+        if (info.serverOptions) {
+            const options = this._serverOptions = info.serverOptions;
+            if (options.msg) Toast.show(I`Server: ` + options.msg, 3000);
+            api.storageUrlBase = options.storageUrlBase || '';
+        }
 
         api.defaultAuth = this.getBearerAuth(this.info.token);
         ui.sidebarLogin.update();

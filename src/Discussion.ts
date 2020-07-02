@@ -126,7 +126,7 @@ export var discussion = new class extends CommentsView {
         });
         ui.sidebarList.addFeatureItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
-            this.sidebarItem.hidden = user.state != 'logged';
+            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.discussionEnabled);
         })();
     }
     sidebarItem: SidebarItem;
@@ -148,7 +148,7 @@ export var notes = new class extends CommentsView {
             if (this.state && notes.state !== 'waiting') this.fetch();
         });
         user.onSwitchedUser.add(() => {
-            this.sidebarItem.hidden = user.state != 'logged';
+            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.notesEnabled);
         })();
     }
     sidebarItem: SidebarItem;
