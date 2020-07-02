@@ -1,5 +1,5 @@
 import { utils, I, TextCompositionWatcher } from "./utils";
-import { Toast, Dialog, LabeledInput, TabBtn } from "./viewlib";
+import { Toast, Dialog, LabeledInput, TabBtn, LoadingIndicator } from "./viewlib";
 import { Api } from "./apidef";
 import { api } from "./Api";
 import { TrackList } from "./TrackList";
@@ -60,6 +60,27 @@ export class Track {
             }
         }
     }
+    _lyricsFetchTask: Promise<string> | null = null;
+    isLyricsGotten() { return this.lyrics != null; }
+    getLyrics(): Promise<string> {
+        if (!this.isLyricsGotten()) {
+            if (!this.id) return Promise.resolve("");
+            if (!this._lyricsFetchTask)
+                this._lyricsFetchTask = (async () => {
+                    try {
+                        var resp: Api.TrackLyrics = await api.get("tracks/" + this.id + "/lyrics");
+                        this.infoObj!.lyrics = resp.lyrics;
+                        return this.lyrics!;
+                    } catch (error) {
+                        this._lyricsFetchTask = null;
+                        console.error(`[Track] id ${this.id} fetching lyrics error`, error);
+                        throw error;
+                    }
+                })();
+            return this._lyricsFetchTask;
+        }
+        return Promise.resolve(this.lyrics!);
+    }
 }
 
 export class TrackDialog extends Dialog {
@@ -67,7 +88,7 @@ export class TrackDialog extends Dialog {
     track: Track;
     inputName = new LabeledInput({ label: I`Name` });
     inputArtist = new LabeledInput({ label: I`Artist` });
-    inputLyrics = new LabeledInput({ label: I`Lyrics` });
+    inputLyrics = new LabeledInputWithLoading({ label: I`Lyrics` });
     btnSave = new TabBtn({ text: I`Save`, right: true });
     btnEditLyrics = new TabBtn({ text: I`Edit Lyrics`, right: true });
     autoFocus = this.inputName.input;
@@ -79,7 +100,8 @@ export class TrackDialog extends Dialog {
         this.inputLyrics.input = new LyricsSourceEditView();
         this.inputLyrics.input.dom.style.resize = 'none';
         this.inputLyrics.dom.style.flex = '1';
-        this.inputLyrics.dominput.style.minHeight = '5em';
+        this.inputLyrics.dominput.style.minHeight = '3em';
+        this.inputLyrics.dominput.style.height = '6em';
         [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
         this.addBtn(this.btnSave);
         this.btnSave.onClick.add(() => this.save());
@@ -103,7 +125,16 @@ export class TrackDialog extends Dialog {
         this.title = I`Track ID` + ' ' + t.id;
         this.inputName.updateWith({ value: t.name });
         this.inputArtist.updateWith({ value: t.artist });
-        this.inputLyrics.updateWith({ value: t.lyrics });
+        if (t.isLyricsGotten()) {
+            this.inputLyrics.loaded = true;
+            this.inputLyrics.updateWith({ value: t.lyrics });
+        } else {
+            this.inputLyrics.loaded = false;
+            t.getLyrics().then(l => {
+                this.inputLyrics.loaded = true;
+                this.inputLyrics.updateWith({ value: t.lyrics });
+            });
+        }
         this.updateDom();
     }
     async save() {
@@ -129,5 +160,19 @@ export class TrackDialog extends Dialog {
             await utils.sleepAsync(3000);
         }
         this.btnSave.updateWith({ clickable: true, text: I`Save` });
+    }
+}
+
+class LabeledInputWithLoading extends LabeledInput {
+    loadingIndicator = new LoadingIndicator();
+    get loaded() { return !this.loadingIndicator.hidden; }
+    set loaded(val) {
+        this.loadingIndicator.hidden = val;
+        this.input.hidden = !val;
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.appendView(this.loadingIndicator);
+        this.loaded = false;
     }
 }

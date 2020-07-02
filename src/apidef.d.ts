@@ -58,6 +58,13 @@ export namespace Api {
         urlurl?: string;
     }
 
+    /**
+     * GET {api}/tracks/{id}/lyrics
+     */
+    interface TrackLyrics {
+        lyrics: string;
+    }
+
     /** 
      * [Get info of existing user]
      * GET {api}/users/me

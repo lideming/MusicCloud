@@ -89,11 +89,24 @@ class PlayingView extends ContentView {
         super.onRemove();
         this.lyricsView.onHide();
     }
-    checkTrack() {
+    _checkTrackVersion = 0;
+    async checkTrack() {
+        var version = ++this._checkTrackVersion;
         this.updateDom();
-        this.editBtn.hidden = !playerCore.track;
-        var newLyrics = playerCore.track?.lyrics || '';
-        this.lyricsView.track = playerCore.track;
+        const newTrack = playerCore.track;
+        let newLyrics = '';
+        this.editBtn.hidden = !newTrack;
+        this.lyricsView.track = newTrack;
+
+        if (newTrack && !newTrack.isLyricsGotten()) {
+            this.lyricsView.reset();
+            this.lyricsView.setLyrics(I`Loading lyrics...`);
+            newLyrics = await newTrack.getLyrics();
+            if (version != this._checkTrackVersion) return;
+        } else {
+            newLyrics = newTrack?.lyrics || '';
+        }
+        
         if (this.loadedLyrics != newLyrics) {
             this.loadedLyrics = newLyrics;
             this.lyricsView.reset();
