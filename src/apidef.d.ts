@@ -48,6 +48,7 @@ export namespace Api {
         size?: number;
         length?: number;
         files?: TrackFile[];
+        version?: number;
     }
 
     interface TrackFile {

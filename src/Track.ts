@@ -148,12 +148,26 @@ export class TrackDialog extends Dialog {
                     id: this.track.id,
                     name: this.inputName.value,
                     artist: this.inputArtist.value,
-                    lyrics: this.inputLyrics.value
+                    lyrics: this.inputLyrics.loaded ? this.inputLyrics.value : undefined,
+                    version: this.track.infoObj?.version
                 }
             }) as Api.Track;
-            if (newinfo.id != this.track.id) throw new Error('Bad ID in response');
-            api.onTrackInfoChanged.invoke(newinfo);
-            this.close();
+            if (newinfo['error']) {
+                if (newinfo['error'] == 'track_changed') {
+                    Toast.show(I`The track was changed from somewhere else.`, 5000);
+                    newinfo = newinfo['track'];
+                    if (newinfo.id != this.track.id) throw new Error('Bad ID in response');
+                    this.track.updateFromApiTrack(newinfo);
+                    api.onTrackInfoChanged.invoke(newinfo);
+                    this.setTrack(this.track);
+                } else {
+                    throw new Error("Unknown track update error");
+                }
+            } else {
+                if (newinfo.id != this.track.id) throw new Error('Bad ID in response');
+                api.onTrackInfoChanged.invoke(newinfo);
+                this.close();
+            }
         } catch (error) {
             console.error('[Track] saving error', error);
             this.btnSave.updateWith({ clickable: false, text: I`Error` });
@@ -165,7 +179,7 @@ export class TrackDialog extends Dialog {
 
 class LabeledInputWithLoading extends LabeledInput {
     loadingIndicator = new LoadingIndicator();
-    get loaded() { return !this.loadingIndicator.hidden; }
+    get loaded() { return this.loadingIndicator.hidden; }
     set loaded(val) {
         this.loadingIndicator.hidden = val;
         this.input.hidden = !val;
