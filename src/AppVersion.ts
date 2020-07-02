@@ -8,14 +8,14 @@ export const appVersion = new class {
     prevVersion = '';
     versionChanged = false;
     init() {
-        this.versionChanged = !!this.currentVersion && (this.siVersion.data != this.currentVersion);
+        this.versionChanged = (this.siVersion.data != this.currentVersion);
         this.prevVersion = this.siVersion.data;
         this.siVersion.set(this.currentVersion);
     }
     showUpdatedToast() {
         if (this.versionChanged) {
             Toast.show(
-                I`Client updated:\nCurrent: ${this.currentVersion}\nPrevious: ${this.prevVersion}`,
+                I`Client updated:\n${this.prevVersion}\n  =>\n${this.currentVersion}`,
                 5000);
         }
     }
