@@ -308,7 +308,7 @@ html, body {
     display: block;
     padding: 10px;
     /* background: #ddd; */
-    animation: showing .3s backwards;
+    animation: showing .3s forwards;
     text-decoration: none;
     line-height: 1.2;
 }
