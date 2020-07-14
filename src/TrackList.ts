@@ -84,7 +84,7 @@ export class TrackList {
     }
     async _post() {
         await user.waitLogin();
-        if (this.apiid !== undefined) throw new Error('cannot post: apiid exists');
+        if (this.apiid != null) throw new Error('cannot post: apiid exists');
         var obj: Api.TrackListPut = {
             id: 0,
             name: this.name ?? '',
