@@ -1084,8 +1084,12 @@ textarea.input-text {
 .playingview .name, .playingview .artist {
     font-size: 120%;
     text-align: center;
-    margin: 10px 20px;
+    margin: 0 20px 10px;
     animation: showing .3s;
+}
+
+.playingview .name {
+    margin-top: 5px;
 }
 
 .playingview .pic {
