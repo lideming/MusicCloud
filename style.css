@@ -948,6 +948,7 @@ textarea.input-text {
     background: var(--color-bg);
     border: solid 1px #777;
     box-shadow: 0 0px 5px rgb(180, 180, 180);
+    min-width: 100px;
     max-width: 450px;
     outline: none;
     z-index: 10001;
