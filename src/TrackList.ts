@@ -308,8 +308,8 @@ export class TrackListView extends ListContentView {
             }
         } else if (playing) {
             const track = item.track;
-            if ((playing._bind?.list === this.list && track === playing)
-                || (!this.curPlaying && track.id === playing.id)) {
+            if (track === playing
+                || (!this.curPlaying.current && track.id === playing.id)) {
                 this.curPlaying.set(item);
             }
         }
