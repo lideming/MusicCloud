@@ -1,5 +1,5 @@
 import { Track } from './Track';
-import { ContentView, ContentHeader, SidebarItem, ui, ActionBtn } from './UI';
+import { ui } from './UI';
 import { I } from './I18n';
 import { BuildDomExpr, utils } from './utils';
 import { LyricsView, SpanView } from './LyricsView';
@@ -7,6 +7,7 @@ import { router } from './Router';
 import { serialize, parse } from './Lyrics';
 import { playerCore } from './PlayerCore';
 import { Toast, InputView } from '@yuuza/webfx/lib/viewlib';
+import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
 
 export var lyricsEdit = new class {
     sidebarItem: SidebarItem;

@@ -6,7 +6,8 @@ import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
 import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";
-import { ui, SidebarItem } from "./UI";
+import { ui } from "./UI";
+import { SidebarItem } from "./ui-views"
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { uploads } from "./Uploads";

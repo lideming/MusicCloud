@@ -6,7 +6,17 @@ This repo contains the frontend parts of MusicCloud.
 
 ## Build
 
+First install development dependencies:
+
+```
+npm install -g rollup
+npm install
+```
+
+Then start the building process:
+
 ```
 npm run build
 ```
-(Generates `bundle.js` from typescript files)
+
+Now `bundle.js` should be generated from typescript files.

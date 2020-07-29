@@ -2,7 +2,7 @@
 
 import { View, ListViewItem, ListView, LoadingIndicator } from "./viewlib";
 import { utils, I } from "./utils";
-import { ContentView, ContentHeader, ActionBtn } from "./UI";
+import { ContentView, ContentHeader, ActionBtn } from "./ui-views";
 
 class DataBackedListViewItem extends ListViewItem {
     data: any;

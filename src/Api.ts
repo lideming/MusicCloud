@@ -1,11 +1,10 @@
 // file: Api.ts
 
-import { settings } from "./main";
+import { settings } from "./Settings";
 import { Callbacks, Action, utils, CancelToken } from "./utils";
 import { Api } from "./apidef";
 
 
-/** API 操作 */
 export var api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     storageUrlBase = '';

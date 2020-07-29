@@ -1,7 +1,8 @@
 // file: Router.ts
 
-import { ContentView, ui, SidebarItem } from "./UI";
+import { ui } from "./UI";
 import { Callbacks } from "./utils";
+import { ContentView, SidebarItem } from "./ui-views";
 
 export interface Route {
     path: string[];

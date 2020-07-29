@@ -1,117 +1,16 @@
 // file: UI.ts
 
 import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, EditableHelper, ContainerView } from "./viewlib";
+import * as views from "./ui-views";
 
-export class SidebarItem extends ListViewItem {
-    text: string;
-    get onclick() { return this.onactive; }
-    set onclick(val) { this.onactive = val; }
-    constructor(init?: Partial<SidebarItem>) {
-        super();
-        utils.objectApply(this, init);
-    }
-    protected createDom(): BuildDomExpr {
-        return {
-            tag: 'li.item.no-selection',
-            tabIndex: 0,
-            text: () => this.text
-        };
-    }
-    bindContentView(viewFunc: Func<ContentView>) {
-        var view: ContentView;
-        this.onclick = () => {
-            if (!view) view = viewFunc();
-            ui.content.setCurrent(view);
-            ui.sidebarList.setActive(this);
-        };
-        return this;
-    }
-}
-
-export class ContentView extends View {
-    dom: HTMLElement;
-
-    private _isVisible = false;
-    public get isVisible() { return this._isVisible; }
-
-    onShow() {
-        this._isVisible = true;
-    }
-    onDomInserted() { }
-    onRemove() {
-        this._isVisible = false;
-        this._shownEvents?.removeAll();
-    }
-
-    _shownEvents: EventRegistrations | null = null;
-    get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }
-}
-
-export class ContentHeader extends View {
-    catalog: string;
-    title: string;
-    titleEditable = false;
-    editHelper: EditableHelper;
-    actions = new ContainerView<ActionBtn>({ tag: 'div.actions' });
-    onTitleEdit: (title: string) => void;
-    constructor(init?: Partial<ContentHeader>) {
-        super();
-        if (init) utils.objectApply(this, init);
-        this.titleView.onactive = async () => {
-            if (!this.titleEditable) return;
-            this.editHelper = this.editHelper || new EditableHelper(this.titleView.dom);
-            if (this.editHelper.editing) return;
-            var newName = await this.editHelper.startEditAsync();
-            if (newName !== this.editHelper.beforeEdit && newName != '') {
-                this.onTitleEdit(newName);
-            }
-            this.updateDom();
-        };
-    }
-    createDom(): BuildDomExpr {
-        return {
-            tag: 'div.content-header',
-            child: [
-                this.titlebar
-            ]
-        };
-    }
-    titleView = new View({
-        tag: 'span.title.no-selection', text: () => this.title,
-        update: (dom) => {
-            utils.toggleClass(dom, 'editable', !!this.titleEditable);
-            if (this.titleEditable) dom.title = I`Click to edit`;
-            else dom.removeAttribute('title');
-            dom.tabIndex = this.titleEditable ? 0 : -1;
-        }
-    });
-    titlebar = new View({
-        tag: 'div.titlebar.clearfix',
-        child: [
-            { tag: 'span.catalog.no-selection', text: () => this.catalog, hidden: () => !this.catalog },
-            this.titleView,
-            this.actions
-        ]
-    });
-    updateDom() {
-        super.updateDom();
-        this.titlebar.updateDom();
-        this.titleView.updateDom();
-    }
-}
-
-export class ActionBtn extends TextView {
-    get onclick() { return this.onactive; }
-    set onclick(val) { this.onactive = val; }
-    get active() { return this.dom.classList.contains('active'); }
-    set active(val) { this.toggleClass('active', val); }
-    constructor(init?: Partial<ActionBtn>) {
-        super();
-        utils.objectApply(this, init);
-    }
-    createDom(): BuildDomExpr {
-        return { tag: 'span.action.clickable.no-selection', tabIndex: 0 };
-    }
+views.SidebarItem.prototype.bindContentView = function(viewFunc: Func<views.ContentView>) {
+    var view: views.ContentView;
+    this.onclick = () => {
+        if (!view) view = viewFunc();
+        ui.content.setCurrent(view);
+        ui.sidebarList.setActive(this);
+    };
+    return this;
 }
 
 import { router } from "./Router";
@@ -477,7 +376,7 @@ export const ui = new class {
     };
     sidebarLogin = new class {
         container = document.getElementById('sidebar-login')!;
-        loginState = new SidebarItem();
+        loginState = new views.SidebarItem();
         init() {
             this.container.appendView(this.loginState);
             this.loginState.dom.id = 'login-state';
@@ -521,7 +420,7 @@ export const ui = new class {
     };
     content = new class {
         container = document.getElementById('content-outer')!;
-        current: ContentView | null = null;
+        current: views.ContentView | null = null;
         removeCurrent() {
             const cur = this.current;
             this.current = null;
@@ -529,7 +428,7 @@ export const ui = new class {
             cur.onRemove();
             if (cur.dom) this.container.removeChild(cur.dom);
         }
-        setCurrent(arg: ContentView | null) {
+        setCurrent(arg: views.ContentView | null) {
             if (arg === this.current) return;
             this.removeCurrent();
             if (arg) {

@@ -1,6 +1,6 @@
 // file: discussion.ts
 
-import { ui, SidebarItem } from "./UI";
+import { ui } from "./UI";
 import { api } from "./Api";
 import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView } from "./viewlib";
 import { I, Lazy, Action, BuildDomExpr, utils, DataUpdatingHelper } from "./utils";
@@ -9,6 +9,7 @@ import { ListContentView } from "./ListContentView";
 import { Api } from "./apidef";
 import { router } from "./Router";
 import { msgcli } from "./MessageClient";
+import { SidebarItem } from "./ui-views";
 
 class CommentsView {
     endpoint: string;

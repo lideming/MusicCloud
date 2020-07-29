@@ -1,9 +1,10 @@
 import { router } from './Router';
-import { ContentView, SidebarItem, ui, ContentHeader, ActionBtn } from './UI';
+import { ui } from './UI';
 import { Lazy, I, BuildDomExpr, SettingItem } from './utils';
 import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
 import { api } from './Api';
+import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
 
 
 export var nowPlaying = new class {

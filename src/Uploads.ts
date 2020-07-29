@@ -10,8 +10,9 @@ import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView } from ".
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
-import { ui, ContentHeader } from "./UI";
+import { ui } from "./UI";
 import { api } from "./Api";
+import { ContentHeader } from "./ui-views";
 
 
 class UploadTrack extends Track {

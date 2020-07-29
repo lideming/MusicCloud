@@ -1,11 +1,14 @@
 {
-  "name": "yuuza-mcloud",
+  "name": "@yuuza/mcloud",
   "version": "1.0.0",
   "description": "The MusicCloud website.",
-  "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "bundle.js",
   "scripts": {
-    "build": "node index.js build",
-    "watch": "node index.js watch"
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
   },
   "repository": {
     "type": "git",
@@ -20,13 +23,17 @@
     "url": "https://github.com/lideming/MusicCloud/issues"
   },
   "homepage": "https://github.com/lideming/MusicCloud",
-  "dependencies": {
-    "@yuuza/webfx": "^1.0.19"
-  },
+  "files": [
+    "bundle.js",
+    "index.html",
+    "style.css"
+  ],
+  "dependencies": {},
   "devDependencies": {
-    "browserify": "^16.5.1",
-    "tsify": "^4.0.2",
-    "typescript": "^3.9.7",
-    "watchify": "^3.11.1"
+    "@rollup/plugin-node-resolve": "^8.4.0",
+    "@rollup/plugin-typescript": "^5.0.2",
+    "@yuuza/webfx": "^1.1.0",
+    "tslib": "^2.0.0",
+    "typescript": "^3.9.7"
   }
 }

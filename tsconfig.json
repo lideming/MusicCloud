@@ -1,18 +1,15 @@
 {
     "files": ["src/main.ts"],
+    "include": ["./src"],
     "compilerOptions": {
-        "module": "CommonJS",
+        "module": "ES2015",
         "target": "ES2015",
-        "jsx": "preserve",
-        "lib": ["dom", "es2015"],
+        "lib": ["DOM", "ES2015"],
+        "moduleResolution": "Node",
         "sourceMap": false,
         "downlevelIteration": true,
         "noImplicitThis": true,
         "strictNullChecks": true,
         "noEmitHelpers": true
-    },
-    "exclude": [
-        "node_modules",
-        "**/node_modules/*"
-    ]
+    }
 }

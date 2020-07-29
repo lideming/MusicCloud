@@ -7,10 +7,10 @@ import { user } from "./User";
 import { Api } from "./apidef";
 import { api } from "./Api";
 import { listIndex } from "./ListIndex";
-import { ContentView, ContentHeader } from "./UI";
 import { playerCore, PlayingLoopMode } from "./PlayerCore";
 import { router } from "./Router";
 import { Track } from "./Track";
+import { ContentView, ContentHeader } from "./ui-views";
 
 export class TrackList {
     info: Api.TrackListInfo | null = null;
