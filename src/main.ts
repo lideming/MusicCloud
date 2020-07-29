@@ -24,7 +24,7 @@ import * as Lyrics from "./Lyrics";
 import { lyricsEdit } from "./LyricsEdit";
 import { appVersion } from "./AppVersion";
 import { settings } from "./Settings";
-import * as webfx from "@yuuza/webfx/lib/webfx";
+import * as webfx from "@yuuza/webfx";
 
 console.timeEnd('[Main] modules importing');
 
