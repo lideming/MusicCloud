@@ -3,7 +3,8 @@
 import { ui } from "./UI";
 import { api } from "./Api";
 import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView } from "./viewlib";
-import { I, Lazy, Action, BuildDomExpr, utils, DataUpdatingHelper } from "./utils";
+import { Lazy, Action, BuildDomExpr, utils, DataUpdatingHelper } from "./utils";
+import { I } from "./I18n";
 import { user } from "./User";
 import { ListContentView } from "./ListContentView";
 import { Api } from "./apidef";

@@ -1,4 +1,5 @@
-import { utils, I, TextCompositionWatcher } from "./utils";
+import { utils, TextCompositionWatcher } from "./utils";
+import { I } from "./I18n";
 import { Toast, Dialog, LabeledInput, TabBtn, LoadingIndicator } from "./viewlib";
 import { Api } from "./apidef";
 import { api } from "./Api";

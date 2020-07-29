@@ -1,4 +1,5 @@
-import { SettingItem, I } from './utils';
+import { SettingItem } from './utils';
+import { I } from "./I18n";
 import { Toast } from './viewlib';
 import buildInfo from './buildInfo';
 

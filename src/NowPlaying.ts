@@ -1,6 +1,7 @@
 import { router } from './Router';
 import { ui } from './UI';
-import { Lazy, I, BuildDomExpr, SettingItem } from './utils';
+import { Lazy, BuildDomExpr, SettingItem } from './utils';
+import { I } from "./I18n";
 import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
 import { api } from './Api';

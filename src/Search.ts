@@ -1,6 +1,7 @@
 import { router } from './Router';
 import { ui } from './UI';
-import { Lazy, I, Callbacks, BuildDomExpr } from './utils';
+import { Lazy, Callbacks, BuildDomExpr } from './utils';
+import { I } from "./I18n";
 import { ListContentView } from './ListContentView';
 import { InputView, View, ButtonView, LoadingIndicator, ListView } from './viewlib';
 import { api } from './Api';

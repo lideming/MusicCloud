@@ -1,6 +1,7 @@
 // file: User.ts
 
-import { SettingItem, Callbacks, Action, I, utils } from "./utils";
+import { SettingItem, Callbacks, Action, utils } from "./utils";
+import { I } from "./I18n";
 import { listIndex } from "./ListIndex";
 import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast } from "./viewlib";
 import { Api } from "./apidef";

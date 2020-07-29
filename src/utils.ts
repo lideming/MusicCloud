@@ -1,1 +1,1 @@
-export * from "@yuuza/webfx/lib/utils"
+export * from "@yuuza/webfx/lib/utils";

@@ -1,7 +1,8 @@
 // file: ListContentView.ts
 
 import { View, ListViewItem, ListView, LoadingIndicator } from "./viewlib";
-import { utils, I } from "./utils";
+import { utils } from "./utils";
+import { I } from "./I18n";
 import { ContentView, ContentHeader, ActionBtn } from "./ui-views";
 
 class DataBackedListViewItem extends ListViewItem {

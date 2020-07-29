@@ -1,5 +1,6 @@
 import { View, ContainerView, ItemActiveHelper } from "./viewlib";
-import { BuildDomExpr, utils, Callbacks, Action, I, Timer } from "./utils";
+import { BuildDomExpr, utils, Callbacks, Action, Timer } from "./utils";
+import { I } from "./I18n";
 import { parse, Lyrics, Line, Span } from "./Lyrics";
 import { playerCore } from "./PlayerCore";
 import { Track } from "./Track";

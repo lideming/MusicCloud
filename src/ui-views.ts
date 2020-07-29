@@ -1,6 +1,7 @@
 // file: ui-views.ts
 import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, EditableHelper, ContainerView } from "./viewlib";
-import { utils, BuildDomExpr, Func, EventRegistrations, I } from "@yuuza/webfx/lib/utils";
+import { utils, BuildDomExpr, Func, EventRegistrations } from "./utils";
+import { I } from "./I18n";
 
 export class SidebarItem extends ListViewItem {
     text: string;

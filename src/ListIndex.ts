@@ -1,7 +1,8 @@
 // file: ListIndex.ts
 
 import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast } from "./viewlib";
-import { I, utils, BuildDomExpr } from "./utils";
+import { utils, BuildDomExpr } from "./utils";
+import { I } from "./I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
 import { user } from "./User";
 import { Api } from "./apidef";

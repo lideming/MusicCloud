@@ -1,6 +1,7 @@
 // file: TrackList.ts
 
-import { utils, I, BuildDomExpr, DataUpdatingHelper } from "./utils";
+import { utils, BuildDomExpr, DataUpdatingHelper } from "./utils";
+import { I } from "./I18n";
 import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
