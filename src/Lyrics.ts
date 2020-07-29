@@ -70,11 +70,11 @@ class Lexer {
         var cur = this.cur;
         try {
             if (cur === str.length)
-                return new Token(T.eof, 'eof', cur);
+                return new Token(T.eof, '[eof]', cur);
             while (true) {
                 var ch = str.charCodeAt(cur);
                 var chCur = cur++;
-                if (!(ch >= 0)) return new Token(T.eof, 'eof', chCur);
+                if (!(ch >= 0)) return new Token(T.eof, '[eof]', chCur);
                 const tokenType = mapCharToken[ch];
                 if (tokenType !== undefined) {
                     if (tokenType === null) continue; // ignore charater
@@ -206,17 +206,20 @@ export class Parser {
         var lastSpan: Span | null = null;
         var curTime: number | null = null;
         var timeStamp: TimeStamp | null = null;
+        const lineStart = lex.peek().pos;
         while (true) {
-            if (lex.tryExpect(T.tagBegin)) {
-                var beginTag = lex.consume();
+            if (lex.tryExpectAndConsume(T.tagBegin)) {
                 let text: string | null = null;
                 let ts: TimeStamp | null;
                 if (lex.tryExpect(T.tagEnd)) {
                     ts = { time: -1, beats: null, beatsDiv: null };
-                } else {
+                } else if (lex.tryExpect(T.text)) {
                     text = lex.expectAndConsume(T.text).val;
                     ts = this.parseTimestamp(text,
                         (curTime != null && curTime >= 0) ? curTime : (this.curTime ?? 0));
+                } else {
+                    this.pushRawLine(startTime, lineStart);
+                    return;
                 }
                 if (lex.tryExpectSeq([T.tagEnd, T.bracketBegin])) {
                     lex.consume(); lex.consume();
@@ -259,14 +262,7 @@ export class Parser {
                 } else {
                     if (!lastSpan) {
                         // unknown tag at the beginning of the line, so skip this line.
-                        this.skipLine();
-                        this.lines.push({
-                            startTime,
-                            orderTime: startTime ?? this.curTime,
-                            translation: null,
-                            spans: null,
-                            rawLine: lex.str.substring(beginTag.pos, lex.peek().pos)
-                        });
+                        this.pushRawLine(startTime, lineStart);
                         return;
                     } else {
                         spans.push(lastSpan = { text: '[' + text + ']', ruby: null, startTime: curTime, timeStamp: null });
@@ -291,8 +287,8 @@ export class Parser {
             } else if (lex.tryExpect(T.eof)) {
                 break;
             } else {
-                this.skipLine();
-                break;
+                this.pushRawLine(startTime, lineStart);
+                return;
             }
         }
         if (timeStamp) {
@@ -342,6 +338,16 @@ export class Parser {
     skipLineFeeds() {
         while (this.lex.tryExpect(T.lineFeed))
             this.lex.consume();
+    }
+    pushRawLine(startTime: number | null, start: number) {
+        this.skipLine();
+        this.lines.push({
+            startTime,
+            orderTime: startTime ?? this.curTime,
+            translation: null,
+            spans: null,
+            rawLine: this.lex.str.substring(start, this.lex.peek().pos)
+        });
     }
     parseTimestamp(str: string, curTime: number | null): TimeStamp | null {
         var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
