@@ -2,7 +2,7 @@ import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
 import { I, i18n } from "./I18n";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
-import { buildInfo } from "./buildInfo";
+import { appVersion } from "./AppVersion";
 
 export var settingsUI = new class {
     dialog: SettingsDialog;
@@ -54,9 +54,9 @@ class SettingsDialog extends Dialog {
             child: [
                 {
                     tag: 'div', style: 'width: 100%; color: var(--color-text-gray);',
-                    text: buildInfo.buildDate
+                    text: appVersion.currentDate ? 'Build: ' + appVersion.currentDate : ''
                 },
-                { tag: 'div', text: 'MusicCloud ' + buildInfo.version },
+                { tag: 'div', text: 'MusicCloud ' + appVersion.currentVersion },
                 {
                     tag: 'a.clickable', style: 'color: inherit;',
                     text: () => I`Source code`, href: 'https://github.com/lideming/MusicCloud',
