@@ -8,7 +8,8 @@
   "main": "bundle.js",
   "scripts": {
     "build": "rollup -c",
-    "watch": "rollup -c -w"
+    "watch": "rollup -c -w",
+    "prepack": "npm run build"
   },
   "repository": {
     "type": "git",
