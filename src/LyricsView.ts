@@ -214,13 +214,13 @@ export class LyricsView extends View {
         this.dom.scrollTop = this.scrollPos = 0;
     }
     onShow() {
-        this.dom.scrollTop = this.scrollPos;
+        this.setCenterPos(this.scrollPos);
         if (this.isTrackPlaying()) this.setCurrentTime(playerCore.currentTime);
         requestAnimationFrame(this._resize);
         window.addEventListener('resize', this._resize);
     }
     onHide() {
-        this.scrollPos = this.dom.scrollTop;
+        this.scrollPos = this.getCenterPos();
         window.removeEventListener('resize', this._resize);
         this.timer.tryCancel();
     }
