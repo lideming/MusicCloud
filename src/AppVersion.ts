@@ -17,7 +17,7 @@ export const appVersion = new class {
     showUpdatedToast() {
         if (this.versionChanged) {
             Toast.show(
-                I`Client updated:\n${this.prevDate}\n  =>\n${this.currentDate}`,
+                I`Client updated:\n${this.prevDate||I`[Unknown version]`}\n  =>\n${this.currentDate||I`[Unknown version]`}`,
                 5000);
         }
     }
