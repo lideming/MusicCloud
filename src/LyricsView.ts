@@ -60,6 +60,12 @@ export class LyricsView extends View {
                 this.scale = scale;
             }
         });
+        this.dom.addEventListener('scroll', (ev) => {
+            if (!this._posChanged) {
+                this.setScrollingPause(5000);
+            }
+            this._posChanged = false;
+        });
     }
     setLyrics(lyrics: string | Lyrics) {
         let msg = '';
@@ -114,7 +120,8 @@ export class LyricsView extends View {
         if (scroll && scroll !== 'smooth' && line && (prev !== line || scroll === 'force')) {
             this.scrollAnimator.cancel();
             this.setCenterPos(line.dom.offsetTop + line.dom.offsetHeight / 2);
-        } else if (scroll === 'smooth' && laterLine && laterLine !== this.scrollingTarget) {
+        } else if (scroll === 'smooth' && !this.isScrollingPaused()
+            && laterLine && laterLine !== this.scrollingTarget) {
             this.scrollingTarget = laterLine;
             this.scrollAnimator.duration = 300 / playerCore.playbackRate;
             this.scrollAnimator.scrollTo(laterLine.dom.offsetTop + laterLine.dom.offsetHeight / 2);
@@ -171,10 +178,12 @@ export class LyricsView extends View {
             return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
         }
     };
+    _posChanged = false;
     getCenterPos() {
         return this.dom.scrollTop + this.dom.offsetHeight / 2;
     }
     setCenterPos(centerY: number) {
+        this._posChanged = true;
         this.dom.scrollTop = centerY - this.dom.offsetHeight / 2;
     }
     resize() {
@@ -236,6 +245,15 @@ export class LyricsView extends View {
     };
     private isTrackPlaying() {
         return playerCore.track && playerCore.track === this.track && playerCore.track.id === this.track.id;
+    }
+
+
+    pauseScrollTime: number | null = null;
+    isScrollingPaused() {
+        return this.pauseScrollTime && Date.now() < this.pauseScrollTime;
+    }
+    setScrollingPause(timeout: number) {
+        this.pauseScrollTime = Math.max(this.pauseScrollTime || 0, Date.now() + timeout);
     }
 
 
