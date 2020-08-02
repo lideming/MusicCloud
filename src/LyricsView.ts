@@ -284,6 +284,7 @@ export class LyricsView extends View {
 export class LineView extends ContainerView<SpanView> {
     line: Line;
     get spans() { return this.items; }
+    currentIndex = 0;
     lyricsView: LyricsView;
     constructor(line: Line, lyricsView: LyricsView) {
         super({ tag: 'p.line' });
@@ -303,9 +304,18 @@ export class LineView extends ContainerView<SpanView> {
         }
     }
     setCurrentTime(time: number) {
-        this.spans.forEach(s => {
-            s.toggleClass('active', s.span.startTime! <= time);
-        });
+        const items = this.items; // assume it's sorted
+        let i = this.currentIndex;
+        while (1) {
+            if (i < items.length && items[i].startTime! <= time) {
+                items[i].toggleClass('active', true);
+                i++;
+            } else if (i > 0 && items[i - 1].startTime! > time) {
+                items[i - 1].toggleClass('active', false);
+                i--;
+            } else break;
+        }
+        this.currentIndex = i;
     }
 }
 
@@ -326,24 +336,18 @@ export class SpanView extends View {
     }
     createDom() {
         var s = this.span;
-        if (!s.ruby) {
-            return utils.buildDOM({
-                tag: 'span.span', text: s.text
-            });
-        } else {
-            return utils.buildDOM({
-                tag: 'span.span',
-                child: {
-                    tag: 'ruby',
-                    child: [
-                        s.text,
-                        { tag: 'rp', text: '(' },
-                        { tag: 'rt', text: s.ruby },
-                        { tag: 'rp', text: ')' }
-                    ]
-                }
-            });
-        }
+        return utils.buildDOM({
+            tag: 'span.span',
+            child: !s.ruby ? s.text : {
+                tag: 'ruby',
+                child: [
+                    s.text,
+                    { tag: 'rp', text: '(' },
+                    { tag: 'rt', text: s.ruby },
+                    { tag: 'rp', text: ')' }
+                ]
+            }
+        });
     }
     postCreateDom() {
         super.postCreateDom();
