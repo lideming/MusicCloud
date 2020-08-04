@@ -151,7 +151,7 @@ export const ui = new class {
         }
         toggle(state?: boolean, hideTimeout?: number) {
             this.shown = utils.toggleClass(this.container, 'show', state);
-            if (!state && this.shown && !this.pinned) this.updateState(hideTimeout);
+            if (state && !this.pinned) this.updateState(hideTimeout);
         }
         private updateState(timeout = 200) {
             var showing = this.pinned || this.mouseInside || (this.focusInside && ui.usingKeyboardInput);
