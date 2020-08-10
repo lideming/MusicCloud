@@ -6,7 +6,7 @@ import { LyricsView, SpanView } from './LyricsView';
 import { router } from './Router';
 import { serialize, parse } from './Lyrics';
 import { playerCore } from './PlayerCore';
-import { Toast, InputView } from '@yuuza/webfx/lib/viewlib';
+import { Toast, InputView } from './viewlib';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
 
 export var lyricsEdit = new class {

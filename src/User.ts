@@ -1,6 +1,6 @@
 // file: User.ts
 
-import { SettingItem, Callbacks, Action, utils } from "./utils";
+import { SettingItem, Callbacks, Action, TextCompositionWatcher, utils } from "./utils";
 import { I } from "./I18n";
 import { listIndex } from "./ListIndex";
 import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast } from "./viewlib";
@@ -12,7 +12,6 @@ import { uploads } from "./Uploads";
 import { TrackList } from "./TrackList";
 import { Track } from "./Track";
 import { settingsUI } from "./SettingsUI";
-import { TextCompositionWatcher } from "@yuuza/webfx/lib/utils";
 
 export var user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
