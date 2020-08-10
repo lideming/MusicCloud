@@ -43,9 +43,9 @@ export const msgcli = new class {
         }, null);
     }
     private getUrl() {
-        var match = api.baseUrl.match(/^(((https?):)?\/\/([\w\-\.:]))?(\/)?(.*)$/);
+        var match = api.baseUrl.match(/^(?:(https?:)?\/\/([\w\-\.:]))?(\/)?(.*)$/);
         if (!match) throw new Error('cannot generate websocket URL');
-        var [_, _, protocol, _, host, pathroot, path] = match;
+        var [_, protocol, host, pathroot, path] = match;
         protocol = protocol || window.location.protocol;
         host = host || window.location.host;
         protocol = protocol === 'https:' ? 'wss://' : 'ws://';
