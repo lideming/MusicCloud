@@ -965,6 +965,10 @@ textarea.input-text {
     color: white;
 }
 
+*.menu-shown {
+    background: var(--color-bg-dd);
+}
+
 .menu-info {
     white-space: pre-wrap;
     color: var(--color-text-gray);

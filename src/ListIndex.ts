@@ -8,7 +8,7 @@ import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";
 import { ui } from "./UI";
-import { SidebarItem } from "./ui-views"
+import { SidebarItem } from "./ui-views";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { uploads } from "./Uploads";
@@ -261,7 +261,7 @@ export class ListIndexViewItem extends SidebarItem {
         }));
         if (m.length) {
             ev.preventDefault();
-            m.show({ ev: ev });
+            ui.showContextMenuForItem([item], m, { ev: ev });
         }
     };
 }

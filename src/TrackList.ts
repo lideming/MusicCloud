@@ -12,6 +12,7 @@ import { playerCore, PlayingLoopMode } from "./PlayerCore";
 import { router } from "./Router";
 import { Track } from "./Track";
 import { ContentView, ContentHeader } from "./ui-views";
+import { ui } from "./UI";
 
 export class TrackList {
     info: Api.TrackListInfo | null = null;
@@ -418,7 +419,7 @@ export class TrackViewItem extends ListViewItem {
                 + I`Size` + ': ' +
                 utils.formatFileSize(utils.arraySum(selected, x => x.track.size!))
         }));
-        m.show({ ev: ev });
+        ui.showContextMenuForItem(selected, m, { ev: ev });
     };
 }
 

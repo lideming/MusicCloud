@@ -1,9 +1,9 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, EditableHelper, ContainerView } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu } from "./viewlib";
 import * as views from "./ui-views";
 
-views.SidebarItem.prototype.bindContentView = function(viewFunc: Func<views.ContentView>) {
+views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.ContentView>) {
     var view: views.ContentView;
     this.onclick = () => {
         if (!view) view = viewFunc();
@@ -11,7 +11,7 @@ views.SidebarItem.prototype.bindContentView = function(viewFunc: Func<views.Cont
         ui.sidebarList.setActive(this);
     };
     return this;
-}
+};
 
 import { router } from "./Router";
 import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer, EventRegistrations } from "./utils";
@@ -505,6 +505,14 @@ export const ui = new class {
             }
         }
     };
+
+    showContextMenuForItem(items: ListViewItem[], menu: ContextMenu, ...args: Parameters<ContextMenu['show']>) {
+        menu.show(...args);
+        items.forEach(t => t.toggleClass('menu-shown', true));
+        menu.onClose.add(() => {
+            items.forEach(t => t.toggleClass('menu-shown', false));
+        });
+    }
 }; // ui
 
 
