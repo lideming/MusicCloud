@@ -3,10 +3,6 @@
 
 // Why do we need to use React and Vue.js? ;)
 
-console.time('[Main] init');
-
-console.time('[Main] modules importing');
-
 import { Toast, ToastsContainer } from "./viewlib";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
@@ -25,8 +21,6 @@ import { lyricsEdit } from "./LyricsEdit";
 import { appVersion } from "./AppVersion";
 import { settings } from "./Settings";
 import * as webfx from "@yuuza/webfx";
-
-console.timeEnd('[Main] modules importing');
 
 export var app = window['app'] = {
     webfx,
@@ -56,5 +50,3 @@ export var app = window['app'] = {
 app.init();
 
 window['preload'].jsOk();
-
-console.timeEnd('[Main] init');
