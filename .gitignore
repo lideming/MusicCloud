@@ -1,4 +1,5 @@
-storage/
-api/
-node_modules/
-bundle.js
+/storage/
+/api/
+/node_modules/
+/bundle.js
+/bundle.js.map
