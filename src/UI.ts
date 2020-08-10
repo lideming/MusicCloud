@@ -21,7 +21,6 @@ import { user } from "./User";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 import { uploads } from "./Uploads";
 
-/** 常驻 UI 元素操作 */
 export const ui = new class {
     usingKeyboardInput = false;
     init() {
@@ -514,11 +513,6 @@ export const ui = new class {
         });
     }
 }; // ui
-
-
-interface ContentViewState {
-    scrollTop: number;
-}
 
 class ProgressButton extends View {
     fill = new View({
