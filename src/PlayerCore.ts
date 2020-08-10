@@ -9,7 +9,6 @@ import { Api } from "./apidef";
 import { Timer } from "./utils";
 import { ui } from "./UI";
 
-/** 播放器核心：控制播放逻辑 */
 export var playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track | null;
@@ -19,7 +18,7 @@ export var playerCore = new class PlayerCore {
     siPlayer = new SettingItem('mcloud-player', 'json', {
         loopMode: 'list-loop' as PlayingLoopMode,
         volume: 1,
-        preferBitrate: 0
+        preferBitrate: 256
     });
     get loopMode() { return this.siPlayer.data.loopMode; }
     set loopMode(val) {
