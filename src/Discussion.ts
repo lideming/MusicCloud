@@ -202,7 +202,7 @@ class CommentViewItem extends ListViewItem {
         if (this.onedit) {
             m.add(new MenuItem({ text: I`Edit`, onclick: () => { this.onedit(this); } }), 0);
         }
-        m.show({ ev: ev });
+        ui.showContextMenuForItem([this], m, { ev: ev });
     };
 }
 
