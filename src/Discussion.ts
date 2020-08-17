@@ -115,7 +115,7 @@ class CommentsContentView extends ListContentView {
     }
 }
 
-export var discussion = new class extends CommentsView {
+export const discussion = new class extends CommentsView {
     endpoint = 'discussion';
     eventName = 'diss-changed';
     init() {
@@ -134,7 +134,7 @@ export var discussion = new class extends CommentsView {
     sidebarItem: SidebarItem;
 };
 
-export var notes = new class extends CommentsView {
+export const notes = new class extends CommentsView {
     endpoint = 'my/notes';
     eventName = 'note-changed';
     init() {
@@ -156,7 +156,7 @@ export var notes = new class extends CommentsView {
     sidebarItem: SidebarItem;
 };
 
-export var comments = new class {
+export const comments = new class {
     init() {
         router.addRoute({
             path: ['track-comments'],

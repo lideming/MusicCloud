@@ -5,7 +5,7 @@ import { Callbacks, Action, utils, CancelToken } from "./utils";
 import { Api } from "./apidef";
 
 
-export var api = new class {
+export const api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
     storageUrlBase = '';
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;

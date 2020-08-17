@@ -13,7 +13,7 @@ import { TrackList } from "./TrackList";
 import { Track } from "./Track";
 import { settingsUI } from "./SettingsUI";
 
-export var user = new class User {
+export const user = new class User {
     siLogin = new SettingItem('mcloud-login', 'json', {
         id: -1,
         username: null! as string,

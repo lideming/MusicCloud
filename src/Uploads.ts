@@ -38,7 +38,7 @@ class UploadTrack extends Track {
     };
 }
 
-export var uploads = new class extends TrackList {
+export const uploads = new class extends TrackList {
     tracks: UploadTrack[] = [];
     state: false | 'waiting' | 'fetching' | 'fetched' = false;
     canEdit = false;

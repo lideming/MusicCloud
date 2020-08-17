@@ -22,7 +22,7 @@ import { appVersion } from "./AppVersion";
 import { settings } from "./Settings";
 import * as webfx from "@yuuza/webfx";
 
-export var app = window['app'] = {
+export const app = window['app'] = {
     webfx,
     settings, settingsUI,
     ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying, lyricsEdit,

@@ -9,7 +9,7 @@ import { playerCore } from './PlayerCore';
 import { Toast, InputView } from './viewlib';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
 
-export var lyricsEdit = new class {
+export const lyricsEdit = new class {
     sidebarItem: SidebarItem;
     view: LyricsEditContentView;
     startEdit(track: Track, lyrics: string) {

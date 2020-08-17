@@ -4,7 +4,7 @@ import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
 import { appVersion } from "./AppVersion";
 
-export var settingsUI = new class {
+export const settingsUI = new class {
     dialog: SettingsDialog;
     openUI() {
         if (!this.dialog)

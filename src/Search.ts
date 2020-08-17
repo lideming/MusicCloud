@@ -11,7 +11,7 @@ import { Track } from "./Track";
 import { playerCore } from './PlayerCore';
 import { ListIndexViewItem } from './ListIndex';
 
-export var search = new class {
+export const search = new class {
     init() {
         this.sidebarItem = new ListIndexViewItem({ text: I`Search` });
         router.addRoute({

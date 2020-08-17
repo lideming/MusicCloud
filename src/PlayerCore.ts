@@ -9,7 +9,7 @@ import { Api } from "./apidef";
 import { Timer } from "./utils";
 import { ui } from "./UI";
 
-export var playerCore = new class PlayerCore {
+export const playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
     track: Track | null;
     audioLoaded = false;

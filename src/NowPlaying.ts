@@ -8,7 +8,7 @@ import { api } from './Api';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
 
 
-export var nowPlaying = new class {
+export const nowPlaying = new class {
     init() {
         var sidebarItem = new SidebarItem({ text: I`Now Playing` });
         router.addRoute({

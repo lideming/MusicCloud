@@ -12,7 +12,7 @@ export interface Route {
     onLeave?: () => void;
 }
 
-export var router = new class {
+export const router = new class {
     routes: Route[] = [];
     current: string[];
     currentStr: string;
