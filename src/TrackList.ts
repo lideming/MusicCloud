@@ -398,7 +398,7 @@ export class TrackViewItem extends ListViewItem {
         }
         if (this.track.canEdit) m.add(new MenuItem({
             text: I`Edit`,
-            onclick: () => this.track.startEdit()
+            onclick: (ev) => this.track.startEdit(ev)
         }));
         if (this.actionHandler?.onTrackRemove) m.add(new MenuItem({
             text: I`Remove`, cls: 'dangerous',

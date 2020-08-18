@@ -47,8 +47,8 @@ class PlayingView extends ContentView {
             if (s.span.startTime && s.span.startTime >= 0) playerCore.currentTime = s.span.startTime;
         });
         this.header.actions.addView(this.editBtn = new ActionBtn({
-            text: I`Edit`, onclick: () => {
-                playerCore.track?.startEdit();
+            text: I`Edit`, onclick: (ev) => {
+                playerCore.track?.startEdit(ev);
             }
         }));
     }

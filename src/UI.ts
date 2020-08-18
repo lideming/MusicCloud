@@ -380,7 +380,7 @@ export const ui = new class {
             this.container.appendView(this.loginState);
             this.loginState.dom.id = 'login-state';
             this.loginState.onactive = (ev) => {
-                user.openUI();
+                user.openUI(undefined, ev);
             };
         }
         update() {
@@ -400,7 +400,6 @@ export const ui = new class {
     };
     sidebarList = new class {
         container = document.getElementById('sidebar-list')!;
-        listview = new ListView(this.container);
 
         features = document.getElementById('sidebar-features')!;
         featuresListview = new ListView(this.features);
@@ -409,9 +408,6 @@ export const ui = new class {
 
         setActive(item: ListViewItem | null) {
             this.currentActive.set(item);
-        }
-        addItem(item: ListViewItem) {
-            this.listview.add(item);
         }
         addFeatureItem(item: ListViewItem) {
             this.featuresListview.add(item);

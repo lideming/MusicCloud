@@ -112,6 +112,7 @@ export class ListIndex {
                 }
             }]
         });
+        this.listView.scrollBox = ui.sidebar.dom;
         ui.sidebarList.container.appendView(this.section);
         router.addRoute({
             path: ['list'],

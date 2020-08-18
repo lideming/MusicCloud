@@ -6,11 +6,11 @@ import { appVersion } from "./AppVersion";
 
 export const settingsUI = new class {
     dialog: SettingsDialog;
-    openUI() {
+    openUI(ev?: MouseEvent) {
         if (!this.dialog)
             this.dialog = new SettingsDialog();
         this.dialog.center();
-        this.dialog.show();
+        this.dialog.show(ev);
     }
 };
 

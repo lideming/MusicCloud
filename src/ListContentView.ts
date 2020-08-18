@@ -111,6 +111,7 @@ export class ListContentView extends ContentView {
             this.selectAllBtn.hidden = !this.listView.selectionHelper.enabled;
         })();
         this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;
+        this.listView.scrollBox = this.scrollBox.dom;
         this.scrollBox.appendView(this.listView);
     }
 

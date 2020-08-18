@@ -51,13 +51,13 @@ export const user = new class User {
     initLoginUI() {
         this.loginDialog = new LoginDialog();
     }
-    openUI(login?: boolean) {
+    openUI(login?: boolean, ev?: MouseEvent) {
         login = login ?? this.state !== 'logged';
         if (login) {
             if (!this.loginDialog) this.loginDialog = new LoginDialog();
-            this.loginDialog.show();
+            this.loginDialog.show(ev);
         } else {
-            new MeDialog().show();
+            new MeDialog().show(ev);
         }
     }
     closeUI() {
@@ -304,16 +304,16 @@ class LoginDialog extends Dialog {
 
         this.addBtn(new TabBtn({
             text: I`Settings`, right: true,
-            onclick: () => {
-                settingsUI.openUI();
+            onclick: (ev) => {
+                settingsUI.openUI(ev);
                 this.close();
             }
         }));
     }
 
-    show() {
+    show(...args: Parameters<Dialog['show']>) {
         this.center();
-        super.show();
+        super.show(...args);
     }
 
     btnClicked() {
@@ -369,12 +369,12 @@ class MeDialog extends Dialog {
         this.addContent(this.btnChangePassword);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);
-        this.btnChangePassword.onclick = () => {
-            new ChangePasswordDialog().show();
+        this.btnChangePassword.onclick = (ev) => {
+            new ChangePasswordDialog().show(ev);
             this.close();
         };
-        this.btnSwitch.onclick = () => {
-            user.openUI(true);
+        this.btnSwitch.onclick = (ev) => {
+            user.openUI(true, ev);
             this.close();
         };
         this.btnLogout.onclick = () => {
@@ -383,8 +383,8 @@ class MeDialog extends Dialog {
         };
         this.addBtn(new TabBtn({
             text: I`Settings`, right: true,
-            onclick: () => {
-                settingsUI.openUI();
+            onclick: (ev) => {
+                settingsUI.openUI(ev);
                 this.close();
             }
         }));

@@ -42,10 +42,10 @@ export class Track {
         // utils.objectApply(this, t, ['id', 'name', 'artist', 'url', 'size']);
         this.infoObj = t;
     }
-    startEdit() {
+    startEdit(ev?: MouseEvent) {
         var dialog = new TrackDialog();
         dialog.setTrack(this);
-        dialog.show();
+        dialog.show(ev);
         return dialog;
     }
     async requestFileUrl(file: Api.TrackFile) {
