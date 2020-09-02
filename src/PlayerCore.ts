@@ -89,10 +89,11 @@ export const playerCore = new class PlayerCore {
                 this.state = 'stalled';
         });
         this.audio.addEventListener('stalled', () => {
-            this.state = 'stalled';
+            if (!this.audio.paused)
+                this.state = 'stalled';
         });
         this.audio.addEventListener('play', () => {
-            this.state = 'playing';
+            this.state = 'stalled';
         });
         this.audio.addEventListener('playing', () => {
             this.state = 'playing';
