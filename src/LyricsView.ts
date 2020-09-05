@@ -87,6 +87,8 @@ export class LyricsView extends View {
         if (parsed?.lang) this.lines.dom.lang = parsed.lang;
         else this.lines.dom.removeAttribute('lang');
 
+        const time = Date.now();
+
         if (parsed) {
             parsed.lines.forEach(l => {
                 if (l.spans) {
@@ -104,6 +106,8 @@ export class LyricsView extends View {
                 ]
             } as any, this));
         }
+
+        console.log(`[LyricsView] rendered ${[this.lines.length]} lines in ${Date.now() - time} ms`);
 
         this.onLyricsChanged.invoke();
         this.resize();
