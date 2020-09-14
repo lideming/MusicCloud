@@ -59,13 +59,13 @@ export class LyricsView extends View {
                 scale = utils.numLimit(scale, 20, 500);
                 this.scale = scale;
             }
-        });
+        }, { passive: true });
         this.dom.addEventListener('scroll', (ev) => {
             if (!this._posChanged) {
                 this.setScrollingPause(5000);
             }
             this._posChanged = false;
-        });
+        }, { passive: true });
     }
     setLyrics(lyrics: string | Lyrics) {
         let msg = '';

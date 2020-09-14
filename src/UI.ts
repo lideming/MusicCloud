@@ -75,7 +75,7 @@ export const ui = new class {
             document.addEventListener(evt, (e) => {
                 this.usingKeyboardInput = false;
                 document.body.classList.remove('keyboard-input');
-            }, true)
+            }, { passive: true, capture: true })
         );
     }
     endPreload() {

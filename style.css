@@ -122,6 +122,7 @@ html, body {
 #main-container {
     height: calc(100% - 15px);
     position: relative;
+    contain: strict;
 }
 
 .bottompinned #main-container {
@@ -133,6 +134,8 @@ html, body {
     height: 100%;
     overflow-y: auto;
     position: relative;
+    contain: strict;
+    will-change: scroll-position;
 }
 
 #content-outer {
@@ -145,6 +148,7 @@ html, body {
     background: var(--color-bg-f8);
     border-right: 1px solid var(--color-bg-cc);
     touch-action: pan-y pinch-zoom;
+    will-change: transform, scroll-position;
 }
 
 @media only screen and (min-width: 800px) {
@@ -186,12 +190,20 @@ html, body {
 .float-sidebar #sidebar-login {
     padding-left: 50px;
     min-height: 50px;
+    position: sticky;
+    top: 0;
+    background: inherit;
 }
 
 .float-sidebar #login-state {
     display: flex;
     align-items: center;
     height: 50px;
+}
+
+.float-sidebar #sidebar-list .section-header {
+    position: sticky;
+    top: 50px;
 }
 
 .sidebar-toggle {
@@ -297,6 +309,7 @@ html, body {
     flex: 1;
     overflow-y: auto;
     animation: showing .3s forwards;
+    will-change: transform;
 }
 
 .tracklistview {
@@ -515,6 +528,8 @@ a.item {
     background: var(--color-bg-dd);
     box-shadow: 0 0px 3px #999;
     z-index: 10001;
+    contain: strict;
+    will-change: transform;
 }
 
 .bottompinned #bottombar {
@@ -744,6 +759,8 @@ a.item {
     animation: fadein .3s;
     z-index: 10001;
     overflow: hidden;
+    contain: strict;
+    will-change: transform;
 }
 
 .dark .overlay {
@@ -776,6 +793,8 @@ a.item {
     display: flex;
     flex-direction: column;
     max-height: 100%;
+    contain: content;
+    will-change: transform;
 }
 
 .dialog.resize {
@@ -1136,6 +1155,7 @@ textarea.input-text {
     flex: 1;
     width: 100%;
     overflow: auto;
+    will-change: scroll-position;
     animation: showing .3s;
 }
 
