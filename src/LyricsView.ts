@@ -245,7 +245,11 @@ export class LyricsView extends View {
             this.lastChangedRealTime = realTime;
             this.setCurrentTime(time, 'smooth');
         }
-        if (realTime - this.lastChangedRealTime < 250) this.timer.timeout(16);
+        if (realTime - this.lastChangedRealTime < 250) {
+            if (!this.timer.cancelFunc) this.timer.interval(30);
+        } else {
+            this.timer.tryCancel();
+        }
     };
     private isTrackPlaying() {
         return playerCore.track && playerCore.track === this.track && playerCore.track.id === this.track.id;
