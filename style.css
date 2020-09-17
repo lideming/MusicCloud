@@ -135,7 +135,6 @@ html, body {
     overflow-y: auto;
     position: relative;
     contain: strict;
-    will-change: scroll-position;
 }
 
 #content-outer {
@@ -769,6 +768,7 @@ a.item {
 
 .overlay.nobg {
     background: none;
+    will-change: auto;
 }
 
 .overlay.centerchild {
