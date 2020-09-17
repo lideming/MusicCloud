@@ -1155,7 +1155,7 @@ textarea.input-text {
     flex: 1;
     width: 100%;
     overflow: auto;
-    will-change: scroll-position;
+    will-change: transform;
     animation: showing .3s;
 }
 
