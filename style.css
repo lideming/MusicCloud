@@ -973,6 +973,7 @@ textarea.input-text {
     outline: none;
     z-index: 10001;
     animation: context-menu-in .2s ease-out forwards;
+    will-change: transform;
 }
 
 .context-menu .item.dangerous {
