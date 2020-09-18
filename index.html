@@ -70,10 +70,9 @@
                 },
                 update() {
                     if (!this.domLoaded) return;
-                    document.getElementById('css-ok').hidden = !preload.cssLoaded;
                     document.getElementById('js-ok').hidden = !preload.jsLoaded;
                     document.getElementById('js-error').hidden = !preload.jsError;
-                    if (this.cssLoaded && this.jsLoaded) this.end();
+                    if (this.jsLoaded) this.end();
                 },
                 end() {
                     app.ui.endPreload();
@@ -97,7 +96,6 @@
         })();
     </script>
     <!-- End of preload style and script -->
-    <link rel="stylesheet" href="style.css" media="print" onload="this.media='all'; preload.cssOk(); this.onload = null;">
     <script src="bundle.js" onload="window.preload && preload.onJsLoad()" defer async></script>
 </head>
 

@@ -17,6 +17,7 @@ const rollupConfig = () => ({
         buildInfo(),
         resolve(),
         typescript(),
+        myCss()
     ],
     context: 'window'
 });
@@ -60,6 +61,20 @@ function transformSourcemapPath() {
             return `https://cdn.jsdelivr.net/npm/${mat[1]}@${version}/${mat[2]}`;
         }
         return `https://github.com/lideming/MusicCloud/raw/dev/${rel}`;
+    };
+}
+
+function myCss() {
+    return {
+        name: 'my-css-loader',
+        transform(code, id) {
+            if (id.endsWith('.css')) {
+                return {
+                    code: 'export default ' + JSON.stringify(code),
+                    map: { mappings: '' }
+                };
+            }
+        }
     };
 }
 

@@ -20,7 +20,11 @@ import * as Lyrics from "./Lyrics";
 import { lyricsEdit } from "./LyricsEdit";
 import { appVersion } from "./AppVersion";
 import { settings } from "./Settings";
+import { utils } from "./utils";
+
 import * as webfx from "@yuuza/webfx";
+
+import style from "../style.css";
 
 export const app = window['app'] = {
     webfx,
@@ -30,6 +34,7 @@ export const app = window['app'] = {
     msgcli,
     init() {
         console.time('[Main] app.init()');
+        app.injectStyle();
         ui.init();
         playerCore.init();
         user.init();
@@ -44,6 +49,9 @@ export const app = window['app'] = {
         router.init();
         appVersion.showUpdatedToast();
         console.timeEnd('[Main] app.init()');
+    },
+    injectStyle() {
+        document.head.appendChild(utils.buildDOM({ tag: 'style#mc-style', text: style }));
     }
 };
 
