@@ -59,7 +59,7 @@ export class LyricsView extends View {
                 scale = utils.numLimit(scale, 20, 500);
                 this.scale = scale;
             }
-        }, { passive: true });
+        });
         this.dom.addEventListener('scroll', (ev) => {
             if (!this._posChanged) {
                 this.setScrollingPause(5000);
@@ -187,8 +187,11 @@ export class LyricsView extends View {
         return this.dom.scrollTop + this.dom.offsetHeight / 2;
     }
     setCenterPos(centerY: number) {
-        this._posChanged = true;
-        this.dom.scrollTop = centerY - this.dom.offsetHeight / 2;
+        var targetPos = centerY - this.dom.offsetHeight / 2;
+        if (this.dom.scrollTop != targetPos) {
+            this._posChanged = true;
+            this.dom.scrollTop = targetPos;
+        }
     }
     resize() {
         if (this.domCreated) {
@@ -200,7 +203,8 @@ export class LyricsView extends View {
                 this.lines.dom.style.margin = ((boxHeight - contentHeight) / 2) + 'px 0';
             }
         }
-        this.centerLyrics();
+        if (!this.isScrollingPaused())
+            this.centerLyrics();
     }
 
     private _fontSize: number = 100;
@@ -258,7 +262,7 @@ export class LyricsView extends View {
 
     pauseScrollTime: number | null = null;
     isScrollingPaused() {
-        return this.pauseScrollTime && Date.now() < this.pauseScrollTime;
+        return !!(this.pauseScrollTime && Date.now() < this.pauseScrollTime);
     }
     setScrollingPause(timeout: number) {
         this.pauseScrollTime = Math.max(this.pauseScrollTime || 0, Date.now() + timeout);
