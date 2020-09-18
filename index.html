@@ -51,6 +51,7 @@
                 cssLoaded: false,
                 jsLoaded: false,
                 jsError: false,
+                preLoginTask: null,
                 cssOk() {
                     this.cssLoaded = true;
                     this.update();
@@ -60,7 +61,7 @@
                     this.update();
                 },
                 onJsLoad() {
-                    setTimeout(function(thiz) {
+                    setTimeout(function (thiz) {
                         if (!thiz.jsLoaded) {
                             console.error('js loaded without calling callback');
                             thiz.jsError = true;
@@ -77,7 +78,25 @@
                 end() {
                     app.ui.endPreload();
                     window.removeEventListener('error', onerror);
-                    delete window.preload;
+                },
+                preLogin() {
+                    // Try to prefetch the user info even before we can run the main script.
+                    // Make it about 1 RTT + 50 ms (script download + execution time) faster.
+                    var strLogin = localStorage.getItem('mcloud-login');
+                    if (!strLogin) return;
+                    var login = JSON.parse(strLogin);
+                    if (!login || !login.token || !login.lastBaseUrl) return;
+                    preload.preLoginTask = fetch(login.lastBaseUrl + 'users/me', {
+                        credentials: 'same-origin',
+                        headers: {
+                            'Authorization': 'Bearer ' + login.token
+                        }
+                    }).then(function (resp) {
+                        if (!resp.ok) {
+                            throw new Error('HTTP status ' + resp.status);
+                        }
+                        return resp.json()
+                    });
                 }
             };
             window.addEventListener('DOMContentLoaded', function () {
@@ -93,6 +112,7 @@
                 preload.update();
             };
             window.addEventListener('error', onerror);
+            preload.preLogin();
         })();
     </script>
     <!-- End of preload style and script -->

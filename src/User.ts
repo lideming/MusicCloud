@@ -18,7 +18,8 @@ export const user = new class User {
         id: -1,
         username: null! as string,
         passwd: undefined as (string | undefined),
-        token: null! as string
+        token: null! as string,
+        lastBaseUrl: null! as string
     });
     loginDialog: LoginDialog;
     get info() { return this.siLogin.data; }
@@ -39,8 +40,9 @@ export const user = new class User {
     }
     init() {
         playerCore.onTrackChanged.add(() => this.playingTrackChanged());
-        if (this.info.username) {
-            this.login(this.info).then(null, (err) => {
+        const preLogin = window['preload']?.preLoginTask;
+        if (this.info.username || preLogin) {
+            this.login(preLogin ? { preLogin: preLogin } : { info: this.info }).then(null, (err) => {
                 Toast.show(I`Failed to login.` + '\n' + err, 5000);
             });
         } else {
@@ -69,21 +71,28 @@ export const user = new class User {
     getBearerAuth(token: string) {
         return 'Bearer ' + token;
     }
-    async login(info: Api.UserInfo) {
+    async login(arg: { info?: Api.UserInfo, preLogin?: Promise<Api.UserInfo>; }) {
         if (this.state !== 'logged') this.setState('logging');
         // try GET `api/users/me` using the new info
         var promise = (async () => {
-            var token = info.token;
+            let resp: Api.UserInfo;
             try {
-                // thanks to the keyword `var` of JavaScript.
-                var resp = token ?
-                    await api.get('users/me', {
-                        auth: this.getBearerAuth(token)
-                    }) as Api.UserInfo
-                    : await api.post({
-                        path: 'users/me/login',
-                        auth: this.getBasicAuth(info)
-                    }) as Api.UserInfo;
+                if (arg.info) {
+                    const info = arg.info;
+                    const token = info.token;
+                    resp = token ?
+                        await api.get('users/me', {
+                            auth: this.getBearerAuth(token)
+                        }) as Api.UserInfo
+                        : await api.post({
+                            path: 'users/me/login',
+                            auth: this.getBasicAuth(info)
+                        }) as Api.UserInfo;
+                } else if (arg.preLogin) {
+                    resp = await arg.preLogin;
+                } else {
+                    throw new Error('Unexpected login argument');
+                }
             } catch (err) {
                 if (this.state !== 'logged') this.setState('error');
                 if (err.message === 'user_not_found')
@@ -121,6 +130,7 @@ export const user = new class User {
         this.info.username = info.username;
         this.info.passwd = undefined;
         if (info.token) this.info.token = info.token;
+        this.info.lastBaseUrl = api.baseUrl;
         this.role = info.role;
         this.siLogin.save();
 
@@ -336,7 +346,7 @@ class LoginDialog extends Dialog {
                 if (this.isRegistering) {
                     await user.register(info);
                 } else {
-                    await user.login(info);
+                    await user.login({ info });
                 }
                 this.viewStatus.text = '';
                 [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => x.value = '');
