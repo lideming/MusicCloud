@@ -1,7 +1,7 @@
 // file: main.ts
-// TypeScript 3.7 is required.
+// TypeScript is required.
 
-// Why do we need to use React and Vue.js? ;)
+// Why do we need React and Vue.js? ;)
 
 import { Toast, ToastsContainer } from "./viewlib";
 import { ui } from "./UI";

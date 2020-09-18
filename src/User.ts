@@ -220,13 +220,21 @@ export const user = new class User {
     }
     async tryRestorePlaying(playing: Api.TrackLocation) {
         if (playing.trackid) {
+            var tmpTrack: Track | null = null;
+            if (playing.track) {
+                tmpTrack = new Track({ infoObj: playing.track });
+                this._ignore_track_once = tmpTrack;
+                playerCore.setTrack(tmpTrack);
+            }
             var list: TrackList = playing.listid ? listIndex.getList(playing.listid) : uploads;
             await list.fetch();
             var track: Track | null = list.tracks[playing.position];
             if (track?.id !== playing.trackid)
                 track = list.tracks.find(x => x.id === playing.trackid) || null;
-            this._ignore_track_once = track;
-            playerCore.setTrack(track);
+            if ((!tmpTrack && playerCore.track == null) || (tmpTrack && playerCore.track == tmpTrack)) {
+                this._ignore_track_once = track;
+                playerCore.setTrack(track);
+            }
         }
     }
     async getPlaying(): Promise<Api.TrackLocation> {

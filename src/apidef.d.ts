@@ -11,6 +11,7 @@ export namespace Api {
     interface TrackListInfo {
         id: number;
         name: string;
+        visibility?: number;
     }
 
     /**
@@ -49,6 +50,7 @@ export namespace Api {
         length?: number;
         files?: TrackFile[];
         version?: number;
+        visibility?: number;
     }
 
     interface TrackFile {
@@ -137,6 +139,7 @@ export namespace Api {
         listid: number;
         position: number;
         trackid: number;
+        track?: Track;
     }
 
     // POST {api}/tracks/uploadrequest
@@ -163,4 +166,11 @@ export namespace Api {
         tag: string;
     }
     // response: Api.Track
+
+    // POST {api}/tracks/visibility
+    // request:
+    interface VisibilityChange {
+        trackids: number[];
+        visibility: number;
+    }
 }
