@@ -1,22 +1,53 @@
 # MusicCloud
 
-MusicCloud is a website allowing users to upload music and play music.
+MusicCloud is a music website.
 
 This repo contains the frontend parts of MusicCloud.
 
+[Backend source repo](https://github.com/lideming/MusicCloudServer) is also on GitHub.
+
+
+## Features
+
+* Music player
+* Single-page application
+* Upload and manage tracks
+* Tracklists on the cloud
+* Lyrics with translation and ruby annotations, extended from LRC.
+* Comment and discussion
+
+
+## Configure Build
+
+Modify `src/Settings.ts` for API location, debug options etc.
+
+
 ## Build
 
-First install development dependencies:
+Ensure development dependencies are installed:
 
 ```
 npm install -g rollup
 npm install
 ```
 
-Then start the building process:
+Start the building process:
 
 ```
 npm run build
 ```
 
-Now `bundle.js` should be generated from typescript files.
+Then `bundle.js` should be generated from source files.
+
+
+## Deploy
+
+Copy `index.html` and `bundle.js` to the static website folder (see `staticdir` in [server side configration](https://github.com/lideming/MusicCloudServer/blob/master/appsettings.json)).
+
+Note that `style.css` is included in `bundle.js`.
+
+
+## Reusable Components
+
+* [webfx](https://github.com/lideming/webfx) - Web UI framework with utilities and basic views
+* `src/Lyrics.ts` - Lyrics parser (LRC compatible)
