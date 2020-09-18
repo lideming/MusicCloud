@@ -6,6 +6,7 @@ import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
 import { api } from './Api';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
+import { LoadingIndicator, View, ViewToggle } from '@yuuza/webfx';
 
 
 export const nowPlaying = new class {
@@ -30,6 +31,15 @@ class PlayingView extends ContentView {
         title: I`Now Playing`
     });
     lyricsView = new LyricsView();
+    loading = new LoadingIndicator();
+    loadingOuter = new View({ tag: 'div', style: 'flex: 1; align-items: center;', child: this.loading });
+    viewToggle = new ViewToggle({
+        container: this,
+        items: {
+            'normal': this.lyricsView,
+            'loading': this.loadingOuter
+        }
+    });
     editBtn: ActionBtn;
     si = new SettingItem('mcloud-nowplaying', 'json', {
         lyricsScale: 100
@@ -98,17 +108,28 @@ class PlayingView extends ContentView {
         const newTrack = playerCore.track;
         let newLyrics = '';
         this.editBtn.hidden = !newTrack;
-        this.lyricsView.track = newTrack;
+
+        this.loadingOuter.dom.remove();
 
         if (newTrack && !newTrack.isLyricsGotten()) {
-            this.lyricsView.reset();
-            this.lyricsView.setLyrics(I`Loading lyrics...`);
-            newLyrics = await newTrack.getLyrics();
+            this.loading.reset();
+            this.viewToggle.setShownKeys(['loading']);
+            try {
+                newLyrics = await newTrack.getLyrics();
+            } catch (error) {
+                if (version != this._checkTrackVersion) return;
+                this.loading.error(error, () => this.checkTrack());
+                return;
+            }
             if (version != this._checkTrackVersion) return;
         } else {
             newLyrics = newTrack?.lyrics || '';
         }
-        
+
+        this.viewToggle.setShownKeys(['normal']);
+
+        this.lyricsView.track = newTrack;
+
         if (this.loadedLyrics != newLyrics) {
             this.loadedLyrics = newLyrics;
             this.lyricsView.reset();
