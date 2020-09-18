@@ -28,6 +28,7 @@ body {
     --color-bg-dd: #dddddd;
     --color-bg-ee: #eeeeee;
     --color-bg-f8: #f8f8f8;
+    --color-shadow: rgba(0, 0, 0, .5);
     background: var(--color-bg);
     color: var(--color-text);
 }
@@ -45,6 +46,7 @@ body.dark {
     --color-bg-ee: #111111;
     --color-bg-dd: #222222;
     --color-bg-cc: #333333;
+    --color-shadow: rgba(180, 180, 180, .5);
 }
 
 ul, li {
@@ -169,6 +171,7 @@ html, body {
     transition: transform .3s, opacity .3s;
     width: 250px;
     max-width: 80vw;
+    box-shadow: 0 0 20px var(--color-shadow);
 }
 
 .float-sidebar #content-outer {
@@ -178,6 +181,7 @@ html, body {
 .float-sidebar #sidebar.hide {
     transform: translate(-100%, 0);
     transition: transform .3s, opacity .3s .3s, width 0s .3s;
+    box-shadow: none;
 }
 
 .float-sidebar #sidebar.hide.peek {
@@ -525,7 +529,7 @@ a.item {
     transform: translate(0, 0);
     transition: transform .3s;
     background: var(--color-bg-dd);
-    box-shadow: 0 0px 3px #999;
+    box-shadow: 0 0px 3px var(--color-shadow);
     z-index: 10001;
     contain: strict;
     will-change: transform;
@@ -787,7 +791,7 @@ a.item {
     overflow: auto;
     background: var(--color-bg);
     border-radius: 5px;
-    box-shadow: 0 0 6px #666;
+    box-shadow: 0 0 12px var(--color-shadow);
     animation: dialogin .2s ease-out;
     z-index: 10001;
     display: flex;
@@ -887,7 +891,7 @@ textarea.input-text {
     background: var(--color-primary);
     color: white;
     text-shadow: 0 0 4px var(--color-primary-verydark);
-    box-shadow: 0 0 3px gray;
+    box-shadow: 0 0 3px var(--color-shadow);
     cursor: pointer;
     -ms-user-select: none;
     -moz-user-select: none;
@@ -911,7 +915,7 @@ textarea.input-text {
 .btn.btn-down, .btn:active {
     transition: all .05s;
     background: var(--color-primary-dark);
-    box-shadow: 0 0 1px gray;
+    box-shadow: 0 0 1px var(--color-shadow);
 }
 
 .btn.disabled {
@@ -967,7 +971,7 @@ textarea.input-text {
     overflow: hidden;
     background: var(--color-bg);
     border: solid 1px #777;
-    box-shadow: 0 0px 5px rgb(180, 180, 180);
+    box-shadow: 0 0px 12px var(--color-shadow);
     min-width: 100px;
     max-width: 450px;
     outline: none;
@@ -1061,7 +1065,7 @@ textarea.input-text {
     margin: 5px;
     padding: 10px;
     border-radius: 5px;
-    box-shadow: 0 0 6px #666;
+    box-shadow: 0 0 12px var(--color-shadow);
     background: var(--color-bg);
     white-space: pre-wrap;
     animation: showing-right .3s;
