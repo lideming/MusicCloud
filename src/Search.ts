@@ -19,8 +19,9 @@ export const search = new class {
             contentView: () => this.view,
             sidebarItem: () => this.sidebarItem,
             onNav: (arg) => {
-                if (arg.remaining[0] != this.view.currentQuery)
-                    this.view.performSearch(arg.remaining[0]);
+                const query = arg.remaining[0];
+                if (query && query != this.view.currentQuery)
+                    this.view.performSearch(query);
             }
         });
         ui.sidebarList.addFeatureItem(this.sidebarItem);
