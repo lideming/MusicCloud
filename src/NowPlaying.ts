@@ -7,6 +7,8 @@ import { LyricsView } from './LyricsView';
 import { api } from './Api';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
 import { LoadingIndicator, View, ViewToggle } from '@yuuza/webfx';
+import { Api } from './apidef';
+import { Track } from './Track';
 
 
 export const nowPlaying = new class {
@@ -16,6 +18,17 @@ export const nowPlaying = new class {
             path: ['nowplaying'],
             contentView: () => this.view,
             sidebarItem: () => sidebarItem
+        });
+        router.addRoute({
+            path: ['tracks'],
+            onNav: (arg) => {
+                router.nav(['nowplaying'], false);
+                if (arg.remaining[0] != playerCore.track?.id as any) { // compare string to number
+                    api.get('tracks/' + arg.remaining[0]).then((t: Api.Track) => {
+                        playerCore.setTrack(new Track({ infoObj: t }));
+                    });
+                }
+            }
         });
         ui.sidebarList.addFeatureItem(sidebarItem);
         playerCore.onTrackChanged.add(() => {
