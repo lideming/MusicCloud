@@ -162,7 +162,7 @@ export const playerCore = new class PlayerCore {
                 this.loadUrl(null);
             }
         }
-        this.state = !track ? 'none' : playNow ? 'playing' : 'paused';
+        this.state = !track ? 'none' : 'paused';
         this.onTrackChanged.invoke();
         this.onProgressChanged.invoke();
         if (playNow && track) await this.playTrack(track);
@@ -202,7 +202,12 @@ export const playerCore = new class PlayerCore {
     }
     async play() {
         await this.ensureLoaded();
-        this.audio.play();
+        try {
+            this.audio.play();
+        } catch (error) {
+            console.error('audio.play() error', error);
+            this.state = 'none';
+        }
     }
     async ensureLoaded() {
         var track = this.track;
