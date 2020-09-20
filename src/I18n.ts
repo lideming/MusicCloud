@@ -64,6 +64,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Converting \\"{0}\\"...", "正在转换 \\"{0}\\"..."],
     ["Error converting \\"{0}\\".", "转换 \\"{0}\\" 时发生错误."],
     ["Edit", "编辑"],
+    ["Details", "详细信息"],
     ["Discard", "放弃更改"],
     ["Lyrics View", "歌词视图"],
     ["Source View", "源码视图"],
@@ -136,4 +137,8 @@ i18n.add2dArray([
     ["msgbox_cancel", "Cancel", "取消"],
     ["colortheme_light", "light", "亮色"],
     ["colortheme_dark", "dark", "暗色"],
+    ["visibility_0", "Private", "私有"],
+    ["visibility_1", "Public", "公开"],
+    ["change_visibility_0", "Change to private", "转为私有"],
+    ["change_visibility_1", "Change to public", "转为公开"]
 ]);

@@ -108,6 +108,7 @@ class PlayingView extends ContentView {
         const newTrack = playerCore.track;
         let newLyrics = '';
         this.editBtn.hidden = !newTrack;
+        this.editBtn.text = newTrack?.canEdit ? I`Edit` : I`Details`;
 
         this.loadingOuter.dom.remove();
 

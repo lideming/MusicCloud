@@ -1,7 +1,7 @@
 // file: TrackList.ts
 
 import { utils, BuildDomExpr, DataUpdatingHelper } from "./utils";
-import { I } from "./I18n";
+import { I, i18n } from "./I18n";
 import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
@@ -364,46 +364,75 @@ export class TrackViewItem extends ListViewItem {
         ev.preventDefault();
         var selected: TrackViewItem[] = this.selected ? this.selectionHelper.selectedItems : [this];
         var m = new ContextMenu();
-        if (item.track.id && user.serverOptions.trackCommentsEnabled !== false) m.add(new MenuItem({
-            text: I`Comments`, onclick: () => {
-                router.nav(['track-comments', item.track.id.toString()]);
+        if (selected.length == 1) {
+            if (item.track.id && user.state != 'none' && user.serverOptions.trackCommentsEnabled !== false) m.add(new MenuItem({
+                text: I`Comments`, onclick: () => {
+                    router.nav(['track-comments', item.track.id.toString()]);
+                }
+            }));
+            if (this.track.url) {
+                var ext = this.track.getExtensionName();
+                ext = ext ? (ext.toUpperCase() + ', ') : '';
+                var fileSize = utils.formatFileSize(this.track.size);
+                var files = [...(this.track.files ?? [])];
+                files.sort((a, b) => b.bitrate - a.bitrate);
+                if (!files.find(f => f.url === this.track.url))
+                    m.add(new MenuLinkItem({
+                        text: I`Download` + ' (' + ext + fileSize + ')',
+                        link: api.processUrl(this.track.url),
+                        download: this.track.artist + ' - ' + this.track.name + '.' + ext
+                    }));
+                files.forEach(f => {
+                    var format = f.format?.toUpperCase();
+                    if (f.url) m.add(new MenuLinkItem({
+                        text: I`Download` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
+                        link: api.processUrl(f.url),
+                        download: this.track.artist + ' - ' + this.track.name + '.' + format
+                    }));
+                    else if (f.urlurl && this.track.canEdit) m.add(new MenuItem({
+                        text: I`Convert` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
+                        onclick: () => {
+                            this.track.requestFileUrl(f);
+                        }
+                    }));
+                });
             }
-        }));
-        if (this.track.url) {
-            var ext = this.track.getExtensionName();
-            ext = ext ? (ext.toUpperCase() + ', ') : '';
-            var fileSize = utils.formatFileSize(this.track.size);
-            var files = [...(this.track.files ?? [])];
-            files.sort((a, b) => b.bitrate - a.bitrate);
-            if (!files.find(f => f.url === this.track.url))
-                m.add(new MenuLinkItem({
-                    text: I`Download` + ' (' + ext + fileSize + ')',
-                    link: api.processUrl(this.track.url),
-                    download: this.track.artist + ' - ' + this.track.name + '.' + ext
-                }));
-            files.forEach(f => {
-                var format = f.format?.toUpperCase();
-                if (f.url) m.add(new MenuLinkItem({
-                    text: I`Download` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
-                    link: api.processUrl(f.url),
-                    download: this.track.artist + ' - ' + this.track.name + '.' + format
-                }));
-                else if (f.urlurl) m.add(new MenuItem({
-                    text: I`Convert` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
-                    onclick: () => {
-                        this.track.requestFileUrl(f);
-                    }
-                }));
-            });
+            m.add(new MenuItem({
+                text: this.track.canEdit ? I`Edit` : I`Details`,
+                onclick: (ev) => this.track.startEdit(ev)
+            }));
+            if (this.actionHandler?.onTrackRemove) m.add(new MenuItem({
+                text: I`Remove`, cls: 'dangerous',
+                onclick: () => this.actionHandler!.onTrackRemove?.([this])
+            }));
         }
-        if (this.track.canEdit) m.add(new MenuItem({
-            text: I`Edit`,
-            onclick: (ev) => this.track.startEdit(ev)
-        }));
-        if (this.actionHandler?.onTrackRemove) m.add(new MenuItem({
-            text: I`Remove`, cls: 'dangerous',
-            onclick: () => this.actionHandler!.onTrackRemove?.([this])
-        }));
+        if (this.track.canEdit) [0, 1].forEach(visi => {
+            var show = false;
+            for (const item of selected) {
+                if (item.track.visibility != visi) {
+                    show = true;
+                    break;
+                }
+            }
+            if (!show) return;
+            m.add(new MenuItem({
+                text: i18n.get('change_visibility_' + visi),
+                onclick: () => {
+                    api.post({
+                        path: 'tracks/visibility',
+                        obj: {
+                            trackids: selected.map(x => x.track.id),
+                            visibility: visi
+                        } as Api.VisibilityChange
+                    }).then(r => {
+                        selected.forEach(t => {
+                            t.track.infoObj!.visibility = visi;
+                            api.onTrackInfoChanged.invoke(t.track.infoObj!);
+                        });
+                    });
+                }
+            }));
+        });
         if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1)
             m.add(new MenuItem({
                 text: I`Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
@@ -411,14 +440,16 @@ export class TrackViewItem extends ListViewItem {
                     this.actionHandler!.onTrackRemove?.([...this.selectionHelper.selectedItems]);
                 }
             }));
-        m.add(new MenuInfoItem({
-            text: I`Track ID` + ': ' +
-                selected.map(x => x.track.id).join(', ') + '\n'
-                + I`Duration` + ': ' +
-                utils.formatTime(utils.arraySum(selected, x => x.track.length!)) + '\n'
-                + I`Size` + ': ' +
-                utils.formatFileSize(utils.arraySum(selected, x => x.track.size!))
-        }));
+        let infoText = I`Track ID` + ': ' +
+            selected.map(x => x.track.id).join(', ') + '\n'
+            + I`Duration` + ': ' +
+            utils.formatTime(utils.arraySum(selected, x => x.track.length!)) + '\n'
+            + I`Size` + ': ' +
+            utils.formatFileSize(utils.arraySum(selected, x => x.track.size!));
+        if (selected.length == 1) {
+            infoText += '\n' + i18n.get('visibility_' + selected[0].track.visibility);
+        }
+        m.add(new MenuInfoItem({ text: infoText }));
         ui.showContextMenuForItem(selected, m, { ev: ev });
     };
 }

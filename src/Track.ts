@@ -5,11 +5,13 @@ import { Api } from "./apidef";
 import { api } from "./Api";
 import { TrackList } from "./TrackList";
 import { lyricsEdit, LyricsSourceEditView } from "./LyricsEdit";
+import { user } from "./User";
 
 /** A track binding with list */
 export class Track {
     infoObj: Api.Track | null = null;
     get id() { return this.infoObj!.id; }
+    get owner() { return this.infoObj!.owner; }
     get name() { return this.infoObj!.name; }
     get artist() { return this.infoObj!.artist; }
     get url() { return this.infoObj!.url; }
@@ -17,13 +19,14 @@ export class Track {
     get length() { return this.infoObj!.length; }
     get size() { return this.infoObj!.size; }
     get lyrics() { return this.infoObj!.lyrics; }
+    get visibility() { return this.infoObj!.visibility; }
     get displayName() { return this.artist + ' - ' + this.name; }
     blob: Blob | null = null;
     _bind?: {
         position?: number;
         list?: TrackList;
     } = undefined;
-    get canEdit() { return true; }
+    get canEdit() { return user.role == 'admin' || user.info.id == this.owner; }
     constructor(init: Partial<Track>) {
         utils.objectApply(this, init);
     }
@@ -113,7 +116,8 @@ export class TrackDialog extends Dialog {
         });
         this.compositionWatcher = new TextCompositionWatcher(this.dom);
         this.dom.addEventListener('keydown', (ev) => {
-            if (!this.compositionWatcher.isCompositing
+            if (this.track.canEdit
+                && !this.compositionWatcher.isCompositing
                 && ev.code === 'Enter'
                 && (ev.ctrlKey || ev.target !== this.inputLyrics.input.dom)) {
                 ev.preventDefault();
@@ -124,6 +128,8 @@ export class TrackDialog extends Dialog {
     setTrack(t: Track) {
         this.track = t;
         this.title = I`Track ID` + ' ' + t.id;
+        if (!t.canEdit) this.title += I` (read-only)`;
+        this.btnSave.hidden = !t.canEdit;
         this.inputName.updateWith({ value: t.name });
         this.inputArtist.updateWith({ value: t.artist });
         if (t.isLyricsGotten()) {
