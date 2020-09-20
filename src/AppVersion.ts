@@ -10,8 +10,8 @@ export const appVersion = new class {
     prevDate = '';
     versionChanged = false;
     init() {
-        this.versionChanged = (this.siVersion.data != this.currentDate);
         this.prevDate = this.siVersion.data;
+        this.versionChanged = !!this.prevDate && (this.prevDate != this.currentDate);
         this.siVersion.set(this.currentDate);
     }
     showUpdatedToast() {
