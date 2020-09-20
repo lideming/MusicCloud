@@ -196,7 +196,7 @@ export const ui = new class {
             bar.addEventListener('keydown', (e) => {
                 this.updateState();
             }, true);
-            this.siPin = new SettingItem('mcloud-bottompin', 'bool', false);
+            this.siPin = new SettingItem('mcloud-bottompin', 'bool', this.pinned);
             this.siPin.render(x => this.setPinned(x));
             this.btnPin.onactive = () => this.siPin.toggle();
         }
