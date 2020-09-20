@@ -17,7 +17,11 @@ export const search = new class {
         router.addRoute({
             path: ['search'],
             contentView: () => this.view,
-            sidebarItem: () => this.sidebarItem
+            sidebarItem: () => this.sidebarItem,
+            onNav: (arg) => {
+                if (arg.remaining[0] != this.view.currentQuery)
+                    this.view.performSearch(arg.remaining[0]);
+            }
         });
         ui.sidebarList.addFeatureItem(this.sidebarItem);
         playerCore.onTrackChanged.add(this.checkPlaying)();
@@ -68,8 +72,11 @@ class SearchView extends ListContentView {
     }
     async performSearch(query: string) {
         this.currentQuery = query;
+        if (this.searchbar.value != query)
+            this.searchbar.value = query;
         var li = new LoadingIndicator();
         this.useLoadingIndicator(li);
+        router.nav(['search', query]);
         try {
             var r = await api.get('tracks?query=' + encodeURIComponent(query)) as { tracks: Api.Track[]; };
             this.tempList = null;

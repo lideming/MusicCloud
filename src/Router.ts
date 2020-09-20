@@ -44,7 +44,7 @@ export const router = new class {
                 break;
             }
         }
-        var strPath = path.join('/');
+        var strPath = path.map(x => encodeURIComponent(x)).join('/');
         this.current = path;
         this.currentStr = strPath;
         if (pushState === undefined || pushState) {
@@ -63,5 +63,5 @@ function match(path: string[], route: Route) {
 }
 
 function parsePath(path: string): string[] {
-    return path.split('/');
+    return path.split('/').map(x => decodeURIComponent(x));
 }
