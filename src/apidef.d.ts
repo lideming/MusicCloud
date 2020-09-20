@@ -41,6 +41,7 @@ export namespace Api {
      */
     interface Track {
         id: number;
+        owner?: number;
         name: string;
         artist: string;
         /** URL to audio file */
