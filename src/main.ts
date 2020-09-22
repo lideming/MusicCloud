@@ -73,7 +73,8 @@ export const app = window['app'] = {
         console.timeEnd('[Main] app.init()');
     },
     injectStyle() {
-        document.head.appendChild(utils.buildDOM({ tag: 'style#mc-style', text: style }));
+        webfx.injectWebfxCss();
+        utils.injectCss(style, { tag: 'style#mcloud-injected-style' });
     }
 };
 
