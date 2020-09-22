@@ -10,7 +10,7 @@ const rollupConfig = () => ({
         name: 'mcloud',
         plugins: [terser()],
         sourcemap: true,
-        sourcemapExcludeSources: true,
+        // sourcemapExcludeSources: true,
         sourcemapPathTransform: transformSourcemapPath()
     },
     plugins: [
