@@ -1,6 +1,6 @@
 {
   "name": "@yuuza/mcloud",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "description": "The MusicCloud website.",
   "publishConfig": {
     "access": "public"
@@ -26,8 +26,7 @@
   "homepage": "https://github.com/lideming/MusicCloud",
   "files": [
     "bundle.js",
-    "index.html",
-    "style.css"
+    "index.html"
   ],
   "dependencies": {},
   "devDependencies": {
