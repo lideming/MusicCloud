@@ -180,6 +180,7 @@ export const playerCore = new class PlayerCore {
         this._loadct?.cancel();
         var ct = this._loadct = new CancelToken();
         if (track.blob) {
+            this.loadUrl(null); // unload current track before await
             var dataurl = await utils.readBlobAsDataUrl(track.blob);
             ct.throwIfCancelled();
             this.loadUrl(dataurl);
@@ -194,6 +195,7 @@ export const playerCore = new class PlayerCore {
                 });
             }
             if (!cur.url) {
+                this.loadUrl(null); // unload current track before await
                 await track.requestFileUrl(cur);
                 ct.throwIfCancelled();
             }
