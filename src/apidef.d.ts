@@ -55,11 +55,11 @@ export namespace Api {
     }
 
     interface TrackFile {
+        profile: string;
         /** Bitrate in kbps */
         bitrate: number;
         format: string;
-        url?: string;
-        urlurl?: string;
+        size: number;
     }
 
     /**
@@ -141,6 +141,7 @@ export namespace Api {
         position: number;
         trackid: number;
         track?: Track;
+        profile?: string;
     }
 
     // POST {api}/tracks/uploadrequest

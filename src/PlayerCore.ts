@@ -11,7 +11,8 @@ import { ui } from "./UI";
 
 export const playerCore = new class PlayerCore {
     audio: HTMLAudioElement;
-    track: Track | null;
+    track: Track | null = null;
+    trackProfile: Api.TrackFile | null = null;
     audioLoaded = false;
     onTrackChanged = new Callbacks<Action>();
 
@@ -149,7 +150,7 @@ export const playerCore = new class PlayerCore {
     }
     async setTrack(track: Track | null, playNow = false) {
         console.info('[PlayerCore] set track: '
-                + (track ? `id ${track.id}: ${track.name} - ${track.artist}` : '(null)'));
+            + (track ? `id ${track.id}: ${track.name} - ${track.artist}` : '(null)'));
         var oldTrack = this.track;
         this.track = track;
         this._loadRetryTimer.tryCancel();
@@ -183,9 +184,10 @@ export const playerCore = new class PlayerCore {
             this.loadUrl(null); // unload current track before await
             var dataurl = await utils.readBlobAsDataUrl(track.blob);
             ct.throwIfCancelled();
+            this.trackProfile = null;
             this.loadUrl(dataurl);
         } else {
-            let cur = { url: track.url, bitrate: 0 } as Api.TrackFile;
+            let cur = { profile: '', bitrate: 0, size: track.size } as Api.TrackFile;
             var prefer = this.preferBitrate;
             if (prefer && track.files) {
                 track.files.forEach(f => {
@@ -194,12 +196,16 @@ export const playerCore = new class PlayerCore {
                     }
                 });
             }
-            if (!cur.url) {
+            let url: string;
+            if (cur.size == -1) {
                 this.loadUrl(null); // unload current track before await
-                await track.requestFileUrl(cur);
+                url = await track.requestFileUrl(cur);
                 ct.throwIfCancelled();
+            } else {
+                url = await track.requestFileUrl(cur);
             }
-            this.loadUrl(api.processUrl(cur.url!));
+            this.trackProfile = cur;
+            this.loadUrl(api.processUrl(url));
         }
     }
     async play() {

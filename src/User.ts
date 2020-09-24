@@ -212,7 +212,8 @@ export const user = new class User {
         var tl: Api.TrackLocation = {
             listid: track?._bind?.list?.id ?? 0,
             position: track?._bind?.position ?? 0,
-            trackid: track?.id ?? 0
+            trackid: track?.id ?? 0,
+            profile: playerCore.trackProfile?.profile ?? ''
         };
         this.postPlaying(tl)
             .then(() => console.info("[User] post playing OK"),

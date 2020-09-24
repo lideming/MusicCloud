@@ -376,7 +376,7 @@ export class TrackViewItem extends ListViewItem {
                 var fileSize = utils.formatFileSize(this.track.size);
                 var files = [...(this.track.files ?? [])];
                 files.sort((a, b) => b.bitrate - a.bitrate);
-                if (!files.find(f => f.url === this.track.url))
+                if (!files.find(f => f.profile === ''))
                     m.add(new MenuLinkItem({
                         text: I`Download` + ' (' + ext + fileSize + ')',
                         link: api.processUrl(this.track.url),
@@ -384,12 +384,13 @@ export class TrackViewItem extends ListViewItem {
                     }));
                 files.forEach(f => {
                     var format = f.format?.toUpperCase();
-                    if (f.url) m.add(new MenuLinkItem({
+                    var url = this.track.getFileUrl(f);
+                    if (url) m.add(new MenuLinkItem({
                         text: I`Download` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
-                        link: api.processUrl(f.url),
+                        link: api.processUrl(url),
                         download: this.track.artist + ' - ' + this.track.name + '.' + format
                     }));
-                    else if (f.urlurl && this.track.canEdit) m.add(new MenuItem({
+                    else if (this.track.canEdit) m.add(new MenuItem({
                         text: I`Convert` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
                         onclick: () => {
                             this.track.requestFileUrl(f);

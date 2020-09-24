@@ -51,17 +51,27 @@ export class Track {
         dialog.show(ev);
         return dialog;
     }
-    async requestFileUrl(file: Api.TrackFile) {
-        if (!file.url) {
-            var toast = Toast.show(I`Converting "${this.displayName}"...`);
-            try {
-                file.url = (await api.get(file.urlurl!))['url'];
-                toast.close();
-            }
-            catch (error) {
-                toast.updateWith({ text: I`Error converting "${this.displayName}".` + '\n' + error });
-                toast.show(3000);
-            }
+    getFileUrl(file?: Api.TrackFile) {
+        if (!file?.profile) return this.url;
+        if (file.size == -1) return false;
+        return this.url + '.' + file.profile;
+    }
+    async requestFileUrl(file: Api.TrackFile): Promise<string> {
+        var r = this.getFileUrl(file);
+        if (r !== false) return r;
+        var toast = Toast.show(I`Converting "${this.displayName}"...`);
+        try {
+            file.size = (await api.post({
+                path: `tracks/${this.id}/convert`,
+                obj: { profile: file.profile }
+            }))['size'];
+            toast.close();
+            return this.getFileUrl(file) as string;
+        }
+        catch (error) {
+            toast.updateWith({ text: I`Error converting "${this.displayName}".` + '\n' + error });
+            toast.show(3000);
+            throw error;
         }
     }
     _lyricsFetchTask: Promise<string> | null = null;
