@@ -89,7 +89,8 @@
                     preload.preLoginTask = fetch(login.lastBaseUrl + 'users/me', {
                         credentials: 'same-origin',
                         headers: {
-                            'Authorization': 'Bearer ' + login.token
+                            'Authorization': 'Bearer ' + login.token,
+                            'Cache-Control': 'no-store'
                         }
                     }).then(function (resp) {
                         if (!resp.ok) {

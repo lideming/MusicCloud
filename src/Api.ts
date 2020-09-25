@@ -26,6 +26,7 @@ export const api = new class {
         var headers = {};
         var auth = arg.auth ?? this.defaultAuth;
         if (auth) headers['Authorization'] = auth;
+        if (arg.cache != true) headers['Cache-Control'] = 'no-store';
         return headers;
     }
     async get(path: string, options?: FetchOptions): Promise<any> {
@@ -165,6 +166,7 @@ export interface PostOptions extends FetchOptions {
 export interface FetchOptions {
     status?: number;
     auth?: string;
+    cache?: boolean;
 }
 
 export type PostBodyOptions =
