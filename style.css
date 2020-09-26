@@ -337,28 +337,29 @@ html, body {
     color: black;
 }
 
+.trackitem {
+    display: flex;
+    align-items: center;
+}
+
 .trackitem .pos {
-    display: inline-block;
     text-align: center;
-    min-width: 2em;
+    flex: 2em;
     color: var(--color-text-gray);
-    vertical-align: middle;
 }
 
 .trackitem .name, .trackitem .artist, .trackitem .duration,
 .trackitem .uploads-state {
-    display: inline-block;
-    vertical-align: middle;
     margin-left: .5em;
     overflow-wrap: break-word;
 }
 
 .trackitem .name {
-    width: calc((100% - 3em - 20px) * .6);
+    flex: 1 1 60%;
 }
 
 .trackitem .artist {
-    width: calc((100% - 3em - 20px) * .4);
+    flex: 1 1 40%;
 }
 
 .trackitem .artist, #bottombar-trackinfo .artist {
@@ -370,12 +371,8 @@ html, body {
     display: none;
 }
 
-.trackitem.uploads-item .name {
-    width: calc((100% - 3em - 20px) * .5);
-}
-
 .trackitem.uploads-item .uploads-state {
-    width: calc((100% - 3em - 20px) * .1);
+    flex: 4em;
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
@@ -391,23 +388,15 @@ html, body {
 }
 
 @media only screen and (min-width: 1000px) {
-    .trackitem .name {
-        width: calc((100% - 3em - 20px - 4.5em) * .6);
-    }
-    .trackitem .artist {
-        width: calc((100% - 3em - 20px - 4.5em) * .4);
-    }
     .trackitem .duration {
-        display: inline-block;
-        width: 4em;
-    }
-    .trackitem.uploads-item .name {
-        width: calc((100% - 3em - 20px - 4.5em) * .5);
+        display: block;
+        flex: 4em;
     }
 }
 
 @media only screen and (max-width: 500px) {
     .trackitem {
+        display: block;
         position: relative;
         padding: 5px;
     }
