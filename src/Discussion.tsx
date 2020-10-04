@@ -181,15 +181,11 @@ class CommentViewItem extends ListViewItem {
     onremove: Action<CommentViewItem>;
     onedit: Action<CommentViewItem>;
     createDom(): BuildDomExpr {
-        return {
-            _ctx: this,
-            tag: 'div.item.comment.no-transform',
-            child: [
-                { tag: 'div.username', text: () => this.comment.username },
-                { tag: 'div.date', text: () => utils.formatDateTime(new Date(this.comment.date)) },
-                { tag: 'div.content', text: () => this.comment.content }
-            ]
-        };
+        return (<div class="item comment no-transform">
+            <div class="username">{() => this.comment.username}</div>
+            <div class="date">{() => utils.formatDateTime(new Date(this.comment.date))}</div>
+            <div class="content">{() => this.comment.content}</div>
+        </div>);
     }
     onContextMenu = (item, ev) => {
         ev.preventDefault();

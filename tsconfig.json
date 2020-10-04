@@ -6,6 +6,8 @@
         "target": "ES2015",
         "lib": ["DOM", "ES2015"],
         "moduleResolution": "Node",
+        "jsx": "react",
+        "jsxFactory": "utils.jsxFactory",
         "sourceMap": true,
         "downlevelIteration": true,
         "noImplicitThis": true,
