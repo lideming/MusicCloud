@@ -63,12 +63,6 @@ ul, li {
     transition: background-color .3s, color .3s, border-color .3s !important;
 }
 
-.fading-out {
-    transition: opacity .3s;
-    opacity: 0;
-    pointer-events: none;
-}
-
 :focus {
     outline: none;
 }
