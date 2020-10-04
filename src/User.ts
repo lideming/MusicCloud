@@ -50,9 +50,6 @@ export const user = new class User {
             this.openUI();
         }
     }
-    initLoginUI() {
-        this.loginDialog = new LoginDialog();
-    }
     openUI(login?: boolean, ev?: MouseEvent) {
         login = login ?? this.state !== 'logged';
         if (login) {
