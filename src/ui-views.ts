@@ -1,5 +1,5 @@
 // file: ui-views.ts
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, EditableHelper, ContainerView } from "./viewlib";
+import { ListViewItem, TextView, View, EditableHelper, ContainerView } from "./viewlib";
 import { utils, BuildDomExpr, Func, EventRegistrations } from "./utils";
 import { I } from "./I18n";
 
@@ -72,6 +72,13 @@ export class ContentHeader extends View {
             ]
         };
     }
+    bindScrollBox(scrollbox: HTMLElement) {
+        scrollbox.addEventListener('scroll', (ev) => {
+            if (ev.eventPhase == Event.AT_TARGET) {
+                setScrollableShadow(this.dom, scrollbox.scrollTop);
+            }
+        });
+    }
     titleView = new View({
         tag: 'span.title.no-selection', text: () => this.title,
         update: (dom) => {
@@ -108,4 +115,8 @@ export class ActionBtn extends TextView {
     createDom(): BuildDomExpr {
         return { tag: 'span.action.clickable.no-selection', tabIndex: 0 };
     }
+}
+
+export function setScrollableShadow(dom: HTMLElement, position: number) {
+    dom.style.boxShadow = `0 0 ${utils.numLimit(Math.log(position) * 2, 0, 10)}px var(--color-shadow)`;
 }

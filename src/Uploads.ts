@@ -93,7 +93,7 @@ export const uploads = new class extends TrackList {
             this.title = I`My Uploads`;
             super.appendHeader();
             this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
-            this.dom.appendView(this.uploadArea);
+            this.header.appendView(this.uploadArea);
 
             this.trackActionHandler.onTrackRemove = (items: UploadViewItem[]) => {
                 if (items.length === 1) {

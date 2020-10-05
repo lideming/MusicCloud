@@ -6,7 +6,7 @@ import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
 import { api } from './Api';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
-import { LoadingIndicator, View, ViewToggle } from '@yuuza/webfx';
+import { LoadingIndicator, View, ViewToggle  } from './viewlib';
 import { Api } from './apidef';
 import { Track } from './Track';
 
@@ -43,6 +43,13 @@ class PlayingView extends ContentView {
     header = new ContentHeader({
         title: I`Now Playing`
     });
+    infoView = new View({
+        tag: 'div.infoview',
+        child: [
+            { tag: 'div.name', text: () => playerCore.track?.name },
+            { tag: 'div.artist', text: () => playerCore.track?.artist },
+        ]
+    });
     lyricsView = new LyricsView();
     loading = new LoadingIndicator();
     loadingOuter = new View({ tag: 'div', style: 'flex: 1; align-items: center;', child: this.loading });
@@ -74,14 +81,14 @@ class PlayingView extends ContentView {
                 playerCore.track?.startEdit(ev);
             }
         }));
+        this.header.appendView(this.infoView);
+        this.header.bindScrollBox(this.lyricsView.dom);
     }
     createDom(): BuildDomExpr {
         return {
             tag: 'div.playingview',
             child: [
                 this.header,
-                { tag: 'div.name', text: () => playerCore.track?.name },
-                { tag: 'div.artist', text: () => playerCore.track?.artist },
                 // {
                 //     tag: 'div.pic',
                 //     child: [
@@ -117,7 +124,7 @@ class PlayingView extends ContentView {
     _checkTrackVersion = 0;
     async checkTrack() {
         var version = ++this._checkTrackVersion;
-        this.updateDom();
+        this.infoView.updateDom();
         const newTrack = playerCore.track;
         let newLyrics = '';
         this.editBtn.hidden = !newTrack;

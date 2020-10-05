@@ -97,7 +97,7 @@ class CommentsContentView extends ListContentView {
     }
     protected appendHeader() {
         super.appendHeader();
-        this.dom.appendView(this.editorNew = new CommentEditor());
+        this.header.appendView(this.editorNew = new CommentEditor());
         this.editorNew.dom.classList.add('comment-editor-new');
         this.editorNew.onsubmit = (editor) => {
             var content = editor.content;

@@ -191,9 +191,21 @@ html, body {
     height: 50px;
 }
 
+.float-sidebar #sidebar-login {
+    z-index: 3;
+}
+
+.float-sidebar #sidebar-features {
+    z-index: 2;
+    position: relative;
+}
+
 .float-sidebar #sidebar-list .section-header {
     position: sticky;
-    top: 50px;
+    top: 0;
+    padding-top: 60px;
+    margin-top: -50px;
+    z-index: 1;
 }
 
 .sidebar-toggle {
@@ -213,6 +225,7 @@ html, body {
 
 .content-header {
     position: relative;
+    z-index: 1;
     top: 0;
     background: var(--color-bg);
     animation: showing-top .3s;
@@ -659,11 +672,14 @@ html, body {
     flex-direction: column;
 }
 
+.playingview .infoview {
+    animation: showing-top .3s;
+}
+
 .playingview .name, .playingview .artist {
     font-size: 120%;
     text-align: center;
     margin: 0 20px 10px;
-    animation: showing .3s;
 }
 
 .playingview .name {
@@ -756,7 +772,7 @@ html, body {
 .searchbar {
     display: flex;
     align-items: center;
-    margin: 10px 10px 5px;
+    margin: 5px 10px 10px;
 }
 
 .searchbar .input-text {

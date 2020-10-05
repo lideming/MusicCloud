@@ -8,7 +8,7 @@ import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";
 import { ui } from "./UI";
-import { SidebarItem } from "./ui-views";
+import { SidebarItem, setScrollableShadow } from "./ui-views";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { uploads } from "./Uploads";
@@ -112,8 +112,14 @@ export class ListIndex {
                 }
             }]
         });
-        this.listView.scrollBox = ui.sidebar.dom;
         ui.sidebarList.container.appendView(this.section);
+        ui.sidebar.dom.addEventListener('scroll', (ev) => {
+            if (ev.eventPhase === Event.AT_TARGET) {
+                var dom = this.section.headerView.dom;
+                setScrollableShadow(dom, dom.offsetTop + dom.offsetHeight - this.listView.dom.offsetTop);
+            }
+        })
+        this.listView.scrollBox = ui.sidebar.dom;
         router.addRoute({
             path: ['list'],
             onNav: async (arg) => {

@@ -100,7 +100,9 @@ export class ListContentView extends ContentView {
     }
 
     protected createScrollBox() {
-        return new View({ tag: 'div.scrollbox' });
+        var scrollbox = new View({ tag: 'div.scrollbox' });
+        this.header.bindScrollBox(scrollbox.dom);
+        return scrollbox;
     }
 
     protected appendListView() {
