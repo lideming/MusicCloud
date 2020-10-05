@@ -417,6 +417,7 @@ html, body {
     .trackitem .pos {
         position: absolute;
         margin: 3px;
+        width: 2em;
     }
     .trackitem.uploads-item.state-done .uploads-state {
         display: none;

@@ -79,6 +79,9 @@ class PlayingView extends ContentView {
             this.si.save();
             this.lyricsView.centerLyrics();
         });
+        this.lyricsView.onLyricsChanged.add(() => {
+            this.header.onScrollboxScroll();
+        });
         this.lyricsView.onSpanClick.add((s) => {
             if (s.span.startTime && s.span.startTime >= 0) playerCore.currentTime = s.span.startTime;
         });
@@ -122,7 +125,6 @@ class PlayingView extends ContentView {
             }
         });
         this.lyricsView.onShow();
-        this.header.onScrollboxScroll();
     }
     onRemove() {
         super.onRemove();
