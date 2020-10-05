@@ -555,15 +555,6 @@ html, body {
     background: var(--color-primary-darker);
 }
 
-@keyframes dialogin {
-    0% {
-        transform: scale(.85);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
 .upload-area {
     margin: 10px;
     padding: 10px;
