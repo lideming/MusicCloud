@@ -5,7 +5,7 @@ import { I } from "./I18n";
 import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
 import { api } from './Api';
-import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
+import { SidebarItem, ContentView, ContentHeader, ActionBtn, setScrollableShadow } from './ui-views';
 import { LoadingIndicator, View, ViewToggle  } from './viewlib';
 import { Api } from './apidef';
 import { Track } from './Track';
@@ -40,7 +40,12 @@ export const nowPlaying = new class {
 };
 
 class PlayingView extends ContentView {
-    header = new ContentHeader({
+    header = new class extends ContentHeader{
+        lines: View;
+        onScrollboxScroll() {
+            setScrollableShadow(this.dom, this.scrollbox!.scrollTop - this.lines.dom.offsetTop)
+        }
+    }({
         title: I`Now Playing`
     });
     infoView = new View({
@@ -67,6 +72,7 @@ class PlayingView extends ContentView {
     loadedLyrics: string = '';
     constructor() {
         super();
+        this.header.lines = this.lyricsView.lines;
         this.lyricsView.scale = this.si.data.lyricsScale;
         this.lyricsView.onFontSizeChanged.add(() => {
             this.si.data.lyricsScale = this.lyricsView.scale;
@@ -116,6 +122,7 @@ class PlayingView extends ContentView {
             }
         });
         this.lyricsView.onShow();
+        this.header.onScrollboxScroll();
     }
     onRemove() {
         super.onRemove();

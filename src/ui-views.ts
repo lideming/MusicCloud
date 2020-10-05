@@ -1,6 +1,6 @@
 // file: ui-views.ts
 import { ListViewItem, TextView, View, EditableHelper, ContainerView } from "./viewlib";
-import { utils, BuildDomExpr, Func, EventRegistrations } from "./utils";
+import { utils, BuildDomExpr, Func, EventRegistrations, Action } from "./utils";
 import { I } from "./I18n";
 
 export class SidebarItem extends ListViewItem {
@@ -49,6 +49,8 @@ export class ContentHeader extends View {
     titleEditable = false;
     editHelper: EditableHelper;
     actions = new ContainerView<ActionBtn>({ tag: 'div.actions' });
+    scrollbox: HTMLElement | null = null;
+    scrollboxScrollHandler: Action<Event> | null = null;
     onTitleEdit: (title: string) => void;
     constructor(init?: Partial<ContentHeader>) {
         super();
@@ -73,11 +75,19 @@ export class ContentHeader extends View {
         };
     }
     bindScrollBox(scrollbox: HTMLElement) {
-        scrollbox.addEventListener('scroll', (ev) => {
+        if (this.scrollbox) {
+            this.scrollbox.removeEventListener('scroll', this.scrollboxScrollHandler!);
+            this.scrollboxScrollHandler = null;
+        }
+        this.scrollbox = scrollbox;
+        scrollbox?.addEventListener('scroll', this.scrollboxScrollHandler = (ev) => {
             if (ev.eventPhase == Event.AT_TARGET) {
-                setScrollableShadow(this.dom, scrollbox.scrollTop);
+                this.onScrollboxScroll();
             }
         });
+    }
+    onScrollboxScroll() {
+        setScrollableShadow(this.dom, this.scrollbox?.scrollTop ?? 0);
     }
     titleView = new View({
         tag: 'span.title.no-selection', text: () => this.title,
@@ -96,6 +106,7 @@ export class ContentHeader extends View {
             this.actions
         ]
     });
+
     updateDom() {
         super.updateDom();
         this.titlebar.updateDom();

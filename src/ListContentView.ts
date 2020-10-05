@@ -126,6 +126,7 @@ export class ListContentView extends ContentView {
         if (this.scrollBox && this._scrollPos) {
             this.scrollBox.dom.scrollTop = this._scrollPos;
         }
+        this.header.onScrollboxScroll();
     }
     onRemove() {
         if (this.scrollBox) {
