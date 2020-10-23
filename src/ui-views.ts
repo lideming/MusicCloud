@@ -129,5 +129,5 @@ export class ActionBtn extends TextView {
 }
 
 export function setScrollableShadow(dom: HTMLElement, position: number) {
-    dom.style.boxShadow = `0 0 ${utils.numLimit(Math.log(position) * 2, 0, 10)}px var(--color-shadow)`;
+    dom.style.boxShadow = `0 0 ${utils.numLimit(Math.log(position) * 2, 0, 10)}px var(--color-light-shadow)`;
 }

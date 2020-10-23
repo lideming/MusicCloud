@@ -29,6 +29,7 @@ body {
     --color-bg-ee: #eeeeee;
     --color-bg-f8: #f8f8f8;
     --color-shadow: rgba(0, 0, 0, .5);
+    --color-light-shadow: rgba(0, 0, 0, .3);
     background: var(--color-bg);
     color: var(--color-text);
 }
@@ -47,6 +48,7 @@ body.dark {
     --color-bg-dd: #222222;
     --color-bg-cc: #333333;
     --color-shadow: rgba(180, 180, 180, .5);
+    --color-light-shadow: rgba(180, 180, 180, .3);
 }
 
 ul, li {
