@@ -449,6 +449,9 @@ export function serialize(lyrics: Lyrics) {
                     str += s.text;
                 }
             });
+            if (l.translation) {
+                str += '\n/' + l.translation;
+            }
             str += '\n';
         }
     });
