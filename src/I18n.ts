@@ -1,4 +1,4 @@
-import { I18n, i18n, I } from "@yuuza/webfx/lib/I18n";
+import { I18n, i18n, I } from "@yuuza/webfx";
 
 export { I18n, i18n, I };
 

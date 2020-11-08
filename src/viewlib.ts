@@ -1,1 +1,1 @@
-export * from "@yuuza/webfx/lib/viewlib";
+export * from "@yuuza/webfx";
