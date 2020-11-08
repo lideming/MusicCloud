@@ -125,10 +125,14 @@ export class LyricsView extends View {
             this.scrollAnimator.cancel();
             this.setCenterPos(line.dom.offsetTop + line.dom.offsetHeight / 2);
         } else if (scroll === 'smooth' && !this.isScrollingPaused()
-            && laterLine && laterLine !== this.scrollingTarget) {
+            && laterLine !== this.scrollingTarget) {
             this.scrollingTarget = laterLine;
             this.scrollAnimator.duration = 300 / playerCore.playbackRate;
-            this.scrollAnimator.scrollTo(laterLine.dom.offsetTop + laterLine.dom.offsetHeight / 2);
+            if (laterLine) {
+                this.scrollAnimator.scrollTo(laterLine.dom.offsetTop + laterLine.dom.offsetHeight / 2);
+            } else {
+                this.scrollAnimator.scrollTo(this.lines.get(0)?.dom.offsetTop ?? 0);
+            }
         }
     }
     scrollAnimator = {
