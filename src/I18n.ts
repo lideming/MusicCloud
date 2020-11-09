@@ -116,6 +116,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Source code", "源代码"],
     ["Client updated:\\n{0}\\n  =>\\n{1}", "客户端已更新:\\n{0}\\n  =>\\n{1}"],
     ["[Unknown version]", "[未知版本]"],
+    ["About", "关于"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

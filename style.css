@@ -57,6 +57,10 @@ ul, li {
     list-style-type: none;
 }
 
+a {
+    color: var(--color-text);
+}
+
 .no-transition, .no-transition * {
     transition: none !important;
 }

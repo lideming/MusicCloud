@@ -2,6 +2,7 @@ import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
 import { I, i18n } from "./I18n";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
+import { utils } from "./utils";
 import { appVersion } from "./AppVersion";
 
 export const settingsUI = new class {
@@ -18,7 +19,7 @@ class SettingsDialog extends Dialog {
     btnSwitchTheme = new ButtonView({ type: 'big' });
     btnSwitchLang = new ButtonView({ type: 'big' });
     inputPreferBitrate = new LabeledInput();
-    bottom: View;
+
     constructor() {
         super();
         this.addContent(this.btnSwitchTheme);
@@ -48,23 +49,23 @@ class SettingsDialog extends Dialog {
                 playerCore.siPlayer.save();
             }
         });
-        this.addContent(this.bottom = new View({
-            tag: 'div',
-            style: 'margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;',
-            child: [
-                {
-                    tag: 'div', style: 'width: 100%; color: var(--color-text-gray);',
-                    text: appVersion.currentDate ? 'Build: ' + appVersion.currentDate : ''
-                },
-                { tag: 'div', text: 'MusicCloud ' + appVersion.currentVersion },
-                {
-                    tag: 'a.clickable', style: 'color: inherit;',
-                    text: () => I`Source code`, href: 'https://github.com/lideming/MusicCloud',
-                    target: '_blank'
-                },
-            ]
-        }));
+        this.addContent(this.bottom);
     }
+
+    bottom: View = new View(
+        <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
+            <div>{'MusicCloud ' + appVersion.currentVersion}</div>
+            <div style="color: var(--color-text-gray);">
+                <div class="clickable" onclick={(ev) => {
+                    new AboutDialog().show(ev);
+                    this.close();
+                }}>
+                    {() => I`About`}
+                </div>
+            </div>
+        </div>
+    );
+
     reloadShown = false;
     showReload() {
         if (this.reloadShown) return;
@@ -78,6 +79,7 @@ class SettingsDialog extends Dialog {
             }
         }), this.bottom.position);
     }
+
     updateDom() {
         this.title = I`Settings`;
         this.btnClose.updateWith({ text: I`Close` });
@@ -87,5 +89,31 @@ class SettingsDialog extends Dialog {
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
         this.content.updateChildrenDom();
+    }
+}
+
+class AboutDialog extends Dialog {
+    title = I`About`;
+
+    constructor() {
+        super();
+        // TODO: i18n
+        this.addContent(new View(
+            <div>
+                <p>{'MusicCloud ' + appVersion.currentVersion}</p>
+                <p>{appVersion.currentDate ? I`Build Date` + ': ' + appVersion.currentDate : ''}</p>
+                <p>
+                    This project is{" "}
+                    <a href="https://github.com/lideming/MusicCloud" class="clickable" target="_blank">
+                        {() => I`open-sourced`}
+                    </a>
+                    {" "}under MIT license, see.
+                </p>
+                <p>
+                    This project is based on {" "}
+                    <a href="https://github.com/lideming/webfx" class="clickable" target="_blank">webfx</a>.
+                </p>
+            </div>
+        ));
     }
 }
