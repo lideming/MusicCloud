@@ -1,5 +1,5 @@
 import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
-import { I, i18n } from "./I18n";
+import { I, i18n, IA } from "./I18n";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
 import { utils } from "./utils";
@@ -97,22 +97,18 @@ class AboutDialog extends Dialog {
 
     constructor() {
         super();
-        // TODO: i18n
         this.addContent(new View(
             <div>
-                <p>{'MusicCloud ' + appVersion.currentVersion}</p>
+                <p>{I`MusicCloud` + ' ' + appVersion.currentVersion}</p>
                 <p>{appVersion.currentDate ? I`Build Date` + ': ' + appVersion.currentDate : ''}</p>
-                <p>
-                    This project is{" "}
-                    <a href="https://github.com/lideming/MusicCloud" class="clickable" target="_blank">
+                <p>{
+                    IA`This project is ${<a href="https://github.com/lideming/MusicCloud" class="clickable" target="_blank">
                         {() => I`open-sourced`}
-                    </a>
-                    {" "}under MIT license, see.
-                </p>
-                <p>
-                    This project is based on {" "}
-                    <a href="https://github.com/lideming/webfx" class="clickable" target="_blank">webfx</a>.
-                </p>
+                    </a>} under MIT license.`
+                }</p>
+                <p>{
+                    IA`This project is based on ${<a href="https://github.com/lideming/webfx" class="clickable" target="_blank">webfx</a>}.`
+                }</p>
             </div>
         ));
     }

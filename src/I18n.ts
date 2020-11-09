@@ -1,6 +1,8 @@
-import { I18n, i18n, I } from "@yuuza/webfx";
+import { I18n, i18n, createArrayBuilder, I } from "@yuuza/webfx";
 
 export { I18n, i18n, I };
+
+export const IA = createArrayBuilder(i18n);
 
 // Use JSON.parse(a_big_json) for faster JavaScript runtime parsing
 i18n.add2dArray(JSON.parse(`[
@@ -117,6 +119,10 @@ i18n.add2dArray(JSON.parse(`[
     ["Client updated:\\n{0}\\n  =>\\n{1}", "客户端已更新:\\n{0}\\n  =>\\n{1}"],
     ["[Unknown version]", "[未知版本]"],
     ["About", "关于"],
+    ["Build Date", "编译时间"],
+    ["This project is {0} under MIT license.", "此项目以 MIT 协议 {0}。"],
+    ["This project is based on {0}.", "此项目基于 {0}。"],
+    ["open-sourced", "开源"],
     ["Music Cloud", "Music Cloud"]
 ]`));
 

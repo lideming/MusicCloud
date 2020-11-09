@@ -25,8 +25,6 @@ export class SidebarItem extends ListViewItem {
 }
 
 export class ContentView extends View {
-    dom: HTMLElement;
-
     private _isVisible = false;
     public get isVisible() { return this._isVisible; }
 

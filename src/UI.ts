@@ -118,8 +118,8 @@ export const ui = new class {
                 i18n.curLang = lang;
                 document.body.lang = lang;
                 console.info(`[UI] Current language: '${i18n.curLang}' - '${I`English`}'`);
-                i18n.renderElements(document.querySelectorAll('.i18ne'));
             });
+            i18n.renderElements(document.querySelectorAll('.i18ne'));
         }
         setLang(lang: string, reload?: boolean) {
             this.siLang.set(lang ?? '');
