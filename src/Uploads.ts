@@ -232,11 +232,11 @@ export const uploads = new class extends TrackList {
         });
         this.insertTrack(track);
 
+        this.inprogress++;
+        this.updateSidebarItem();
+
         await this.uploadSemaphore.enter();
         try {
-            this.inprogress++;
-            this.updateSidebarItem();
-
             if (track._upload.state === 'cancelled') return null;
 
             await this.uploadCore(apitrack, track, file);
