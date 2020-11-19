@@ -15,6 +15,11 @@ This repo contains the frontend parts of MusicCloud.
 * Tracklists on the cloud
 * Lyrics with translation and ruby annotations, extended from LRC.
 * Comment and discussion
+* Todo:
+    - [ ] Player control UI rework
+    - [ ] Front page
+    - [ ] Albums
+    - [ ] Cross-device interaction
 
 
 ## Configure Build
