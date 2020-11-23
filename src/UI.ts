@@ -20,6 +20,7 @@ import { Track } from "./Track";
 import { user } from "./User";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 import { uploads } from "./Uploads";
+import { ToolTip } from "@yuuza/webfx";
 
 export const ui = new class {
     usingKeyboardInput = false;
@@ -536,7 +537,16 @@ class ProgressButton extends View {
 
 class VolumeButton extends ProgressButton {
     onChanging = new Callbacks<(delta: number) => void>();
-    tip = '\n' + I`(Scroll whell or drag to adjust volume)`;
+    showUsage = false;
+    tipView = new ToolTip();
+    private _mouseDown = false;
+    private _mouseIn = false;
+
+    get progress() { return super.progress; }
+    set progress(val: number) {
+        super.progress = val;
+        this.updateTip();
+    }
 
     constructor(dom?: HTMLElement) {
         super(dom);
@@ -549,6 +559,7 @@ class VolumeButton extends ProgressButton {
         utils.listenPointerEvents(this.dom, (e) => {
             if (e.type === 'mouse' && e.action === 'down' && e.ev.buttons != 1) return;
             e.ev.preventDefault();
+            this._mouseDown = e.action != 'up';
             if (e.action === 'down') {
                 this.dom.focus();
                 startX = e.point.pageX;
@@ -563,7 +574,20 @@ class VolumeButton extends ProgressButton {
                 this.dom.classList.remove('btn-down');
                 this.fill.dom.style.transition = '';
             }
+            this.updateTip();
         });
+        this.dom.addEventListener('mouseenter', (e) => {
+            this._mouseIn = true;
+            this.updateTip();
+        });
+        this.dom.addEventListener('mouseleave', (e) => {
+            this._mouseIn = false;
+            this.updateTip();
+        });
+        this.dom.addEventListener('click', (e) => {
+            this.showUsage = true;
+            this.updateTip();
+        })
         const mapKeyAdjustment = {
             "ArrowUp": 0.05,
             "ArrowDown": -0.05,
@@ -578,16 +602,34 @@ class VolumeButton extends ProgressButton {
             }
         });
     }
+
+    private updateTip() {
+        const percent = Math.floor(this.progress * 100);
+        this.tipView.text = percent + '%';
+        const showing = this._mouseIn || this._mouseDown;
+        if (showing == this.tipView.shown) {
+        } else if (showing) {
+            const rect = this.dom.getBoundingClientRect();
+            const parentRect = ui.bottomBar.container.getBoundingClientRect();
+            this.tipView.show({
+                x: rect.left + rect.width / 2 - parentRect.left,
+                y: rect.top - parentRect.top - 3,
+                parent: ui.bottomBar.container
+            });
+        } else {
+            this.tipView.close();
+        }
+    }
+
     bindToPlayer() {
         playerCore.onVolumeChanged.add(() => {
             this.progress = playerCore.volume;
-            this.dom.title = I`Volume` + ' ' + Math.floor(this.progress * 100) + '%' + this.tip;
         })();
         this.onChanging.add((x) => {
             var r = utils.numLimit(playerCore.volume + x, 0, 1);
             r = Math.round(r * 100) / 100;
+            this.showUsage = false;
             playerCore.volume = r;
-            this.tip = '';
         });
     }
 }
