@@ -270,6 +270,7 @@ export class LyricsView extends View {
     }
     setScrollingPause(timeout: number) {
         this.pauseScrollTime = Math.max(this.pauseScrollTime || 0, Date.now() + timeout);
+        this.scrollingTarget = null;
     }
 
 
