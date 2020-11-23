@@ -556,6 +556,7 @@ class VolumeButton extends ProgressButton {
             this.onChanging.invoke(delta);
         });
         var startX: number;
+        var startVol: number;
         utils.listenPointerEvents(this.dom, (e) => {
             if (e.type === 'mouse' && e.action === 'down' && e.ev.buttons != 1) return;
             e.ev.preventDefault();
@@ -563,13 +564,13 @@ class VolumeButton extends ProgressButton {
             if (e.action === 'down') {
                 this.dom.focus();
                 startX = e.point.pageX;
+                startVol = this.progress;
                 this.dom.classList.add('btn-down');
                 this.fill.dom.style.transition = 'none';
                 return 'track';
             } else if (e.action === 'move') {
                 var deltaX = e.point.pageX - startX;
-                startX = e.point.pageX;
-                this.onChanging.invoke(deltaX * 0.01);
+                this.onChanging.invoke(startVol + deltaX * 0.01);
             } else if (e.action === 'up') {
                 this.dom.classList.remove('btn-down');
                 this.fill.dom.style.transition = '';
@@ -595,10 +596,10 @@ class VolumeButton extends ProgressButton {
             "ArrowLeft": -0.01,
         };
         this.dom.addEventListener('keydown', (e) => {
-            var adj = mapKeyAdjustment[e.code];
+            var adj = mapKeyAdjustment[e.code] as number;
             if (adj) {
                 e.preventDefault();
-                this.onChanging.invoke(adj);
+                this.onChanging.invoke(this.progress + adj);
             }
         });
     }
@@ -626,7 +627,7 @@ class VolumeButton extends ProgressButton {
             this.progress = playerCore.volume;
         })();
         this.onChanging.add((x) => {
-            var r = utils.numLimit(playerCore.volume + x, 0, 1);
+            var r = utils.numLimit(x, 0, 1);
             r = Math.round(r * 100) / 100;
             this.showUsage = false;
             playerCore.volume = r;
