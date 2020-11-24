@@ -317,7 +317,7 @@ html, body {
 .listcontentview > .scrollbox {
     flex: 1;
     overflow-y: auto;
-    animation: showing .3s forwards;
+    animation: showing .3s;
     will-change: transform;
 }
 
@@ -464,7 +464,7 @@ html, body {
     background: var(--color-bg-dd);
     box-shadow: 0 0px 3px var(--color-shadow);
     z-index: 10001;
-    contain: strict;
+    contain: layout;
     will-change: transform;
 }
 
