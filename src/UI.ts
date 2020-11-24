@@ -20,7 +20,7 @@ import { Track } from "./Track";
 import { user } from "./User";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 import { uploads } from "./Uploads";
-import { ToolTip } from "@yuuza/webfx";
+import { InputStateTracker, ToolTip } from "@yuuza/webfx";
 
 export const ui = new class {
     usingKeyboardInput = false;
@@ -132,9 +132,8 @@ export const ui = new class {
         btnPin = new TextView(document.getElementById('btnPin')!);
         siPin: SettingItem<boolean>;
         private pinned = true;
+        InputStateTracker = new InputStateTracker(this.container);
         hideTimer = new utils.Timer(() => { this.toggle(false); });
-        mouseInside = false;
-        focusInside = false;
         shown = false;
         inTransition = false;
         setPinned(val?: boolean) {
@@ -154,7 +153,8 @@ export const ui = new class {
             if (state && hideTimeout && !this.pinned) this.updateState(hideTimeout);
         }
         private updateState(timeout = 200) {
-            var showing = this.pinned || this.mouseInside || (this.focusInside && ui.usingKeyboardInput);
+            var showing = this.pinned || this.InputStateTracker.state.mouseIn
+                || this.InputStateTracker.state.mouseDown || (this.InputStateTracker.state.focusIn && ui.usingKeyboardInput);
             if (showing) {
                 this.hideTimer.tryCancel();
                 this.toggle(true);
@@ -165,6 +165,7 @@ export const ui = new class {
         }
         init() {
             var bar = this.container;
+            this.InputStateTracker.onChanged.add(() => this.updateState());
             bar.addEventListener('transitionstart', (e) => {
                 if (e.target === bar && e.propertyName === 'transform') this.inTransition = true;
             });
@@ -174,26 +175,6 @@ export const ui = new class {
             bar.addEventListener('transitioncancel', (e) => {
                 if (e.target === bar && e.propertyName === 'transform') this.inTransition = false;
             });
-            bar.addEventListener('mouseenter', () => {
-                this.mouseInside = true;
-                this.updateState();
-            }, true);
-            bar.addEventListener('mouseleave', (e) => {
-                if (e.relatedTarget instanceof Node && bar.contains(e.relatedTarget))
-                    return;
-                this.mouseInside = false;
-                this.updateState();
-            }, true);
-            bar.addEventListener('focusin', () => {
-                this.focusInside = true;
-                this.updateState();
-            }, true);
-            bar.addEventListener('focusout', (e) => {
-                if (e.relatedTarget instanceof Node && bar.contains(e.relatedTarget))
-                    return;
-                this.focusInside = false;
-                this.updateState();
-            }, true);
             bar.addEventListener('keydown', (e) => {
                 this.updateState();
             }, true);
@@ -229,7 +210,8 @@ export const ui = new class {
             };
             this.btnPrev.onactive = () => playerCore.prev();
             this.btnNext.onactive = () => playerCore.next();
-            playerCore.onLoopModeChanged.add(() => this.setLoopMode(playerCore.loopMode))();
+            playerCore.onLoopModeChanged.add(() => this.updateLoopMode())();
+            playerCore.onTrackChanged.add(() => this.updateLoopMode())();
             playerCore.onStateChanged.add(() => {
                 this.setState(playerCore.state);
                 this.setProg(playerCore.currentTime, playerCore.duration);
@@ -266,9 +248,11 @@ export const ui = new class {
             this.labelCur.textContent = utils.formatTime(cur!);
             this.labelTotal.textContent = utils.formatTime(total!);
         }
-        setLoopMode(str: PlayingLoopMode) {
+        updateLoopMode() {
             this.btnLoop.hidden = false;
-            this.btnLoop.text = i18n.get('loopmode_' + str);
+            this.btnLoop.text = i18n.get('loopmode_' + playerCore.loopMode);
+            this.btnNext.toggleClass('disabled', !playerCore.getNextTrack(1));
+            this.btnPrev.toggleClass('disabled', !playerCore.getNextTrack(-1));
         }
         onProgressSeeking(cb: (percent: number) => void) {
             var call = (offsetX) => { cb(utils.numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
@@ -539,8 +523,8 @@ class VolumeButton extends ProgressButton {
     onChanging = new Callbacks<(delta: number) => void>();
     showUsage = false;
     tipView = new ToolTip();
-    private _mouseDown = false;
-    private _mouseIn = false;
+    InputStateTracker: InputStateTracker;
+    get state() { return this.InputStateTracker.state; }
 
     get progress() { return super.progress; }
     set progress(val: number) {
@@ -550,6 +534,9 @@ class VolumeButton extends ProgressButton {
 
     constructor(dom?: HTMLElement) {
         super(dom);
+        this.tipView.toggleClass('volume-tip', true);
+        this.InputStateTracker = new InputStateTracker(this.dom);
+        this.InputStateTracker.onChanged.add(() => this.updateTip());
         this.dom.addEventListener('wheel', (ev) => {
             ev.preventDefault();
             var delta = Math.sign(ev.deltaY) * -0.05;
@@ -560,7 +547,6 @@ class VolumeButton extends ProgressButton {
         utils.listenPointerEvents(this.dom, (e) => {
             if (e.type === 'mouse' && e.action === 'down' && e.ev.buttons != 1) return;
             e.ev.preventDefault();
-            this._mouseDown = e.action != 'up';
             if (e.action === 'down') {
                 this.dom.focus();
                 startX = e.point.pageX;
@@ -577,18 +563,10 @@ class VolumeButton extends ProgressButton {
             }
             this.updateTip();
         });
-        this.dom.addEventListener('mouseenter', (e) => {
-            this._mouseIn = true;
-            this.updateTip();
-        });
-        this.dom.addEventListener('mouseleave', (e) => {
-            this._mouseIn = false;
-            this.updateTip();
-        });
         this.dom.addEventListener('click', (e) => {
             this.showUsage = true;
             this.updateTip();
-        })
+        });
         const mapKeyAdjustment = {
             "ArrowUp": 0.05,
             "ArrowDown": -0.05,
@@ -607,7 +585,7 @@ class VolumeButton extends ProgressButton {
     private updateTip() {
         const percent = Math.floor(this.progress * 100);
         this.tipView.text = percent + '%';
-        const showing = this._mouseIn || this._mouseDown;
+        const showing = this.state.mouseIn || this.state.mouseDown || (this.state.focusIn && ui.usingKeyboardInput);
         if (showing == this.tipView.shown) {
         } else if (showing) {
             const rect = this.dom.getBoundingClientRect();
@@ -618,7 +596,9 @@ class VolumeButton extends ProgressButton {
                 parent: ui.bottomBar.container
             });
         } else {
-            this.tipView.close();
+            this.tipView.close({
+                className: 'animation-fading-out'
+            });
         }
     }
 

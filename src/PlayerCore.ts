@@ -130,12 +130,17 @@ export const playerCore = new class PlayerCore {
     }
     prev() { return this.next(-1); }
     next(offset?: number) {
-        var nextTrack = this.track?._bind?.list?.getNextTrack(this.track, this.loopMode, offset);
+        var nextTrack = this.getNextTrack(offset);
         if (nextTrack)
             this.playTrack(nextTrack, true);
         else
             this.setTrack(null);
     }
+
+    getNextTrack(offset?: number) {
+        return this.track?._bind?.list?.getNextTrack(this.track, this.loopMode, offset);
+    }
+
     loadUrl(src: string | null) {
         // Getting `this.audio.src` is very slow when a blob is loaded,
         // so we add this property:

@@ -792,3 +792,26 @@ html, body {
     line-height: 1.5;
     padding: 3px;
 }
+
+.volume-tip {
+    animation: volume-tip-animation .2s;
+    pointer-events: none;
+}
+
+.volume-tip.animation-fading-out {
+    animation: volume-tip-animation .2s reverse;
+    transform: translate(-50%, 0) scale(.5);
+    opacity: 0;
+    transition: all .2s;
+}
+
+@keyframes volume-tip-animation {
+    0% {
+        transform: translate(-50%, 0) scale(.5);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(-50%, -100%) scale(1);
+        opacity: 1;
+    }
+}
