@@ -1,0 +1,10 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+- name: Build
+  image: node
+  commands:
+  - npm install rollup
+  - npm run build
