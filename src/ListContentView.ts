@@ -1,6 +1,6 @@
 // file: ListContentView.ts
 
-import { View, ListViewItem, ListView, LoadingIndicator } from "./viewlib";
+import { View, ListViewItem, ListView, LazyListView, LoadingIndicator } from "./viewlib";
 import { utils } from "./utils";
 import { I } from "./I18n";
 import { ContentView, ContentHeader, ActionBtn } from "./ui-views";
@@ -48,7 +48,7 @@ export class ListContentView extends ContentView {
     selectBtn: ActionBtn;
 
     scrollBox: View;
-    listView: ListView<ListViewItem>;
+    listView: LazyListView<ListViewItem>;
     loadingIndicator: LoadingIndicator | null;
     emptyIndicator: LoadingIndicator;
 
@@ -106,7 +106,8 @@ export class ListContentView extends ContentView {
     }
 
     protected appendListView() {
-        this.listView = new ListView({ tag: 'ul.listview' });
+        this.listView = new LazyListView({ tag: 'ul.listview' });
+        this.listView.lazy = true;
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
             this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
@@ -123,15 +124,21 @@ export class ListContentView extends ContentView {
     }
     onDomInserted() {
         super.onDomInserted();
+        this.listView.ensureLoaded(20);
         if (this.scrollBox && this._scrollPos) {
+            this.listView.dom.style.minHeight = (this._scrollPos + this.scrollBox.dom.offsetHeight) + 'px';
             this.scrollBox.dom.scrollTop = this._scrollPos;
         }
+        this.listView.slowlyLoad(-1, 30, true).then(() => {
+            this.listView.dom.style.minHeight = '';
+        });
         this.header.onScrollboxScroll();
     }
     onRemove() {
         if (this.scrollBox) {
             this._scrollPos = this.scrollBox.dom.scrollTop;
         }
+        this.listView.unload();
         super.onRemove();
     }
 

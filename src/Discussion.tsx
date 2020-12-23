@@ -2,7 +2,7 @@
 
 import { ui } from "./UI";
 import { api } from "./Api";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView } from "./viewlib";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView, LazyListView } from "./viewlib";
 import { Lazy, Action, BuildDomExpr, utils, DataUpdatingHelper } from "./utils";
 import { I } from "./I18n";
 import { user } from "./User";
@@ -90,7 +90,7 @@ class CommentsView {
 class CommentsContentView extends ListContentView {
     comments: CommentsView;
     editorNew: CommentEditor;
-    listView: ListView<CommentViewItem>;
+    listView: LazyListView<CommentViewItem>;
     constructor(comments: CommentsView) {
         super();
         this.comments = comments;

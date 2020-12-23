@@ -3,7 +3,7 @@ import { ui } from './UI';
 import { Lazy, Callbacks, BuildDomExpr } from './utils';
 import { I } from "./I18n";
 import { ListContentView } from './ListContentView';
-import { InputView, View, ButtonView, LoadingIndicator, ListView } from './viewlib';
+import { InputView, View, ButtonView, LoadingIndicator, ListView, LazyListView } from './viewlib';
 import { api } from './Api';
 import { Api } from './apidef';
 import { TrackViewItem, TrackList } from './TrackList';
@@ -42,7 +42,7 @@ class SearchView extends ListContentView {
     searchbar = new SearchBar();
     currentQuery: string;
     tempList: TrackList | null = null;
-    listView: ListView<TrackViewItem>;
+    listView: LazyListView<TrackViewItem>;
     appendListView() {
         super.appendListView();
         this.listView.toggleClass('tracklistview', true);

@@ -2,7 +2,7 @@
 
 import { utils, BuildDomExpr, DataUpdatingHelper } from "./utils";
 import { I, i18n } from "./I18n";
-import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper } from "./viewlib";
+import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -34,7 +34,7 @@ export class TrackList {
 
     /** Available when the view is created */
     contentView: TrackListView;
-    listView: ListView<TrackViewItem>;
+    listView: LazyListView<TrackViewItem>;
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
@@ -44,6 +44,7 @@ export class TrackList {
     loadFromGetResult(obj: Api.TrackListGet) {
         this.loadInfo(obj);
         const thiz = this;
+        if (this.listView) this.listView.lazy = true;
         new class extends DataUpdatingHelper<Track, Api.Track>{
             items = thiz.tracks;
             addItem(data: Api.Track, pos: number) { thiz.addTrack_NoUpdating(data, pos); }
@@ -52,6 +53,7 @@ export class TrackList {
         }().update(obj.tracks);
         this.updateTracksState();
         this.contentView?.updateView();
+        if (this.listView) this.listView.slowlyLoad(1, 30);
         return this;
     }
     addTrack(t: Api.Track, pos?: number) {
@@ -226,14 +228,14 @@ export class TrackList {
 
 export class TrackListView extends ListContentView {
     list: TrackList;
-    listView: ListView<TrackViewItem>;
+    listView: LazyListView<TrackViewItem>;
     curPlaying = new ItemActiveHelper<TrackViewItem>({
         funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
     });
-    canMultiSelect = true;
     trackActionHandler: TrackActionHandler<TrackViewItem> = {};
     constructor(list: TrackList) {
         super();
+        this.canMultiSelect = true;
         this.list = list;
         if (this.list.canEdit) {
             this.trackActionHandler.onTrackRemove = (items) =>

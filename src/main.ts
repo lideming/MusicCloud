@@ -56,6 +56,7 @@ export const app = window['app'] = {
     msgcli,
     init() {
         console.time('[Main] app.init()');
+        app.checkMode();
         app.injectStyle();
         ui.init();
         playerCore.init();
@@ -71,6 +72,11 @@ export const app = window['app'] = {
         router.init();
         appVersion.showUpdatedToast();
         console.timeEnd('[Main] app.init()');
+    },
+    checkMode() {
+        if (localStorage.getItem("mcloud-dev") == "1") {
+            webfx.startBlockingDetect();
+        }
     },
     injectStyle() {
         webfx.injectWebfxCss();

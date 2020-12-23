@@ -6,7 +6,7 @@ import { Semaphore, utils, DataUpdatingHelper, CancelToken } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
-import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView } from "./viewlib";
+import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView } from "./viewlib";
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
@@ -86,7 +86,7 @@ export const uploads = new class extends TrackList {
     sidebarItem: ListIndexViewItem;
     view = new class extends TrackListView {
         uploadArea: UploadArea;
-        listView: ListView<UploadViewItem>;
+        listView: LazyListView<UploadViewItem>;
         usage = new TextView({ tag: 'span.uploads-usage' });
 
         protected appendHeader() {
