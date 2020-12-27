@@ -121,6 +121,7 @@ export class ListContentView extends ContentView {
     onShow() {
         super.onShow();
         this.ensureDom();
+        this.listView.unload();
     }
     onDomInserted() {
         super.onDomInserted();
@@ -138,7 +139,7 @@ export class ListContentView extends ContentView {
         if (this.scrollBox) {
             this._scrollPos = this.scrollBox.dom.scrollTop;
         }
-        this.listView.unload();
+        this.listView.stopLoading();
         super.onRemove();
     }
 

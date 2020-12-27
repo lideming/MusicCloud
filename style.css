@@ -353,6 +353,7 @@ html, body {
 .trackitem {
     display: flex;
     align-items: center;
+    contain: content;
 }
 
 .trackitem .pos {

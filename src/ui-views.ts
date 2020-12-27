@@ -36,6 +36,7 @@ export class ContentView extends View {
         this._isVisible = false;
         this._shownEvents?.removeAll();
     }
+    onDomRemoved() { }
 
     _shownEvents: EventRegistrations | null = null;
     get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }

@@ -406,7 +406,10 @@ export const ui = new class {
             this.current = null;
             if (!cur) return;
             cur.onRemove();
-            if (cur.dom) this.container.removeChild(cur.dom);
+            if (cur.dom) {
+                this.container.removeChild(cur.dom);
+                cur.onDomRemoved();
+            }
         }
         setCurrent(arg: views.ContentView | null) {
             if (arg === this.current) return;
