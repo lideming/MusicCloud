@@ -125,7 +125,7 @@ export class ListContentView extends ContentView {
     }
     onDomInserted() {
         super.onDomInserted();
-        this.listView.ensureLoaded(20);
+        this.listView.ensureLoaded(50);
         if (this.scrollBox && this._scrollPos) {
             this.listView.dom.style.minHeight = (this._scrollPos + this.scrollBox.dom.offsetHeight) + 'px';
             this.scrollBox.dom.scrollTop = this._scrollPos;
