@@ -73,6 +73,7 @@
                     if (!this.domLoaded) return;
                     document.getElementById('js-ok').hidden = !preload.jsLoaded;
                     document.getElementById('js-error').hidden = !preload.jsError;
+                    document.getElementById('js-error-msg').hidden = !preload.jsError;
                     if (this.jsLoaded) this.end();
                 },
                 end() {
@@ -108,8 +109,9 @@
                     document.getElementById('meta-theme-color').content = 'black';
                 }
             });
-            var onerror = function () {
+            var onerror = function (e) {
                 preload.jsError = true;
+                document.getElementById('js-error-msg').textContent = "" + e.error;
                 preload.update();
             };
             window.addEventListener('error', onerror);
@@ -158,7 +160,11 @@
             <p hidden style="color: gray;" id="css-ok">CSS OK</p>
             <p hidden style="color: gray;" id="js-ok">JavaScript OK</p>
             <p hidden style="color: red;" id="js-error">JavaScript Error</p>
+            <p hidden id="js-error-msg"></p>
         </div>
+        <noscript>
+            <p>JavaScript is required to run this application.</p>
+        </noscript>
     </div>
 </body>
 
