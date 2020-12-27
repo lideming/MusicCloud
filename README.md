@@ -20,6 +20,9 @@ This repo contains the frontend parts of MusicCloud.
     - [ ] Front page
     - [ ] Albums
     - [ ] Cross-device interaction
+    - [ ] Quick switching bitrate
+    - [ ] Cache management
+    - [ ] Offline usability
 
 
 ## Configure Build
