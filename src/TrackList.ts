@@ -13,6 +13,7 @@ import { router } from "./Router";
 import { Track } from "./Track";
 import { ContentView, ContentHeader } from "./ui-views";
 import { ui } from "./UI";
+import { msgcli } from "./MessageClient";
 
 export class TrackList {
     info: Api.TrackListInfo | null = null;
@@ -22,6 +23,7 @@ export class TrackList {
     tracks: Track[] = [];
     fetching: Promise<void> | null = null;
     posting: Promise<void> | null = null;
+    eventListening = false;
 
     canEdit = true;
 
@@ -50,7 +52,7 @@ export class TrackList {
             addItem(data: Api.Track, pos: number) { thiz.addTrack_NoUpdating(data, pos); }
             updateItem(item: Track, data: Api.Track) { item.updateFromApiTrack(data); }
             removeItem(item: Track) { thiz.remove_NoUpdating(item); }
-        }().update(obj.tracks);
+        }().updateOrRebuildAll(obj.tracks);
         this.updateTracksState();
         this.contentView?.updateView();
         if (this.listView) this.listView.slowlyLoad(1, 30);
@@ -153,6 +155,11 @@ export class TrackList {
         } catch (err) {
             li.error(err, () => this.fetch(true));
             throw err;
+        }
+        if (!this.eventListening && this.apiid != null) {
+            msgcli.listenEvent("l-" + this.apiid, () => {
+                this.fetch(true);
+            }, true);
         }
     }
     async rename(newName: string) {

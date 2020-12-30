@@ -140,7 +140,7 @@ export const msgcli = new class {
         });
     }
     listenEvent(evt: string, callback: Action, autoRetry?: boolean) {
-        if (this.events[evt]) throw new Error('the event is already registered: ' + evt);
+        if (this.events[evt]) return; // throw new Error('the event is already registered: ' + evt);
         if (this.connected) {
             this.sendQuery({
                 cmd: 'listenEvent',
