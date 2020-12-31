@@ -24,7 +24,7 @@ export class ListIndex {
         this.listView.dragging = true;
         this.listView.moveByDragging = true;
         this.listView.onItemMoved = (item, from) => {
-            user.setListids(this.listView.map(l => l.listInfo.id));
+            this.putUser();
         };
         this.listView.onDragover = (arg) => {
             const src = arg.source;
@@ -69,6 +69,10 @@ export class ListIndex {
             this.showTracklist(item.listInfo.id);
         };
     }
+    private putUser() {
+        user.setListids(this.listView.map(l => l.listInfo.id));
+    }
+
     init() {
         playerCore.onTrackChanged.add(() => {
             var curPlaying = playerCore.track?._bind?.list ?? null;
@@ -127,7 +131,14 @@ export class ListIndex {
                 var id = window.parseInt(arg.remaining[0]);
                 var list = this.getList(id);
                 ui.content.setCurrent(list.createView());
-                ui.sidebarList.setActive(this.getViewItem(id));
+                var item = this.getViewItem(id);
+                ui.sidebarList.setActive(item);
+                if (!item) {
+                    await list.fetch();
+                    this.addListInfo(list.info!);
+                    if (user.state == 'logged') 
+                        this.putUser();
+                }
             }
         });
         router.addRoute({
