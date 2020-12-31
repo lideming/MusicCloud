@@ -42,6 +42,7 @@ export class TrackList {
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
         this.info = utils.objectApply(this.info ?? {}, info, ["id", "owner", "name", "version", "visibility"]) as typeof info;
+        if (this.info.id < 0) this.info.id = 0;
         this.updateCanEdit();
     }
     updateCanEdit() {
@@ -107,7 +108,7 @@ export class TrackList {
     }
     async _post() {
         await user.waitLogin();
-        if (this.apiid != null) throw new Error('cannot post: apiid exists');
+        if (this.apiid) throw new Error('cannot post: apiid exists');
         var obj = this.getTrackListPutInfo();
         var resp: Api.TrackListPutResult = await api.post({
             path: 'users/me/lists/new',
@@ -139,7 +140,7 @@ export class TrackList {
             await user.waitLogin(true);
             if (this.fetching) await this.fetching;
             if (this.posting) await this.posting;
-            if (this.apiid == null) throw new Error('cannot put: no apiid');
+            if (!this.apiid) throw new Error('cannot put: no apiid');
         } catch (error) {
             this.putDelaying = null;
             console.error('[TrackList] pre-put error', error);
@@ -170,7 +171,7 @@ export class TrackList {
         const li = new LoadingIndicator();
         this.setLoadIndicator(li);
         try {
-            if (this.apiid == null) throw new Error('Cannot fetch: no apiid');
+            if (!this.apiid) throw new Error('Cannot fetch: no apiid');
             const obj = await api.getListAsync(this.apiid);
             this.loadFromGetResult(obj);
             this.setLoadIndicator(null);
