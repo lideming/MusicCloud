@@ -14,7 +14,7 @@ export const msgcli = new class {
     lastQueryId = 0;
     queries: Record<number, Action<QueryAnswer>> = {};
     events: Record<string, Action> = {};
-    permEvents: Record<string, Action> = {};
+    permEvents: Record<string, Action<any>> = {};
 
     init() {
         user.onSwitchedUser.add(() => {
@@ -92,8 +92,9 @@ export const msgcli = new class {
                     }
                 } else if (json.cmd === 'event') {
                     var evt = json.event as string;
+                    console.debug('[MsgCli] ws received event', json);
                     if (this.events[evt]) {
-                        this.events[evt]();
+                        this.events[evt](json.data);
                     } else {
                         console.debug('[MsgCli] ws unknown event', json);
                     }
@@ -128,7 +129,7 @@ export const msgcli = new class {
             queryId,
             ...obj
         };
-        console.debug('[MsgCli] ws send', obj);
+        console.debug('[MsgCli] ws send', printFilter(obj));
         this.ws!.send(JSON.stringify(obj));
         if (callback) {
             this.queries[queryId] = callback;
@@ -139,7 +140,7 @@ export const msgcli = new class {
             this.sendQuery(obj, resolve);
         });
     }
-    listenEvent(evt: string, callback: Action, autoRetry?: boolean) {
+    listenEvent(evt: string, callback: Action<any>, autoRetry?: boolean) {
         if (this.events[evt]) return; // throw new Error('the event is already registered: ' + evt);
         if (this.connected) {
             this.sendQuery({
@@ -156,6 +157,12 @@ export const msgcli = new class {
     }
 };
 
+function printFilter(obj: any) {
+    if (obj.token) {
+        return { ...obj, token: "***" };
+    }
+    return obj;
+}
 
 export interface QueryAnswer {
     resp: string;

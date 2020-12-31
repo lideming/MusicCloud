@@ -18,8 +18,9 @@ import { msgcli } from "./MessageClient";
 export class TrackList {
     info: Api.TrackListInfo | null = null;
     id: number | null = null;
-    apiid: number | null = null;
-    name: string | null = null;
+    get apiid() { return this.info?.id ?? null; }
+    get name() { return this.info?.name ?? null; }
+    get version() { return this.info?.version ?? null; }
     tracks: Track[] = [];
     fetching: Promise<void> | null = null;
     posting: Promise<void> | null = null;
@@ -40,15 +41,16 @@ export class TrackList {
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
-        this.apiid = this.id > 0 ? this.id : null;
-        this.name = info.name;
+        this.info = utils.objectApply(this.info ?? {}, info, ["id", "name", "version", "visibility"]) as typeof info;
     }
     loadFromGetResult(obj: Api.TrackListGet) {
         this.loadInfo(obj);
+        this.onInfoChanged();
         const thiz = this;
         if (this.listView) this.listView.lazy = true;
+        if (!this.tracks) this.tracks = [];
         new class extends DataUpdatingHelper<Track, Api.Track>{
-            items = thiz.tracks;
+            items = thiz.tracks!;
             addItem(data: Api.Track, pos: number) { thiz.addTrack_NoUpdating(data, pos); }
             updateItem(item: Track, data: Api.Track) { item.updateFromApiTrack(data); }
             removeItem(item: Track) { thiz.remove_NoUpdating(item); }
@@ -91,16 +93,18 @@ export class TrackList {
     async _post() {
         await user.waitLogin();
         if (this.apiid != null) throw new Error('cannot post: apiid exists');
-        var obj: Api.TrackListPut = {
-            id: 0,
-            name: this.name ?? '',
-            trackids: this.tracks.map(t => t.id)
-        };
+        var obj = this.getTrackListPutInfo();
         var resp: Api.TrackListPutResult = await api.post({
             path: 'users/me/lists/new',
             obj: obj
         });
-        this.apiid = resp.id;
+        this.info!.id = resp.id;
+    }
+    private getTrackListPutInfo(): Api.TrackListPut {
+        return {
+            ...this.info!,
+            trackids: this.fetching ? this.tracks.map(t => t.id) : undefined,
+        };
     }
     async getRealId(): Promise<number> {
         if (this.apiid) return this.apiid;
@@ -125,21 +129,24 @@ export class TrackList {
             this.putDelaying = null;
             console.error('[TrackList] pre-put error', error);
         }
+        const origVersion = this.info!.version;
         try {
             [this.putInProgress, this.putDelaying] = [this.putDelaying, null];
-            var obj: Api.TrackListPut = {
-                id: this.apiid!,
-                name: this.name ?? '',
-                trackids: this.tracks.map(t => t.id)
-            };
+            var obj = this.getTrackListPutInfo();
+            this.info!.version++;
             await api.put({
                 path: 'lists/' + this.apiid,
                 obj: obj
             });
         } catch (error) {
+            this.info!.version = origVersion;
             console.error('[TrackList] put error', this, error);
-            Toast.show(I`Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
-            throw error;
+            if (error instanceof Error && error.message == "list_changed") {
+                Toast.show(I`Failed to sync playlist "${this.name}": the list was changed by other client. Please refresh and try again.` + '\n' + error, 3000);
+            } else {
+                Toast.show(I`Failed to sync playlist "${this.name}".` + '\n' + error, 3000);
+                throw error;
+            }
         } finally {
             this.putInProgress = null;
         }
@@ -157,18 +164,26 @@ export class TrackList {
             throw err;
         }
         if (!this.eventListening && this.apiid != null) {
-            msgcli.listenEvent("l-" + this.apiid, () => {
+            msgcli.listenEvent("l-" + this.apiid, (data) => {
+                console.info(data, this.version);
+                if (typeof data.version == 'number' && data.version == this.version)
+                    return;
                 this.fetch(true);
             }, true);
         }
     }
     async rename(newName: string) {
-        this.name = newName;
-        var header = this.contentView?.header;
-        if (header) header.updateWith({ title: this.name });
-        listIndex.onrename(this.id!, newName);
+        this.info!.name = newName;
+        this.onInfoChanged();
         await this.put();
     }
+    onInfoChanged() {
+        var newName = this.name!;
+        var header = this.contentView?.header;
+        if (header) header.updateWith({ title: newName });
+        listIndex.onInfoChanged(this.id!, this.info!);
+    }
+
     createView(): ContentView {
         return this.contentView = this.contentView || new TrackListView(this);
     }
@@ -266,7 +281,8 @@ export class TrackListView extends ListContentView {
     onShow() {
         super.onShow();
         this.shownEvents.add(playerCore.onTrackChanged, this.trackChanged);
-        this.updateItems();
+        this.list.fetch();
+        this.trackChanged();
     }
     onRemove() {
         super.onRemove();
@@ -287,13 +303,8 @@ export class TrackListView extends ListContentView {
             playerCore.playTrack(item.track);
         };
         this.list.tracks.forEach(t => this.addItem(t, undefined, false));
-        this.updateItems();
         if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);
         this.updateView();
-    }
-    updateItems() {
-        // update active state of items
-        this.trackChanged();
     }
     addItem(t: Track, pos?: number, updateView?: boolean) {
         var item = this.createViewItem(t);

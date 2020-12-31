@@ -1,6 +1,6 @@
 // file: ListIndex.ts
 
-import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast } from "./viewlib";
+import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n } from "./viewlib";
 import { utils, BuildDomExpr } from "./utils";
 import { I } from "./I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
@@ -118,7 +118,7 @@ export class ListIndex {
                 var dom = this.section.headerView.dom;
                 setScrollableShadow(dom, dom.offsetTop + dom.offsetHeight - this.listView.dom.offsetTop);
             }
-        })
+        });
         this.listView.scrollBox = ui.sidebar.dom;
         router.addRoute({
             path: ['list'],
@@ -167,7 +167,7 @@ export class ListIndex {
             if (!listInfo) throw new Error('cannot find list info');
             list.loadInfo(listInfo);
             if (list.apiid) {
-                list.fetch();
+                // list.fetch();
             } else {
                 list.loadEmpty();
             }
@@ -181,10 +181,12 @@ export class ListIndex {
     showTracklist(id: number) {
         router.nav(['list', id.toString()]);
     }
-    onrename(id: number, newName: string) {
-        var lvi = this.getViewItem(id)!;
-        lvi.listInfo.name = newName;
-        lvi.updateDom();
+    onInfoChanged(id: number, info: Api.TrackListInfo) {
+        var lvi = this.getViewItem(id);
+        if (lvi) {
+            utils.objectApply(lvi.listInfo, info);
+            lvi.updateDom();
+        }
     }
 
     async removeList(id: number) {
@@ -218,7 +220,9 @@ export class ListIndex {
             id,
             name: utils.createName(
                 (x) => x ? I`New Playlist (${x + 1})` : I`New Playlist`,
-                (x) => !!this.listView.find((l) => l.listInfo.name === x))
+                (x) => !!this.listView.find((l) => l.listInfo.name === x)),
+            visibility: 0,
+            version: 0
         };
         this.addListInfo(list);
         var listview = this.getList(id);
@@ -257,12 +261,24 @@ export class ListIndexViewItem extends SidebarItem {
     }
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
         var m = new ContextMenu();
-        if (this.index && this.listInfo) m.add(new MenuItem({
-            text: I`Remove`, cls: 'dangerous',
-            onclick: () => {
-                this.index.removeList(this.listInfo.id);
-            }
-        }));
+        if (this.index && this.listInfo) {
+            var targetVisibility = this.listInfo.visibility ? 0 : 1;
+            m.add(new MenuItem({
+                text: i18n.get('change_visibility_' + targetVisibility),
+                onclick: () => {
+                    const list = this.index.getList(item.listInfo.id);
+                    list.info!.visibility = targetVisibility;
+                    list.onInfoChanged();
+                    list.put();
+                }
+            }));
+            m.add(new MenuItem({
+                text: I`Remove`, cls: 'dangerous',
+                onclick: () => {
+                    this.index.removeList(this.listInfo.id);
+                }
+            }));
+        }
         if (this.listInfo) m.add(new MenuInfoItem({
             text: I`List ID` + ': ' + this.listInfo.id
         }));

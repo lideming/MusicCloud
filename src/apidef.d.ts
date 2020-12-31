@@ -11,7 +11,8 @@ export namespace Api {
     interface TrackListInfo {
         id: number;
         name: string;
-        visibility?: number;
+        visibility: number;
+        version: number;
     }
 
     /**
@@ -29,7 +30,7 @@ export namespace Api {
      * PUT {api}/lists/{id}
      */
     interface TrackListPut extends TrackListInfo {
-        trackids: number[];
+        trackids?: number[];
     }
 
     interface TrackListPutResult extends TrackListInfo {
