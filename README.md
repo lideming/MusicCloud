@@ -12,11 +12,13 @@ This repo contains the frontend parts of MusicCloud.
 * Music player
 * Single-page application
 * Upload and manage tracks
-* Tracklists on the cloud
+* Share tracks and playlists
+* Search tracks
 * Lyrics with translation and ruby annotations, extended from LRC.
 * Comment and discussion
 * Todo:
     - [ ] Player control UI rework
+    - [ ] Search playlists and users
     - [ ] Front page
     - [ ] Albums
     - [ ] Cross-device interaction
