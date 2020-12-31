@@ -87,7 +87,7 @@ export const api = new class {
         }
 
         const xhr = new XMLHttpRequest();
-        const whenXhrComplete = new Promise((resolve, reject) => {
+        const whenXhrComplete = new Promise<void>((resolve, reject) => {
             xhr.onload = ev => resolve();
             xhr.onerror = ev => reject("XHR error");
             xhr.onabort = ev => reject("XHR abort");
