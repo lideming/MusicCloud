@@ -22,7 +22,8 @@ export const user = new class User {
         lastBaseUrl: null! as string
     });
     loginDialog: LoginDialog;
-    get info() { return this.siLogin.data; }
+    readonly info = this.siLogin.data;
+    get id() { return this.info.id; }
 
     role?: Api.UserInfo['role'];
     get isAdmin() { return this.role === 'admin'; }

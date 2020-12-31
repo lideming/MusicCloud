@@ -336,6 +336,7 @@ html, body {
 
 #sidebar .section-header {
     background: var(--color-bg-f8);
+    z-index: 1;
 }
 
 .section-title {
@@ -348,6 +349,26 @@ html, body {
 
 .section-action:hover {
     color: black;
+}
+
+.indexitem {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.indexitem > .tag {
+    position: absolute;
+    left: 10px;
+    bottom: 6px;
+    font-size: 12px;
+    color: var(--color-text-gray);
+    text-align: right;
+}
+
+.indexitem > .state {
+    margin-left: .5em;
+    font-size: 80%;
 }
 
 .trackitem {

@@ -217,6 +217,7 @@ export class ListIndex {
         var id = this.nextId--;
         var list: Api.TrackListInfo = {
             id,
+            owner: user.id,
             name: utils.createName(
                 (x) => x ? I`New Playlist (${x + 1})` : I`New Playlist`,
                 (x) => !!this.listView.find((l) => l.listInfo.name === x)),
@@ -243,13 +244,13 @@ export class ListIndexViewItem extends SidebarItem {
     }
     protected createDom(): BuildDomExpr {
         return {
-            tag: 'li.item.no-selection',
-            style: 'display: flex',
+            tag: 'li.item.indexitem.no-selection',
             tabIndex: 0,
             child: [
+                { _key: 'tag', tag: 'span.tag' },
                 { tag: 'span.name.flex-1', text: () => this.listInfo?.name ?? this.text },
                 {
-                    tag: 'span.state', style: 'margin-left: .5em; font-size: 80%;',
+                    tag: 'span.state',
                     update: (dom) => {
                         dom.textContent = this.playing ? "🎵" : "";
                         dom.hidden = !dom.textContent;
@@ -257,6 +258,17 @@ export class ListIndexViewItem extends SidebarItem {
                 }
             ]
         };
+    }
+    updateDom() {
+        super.updateDom();
+        var domtag = this.domctx.dict.tag;
+        var tagText = (!this.listInfo || this.listInfo.visibility == 0) ? "" :
+            (this.listInfo.owner == user.id && this.listInfo.visibility == 1) ? I`my_visibility_1` :
+                I`visibility_1`;
+        domtag.textContent = tagText;
+        domtag.style.display = tagText ? 'block' : 'none';
+        this.dom.style.paddingTop = tagText ? '6px' : '';
+        this.dom.style.paddingBottom = tagText ? '20px' : '';
     }
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
         var m = new ContextMenu();
