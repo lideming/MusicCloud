@@ -14,17 +14,17 @@ views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.Con
 };
 
 import { router } from "./Router";
-import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer, EventRegistrations } from "./utils";
+import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer, InputStateTracker, Toast, ToolTip } from "./utils";
 import { I18n, i18n, I } from "./I18n";
 import { Track } from "./Track";
 import { user } from "./User";
 import { playerCore, PlayingLoopMode, playingLoopModes } from "./PlayerCore";
 import { uploads } from "./Uploads";
-import { InputStateTracker, ToolTip } from "@yuuza/webfx";
 
 export const ui = new class {
     usingKeyboardInput = false;
     init() {
+        this.addErrorListener();
         this.lang.init();
         this.sidebar.init();
         this.bottomBar.init();
@@ -78,6 +78,11 @@ export const ui = new class {
                 document.body.classList.remove('keyboard-input');
             }, { passive: true, capture: true })
         );
+    }
+    addErrorListener() {
+        window.addEventListener("error", (e) => {
+            Toast.show(I`Application Error:` + "\n" + e.error, 5000);
+        });
     }
     endPreload() {
         setTimeout(() => {
