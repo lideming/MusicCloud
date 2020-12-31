@@ -293,7 +293,7 @@ export class ListIndexViewItem extends SidebarItem {
             if (this.listInfo.owner == user.id) {
                 const targetVisibility = this.listInfo.visibility ? 0 : 1;
                 m.add(new MenuItem({
-                    text: i18n.get('change_visibility_' + targetVisibility),
+                    text: i18n.get('make_it_visibility_' + targetVisibility),
                     onclick: () => {
                         const list = this.index.getList(item.listInfo.id);
                         list.info!.visibility = targetVisibility;

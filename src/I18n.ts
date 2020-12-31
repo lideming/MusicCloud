@@ -148,6 +148,8 @@ i18n.add2dArray([
     ["visibility_1", "Public", "公开"],
     ["my_visibility_0", "My private", "我的私有"],
     ["my_visibility_1", "My public", "我的公开"],
-    ["change_visibility_0", "Make it private", "转为私有"],
-    ["change_visibility_1", "Make it public", "转为公开"]
+    ["make_it_visibility_0", "Make it private", "转为私有"],
+    ["make_it_visibility_1", "Make it public", "转为公开"],
+    ["make_{0}_visibility_0", "Make {0} items private", "转换 {0} 个项目为私有"],
+    ["make_{0}_visibility_1", "Make {0} items public", "转换 {0} 个项目为公开"]
 ]);

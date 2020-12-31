@@ -434,30 +434,20 @@ export class TrackViewItem extends ListViewItem {
                     }));
                 });
             }
-            if (this.track.visibility == 1) m.add(new CopyMenuItem({
-                text: I`Copy link`,
-                textToCopy: api.appBaseUrl + '#track/' + this.track.id
-            }));
-            m.add(new MenuItem({
-                text: this.track.canEdit ? I`Edit` : I`Details`,
-                onclick: (ev) => this.track.startEdit(ev)
-            }));
-            if (this.actionHandler?.onTrackRemove && this.actionHandler?.canRemove?.([this]) != false) m.add(new MenuItem({
-                text: I`Remove`, cls: 'dangerous',
-                onclick: () => this.actionHandler!.onTrackRemove?.([this])
-            }));
         }
         if (this.track.canEdit) [0, 1].forEach(visi => {
-            var show = false;
+            var count = 0;
             for (const item of selected) {
-                if (item.track.visibility != visi) {
-                    show = true;
-                    break;
-                }
+                if (item.track.visibility != visi) count++;
             }
-            if (!show) return;
+            if (!count) return;
             m.add(new MenuItem({
-                text: i18n.get('change_visibility_' + visi),
+                text: i18n.get(
+                    (count == 1) ?
+                        'make_it_visibility_' + visi :
+                        'make_{0}_visibility_' + visi,
+                    [count]
+                ),
                 onclick: () => {
                     api.post({
                         path: 'tracks/visibility',
@@ -474,6 +464,20 @@ export class TrackViewItem extends ListViewItem {
                 }
             }));
         });
+        if (selected.length == 1) {
+            if (this.track.visibility == 1) m.add(new CopyMenuItem({
+                text: I`Copy link`,
+                textToCopy: api.appBaseUrl + '#track/' + this.track.id
+            }));
+            m.add(new MenuItem({
+                text: this.track.canEdit ? I`Edit` : I`Details`,
+                onclick: (ev) => this.track.startEdit(ev)
+            }));
+            if (this.actionHandler?.onTrackRemove && this.actionHandler?.canRemove?.([this]) != false) m.add(new MenuItem({
+                text: I`Remove`, cls: 'dangerous',
+                onclick: () => this.actionHandler!.onTrackRemove?.([this])
+            }));
+        }
         if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1
             && this.actionHandler?.canRemove?.([...this.selectionHelper.selectedItems]) != false)
             m.add(new MenuItem({
