@@ -284,16 +284,18 @@ export class ListIndexViewItem extends SidebarItem {
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
         var m = new ContextMenu();
         if (this.index && this.listInfo) {
-            var targetVisibility = this.listInfo.visibility ? 0 : 1;
-            m.add(new MenuItem({
-                text: i18n.get('change_visibility_' + targetVisibility),
-                onclick: () => {
-                    const list = this.index.getList(item.listInfo.id);
-                    list.info!.visibility = targetVisibility;
-                    list.onInfoChanged();
-                    list.put();
-                }
-            }));
+            if (this.listInfo.owner == user.id) {
+                const targetVisibility = this.listInfo.visibility ? 0 : 1;
+                m.add(new MenuItem({
+                    text: i18n.get('change_visibility_' + targetVisibility),
+                    onclick: () => {
+                        const list = this.index.getList(item.listInfo.id);
+                        list.info!.visibility = targetVisibility;
+                        list.onInfoChanged();
+                        list.put();
+                    }
+                }));
+            }
             m.add(new MenuItem({
                 text: I`Remove`, cls: 'dangerous',
                 onclick: () => {
