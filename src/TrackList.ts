@@ -11,7 +11,7 @@ import { listIndex } from "./ListIndex";
 import { playerCore, PlayingLoopMode } from "./PlayerCore";
 import { router } from "./Router";
 import { Track } from "./Track";
-import { ContentView, ContentHeader } from "./ui-views";
+import { ContentView, ContentHeader, CopyMenuItem } from "./ui-views";
 import { ui } from "./UI";
 import { msgcli } from "./MessageClient";
 
@@ -434,6 +434,10 @@ export class TrackViewItem extends ListViewItem {
                     }));
                 });
             }
+            if (this.track.visibility == 1) m.add(new CopyMenuItem({
+                text: I`Copy link`,
+                textToCopy: api.appBaseUrl + '#track/' + this.track.id
+            }));
             m.add(new MenuItem({
                 text: this.track.canEdit ? I`Edit` : I`Details`,
                 onclick: (ev) => this.track.startEdit(ev)

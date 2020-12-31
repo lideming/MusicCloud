@@ -8,7 +8,7 @@ import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";
 import { ui } from "./UI";
-import { SidebarItem, setScrollableShadow } from "./ui-views";
+import { SidebarItem, setScrollableShadow, CopyMenuItem } from "./ui-views";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { uploads } from "./Uploads";
@@ -136,7 +136,7 @@ export class ListIndex {
                 if (!item) {
                     await list.fetch();
                     this.addListInfo(list.info!);
-                    if (user.state == 'logged') 
+                    if (user.state == 'logged')
                         this.putUser();
                 }
             }
@@ -284,6 +284,12 @@ export class ListIndexViewItem extends SidebarItem {
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
         var m = new ContextMenu();
         if (this.index && this.listInfo) {
+            if (this.listInfo.visibility == 1) {
+                m.add(new CopyMenuItem({
+                    text: I`Copy link`,
+                    textToCopy: api.appBaseUrl + '#list/' + this.listInfo.id
+                }));
+            }
             if (this.listInfo.owner == user.id) {
                 const targetVisibility = this.listInfo.visibility ? 0 : 1;
                 m.add(new MenuItem({

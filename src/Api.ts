@@ -4,9 +4,18 @@ import { settings } from "./Settings";
 import { Callbacks, Action, utils, CancelToken } from "./utils";
 import { Api } from "./apidef";
 
+function getAppBaseUrl() {
+    var href = window.location.href;
+    var queryStrStart = href.indexOf('?');
+    if (queryStrStart >= 0) return href.substring(0, queryStrStart);
+    var hash = href.indexOf('#');
+    if (hash >= 0) return href.substring(0, hash);
+    return href;
+}
 
 export const api = new class {
     get baseUrl() { return settings.apiBaseUrl; }
+    readonly appBaseUrl = getAppBaseUrl();
     storageUrlBase = '';
     debugSleep = settings.debug ? settings.apiDebugDelay : 0;
     defaultAuth: string | null = null;

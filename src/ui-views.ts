@@ -2,6 +2,7 @@
 import { ListViewItem, TextView, View, EditableHelper, ContainerView } from "./viewlib";
 import { utils, BuildDomExpr, Func, EventRegistrations, Action } from "./utils";
 import { I } from "./I18n";
+import { InputView, MenuItem } from "@yuuza/webfx";
 
 export class SidebarItem extends ListViewItem {
     text: string;
@@ -129,4 +130,22 @@ export class ActionBtn extends TextView {
 
 export function setScrollableShadow(dom: HTMLElement, position: number) {
     dom.style.boxShadow = `0 0 ${utils.numLimit(Math.log(position) * 2, 0, 10)}px var(--color-light-shadow)`;
+}
+
+export class CopyMenuItem extends MenuItem {
+    textToCopy: string;
+    private textView: InputView | null = null;
+    constructor(init: Partial<CopyMenuItem>) {
+        super(init);
+    }
+    onclick = () => {
+        this.dom.textContent = "";
+        if (!this.textView) {
+            this.textView = new InputView();
+            this.addChild(this.textView);
+            this.textView.value = this.textToCopy;
+        }
+        (this.textView.dom as HTMLInputElement).select();
+        document.execCommand('copy');
+    };
 }
