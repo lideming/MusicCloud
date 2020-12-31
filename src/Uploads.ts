@@ -95,6 +95,7 @@ export const uploads = new class extends TrackList {
             this.uploadArea = new UploadArea({ onfile: (file) => uploads.uploadFile(file) });
             this.header.appendView(this.uploadArea);
 
+            this.trackActionHandler.canRemove = () => true;
             this.trackActionHandler.onTrackRemove = (items: UploadViewItem[]) => {
                 if (items.length === 1) {
                     this.removeTrack(items[0]);
