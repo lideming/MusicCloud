@@ -6,7 +6,7 @@ import { playerCore } from './PlayerCore';
 import { LyricsView } from './LyricsView';
 import { api } from './Api';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn, setScrollableShadow } from './ui-views';
-import { LoadingIndicator, View, ViewToggle  } from './viewlib';
+import { LoadingIndicator, View, ViewToggle } from './viewlib';
 import { Api } from './apidef';
 import { Track } from './Track';
 
@@ -21,6 +21,12 @@ export const nowPlaying = new class {
         });
         router.addRoute({
             path: ['tracks'],
+            onNav: (arg) => {
+                router.nav(['track', ...arg.remaining], 'replace');
+            }
+        });
+        router.addRoute({
+            path: ['track'],
             onNav: (arg) => {
                 router.nav(['nowplaying'], false);
                 if (arg.remaining[0] != playerCore.track?.id as any) { // compare string to number
@@ -40,10 +46,10 @@ export const nowPlaying = new class {
 };
 
 class PlayingView extends ContentView {
-    header = new class extends ContentHeader{
+    header = new class extends ContentHeader {
         lines: View;
         onScrollboxScroll() {
-            setScrollableShadow(this.dom, this.scrollbox!.scrollTop - this.lines.dom.offsetTop)
+            setScrollableShadow(this.dom, this.scrollbox!.scrollTop - this.lines.dom.offsetTop);
         }
     }({
         title: I`Now Playing`

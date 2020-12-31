@@ -34,7 +34,7 @@ export const router = new class {
             this.nav([...arg.path]);
         };
     }
-    nav(path: string | string[], pushState?: boolean) {
+    nav(path: string | string[], pushState?: boolean | "replace") {
         if (typeof path === 'string') path = parsePath(path);
         for (const r of this.routes) {
             if (match(path, r)) {
@@ -48,7 +48,12 @@ export const router = new class {
         this.current = path;
         this.currentStr = strPath;
         if (pushState === undefined || pushState) {
-            window.history.pushState({}, strPath, '#' + strPath);
+            const args = [{}, strPath, '#' + strPath] as const;
+            if (pushState == "replace") {
+                window.history.replaceState(...args)
+            } else {
+                window.history.pushState(...args);
+            }
         }
         this.onNavCompleted.invoke({ path });
     }
