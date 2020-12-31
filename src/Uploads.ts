@@ -41,7 +41,7 @@ class UploadTrack extends Track {
 export const uploads = new class extends TrackList {
     tracks: UploadTrack[] = [];
     state: false | 'waiting' | 'fetching' | 'fetched' = false;
-    canEdit = false;
+    get canEdit() { return false; }
     inprogress = 0;
     unreadError = false;
     private uploadSemaphore = new Semaphore({ maxCount: 2 });

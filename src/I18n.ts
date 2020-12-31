@@ -146,6 +146,8 @@ i18n.add2dArray([
     ["colortheme_dark", "dark", "暗色"],
     ["visibility_0", "Private", "私有"],
     ["visibility_1", "Public", "公开"],
-    ["change_visibility_0", "Change to private", "转为私有"],
-    ["change_visibility_1", "Change to public", "转为公开"]
+    ["my_visibility_0", "My private", "我的私有"],
+    ["my_visibility_1", "My public", "我的公开"],
+    ["change_visibility_0", "Make it private", "转为私有"],
+    ["change_visibility_1", "Make it public", "转为公开"]
 ]);

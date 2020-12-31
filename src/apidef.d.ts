@@ -10,6 +10,7 @@ export namespace Api {
 
     interface TrackListInfo {
         id: number;
+        owner: number;
         name: string;
         visibility: number;
         version: number;

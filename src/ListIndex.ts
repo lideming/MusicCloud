@@ -164,12 +164,11 @@ export class ListIndex {
         if (!list) {
             list = new TrackList();
             const listInfo = this.getListInfo(id);
-            if (!listInfo) throw new Error('cannot find list info');
-            list.loadInfo(listInfo);
-            if (list.apiid) {
-                // list.fetch();
+            if (listInfo) {
+                list.loadInfo(listInfo);
+                if (!list.apiid) list.loadEmpty();
             } else {
-                list.loadEmpty();
+                list.loadApiId(id);
             }
             this.loadedList[id] = list;
         }

@@ -26,7 +26,7 @@ export class TrackList {
     posting: Promise<void> | null = null;
     eventListening = false;
 
-    canEdit = true;
+    get canEdit() { return user.info.id == this.info!.owner; }
 
     /** Available when loading */
     loadIndicator: LoadingIndicator | null;
@@ -41,7 +41,22 @@ export class TrackList {
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
-        this.info = utils.objectApply(this.info ?? {}, info, ["id", "name", "version", "visibility"]) as typeof info;
+        this.info = utils.objectApply(this.info ?? {}, info, ["id", "owner", "name", "version", "visibility"]) as typeof info;
+        this.updateCanEdit();
+    }
+    updateCanEdit() {
+        if (this.contentView)
+            this.contentView.header.updateWith({ titleEditable: this.canEdit });
+    }
+
+    loadApiId(id: number) {
+        this.loadInfo({
+            id,
+            owner: 0,
+            name: "",
+            version: 0,
+            visibility: 0
+        });
     }
     loadFromGetResult(obj: Api.TrackListGet) {
         this.loadInfo(obj);
@@ -259,10 +274,9 @@ export class TrackListView extends ListContentView {
         super();
         this.canMultiSelect = true;
         this.list = list;
-        if (this.list.canEdit) {
-            this.trackActionHandler.onTrackRemove = (items) =>
-                items.forEach(x => this.list.remove(x.track));
-        }
+        this.trackActionHandler.onTrackRemove = (items) =>
+            items.forEach(x => this.list.remove(x.track));
+        this.trackActionHandler.canRemove = (items) => this.list.canEdit;
     }
     createHeader() {
         return new ContentHeader({
@@ -281,6 +295,7 @@ export class TrackListView extends ListContentView {
     onShow() {
         super.onShow();
         this.shownEvents.add(playerCore.onTrackChanged, this.trackChanged);
+        this.shownEvents.add(user.onSwitchedUser, () => { this.list.updateCanEdit(); })();
         this.list.fetch();
         this.trackChanged();
     }
@@ -422,7 +437,7 @@ export class TrackViewItem extends ListViewItem {
                 text: this.track.canEdit ? I`Edit` : I`Details`,
                 onclick: (ev) => this.track.startEdit(ev)
             }));
-            if (this.actionHandler?.onTrackRemove) m.add(new MenuItem({
+            if (this.actionHandler?.onTrackRemove && this.actionHandler?.canRemove?.([this]) != false) m.add(new MenuItem({
                 text: I`Remove`, cls: 'dangerous',
                 onclick: () => this.actionHandler!.onTrackRemove?.([this])
             }));
@@ -454,7 +469,8 @@ export class TrackViewItem extends ListViewItem {
                 }
             }));
         });
-        if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1)
+        if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1
+            && this.actionHandler?.canRemove?.([...this.selectionHelper.selectedItems]) != false)
             m.add(new MenuItem({
                 text: I`Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
                 onclick: () => {
@@ -468,7 +484,8 @@ export class TrackViewItem extends ListViewItem {
             + I`Size` + ': ' +
             utils.formatFileSize(utils.arraySum(selected, x => x.track.size!));
         if (selected.length == 1) {
-            infoText += '\n' + i18n.get('visibility_' + selected[0].track.visibility);
+            const my = (this.track.owner == user.info.id) ? 'my_' : '';
+            infoText += '\n' + i18n.get(my + 'visibility_' + selected[0].track.visibility);
         }
         m.add(new MenuInfoItem({ text: infoText }));
         ui.showContextMenuForItem(selected, m, { ev: ev });
@@ -478,4 +495,5 @@ export class TrackViewItem extends ListViewItem {
 export interface TrackActionHandler<T> {
     /** When undefined, the item is not removable */
     onTrackRemove?(arr: T[]);
+    canRemove?(arr: T[]): boolean;
 }
