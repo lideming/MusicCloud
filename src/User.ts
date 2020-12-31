@@ -144,7 +144,7 @@ export const user = new class User {
         this.loggingin = null;
         this.onSwitchedUser.invoke();
 
-        if (info.playing) this.tryRestorePlaying(info.playing);
+        if (info.playing && !playerCore.track) this.tryRestorePlaying(info.playing);
     }
     async logout() {
         if (this.info.token) {
