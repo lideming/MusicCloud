@@ -48,6 +48,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Click here to select files to upload", "点此选择文件并上传"],
     ["or drag files to this zone...", "或拖放文件到此处..."],
     ["Comments", "评论"],
+    ["Copy link", "复制链接"],
     ["Remove", "移除"],
     ["Remove {0} tracks","移除 {0} 首歌曲"],
     ["List ID", "列表 ID"],
