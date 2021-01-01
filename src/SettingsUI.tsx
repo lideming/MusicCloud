@@ -100,7 +100,7 @@ class AboutDialog extends Dialog {
         this.addContent(new View(
             <div>
                 <p>{I`MusicCloud` + ' ' + appVersion.currentVersion}</p>
-                <p>{appVersion.currentDate ? I`Build Date` + ': ' + appVersion.currentDate : ''}</p>
+                <p>{appVersion.currentDate ? I`Build Date` + ': ' + new Date(appVersion.currentDate).toLocaleString(ui.lang.curLang) : ''}</p>
                 <p>{
                     IA`This project is ${<a href="https://github.com/lideming/MusicCloud" class="clickable" target="_blank">
                         {() => I`open-sourced`}

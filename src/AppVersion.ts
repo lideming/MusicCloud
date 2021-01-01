@@ -2,6 +2,7 @@ import { SettingItem } from './utils';
 import { I } from "./I18n";
 import { Toast } from './viewlib';
 import buildInfo from './buildInfo';
+import { ui } from './UI';
 
 export const appVersion = new class {
     siVersion = new SettingItem('mcloud-ver', 'str', '');
@@ -16,8 +17,10 @@ export const appVersion = new class {
     }
     showUpdatedToast() {
         if (this.versionChanged) {
+            const [prevDate, currentDate] = [this.prevDate, this.currentDate]
+                .map(x => x ? new Date(x).toLocaleString(ui.lang.curLang) : I`[Unknown version]`);
             Toast.show(
-                I`Client updated:\n${this.prevDate||I`[Unknown version]`}\n  =>\n${this.currentDate||I`[Unknown version]`}`,
+                I`Client updated:\n${prevDate}\n  =>\n${currentDate}`,
                 5000);
         }
     }
