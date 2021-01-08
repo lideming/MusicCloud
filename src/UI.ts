@@ -566,6 +566,7 @@ class VolumeButton extends ProgressButton {
                 var deltaX = e.point.pageX - startX;
                 this.onChanging.invoke(startVol + deltaX * 0.01);
             } else if (e.action === 'up') {
+                if (e.ev.type == "touchcancel") this.onChanging.invoke(startVol);
                 this.dom.classList.remove('btn-down');
                 this.fill.dom.style.transition = '';
             }
