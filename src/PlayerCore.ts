@@ -168,7 +168,7 @@ export const playerCore = new class PlayerCore {
                 this.loadUrl(null);
             }
         }
-        this.state = !track ? 'none' : 'paused';
+        this.state = !track ? 'none' : playNow ? 'stalled' : 'paused';
         this.onTrackChanged.invoke();
         this.onProgressChanged.invoke();
         if (playNow && track) await this.playTrack(track);

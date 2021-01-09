@@ -477,7 +477,7 @@ export const ui = new class {
             }
             playerCore.onTrackChanged.add(() => {
                 if (this.isEnabledFor('nowPlaying') && !ui.isVisible()
-                    && this.config.nowPlaying && playerCore.state == 'playing') {
+                    && this.config.nowPlaying && (playerCore.state == 'playing' || playerCore.state == 'stalled')) {
                     const track = playerCore.track!;
                     this.show(track.name, {
                         body: I`Artist` + ': ' + track?.artist,

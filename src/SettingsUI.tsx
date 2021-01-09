@@ -19,6 +19,7 @@ class SettingsDialog extends Dialog {
     btnSwitchTheme = new ButtonView({ type: 'big' });
     btnSwitchLang = new ButtonView({ type: 'big' });
     inputPreferBitrate = new LabeledInput();
+    btnNotification = new ButtonView({ type: 'big' });
 
     constructor() {
         super();
@@ -49,6 +50,10 @@ class SettingsDialog extends Dialog {
                 playerCore.siPlayer.save();
             }
         });
+        this.addContent(this.btnNotification);
+        this.btnNotification.onclick = () => {
+            ui.notification.enable().then(() => this.updateDom());
+        };
         this.addContent(this.bottom);
     }
 
@@ -88,6 +93,8 @@ class SettingsDialog extends Dialog {
         this.btnSwitchLang.text = I`Language: ${I`English`}`;
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
+        this.btnNotification.text = I`Enable notification`;
+        this.btnNotification.disabled = ui.notification.config.enabled;
         this.content.updateChildrenDom();
     }
 }
