@@ -112,6 +112,7 @@ i18n.add2dArray(JSON.parse(`[
     ["Color theme: {0}", "配色主题：{0}"],
     ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
     ["Enable notification", "启用通知"],
+    ["Disable notification", "禁用通知"],
     ["Now Playing", "正在播放"],
     ["Lyrics", "歌词"],
     ["Edit Lyrics", "编辑歌词"],

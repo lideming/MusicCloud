@@ -486,11 +486,11 @@ export const ui = new class {
                 }
             });
         }
-        async enable() {
-            if (this.browserSupport() && await this.requestPermission()) {
-                this.config.enabled = true;
-                this.siNotification.save();
-            }
+        async setEnable(enable: boolean) {
+            if (enable && !(this.browserSupport() && await this.requestPermission()))
+                return;
+            this.config.enabled = enable;
+            this.siNotification.save();
         }
     };
 

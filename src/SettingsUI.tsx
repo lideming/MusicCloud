@@ -52,7 +52,8 @@ class SettingsDialog extends Dialog {
         });
         this.addContent(this.btnNotification);
         this.btnNotification.onclick = () => {
-            ui.notification.enable().then(() => this.updateDom());
+            ui.notification.setEnable(!ui.notification.config.enabled)
+                .then(() => this.updateDom());
         };
         this.addContent(this.bottom);
     }
@@ -93,8 +94,7 @@ class SettingsDialog extends Dialog {
         this.btnSwitchLang.text = I`Language: ${I`English`}`;
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
-        this.btnNotification.text = I`Enable notification`;
-        this.btnNotification.disabled = ui.notification.config.enabled;
+        this.btnNotification.text = ui.notification.config.enabled ? I`Disable notification` : I`Enable notification`;
         this.content.updateChildrenDom();
     }
 }
