@@ -290,7 +290,7 @@ class LoginDialog extends Dialog {
         dig.title = '';
         [this.tabLogin, this.tabCreate].forEach(x => {
             dig.addBtn(x);
-            x.onClick.add(() => toggle(x));
+            x.onActive.add(() => toggle(x));
         });
 
         [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
@@ -321,7 +321,7 @@ class LoginDialog extends Dialog {
 
         this.addBtn(new TabBtn({
             text: I`Settings`, right: true,
-            onclick: (ev) => {
+            onActive: (ev) => {
                 settingsUI.openUI(ev);
                 this.close();
             }
@@ -386,21 +386,21 @@ class MeDialog extends Dialog {
         this.addContent(this.btnChangePassword);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);
-        this.btnChangePassword.onclick = (ev) => {
+        this.btnChangePassword.onActive.add((ev) => {
             new ChangePasswordDialog().show(ev);
             this.close();
-        };
-        this.btnSwitch.onclick = (ev) => {
+        });
+        this.btnSwitch.onActive.add((ev) => {
             user.openUI(true, ev);
             this.close();
-        };
-        this.btnLogout.onclick = () => {
+        });
+        this.btnLogout.onActive.add(() => {
             user.logout();
             this.close();
-        };
+        });
         this.addBtn(new TabBtn({
             text: I`Settings`, right: true,
-            onclick: (ev) => {
+            onActive: (ev) => {
                 settingsUI.openUI(ev);
                 this.close();
             }
@@ -418,7 +418,7 @@ class ChangePasswordDialog extends Dialog {
         this.title = I`Change password`;
         [this.inputPasswd, this.inputPasswd2, this.status, this.btnChangePassword]
             .forEach(x => this.addContent(x));
-        this.btnChangePassword.onclick = () => {
+        this.btnChangePassword.onActive.add(() => {
             if (!this.inputPasswd.value) {
                 this.status.text = (I`Please input the new password!`);
             } else if (this.inputPasswd.value !== this.inputPasswd2.value) {
@@ -427,6 +427,6 @@ class ChangePasswordDialog extends Dialog {
                 user.changePassword(this.inputPasswd.value);
                 this.close();
             }
-        };
+        });
     }
 }

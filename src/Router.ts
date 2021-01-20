@@ -29,10 +29,10 @@ export const router = new class {
     }
     addRoute(arg: Route) {
         this.routes.push(arg);
-        if (arg.sidebarItem) arg.sidebarItem().onclick = () => {
+        if (arg.sidebarItem) arg.sidebarItem().onActive.add(() => {
             if (arg.contentView && arg.contentView().isVisible) return;
             this.nav([...arg.path]);
-        };
+        });
     }
     nav(path: string | string[], pushState?: boolean | "replace") {
         if (typeof path === 'string') path = parsePath(path);

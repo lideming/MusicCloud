@@ -289,9 +289,9 @@ export class TrackListView extends ListContentView {
     }
     protected appendHeader() {
         super.appendHeader();
-        this.refreshBtn.onclick = () => {
+        this.refreshBtn.onActive.add(() => {
             this.list.fetch(true);
-        };
+        });
     }
     onShow() {
         super.onShow();
@@ -402,7 +402,7 @@ export class TrackViewItem extends ListViewItem {
         var m = new ContextMenu();
         if (selected.length == 1) {
             if (item.track.id && user.state != 'none' && user.serverOptions.trackCommentsEnabled !== false) m.add(new MenuItem({
-                text: I`Comments`, onclick: () => {
+                text: I`Comments`, onActive: () => {
                     router.nav(['track-comments', item.track.id.toString()]);
                 }
             }));
@@ -428,7 +428,7 @@ export class TrackViewItem extends ListViewItem {
                     }));
                     else if (this.track.canEdit) m.add(new MenuItem({
                         text: I`Convert` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
-                        onclick: () => {
+                        onActive: () => {
                             this.track.requestFileUrl(f);
                         }
                     }));
@@ -448,7 +448,7 @@ export class TrackViewItem extends ListViewItem {
                         'make_{0}_visibility_' + visi,
                     [count]
                 ),
-                onclick: () => {
+                onActive: () => {
                     api.post({
                         path: 'tracks/visibility',
                         obj: {
@@ -471,18 +471,18 @@ export class TrackViewItem extends ListViewItem {
             }));
             m.add(new MenuItem({
                 text: this.track.canEdit ? I`Edit` : I`Details`,
-                onclick: (ev) => this.track.startEdit(ev)
+                onActive: (ev) => this.track.startEdit(ev)
             }));
             if (this.actionHandler?.onTrackRemove && this.actionHandler?.canRemove?.([this]) != false) m.add(new MenuItem({
                 text: I`Remove`, cls: 'dangerous',
-                onclick: () => this.actionHandler!.onTrackRemove?.([this])
+                onActive: () => this.actionHandler!.onTrackRemove?.([this])
             }));
         }
         if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1
             && this.actionHandler?.canRemove?.([...this.selectionHelper.selectedItems]) != false)
             m.add(new MenuItem({
                 text: I`Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
-                onclick: () => {
+                onActive: () => {
                     this.actionHandler!.onTrackRemove?.([...this.selectionHelper.selectedItems]);
                 }
             }));

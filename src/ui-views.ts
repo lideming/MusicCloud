@@ -2,15 +2,13 @@
 import { ListViewItem, TextView, View, EditableHelper, ContainerView } from "./viewlib";
 import { utils, BuildDomExpr, Func, EventRegistrations, Action } from "./utils";
 import { I } from "./I18n";
-import { InputView, MenuItem } from "@yuuza/webfx";
+import { InputView, MenuItem, ObjectInit } from "@yuuza/webfx";
 
 export class SidebarItem extends ListViewItem {
     text: string;
-    get onclick() { return this.onactive; }
-    set onclick(val) { this.onactive = val; }
-    constructor(init?: Partial<SidebarItem>) {
+    constructor(init?: ObjectInit<SidebarItem>) {
         super();
-        utils.objectApply(this, init);
+        utils.objectInit(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
@@ -52,10 +50,10 @@ export class ContentHeader extends View {
     scrollbox: HTMLElement | null = null;
     scrollboxScrollHandler: Action<Event> | null = null;
     onTitleEdit: (title: string) => void;
-    constructor(init?: Partial<ContentHeader>) {
+    constructor(init?: ObjectInit<ContentHeader>) {
         super();
-        if (init) utils.objectApply(this, init);
-        this.titleView.onactive = async () => {
+        if (init) utils.objectInit(this, init);
+        this.titleView.onActive.add(async () => {
             if (!this.titleEditable) return;
             this.editHelper = this.editHelper || new EditableHelper(this.titleView.dom);
             if (this.editHelper.editing) return;
@@ -64,7 +62,7 @@ export class ContentHeader extends View {
                 this.onTitleEdit(newName);
             }
             this.updateDom();
-        };
+        });
     }
     createDom(): BuildDomExpr {
         return {
@@ -115,13 +113,11 @@ export class ContentHeader extends View {
 }
 
 export class ActionBtn extends TextView {
-    get onclick() { return this.onactive; }
-    set onclick(val) { this.onactive = val; }
     get active() { return this.dom.classList.contains('active'); }
     set active(val) { this.toggleClass('active', val); }
-    constructor(init?: Partial<ActionBtn>) {
+    constructor(init?: ObjectInit<ActionBtn>) {
         super();
-        utils.objectApply(this, init);
+        utils.objectInit(this, init);
     }
     createDom(): BuildDomExpr {
         return { tag: 'span.action.clickable.no-selection', tabIndex: 0 };
@@ -135,17 +131,17 @@ export function setScrollableShadow(dom: HTMLElement, position: number) {
 export class CopyMenuItem extends MenuItem {
     textToCopy: string;
     private textView: InputView | null = null;
-    constructor(init: Partial<CopyMenuItem>) {
+    constructor(init: ObjectInit<CopyMenuItem>) {
         super(init);
+        this.onActive.add(() => {
+            this.dom.textContent = "";
+            if (!this.textView) {
+                this.textView = new InputView();
+                this.addChild(this.textView);
+                this.textView.value = this.textToCopy;
+            }
+            (this.textView.dom as HTMLInputElement).select();
+            document.execCommand('copy');
+        });
     }
-    onclick = () => {
-        this.dom.textContent = "";
-        if (!this.textView) {
-            this.textView = new InputView();
-            this.addChild(this.textView);
-            this.textView.value = this.textToCopy;
-        }
-        (this.textView.dom as HTMLInputElement).select();
-        document.execCommand('copy');
-    };
 }

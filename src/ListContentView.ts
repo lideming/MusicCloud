@@ -84,12 +84,12 @@ export class ListContentView extends ContentView {
         this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: I`Refresh` }));
         this.header.actions.addView(this.selectAllBtn = new ActionBtn({ text: I`Select all` }));
         this.header.actions.addView(this.selectBtn = new ActionBtn({ text: I`Select` }));
-        this.selectBtn.onclick = () => {
+        this.selectBtn.onActive.add(() => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
-        };
-        this.selectAllBtn.onclick = () => {
+        });
+        this.selectAllBtn.onActive.add(() => {
             this.listView.forEach(x => this.listView.selectionHelper.toggleItemSelection(x, true));
-        };
+        });
         this.dom.appendView(this.header);
     }
 

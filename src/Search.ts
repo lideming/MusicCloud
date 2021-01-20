@@ -110,7 +110,7 @@ class SearchView extends ListContentView {
 
 class SearchBar extends View {
     input = new InputView();
-    btn = new ButtonView({ text: I`Search`, onclick: () => this.onSearch.invoke() });
+    btn = new ButtonView({ text: I`Search`, onActive: () => this.onSearch.invoke() });
     onSearch = new Callbacks();
     get value() { return this.input.value; }
     set value(val) { this.input.value = val; }

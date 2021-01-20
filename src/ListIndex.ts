@@ -294,7 +294,7 @@ export class ListIndexViewItem extends SidebarItem {
                 const targetVisibility = this.listInfo.visibility ? 0 : 1;
                 m.add(new MenuItem({
                     text: i18n.get('make_it_visibility_' + targetVisibility),
-                    onclick: () => {
+                    onActive: () => {
                         const list = this.index.getList(item.listInfo.id);
                         list.info!.visibility = targetVisibility;
                         list.onInfoChanged();
@@ -304,7 +304,7 @@ export class ListIndexViewItem extends SidebarItem {
             }
             m.add(new MenuItem({
                 text: I`Remove`, cls: 'dangerous',
-                onclick: () => {
+                onActive: () => {
                     this.index.removeList(this.listInfo.id);
                 }
             }));

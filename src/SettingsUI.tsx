@@ -24,12 +24,12 @@ class SettingsDialog extends Dialog {
     constructor() {
         super();
         this.addContent(this.btnSwitchTheme);
-        this.btnSwitchTheme.onclick = () => {
+        this.btnSwitchTheme.onActive.add(() => {
             ui.theme.set((ui.theme.current === 'light') ? 'dark' : 'light');
             this.updateDom();
-        };
+        });
         this.addContent(this.btnSwitchLang);
-        this.btnSwitchLang.onclick = () => {
+        this.btnSwitchLang.onActive.add(() => {
             var origUsingLang = ui.lang.curLang;
             var curlang = ui.lang.siLang.data;
             var langs = ['', ...ui.lang.availableLangs];
@@ -38,7 +38,7 @@ class SettingsDialog extends Dialog {
             if (origUsingLang != ui.lang.curLang)
                 this.showReload();
             this.updateDom();
-        };
+        });
         this.addContent(this.inputPreferBitrate);
         this.onShown.add(() => {
             this.inputPreferBitrate.value = (playerCore.siPlayer.data.preferBitrate ?? '0').toString();
@@ -51,10 +51,10 @@ class SettingsDialog extends Dialog {
             }
         });
         this.addContent(this.btnNotification);
-        this.btnNotification.onclick = () => {
+        this.btnNotification.onActive.add(() => {
             ui.notification.setEnable(!ui.notification.config.enabled)
                 .then(() => this.updateDom());
-        };
+        });
         this.addContent(this.bottom);
     }
 
@@ -62,12 +62,12 @@ class SettingsDialog extends Dialog {
         <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
             <div>{'MusicCloud ' + appVersion.currentVersion}</div>
             <div style="color: var(--color-text-gray);">
-                <div class="clickable" onclick={(ev) => {
+                <View args={[{ tag: 'div.clickable', tabIndex: -1 }]} onActive={(ev) => {
                     new AboutDialog().show(ev);
                     this.close();
                 }}>
                     {() => I`About`}
-                </div>
+                </View>
             </div>
         </div>
     );

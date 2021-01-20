@@ -118,9 +118,9 @@ export class TrackDialog extends Dialog {
         this.inputLyrics.dominput.style.height = '6em';
         [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
         this.addBtn(this.btnSave);
-        this.btnSave.onClick.add(() => this.save());
+        this.btnSave.onActive.add(() => this.save());
         this.addBtn(this.btnEditLyrics);
-        this.btnEditLyrics.onClick.add(() => {
+        this.btnEditLyrics.onActive.add(() => {
             this.close();
             lyricsEdit.startEdit(this.track, this.inputLyrics.value);
         });

@@ -5,11 +5,11 @@ import * as views from "./ui-views";
 
 views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.ContentView>) {
     var view: views.ContentView;
-    this.onclick = () => {
+    this.onActive.add(() => {
         if (!view) view = viewFunc();
         ui.content.setCurrent(view);
         ui.sidebarList.setActive(this);
-    };
+    });
     return this;
 };
 
@@ -35,6 +35,7 @@ export const ui = new class {
         this.notification.init();
         Dialog.defaultParent = new DialogParent(this.mainContainer.dom);
         ToastsContainer.default.parentDom = this.mainContainer.dom;
+        ToastsContainer.default.dom.style.position = 'absolote';
         router.addRoute({
             path: ['home'],
             onNav: () => {
@@ -185,7 +186,7 @@ export const ui = new class {
             }, true);
             this.siPin = new SettingItem('mcloud-bottompin', 'bool', this.pinned);
             this.siPin.render(x => this.setPinned(x));
-            this.btnPin.onactive = () => this.siPin.toggle();
+            this.btnPin.onActive.add(() => this.siPin.toggle());
         }
     };
     playerControl = new class {
@@ -203,18 +204,18 @@ export const ui = new class {
 
         init() {
             this.setState('none');
-            this.btnPlay.onactive = () => {
+            this.btnPlay.onActive.add(() => {
                 var state = playerCore.state;
                 if (state === 'paused') playerCore.play();
                 else playerCore.pause();
-            };
-            this.btnLoop.onactive = () => {
+            });
+            this.btnLoop.onActive.add(() => {
                 var modes = playingLoopModes;
                 var next = modes[(modes.indexOf(playerCore.loopMode) + 1) % modes.length];
                 playerCore.loopMode = next;
-            };
-            this.btnPrev.onactive = () => playerCore.prev();
-            this.btnNext.onactive = () => playerCore.next();
+            });
+            this.btnPrev.onActive.add(() => playerCore.prev());
+            this.btnNext.onActive.add(() => playerCore.next());
             playerCore.onLoopModeChanged.add(() => this.updateLoopMode())();
             playerCore.onTrackChanged.add(() => this.updateLoopMode())();
             playerCore.onStateChanged.add(() => {
@@ -369,9 +370,9 @@ export const ui = new class {
         init() {
             this.container.appendView(this.loginState);
             this.loginState.dom.id = 'login-state';
-            this.loginState.onactive = (ev) => {
+            this.loginState.onActive.add((ev) => {
                 user.openUI(undefined, ev);
-            };
+            });
         }
         update() {
             var text = this.loginState.text;

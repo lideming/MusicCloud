@@ -51,26 +51,26 @@ class LyricsEditContentView extends ContentView {
         super();
         this.header.actions.addView(this.btnLyrics = new ActionBtn({
             text: I`Lyrics View`,
-            onclick: () => {
+            onActive: () => {
                 this.setMode('lyrics');
             }
         }));
         this.header.actions.addView(this.btnSource = new ActionBtn({
             text: I`Source View`,
-            onclick: () => {
+            onActive: () => {
                 this.setMode('source');
             }
         }));
         this.header.actions.addView(new ActionBtn({
             text: I`Discard`,
-            onclick: () => {
+            onActive: () => {
                 this.lyrics = this.originalLyrics;
                 this.close();
             }
         }));
         this.header.actions.addView(new ActionBtn({
             text: I`Done`,
-            onclick: () => {
+            onActive: () => {
                 this.serializeLyricsFromView();
                 this.close();
             }
