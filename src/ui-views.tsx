@@ -4,6 +4,50 @@ import { utils, BuildDomExpr, Func, EventRegistrations, Action } from "./utils";
 import { I } from "./I18n";
 import { InputView, MenuItem, ObjectInit } from "@yuuza/webfx";
 
+export class MainContainer extends View {
+    createDom() {
+        return (
+            <div id="main-container" class="no-transition">
+                <nav id="sidebar" class="no-selection">
+                    <div id="sidebar-login">
+                    </div>
+                    <div id="sidebar-features">
+                    </div>
+                    <div id="sidebar-list">
+                    </div>
+                </nav>
+                <main id="content-outer">
+                </main>
+            </div>
+        );
+    }
+}
+
+export class BottomBar extends View {
+    createDom() {
+        return (
+            <div id="bottombar">
+                <div id="progress-outer">
+                    <div class="no-selection" id="progressbar-label-cur">--:--</div>
+                    <div class="no-selection" id="progressbar-label-total">--:--</div>
+                </div>
+                <div class="btn-progress" id="progressbar">
+                    <div class="btn-fill" id="progressbar-fill"></div>
+                </div>
+                <div id="bottombar-btns" class="flexbox-h">
+                    <div id="btn-play" class="btn i18ne" tabindex="0">Play</div>
+                    <div id="btn-prevtrack" class="btn i18ne" tabindex="0">prev_track</div>
+                    <div id="btn-nexttrack" class="btn i18ne" tabindex="0">next_track</div>
+                    <div id="btn-volume" class="btn" tabindex="0"></div>
+                    <div id="btn-loop" class="btn" tabindex="0" hidden></div>
+                    <div id="bottombar-trackinfo" class="flex-1"></div>
+                    <div class="btn" id="btnPin" tabindex="0">Pin</div>
+                </div>
+            </div>
+        );
+    }
+}
+
 export class SidebarItem extends ListViewItem {
     text: string;
     constructor(init?: ObjectInit<SidebarItem>) {

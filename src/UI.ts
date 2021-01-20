@@ -2,6 +2,7 @@
 
 import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu } from "./viewlib";
 import * as views from "./ui-views";
+import { MainContainer, BottomBar } from "./ui-views";
 
 views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.ContentView>) {
     var view: views.ContentView;
@@ -12,6 +13,11 @@ views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.Con
     });
     return this;
 };
+
+const mainContainer = new MainContainer();
+const bottomBar = new BottomBar();
+document.body.insertBefore(mainContainer.dom, document.body.firstChild);
+document.body.insertBefore(bottomBar.dom, mainContainer.dom.nextSibling);
 
 import { router } from "./Router";
 import { SettingItem, utils, Action, BuildDomExpr, Func, Callbacks, Timer, InputStateTracker, Toast, ToolTip } from "./utils";

@@ -8,8 +8,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta id="meta-theme-color" name="theme-color" content="">
-    <title>Music Cloud loading...</title>
-    <!-- Preload style and script -->
+    <title>Music Cloud</title>
+    <!-- Preload style -->
     <style>
         * {
             box-sizing: border-box;
@@ -44,18 +44,14 @@
             margin: 10px 5px;
         }
     </style>
+    <!-- Preload script which waits for main script loading and displays status -->
     <script>
         (function () {
             var preload = window.preload = {
                 domLoaded: false,
-                cssLoaded: false,
                 jsLoaded: false,
                 jsError: false,
                 preLoginTask: null,
-                cssOk() {
-                    this.cssLoaded = true;
-                    this.update();
-                },
                 jsOk() {
                     this.jsLoaded = true
                     this.update();
@@ -104,6 +100,7 @@
             window.addEventListener('DOMContentLoaded', function () {
                 preload.domLoaded = true;
                 preload.update();
+                // Set the theme ASAP to avoid blinking
                 if (localStorage.getItem('mcloud-theme') === 'dark') {
                     document.body.classList.add('dark');
                     document.getElementById('meta-theme-color').content = 'black';
@@ -119,45 +116,14 @@
         })();
     </script>
     <!-- End of preload style and script -->
-    <script src="bundle.js?v=1.0.8" onload="window.preload && preload.onJsLoad()" defer async></script>
+    <script src="bundle.js?v=1.0.8-2" onload="window.preload && preload.onJsLoad()" defer async></script>
 </head>
 
 <body>
-    <div id="main-container" class="no-transition">
-        <nav id="sidebar" class="no-selection">
-            <div id="sidebar-login">
-            </div>
-            <div id="sidebar-features">
-            </div>
-            <div id="sidebar-list">
-            </div>
-        </nav>
-        <main id="content-outer">
-        </main>
-    </div>
-    <div id="bottombar">
-        <div id="progress-outer">
-            <div class="no-selection" id="progressbar-label-cur">--:--</div>
-            <div class="no-selection" id="progressbar-label-total">--:--</div>
-        </div>
-        <div class="btn-progress" id="progressbar">
-            <div class="btn-fill" id="progressbar-fill"></div>
-        </div>
-        <div id="bottombar-btns" class="flexbox-h">
-            <div id="btn-play" class="btn i18ne" tabindex="0">Play</div>
-            <div id="btn-prevtrack" class="btn i18ne" tabindex="0">prev_track</div>
-            <div id="btn-nexttrack" class="btn i18ne" tabindex="0">next_track</div>
-            <div id="btn-volume" class="btn" tabindex="0"></div>
-            <div id="btn-loop" class="btn" tabindex="0" hidden></div>
-            <div id="bottombar-trackinfo" class="flex-1"></div>
-            <div class="btn" id="btnPin" tabindex="0">Pin</div>
-        </div>
-    </div>
     <div id="preload-overlay" lang="en">
         <h1>MusicCloud</h1>
         <div style="min-height: 6em;">
             <p>Loading...</p>
-            <p hidden style="color: gray;" id="css-ok">CSS OK</p>
             <p hidden style="color: gray;" id="js-ok">JavaScript OK</p>
             <p hidden style="color: red;" id="js-error">JavaScript Error</p>
             <p hidden id="js-error-msg"></p>
