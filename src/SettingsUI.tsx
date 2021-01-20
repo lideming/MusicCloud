@@ -62,7 +62,7 @@ class SettingsDialog extends Dialog {
         <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
             <div>{'MusicCloud ' + appVersion.currentVersion}</div>
             <div style="color: var(--color-text-gray);">
-                <View args={[{ tag: 'div.clickable', tabIndex: -1 }]} onActive={(ev) => {
+                <View args={[{ tag: 'div.clickable', tabIndex: 0 }]} onActive={(ev) => {
                     new AboutDialog().show(ev);
                     this.close();
                 }}>
@@ -76,14 +76,15 @@ class SettingsDialog extends Dialog {
     showReload() {
         if (this.reloadShown) return;
         this.reloadShown = true;
-        this.content.addView(new View({
-            tag: 'div.clickable',
-            style: 'color: var(--color-primary); text-align: center; margin: 10px 0;',
-            text: () => I`Reload to fully apply changes`,
-            onclick: () => {
-                window.location.reload();
-            }
-        }), this.bottom.position);
+        var reloadView = new View(
+            <div class="clickable" style='color: var(--color-primary); text-align: center; margin: 10px 0;' tabIndex="0">
+                {() => I`Reload to fully apply changes`}
+            </div>
+        );
+        reloadView.onActive.add(() => {
+            window.location.reload();
+        });
+        this.content.addView(reloadView, this.bottom.position);
     }
 
     updateDom() {

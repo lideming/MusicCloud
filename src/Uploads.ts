@@ -6,7 +6,7 @@ import { Semaphore, utils, DataUpdatingHelper, CancelToken } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
-import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView } from "./viewlib";
+import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref } from "./viewlib";
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
@@ -370,20 +370,20 @@ class UploadViewItem extends TrackViewItem {
 
 class UploadArea extends View {
     onfile: (file: File) => void;
-    private domfile: HTMLInputElement;
+    private domfile = new Ref<HTMLInputElement>();
     constructor(init: Partial<UploadArea>) {
         super();
         utils.objectApply(this, init);
     }
     createDom() {
         return {
-            _ctx: this,
             tag: 'div.upload-area.clickable',
+            tabIndex: 0,
             child: [
-                { tag: 'div.text.no-selection', textContent: I`Click here to select files to upload` },
-                { tag: 'div.text.no-selection', textContent: I`or drag files to this zone...` },
+                { tag: 'div.text.no-selection', text: I`Click here to select files to upload` },
+                { tag: 'div.text.no-selection', text: I`or drag files to this zone...` },
                 {
-                    tag: 'input', type: 'file', _key: 'domfile',
+                    tag: 'input', type: 'file', ref: this.domfile,
                     style: 'visibility: collapse; height: 0;',
                     accept: 'audio/*', multiple: true
                 },
@@ -391,12 +391,12 @@ class UploadArea extends View {
         };
     }
     postCreateDom() {
-        this.domfile.addEventListener('change', (ev) => {
-            if (this.domfile.files)
-                this.handleFiles(this.domfile.files);
+        this.domfile.value!.addEventListener('change', (ev) => {
+            if (this.domfile.value!.files)
+                this.handleFiles(this.domfile.value!.files);
         });
-        this.dom.addEventListener('click', (ev) => {
-            this.domfile.click();
+        this.onActive.add((ev) => {
+            this.domfile.value!.click();
         });
         this.dom.addEventListener('dragover', (ev) => {
             if (!ev.dataTransfer) return;
