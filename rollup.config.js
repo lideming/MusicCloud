@@ -8,10 +8,15 @@ const rollupConfig = () => ({
         file: './bundle.js',
         format: 'umd',
         name: 'mcloud',
-        plugins: [terser()],
+        plugins: [
+            terser({
+                keep_classnames: true,
+                keep_fnames: true,
+            }),
+        ],
         sourcemap: true,
         // sourcemapExcludeSources: true,
-        sourcemapPathTransform: transformSourcemapPath()
+        sourcemapPathTransform: transformSourcemapPath(),
     },
     plugins: [
         buildInfo(),
