@@ -35,7 +35,7 @@ export class ListIndex {
                 data.dropEffect = 'copy';
                 if (arg.drop) {
                     const list = this.getList(arg.target.listInfo.id);
-                    if (list.fetching) list.fetching.then(r => {
+                    list.fetch().then(r => {
                         for (const item of arg.sourceItems as TrackViewItem[]) {
                             list.addTrack(item.track.toApiTrack(), arg.event.altKey ? undefined : 0);
                         }
@@ -53,7 +53,7 @@ export class ListIndex {
                         const file = data.files[i];
                         uploads.uploadFile(file).then(async track => {
                             if (!track) return;
-                            if (list.fetching) await list.fetching;
+                            await list.fetch();
                             list.addTrack(track.toApiTrack(), arg.event.altKey ? undefined : 0);
                             await list.put();
                         }).catch(err => {

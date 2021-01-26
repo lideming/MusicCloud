@@ -99,6 +99,7 @@ export class TrackList {
         this.contentView?.updateView();
         return this.fetching = Promise.resolve();
     }
+    /** Ensure the list is loaded */
     fetch(force?: boolean) {
         if (force) this.fetching = null;
         return this.fetching = this.fetching ?? this.fetchImpl();
