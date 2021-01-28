@@ -140,6 +140,7 @@ i18n.add2dArray([
     ["next_track", "Next", "下一首"],
     ["loopmode_list-seq", "List-seq", "顺序播放"],
     ["loopmode_list-loop", "List-loop", "列表循环"],
+    ["loopmode_list-shuffle", "List-shuffle", "乱序播放"],
     ["loopmode_track-loop", "Track-loop", "单曲循环"],
     ["msgbox_no", "No", "否"],
     ["msgbox_yes", "Yes", "是"],

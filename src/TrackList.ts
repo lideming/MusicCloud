@@ -22,6 +22,7 @@ export class TrackList {
     get name() { return this.info?.name ?? null; }
     get version() { return this.info?.version ?? null; }
     tracks: Track[] = [];
+    tracksSuffled: Track[] | null = null;
     fetching: Promise<void> | null = null;
     posting: Promise<void> | null = null;
     eventListening = false;
@@ -91,6 +92,7 @@ export class TrackList {
             }
         });
         utils.arrayInsert(this.tracks, track, pos);
+        this.tracksSuffled?.push(track);
         this.contentView?.addItem(track, pos, false);
         return track;
     }
@@ -220,6 +222,15 @@ export class TrackList {
             return this.tracks[position + offset] ?? null;
         } else if (loopMode === 'list-loop') {
             return this.tracks[utils.mod(position + offset, this.tracks.length)] ?? null;
+        } else if (loopMode === 'list-shuffle') {
+            if (!this.tracksSuffled) {
+                this.tracksSuffled = this.tracks.splice(0);
+                shuffleArray(this.tracksSuffled);
+            }
+            var suffled = this.tracksSuffled;
+            position = suffled.indexOf(track);
+            if (!position || position < 0) position = suffled.findIndex(x => x.id === track.id)
+            return suffled[utils.mod(position + offset, suffled.length)] ?? null;
         } else if (loopMode === 'track-loop') {
             return track;
         } else {
@@ -260,6 +271,7 @@ export class TrackList {
         if (pos == null) return;
         track._bind = undefined;
         this.tracks.splice(pos, 1);
+        this.tracksSuffled?.remove(track);
         if (this.listView)
             this.listView.remove(pos);
     }
@@ -506,4 +518,17 @@ export interface TrackActionHandler<T> {
     /** When undefined, the item is not removable */
     onTrackRemove?(arr: T[]);
     canRemove?(arr: T[]): boolean;
+}
+
+/**
+ * Randomize array in-place using Durstenfeld shuffle algorithm
+ * @see https://stackoverflow.com/a/12646864
+ */
+function shuffleArray(array: any[]) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
 }

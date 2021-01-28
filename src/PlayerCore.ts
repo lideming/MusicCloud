@@ -232,7 +232,7 @@ export const playerCore = new class PlayerCore {
     }
 };
 
-export const playingLoopModes = ['list-seq', 'list-loop', 'track-loop'] as const;
+export const playingLoopModes = ['list-seq', 'list-loop', 'list-shuffle', 'track-loop'] as const;
 
 export type PlayingLoopMode = typeof playingLoopModes[number];
 
