@@ -5,10 +5,13 @@ import * as views from "./ui-views";
 import { MainContainer, BottomBar } from "./ui-views";
 
 views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.ContentView>) {
-    var view: views.ContentView;
     this.onActive.add(() => {
-        if (!view) view = viewFunc();
-        ui.content.setCurrent(view);
+        if (!this.contentView) this.contentView = viewFunc();
+        if (ui.content.current === this.contentView) {
+            this.contentView.onSidebarItemReactived();
+            return;
+        }
+        ui.content.setCurrent(this.contentView);
         ui.sidebarList.setActive(this);
     });
     return this;

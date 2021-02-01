@@ -30,7 +30,10 @@ export const router = new class {
     addRoute(arg: Route) {
         this.routes.push(arg);
         if (arg.sidebarItem) arg.sidebarItem().onActive.add(() => {
-            if (arg.contentView && arg.contentView().isVisible) return;
+            if (arg.contentView && arg.contentView().isVisible) {
+                arg.contentView().onSidebarItemReactived();
+                return;
+            }
             this.nav([...arg.path]);
         });
     }

@@ -316,6 +316,12 @@ export class TrackListView extends ListContentView {
     onRemove() {
         super.onRemove();
     }
+    onSidebarItemReactived() {
+        this.curPlaying.current?.dom.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
     protected appendListView() {
         super.appendListView();
         var lv = this.listView;

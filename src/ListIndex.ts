@@ -64,7 +64,10 @@ export class ListIndex {
             }
         };
         this.listView.onItemClicked = (item) => {
-            if (ui.sidebarList.currentActive.current === item) return;
+            if (ui.sidebarList.currentActive.current === item) {
+                item.contentView?.onSidebarItemReactived();
+                return;
+            }
             ui.sidebarList.setActive(item);
             this.showTracklist(item.listInfo.id);
         };
@@ -130,15 +133,17 @@ export class ListIndex {
                 await user.waitLogin(false);
                 var id = window.parseInt(arg.remaining[0]);
                 var list = this.getList(id);
-                ui.content.setCurrent(list.createView());
+                var content = list.createView();
+                ui.content.setCurrent(content);
                 var item = this.getViewItem(id);
                 ui.sidebarList.setActive(item);
                 if (!item) {
                     await list.fetch();
-                    this.addListInfo(list.info!);
+                    item = this.addListInfo(list.info!);
                     if (user.state == 'logged')
                         this.putUser();
                 }
+                item.contentView = content;
             }
         });
         router.addRoute({
@@ -166,6 +171,7 @@ export class ListIndex {
         var curContent = ui.content.current;
         if (curContent instanceof TrackListView && curContent.list?.id === listinfo.id)
             ui.sidebarList.setActive(item);
+        return item;
     }
     getListInfo(id: number) {
         return this.getViewItem(id)?.listInfo;

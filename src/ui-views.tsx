@@ -49,7 +49,8 @@ export class BottomBar extends View {
 }
 
 export class SidebarItem extends ListViewItem {
-    text: string;
+    text: string = '';
+    contentView: ContentView | null = null;
     constructor(init?: ObjectInit<SidebarItem>) {
         super();
         utils.objectInit(this, init);
@@ -80,6 +81,7 @@ export class ContentView extends View {
         this._shownEvents?.removeAll();
     }
     onDomRemoved() { }
+    onSidebarItemReactived() { }
 
     _shownEvents: EventRegistrations | null = null;
     get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }
