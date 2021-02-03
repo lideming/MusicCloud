@@ -2,6 +2,10 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import { terser } from "rollup-plugin-terser";
 
+import { promisify } from "util";
+import { exec } from "child_process";
+const execAsync = promisify(exec);
+
 const rollupConfig = () => ({
     input: './src/main.ts',
     output: {
@@ -27,11 +31,26 @@ const rollupConfig = () => ({
     context: 'window'
 });
 
-function getBuildInfo() {
+async function getBuildInfo() {
     return JSON.stringify({
         version: require('./package.json').version,
-        buildDate: new Date().toISOString()
+        buildDate: new Date().toISOString(),
+        commits: await getCommits(),
     });
+}
+
+async function getCommits() {
+    var execResult = await execAsync('git log --pretty=format:"%h %cI %s" -n 20');
+    return execResult.stdout
+        .split('\n')
+        .map(x => {
+            var s = x.split(' ', 2);
+            return {
+                id: s[0],
+                date: s[1],
+                message: x.substr(s[0].length + 1 + s[1].length + 1)
+            };
+        });
 }
 
 function buildInfo() {
@@ -43,9 +62,9 @@ function buildInfo() {
             }
             return null;
         },
-        load(id) {
+        async load(id) {
             if (id === './buildInfo') {
-                const info = getBuildInfo();
+                const info = await getBuildInfo();
                 console.info('buildInfo: ' + info);
                 return 'export default ' + info + ';';
             }

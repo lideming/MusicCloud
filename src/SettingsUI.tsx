@@ -4,6 +4,7 @@ import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
 import { utils } from "./utils";
 import { appVersion } from "./AppVersion";
+import buildInfo from "./buildInfo";
 
 export const settingsUI = new class {
     dialog: SettingsDialog;
@@ -105,9 +106,10 @@ class AboutDialog extends Dialog {
 
     constructor() {
         super();
+        this.width = '500px';
         this.addContent(new View(
             <div>
-                <p>{I`MusicCloud` + ' ' + appVersion.currentVersion}</p>
+                <h2>{I`MusicCloud` + ' ' + appVersion.currentVersion}</h2>
                 <p>{appVersion.currentDate ? I`Build Date` + ': ' + new Date(appVersion.currentDate).toLocaleString(ui.lang.curLang) : ''}</p>
                 <p>{
                     IA`This project is ${<a href="https://github.com/lideming/MusicCloud" class="clickable" target="_blank">
@@ -117,6 +119,24 @@ class AboutDialog extends Dialog {
                 <p>{
                     IA`This project is based on ${<a href="https://github.com/lideming/webfx" class="clickable" target="_blank">webfx</a>}.`
                 }</p>
+                <h3>{I`Recent changes:`}</h3>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table>
+                        <tr><th>Id</th><th>Message</th></tr>
+                        {
+                            buildInfo.commits.map(c =>
+                                <tr>
+                                    <td>
+                                        <a href={`https://github.com/lideming/MusicCloud/commit/${c.id}`} target="_blank">
+                                            <code>{c.id}</code>
+                                        </a>
+                                    </td>
+                                    <td>{c.message}</td>
+                                </tr>
+                            )
+                        }
+                    </table>
+                </div>
             </div>
         ));
     }
