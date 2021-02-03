@@ -2,6 +2,7 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import { terser } from "rollup-plugin-terser";
 
+import { readFile } from "fs/promises";
 import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
@@ -26,7 +27,8 @@ const rollupConfig = () => ({
         buildInfo(),
         resolve(),
         typescript(),
-        myCss()
+        myCss(),
+        jsonLoader(),
     ],
     context: 'window'
 });
@@ -95,6 +97,20 @@ function myCss() {
             if (id.endsWith('.css')) {
                 return {
                     code: 'export default ' + JSON.stringify(code),
+                    map: { mappings: '' }
+                };
+            }
+        }
+    };
+}
+
+function jsonLoader() {
+    return {
+        name: 'json-loader',
+        transform(code, id) {
+            if (id.endsWith('.json')) {
+                return {
+                    code: 'export default JSON.parse(' + JSON.stringify(JSON.stringify(JSON.parse(code))) + ');',
                     map: { mappings: '' }
                 };
             }
