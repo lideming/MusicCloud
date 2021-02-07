@@ -224,7 +224,7 @@ export class TrackList {
             return this.tracks[utils.mod(position + offset, this.tracks.length)] ?? null;
         } else if (loopMode === 'list-shuffle') {
             if (!this.tracksSuffled) {
-                this.tracksSuffled = this.tracks.splice(0);
+                this.tracksSuffled = this.tracks.slice(0);
                 shuffleArray(this.tracksSuffled);
             }
             var suffled = this.tracksSuffled;
