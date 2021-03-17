@@ -183,30 +183,27 @@ html, body {
     transition: transform .3s, opacity .3s;
 }
 
-.float-sidebar #sidebar-login {
+#sidebar-login {
     padding-left: 50px;
     min-height: 50px;
     position: sticky;
     top: 0;
     background: inherit;
+    z-index: 3;
 }
 
-.float-sidebar #login-state {
+#login-state {
     display: flex;
     align-items: center;
     height: 50px;
 }
 
-.float-sidebar #sidebar-login {
-    z-index: 3;
-}
-
-.float-sidebar #sidebar-features {
+#sidebar-features {
     z-index: 2;
     position: relative;
 }
 
-.float-sidebar #sidebar-list .section-header {
+#sidebar-list .section-header {
     position: sticky;
     top: 0;
     padding-top: 60px;

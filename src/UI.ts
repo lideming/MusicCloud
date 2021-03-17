@@ -316,18 +316,24 @@ export const ui = new class {
     };
     sidebar = new class {
         dom = document.getElementById('sidebar')!;
-        btnShow: SidebarToggle;
+        btn: SidebarToggle;
         overlay: Overlay | null;
-        _float = false;
+        private _float = false;
         get float() { return this._float; }
-        _hide = false;
+        private _hide = false;
+        private _hideMobile = true;
+        private _hideLarge = false;
         get hide() { return this._hide && this._float; }
+        private _btnShown = false;
+        get btnShown() { return this._btnShown; }
+        private _isMobile = false;
         init() {
-            this.toggleHide(true);
+            this.toggleBtn(true);
+            this._isMobile = this.isMobile();
             this.checkWidth();
             window.addEventListener('resize', () => this.checkWidth());
             router.onNavCompleted.add(() => {
-                this.toggleHide(true);
+                if (this.float) this.toggleHide(true);
             });
             dragManager.onDragStart.add(() => {
                 utils.toggleClass(this.dom, 'peek', true);
@@ -337,23 +343,38 @@ export const ui = new class {
             });
             this.dom.addEventListener('dragover', () => this.toggleHide(false));
         }
-        checkWidth() {
+        isMobile() {
             var width = window.innerWidth;
-            this.toggleFloat(width < 800);
+            return width < 800;
+        }
+        checkWidth() {
+            const mobile = this.isMobile();
+            if (mobile != this._isMobile) {
+                this._isMobile = mobile;
+                this.toggleHide(mobile ? (this._hideMobile || this._hideLarge) : (this._hideLarge && this._hideMobile));
+            }
         }
         toggleFloat(float?) {
             if (float !== undefined && !!float === this._float) return;
             this._float = utils.toggleClass(document.body, 'float-sidebar', float);
-            if (this._float) {
-                this.btnShow = this.btnShow || new SidebarToggle();
-                this.dom.parentElement!.appendChild(this.btnShow.dom);
-            } else {
-                this.btnShow.dom.remove();
-            }
             this.updateOverlay();
         }
+        toggleBtn(show: boolean) {
+            if (show == this._btnShown) return;
+            this._btnShown = show;
+            if (show) {
+                this.btn = this.btn || new SidebarToggle();
+                this.dom.parentElement!.appendChild(this.btn.dom);
+            } else {
+                this.btn.dom.remove();
+            }
+        }
+
         toggleHide(hide?) {
             this._hide = utils.toggleClass(this.dom, 'hide', hide);
+            if (this.isMobile()) this._hideMobile = this._hide;
+            else this._hideLarge = this._hide;
+            this.toggleFloat(this.isMobile() || this._hide);
             this.updateOverlay();
         }
         updateOverlay() {
