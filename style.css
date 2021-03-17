@@ -396,7 +396,11 @@ html, body {
 
 .indexitem > .state {
     margin-left: .5em;
-    font-size: 80%;
+}
+
+.indexitem > .state > svg {
+    height: 1em;
+    width: 1em;
 }
 
 .trackitem {

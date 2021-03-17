@@ -12,6 +12,7 @@ import { SidebarItem, setScrollableShadow, CopyMenuItem } from "./ui-views";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { uploads } from "./Uploads";
+import svgAudio from "../resources/audiotrack-24px.svg";
 
 export class ListIndex {
     loadedList: { [x: number]: TrackList; } = {};
@@ -269,8 +270,9 @@ export class ListIndexViewItem extends SidebarItem {
                 {
                     tag: 'span.state',
                     update: (dom) => {
-                        dom.textContent = this.playing ? "🎵" : "";
-                        dom.hidden = !dom.textContent;
+                        var icon = this.playing ? svgAudio : '';
+                        dom.innerHTML = icon;
+                        dom.hidden = !icon;
                     },
                 }
             ]
