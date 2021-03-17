@@ -27,7 +27,7 @@ const rollupConfig = () => ({
         buildInfo(),
         resolve(),
         typescript(),
-        myCss(),
+        myText(),
         jsonLoader(),
     ],
     context: 'window'
@@ -90,11 +90,14 @@ function transformSourcemapPath() {
     };
 }
 
-function myCss() {
+function myText() {
+    function match(id) {
+        return /\.(css|svg)$/.test(id);
+    }
     return {
-        name: 'my-css-loader',
+        name: 'my-text-loader',
         transform(code, id) {
-            if (id.endsWith('.css')) {
+            if (match(id)) {
                 return {
                     code: 'export default ' + JSON.stringify(code),
                     map: { mappings: '' }

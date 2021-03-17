@@ -1,15 +1,17 @@
 // file: ui-views.ts
-import { ListViewItem, TextView, View, EditableHelper, ContainerView } from "./viewlib";
-import { utils, BuildDomExpr, Func, EventRegistrations, Action } from "./utils";
+import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit,  } from "./viewlib";
+import { utils, BuildDomExpr, Func, EventRegistrations, Action, Ref } from "./utils";
 import { I } from "./I18n";
-import { InputView, MenuItem, ObjectInit } from "@yuuza/webfx";
+import svgSettings from "../resources/settings-24px.svg";
+import { settingsUI } from "./SettingsUI";
 
 export class MainContainer extends View {
     createDom() {
         return (
             <div id="main-container" class="no-transition">
                 <nav id="sidebar" class="no-selection">
-                    <div id="sidebar-login">
+                    <div id="sidebar-header">
+                        <SettingsBtn />
                     </div>
                     <div id="sidebar-features">
                     </div>
@@ -65,6 +67,22 @@ export class SidebarItem extends ListViewItem {
     bindContentView(viewFunc: Func<ContentView>) {
         // implement in UI.ts
         return this;
+    }
+}
+
+export class SettingsBtn extends View {
+    createDom() {
+        return (
+            <div class="item" id="settings-btn">
+            </div>
+        );
+    }
+    postCreateDom() {
+        super.postCreateDom();
+        this.dom.innerHTML = svgSettings;
+        this.onActive.add((e) => {
+            settingsUI.openUI(e);
+        });
     }
 }
 

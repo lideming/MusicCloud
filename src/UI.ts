@@ -395,10 +395,10 @@ export const ui = new class {
         }
     };
     sidebarLogin = new class {
-        container = document.getElementById('sidebar-login')!;
+        container = document.getElementById('sidebar-header')!;
         loginState = new views.SidebarItem();
         init() {
-            this.container.appendView(this.loginState);
+            this.container.insertBefore(this.loginState.dom, this.container.firstChild);
             this.loginState.dom.id = 'login-state';
             this.loginState.onActive.add((ev) => {
                 user.openUI(undefined, ev);
@@ -658,7 +658,11 @@ class VolumeButton extends ProgressButton {
 class SidebarToggle extends View {
     createDom(): BuildDomExpr {
         return {
-            tag: 'div.sidebar-toggle.clickable.no-selection', text: 'M',
+            tag: 'div.sidebar-toggle.clickable.no-selection',
+            child: {
+                tag: 'div.logo',
+                text: 'M'
+            },
             onclick: (ev) => {
                 ui.sidebar.toggleHide();
             },

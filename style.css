@@ -61,6 +61,10 @@ a {
     color: var(--color-text);
 }
 
+svg {
+    fill: currentColor;
+}
+
 .no-transition, .no-transition * {
     transition: none !important;
 }
@@ -183,19 +187,32 @@ html, body {
     transition: transform .3s, opacity .3s;
 }
 
-#sidebar-login {
+#sidebar-header {
     padding-left: 50px;
     min-height: 50px;
     position: sticky;
     top: 0;
     background: inherit;
     z-index: 3;
+    display: flex;
 }
 
 #login-state {
     display: flex;
+    flex: 1;
     align-items: center;
     height: 50px;
+}
+
+#settings-btn {
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
+
+#settings-btn svg {
+    height: 20px;
+    width: 20px;
 }
 
 #sidebar-features {
@@ -216,14 +233,28 @@ html, body {
     left: 0;
     top: 0;
     z-index: 101;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     height: 50px;
     width: 50px;
+    background: var(--color-bg-ee);
+    color: var(--color-primary-dark);
+}
+
+.sidebar-toggle .logo {
     text-align: center;
-    line-height: 50px;
+    line-height: 1;
     font-size: 20px;
     font-weight: 700;
-    background: var(--color-bg-ee);
+    transition: transform .3s, color .3s;
+    transform: scale(1);
+}
+
+.sidebar-toggle:hover .logo {
     color: var(--color-primary);
+    transform: scale(1.2);
+    transition: transform .2s, color .2s;
 }
 
 .content-header {
@@ -572,11 +603,11 @@ html, body {
     overflow: hidden;
 }
 
-#sidebar-login, #sidebar-features {
+#sidebar-header, #sidebar-features {
     border-bottom: 1px solid var(--color-bg-cc);
 }
 
-#sidebar-login .item, #sidebar-features .item {
+#sidebar-header .item, #sidebar-features .item {
     animation: none;
 }
 
