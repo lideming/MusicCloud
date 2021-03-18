@@ -160,6 +160,7 @@ html, body {
     transition: transform .3s, width .3s;
     transform: translate(0, 0);
     z-index: 1;
+    animation: showing .3s;
 }
 
 #content-outer {
@@ -167,7 +168,7 @@ html, body {
     left: 200px;
     width: calc(100% - 200px);
     background: var(--color-bg);
-    transition: left .3s;
+    transition: left .3s, width .3s;
 }
 
 @media only screen and (min-width: 800px) {
