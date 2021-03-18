@@ -329,7 +329,6 @@ export const ui = new class {
         private _isMobile = false;
         init() {
             this.toggleBtn(true);
-            this._isMobile = this.isMobile();
             this.checkWidth();
             window.addEventListener('resize', () => this.checkWidth());
             router.onNavCompleted.add(() => {
