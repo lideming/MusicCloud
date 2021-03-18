@@ -8,7 +8,7 @@ import { user } from "./User";
 import { Api } from "./apidef";
 import { router } from "./Router";
 import { ui } from "./UI";
-import { SidebarItem, setScrollableShadow, CopyMenuItem } from "./ui-views";
+import { SidebarItem, setScrollableShadow, CopyMenuItem, Icon } from "./ui-views";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { uploads } from "./Uploads";
@@ -270,8 +270,9 @@ export class ListIndexViewItem extends SidebarItem {
                 {
                     tag: 'span.state',
                     update: (dom) => {
-                        var icon = this.playing ? svgAudio : '';
-                        dom.innerHTML = icon;
+                        var icon = this.playing ? new Icon({icon: svgAudio}) : null;
+                        utils.clearChildren(dom);
+                        if (icon) dom.appendChild(icon.dom);
                         dom.hidden = !icon;
                     },
                 }

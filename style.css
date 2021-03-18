@@ -61,8 +61,22 @@ a {
     color: var(--color-text);
 }
 
-svg {
+.icon {
+    display: inline-block;
+    height: 1em;
+    width: 1em;
+    overflow: visible;
+    vertical-align: middle;
+    position: relative;
+}
+
+.icon svg {
+    position: absolute;
     fill: currentColor;
+    height: 1.2em;
+    width: 1.2em;
+    left: -.1em;
+    top: -.1em;
 }
 
 .no-transition, .no-transition * {
@@ -396,6 +410,7 @@ html, body {
 
 .indexitem > .state {
     margin-left: .5em;
+    line-height: 1;
 }
 
 .indexitem > .state > svg {
@@ -413,6 +428,10 @@ html, body {
     text-align: center;
     flex: 2em;
     color: var(--color-text-gray);
+}
+
+.trackitem .pos .icon {
+    color: var(--color-text);
 }
 
 .trackitem .name, .trackitem .artist, .trackitem .duration,

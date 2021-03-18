@@ -11,9 +11,10 @@ import { listIndex } from "./ListIndex";
 import { playerCore, PlayingLoopMode } from "./PlayerCore";
 import { router } from "./Router";
 import { Track } from "./Track";
-import { ContentView, ContentHeader, CopyMenuItem } from "./ui-views";
+import { ContentView, ContentHeader, CopyMenuItem, Icon } from "./ui-views";
 import { ui } from "./UI";
 import { msgcli } from "./MessageClient";
+import svgPlayArrow from "../resources/play_arrow-24px.svg";
 
 export class TrackList {
     info: Api.TrackListInfo | null = null;
@@ -395,7 +396,8 @@ export class TrackViewItem extends ListViewItem {
                 {
                     tag: 'span.pos', update: (dompos) => {
                         if (this.playing) {
-                            dompos.textContent = '🎵';
+                            utils.clearChildren(dompos);
+                            dompos.appendChild(new Icon({icon: svgPlayArrow}).dom);
                         } else if (!this.noPos) {
                             dompos.textContent = this.track._bind?.position != null
                                 ? (this.track._bind.position + 1).toString() : '';

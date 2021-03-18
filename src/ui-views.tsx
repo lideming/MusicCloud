@@ -1,5 +1,5 @@
 // file: ui-views.ts
-import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit,  } from "./viewlib";
+import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, } from "./viewlib";
 import { utils, BuildDomExpr, Func, EventRegistrations, Action, Ref } from "./utils";
 import { I } from "./I18n";
 import svgSettings from "../resources/settings-24px.svg";
@@ -74,12 +74,12 @@ export class SettingsBtn extends View {
     createDom() {
         return (
             <div class="item" id="settings-btn">
+                <Icon icon={svgSettings}/>
             </div>
         );
     }
     postCreateDom() {
         super.postCreateDom();
-        this.dom.innerHTML = svgSettings;
         this.onActive.add((e) => {
             settingsUI.openUI(e);
         });
@@ -207,5 +207,14 @@ export class CopyMenuItem extends MenuItem {
             (this.textView.dom as HTMLInputElement).select();
             document.execCommand('copy');
         });
+    }
+}
+
+export class Icon extends View {
+    get icon() { return this.dom.innerHTML; }
+    set icon(val) { this.dom.innerHTML = val; }
+    constructor(init?: ObjectInit<Icon>) {
+        super({ tag: 'span.icon' });
+        utils.objectInit(this, init);
     }
 }
