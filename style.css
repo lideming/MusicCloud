@@ -226,12 +226,15 @@ html, body {
     flex: 1;
     align-items: center;
     height: 50px;
+    overflow: hidden;
 }
 
 #settings-btn {
     display: flex;
     align-items: center;
     text-align: center;
+    justify-content: center;
+    width: 50px;
 }
 
 #settings-btn svg {
