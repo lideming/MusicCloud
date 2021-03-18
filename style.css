@@ -40,13 +40,13 @@ body.dark {
     --color-text-gray: #aaa;
     --color-bg-selection: hsl(5, 100%, 20%);
     --color-primary-dark-depends: hsl(5, 100%, 83%);
-    --color-fg-11: #eeeeee;
-    --color-fg-22: #dddddd;
-    --color-fg-33: #cccccc;
-    --color-bg-f8: #080808;
-    --color-bg-ee: #111111;
-    --color-bg-dd: #222222;
-    --color-bg-cc: #333333;
+    --color-fg-11: #dddddd;
+    --color-fg-22: #cccccc;
+    --color-fg-33: #bbbbbb;
+    --color-bg-f8: #111111;
+    --color-bg-ee: #222222;
+    --color-bg-dd: #333333;
+    --color-bg-cc: #444444;
     --color-shadow: rgba(180, 180, 180, .5);
     --color-light-shadow: rgba(180, 180, 180, .3);
 }
@@ -143,24 +143,31 @@ html, body {
 }
 
 #sidebar, #content-outer {
-    float: left;
+    position: absolute;
     height: 100%;
     overflow-y: auto;
-    position: relative;
     contain: strict;
 }
 
-#content-outer {
-    width: calc(100% - 200px);
-    background: var(--color-bg);
-}
-
 #sidebar {
+    top: 0;
+    left: 0;
     width: 200px;
     background: var(--color-bg-f8);
     border-right: 1px solid var(--color-bg-cc);
     touch-action: pan-y pinch-zoom;
     will-change: transform, scroll-position;
+    transition: transform .3s, width .3s;
+    transform: translate(0, 0);
+    z-index: 1;
+}
+
+#content-outer {
+    top: 0;
+    left: 200px;
+    width: calc(100% - 200px);
+    background: var(--color-bg);
+    transition: left .3s;
 }
 
 @media only screen and (min-width: 800px) {
@@ -168,6 +175,7 @@ html, body {
         width: calc(200px + (100vw - 800px) * .2);
     }
     #content-outer {
+        left: calc(200px + (100vw - 800px) * .2);
         width: calc(100% - (200px + (100vw - 800px) * .2));
     }
 }
@@ -186,6 +194,7 @@ html, body {
 }
 
 .float-sidebar #content-outer {
+    left: 0;
     width: 100%;
 }
 
@@ -285,6 +294,7 @@ html, body {
 
 .titlebar {
     padding: 10px;
+    transition: padding-left .3s;
 }
 
 .float-sidebar .content-header .titlebar {
