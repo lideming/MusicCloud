@@ -268,9 +268,13 @@ export class LyricsView extends View {
     isScrollingPaused() {
         return !!(this.pauseScrollTime && Date.now() < this.pauseScrollTime);
     }
-    setScrollingPause(timeout: number) {
-        this.pauseScrollTime = Math.max(this.pauseScrollTime || 0, Date.now() + timeout);
-        this.scrollingTarget = null;
+    setScrollingPause(timeout: number | null) {
+        if (timeout == null) {
+            this.pauseScrollTime = null;
+        } else {
+            this.pauseScrollTime = Math.max(this.pauseScrollTime || 0, Date.now() + timeout);
+            this.scrollingTarget = null;
+        }
     }
 
 

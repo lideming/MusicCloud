@@ -136,6 +136,10 @@ class PlayingView extends ContentView {
         super.onRemove();
         this.lyricsView.onHide();
     }
+    onSidebarItemReactived() {
+        this.lyricsView.setScrollingPause(null);
+        this.lyricsView.setCurrentTime(this.lyricsView.curTime, "smooth");
+    }
     _checkTrackVersion = 0;
     async checkTrack() {
         var version = ++this._checkTrackVersion;
