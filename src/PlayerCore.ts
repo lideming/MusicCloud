@@ -159,16 +159,17 @@ export const playerCore = new class PlayerCore {
         var oldTrack = this.track;
         this.track = track;
         this._loadRetryTimer.tryCancel();
-        if (oldTrack !== track
-            && (oldTrack?.url !== track?.url
-                || (track?.blob && track.blob !== oldTrack?.blob))) {
+        var sameTrack = oldTrack === track
+            || (oldTrack?.url === track?.url
+                || (track?.blob && track.blob === oldTrack?.blob));
+        if (!sameTrack) {
             if (playNow && track) {
                 await this.loadTrack(track);
             } else {
                 this.loadUrl(null);
             }
+            this.state = !track ? 'none' : playNow ? 'stalled' : 'paused';
         }
-        this.state = !track ? 'none' : playNow ? 'stalled' : 'paused';
         this.onTrackChanged.invoke();
         this.onProgressChanged.invoke();
         if (playNow && track) await this.playTrack(track);
