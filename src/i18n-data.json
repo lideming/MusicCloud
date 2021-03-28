@@ -49,6 +49,8 @@
         ["Track ID", "歌曲 ID"],
         ["Name", "名称"],
         ["Artist", "艺术家"],
+        ["Album", "专辑"],
+        ["Album artist", "专辑艺术家"],
         ["Duration", "时长"],
         ["Size", "大小"],
         ["Search", "搜索"],

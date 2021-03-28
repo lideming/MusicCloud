@@ -102,6 +102,8 @@ export class TrackDialog extends Dialog {
     track: Track;
     inputName = new LabeledInput({ label: I`Name` });
     inputArtist = new LabeledInput({ label: I`Artist` });
+    inputAlbum = new LabeledInput({ label: I`Album` });
+    inputAlbumArtist = new LabeledInput({ label: I`Album artist` });
     inputLyrics = new LabeledInputWithLoading({ label: I`Lyrics` });
     btnSave = new TabBtn({ text: I`Save`, right: true });
     btnEditLyrics = new TabBtn({ text: I`Edit Lyrics`, right: true });
@@ -116,7 +118,15 @@ export class TrackDialog extends Dialog {
         this.inputLyrics.dom.style.flex = '1';
         this.inputLyrics.dominput.style.minHeight = '3em';
         this.inputLyrics.dominput.style.height = '6em';
-        [this.inputName, this.inputArtist, this.inputLyrics].forEach(x => this.addContent(x));
+
+        [
+            this.inputName,
+            this.inputArtist,
+            this.inputAlbum,
+            this.inputAlbumArtist,
+            this.inputLyrics
+        ].forEach(x => this.addContent(x));
+
         this.addBtn(this.btnSave);
         this.btnSave.onActive.add(() => this.save());
         this.addBtn(this.btnEditLyrics);
@@ -142,6 +152,8 @@ export class TrackDialog extends Dialog {
         this.btnSave.hidden = !t.canEdit;
         this.inputName.updateWith({ value: t.name });
         this.inputArtist.updateWith({ value: t.artist });
+        this.inputAlbum.value = t.infoObj?.album || '';
+        this.inputAlbumArtist.value = t.infoObj?.albumArtist || '';
         if (t.isLyricsGotten()) {
             this.inputLyrics.loaded = true;
             this.inputLyrics.updateWith({ value: t.lyrics });
@@ -165,9 +177,11 @@ export class TrackDialog extends Dialog {
                     id: this.track.id,
                     name: this.inputName.value,
                     artist: this.inputArtist.value,
+                    album: this.inputAlbum.value,
+                    albumArtist: this.inputAlbumArtist.value,
                     lyrics: this.inputLyrics.loaded ? this.inputLyrics.value : undefined,
                     version: this.track.infoObj?.version
-                }
+                } as Api.Track
             }) as Api.Track;
             if (newinfo['error']) {
                 if (newinfo['error'] == 'track_changed') {

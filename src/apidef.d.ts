@@ -46,6 +46,8 @@ export namespace Api {
         owner?: number;
         name: string;
         artist: string;
+        album: string;
+        albumArtist: string;
         /** URL to audio file */
         url: string;
         lyrics?: string;
