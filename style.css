@@ -62,12 +62,12 @@ a {
 }
 
 .icon {
-    display: inline-block;
+    display: block;
+    position: relative;
     height: 1em;
     width: 1em;
+    margin: auto;
     overflow: visible;
-    vertical-align: middle;
-    position: relative;
 }
 
 .icon svg {
