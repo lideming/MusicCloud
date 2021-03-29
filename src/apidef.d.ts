@@ -53,6 +53,7 @@ export namespace Api {
         lyrics?: string;
         size?: number;
         length?: number;
+        groupId?: number;
         files?: TrackFile[];
         version?: number;
         visibility?: number;
@@ -178,5 +179,10 @@ export namespace Api {
     interface VisibilityChange {
         trackids: number[];
         visibility: number;
+    }
+
+    // GET {api}/tracks/group/{id}
+    interface TrackGroup {
+        tracks: Track;
     }
 }
