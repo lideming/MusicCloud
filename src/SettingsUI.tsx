@@ -5,6 +5,7 @@ import { playerCore } from "./PlayerCore";
 import { utils } from "./utils";
 import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
+import { playerFX } from "./PlayerFX";
 
 export const settingsUI = new class {
     dialog: SettingsDialog;
@@ -56,6 +57,9 @@ class SettingsDialog extends Dialog {
             ui.notification.setEnable(!ui.notification.config.enabled)
                 .then(() => this.updateDom());
         });
+        this.addContent(<ButtonView onActive={(e) => {
+            playerFX.showUI(e);
+        }}>Test: Player FX</ButtonView>)
         this.addContent(this.bottom);
     }
 

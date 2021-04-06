@@ -43,6 +43,7 @@ import { lyricsEdit } from "./LyricsEdit";
 import { appVersion } from "./AppVersion";
 import { settings } from "./Settings";
 import { utils } from "./utils";
+import { playerFX } from "./PlayerFX";
 
 import * as webfx from "@yuuza/webfx";
 
@@ -51,7 +52,7 @@ import style from "../style.css";
 export const app = window['app'] = {
     webfx,
     settings, settingsUI,
-    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying, lyricsEdit,
+    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying, lyricsEdit, playerFX,
     Toast, ToastsContainer, Lyrics,
     msgcli,
     init() {
@@ -60,6 +61,7 @@ export const app = window['app'] = {
         app.injectStyle();
         ui.init();
         playerCore.init();
+        playerFX.init();
         user.init();
         uploads.init();
         search.init();

@@ -80,6 +80,7 @@ export const playerCore = new class PlayerCore {
         }
 
         this.audio = document.createElement('audio');
+        this.audio.crossOrigin = 'anonymous';
         this.audio.addEventListener('timeupdate', () => this.onProgressChanged.invoke());
         this.audio.addEventListener('canplay', () => {
             this._loadRetryCount = 0;
