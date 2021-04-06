@@ -12,7 +12,7 @@ export const playerFX = new class PlayerFX {
             [
                 () => {
                     this.analyser = this.ctx.createAnalyser();
-                    this.analyser.fftSize = 4096;
+                    this.analyser.fftSize = 8192;
                     return this.analyser;
                 },
                 this.ctx.destination
