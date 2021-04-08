@@ -14,6 +14,7 @@ export const playerCore = new class PlayerCore {
     track: Track | null = null;
     trackProfile: Api.TrackFile | null = null;
     audioLoaded = false;
+    objectUrl: string | null = null;
     onTrackChanged = new Callbacks<Action>();
 
     siPlayer = new SettingItem('mcloud-player', 'json', {
@@ -142,11 +143,17 @@ export const playerCore = new class PlayerCore {
         return this.track?._bind?.list?.getNextTrack(this.track, this.loopMode, offset);
     }
 
-    loadUrl(src: string | null) {
-        // Getting `this.audio.src` is very slow when a blob is loaded,
-        // so we add this property:
+    loadUrl(src: Blob | string | null) {
+        if (this.objectUrl) {
+            URL.revokeObjectURL(this.objectUrl);
+            this.objectUrl = null;
+        }
+
         this.audioLoaded = !!src;
         if (src) {
+            if (src instanceof Blob) {
+                src = this.objectUrl = URL.createObjectURL(src);
+            }
             this.audio.src = src;
         } else {
             this.audio.pause();
@@ -189,10 +196,9 @@ export const playerCore = new class PlayerCore {
         var ct = this._loadct = new CancelToken();
         if (track.blob) {
             this.loadUrl(null); // unload current track before await
-            var dataurl = await utils.readBlobAsDataUrl(track.blob);
             ct.throwIfCancelled();
             this.trackProfile = null;
-            this.loadUrl(dataurl);
+            this.loadUrl(track.blob);
         } else {
             let cur = { profile: '', bitrate: 0, size: track.size } as Api.TrackFile;
             var prefer = this.preferBitrate;
