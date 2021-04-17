@@ -11,6 +11,7 @@ import { Api } from "./apidef";
 import { router } from "./Router";
 import { msgcli } from "./MessageClient";
 import { SidebarItem } from "./ui-views";
+import { settings } from "./Settings";
 
 class CommentsView {
     endpoint: string;
@@ -128,7 +129,7 @@ export const discussion = new class extends CommentsView {
         });
         ui.sidebarList.addFeatureItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
-            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.discussionEnabled);
+            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.discussionEnabled && settings.showDiscussion);
         })();
     }
     sidebarItem: SidebarItem;
@@ -150,7 +151,7 @@ export const notes = new class extends CommentsView {
             if (this.state && notes.state !== 'waiting') this.fetch();
         });
         user.onSwitchedUser.add(() => {
-            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.notesEnabled);
+            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.notesEnabled && settings.showNotes);
         })();
     }
     sidebarItem: SidebarItem;

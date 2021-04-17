@@ -15,6 +15,7 @@ import { ContentView, ContentHeader, CopyMenuItem, Icon } from "./ui-views";
 import { ui } from "./UI";
 import { msgcli } from "./MessageClient";
 import svgPlayArrow from "../resources/play_arrow-24px.svg";
+import { settings } from "./Settings";
 
 export class TrackList {
     info: Api.TrackListInfo | null = null;
@@ -427,7 +428,7 @@ export class TrackViewItem extends ListViewItem {
                     router.nav(['track-comments', item.track.id.toString()]);
                 }
             }));
-            if (this.track.url) {
+            if (settings.showDownloadOptions && this.track.url) {
                 var ext = this.track.getExtensionName();
                 ext = ext ? (ext.toUpperCase() + ', ') : '';
                 var fileSize = utils.formatFileSize(this.track.size);
