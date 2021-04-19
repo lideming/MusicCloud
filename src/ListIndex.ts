@@ -1,6 +1,6 @@
 // file: ListIndex.ts
 
-import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n } from "./viewlib";
+import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction } from "./viewlib";
 import { utils, BuildDomExpr } from "./utils";
 import { I } from "./I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
@@ -13,6 +13,7 @@ import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
 import { uploads } from "./Uploads";
 import svgAudio from "../resources/audiotrack-24px.svg";
+import svgAdd from "../resources/add-24px.svg";
 
 export class ListIndex {
     loadedList: { [x: number]: TrackList; } = {};
@@ -112,14 +113,15 @@ export class ListIndex {
         });
         this.section = new Section({
             title: I`Playlists`,
-            content: this.listView,
-            actions: [{
-                text: '➕',
-                onclick: () => {
-                    this.newTracklist();
-                }
-            }]
+            content: this.listView
         });
+        const icon = new Icon({ icon: svgAdd });
+        icon.dom.style.fontSize = '1.4em';
+        this.section.addAction(jsxBuild(jsx(SectionAction, {
+            onActive: () => {
+                this.newTracklist();
+            }
+        } as any, [ icon ])));
         ui.sidebarList.container.appendView(this.section);
         ui.sidebar.dom.addEventListener('scroll', (ev) => {
             if (ev.eventPhase === Event.AT_TARGET) {
@@ -270,7 +272,7 @@ export class ListIndexViewItem extends SidebarItem {
                 {
                     tag: 'span.state',
                     update: (dom) => {
-                        var icon = this.playing ? new Icon({icon: svgAudio}) : null;
+                        var icon = this.playing ? new Icon({ icon: svgAudio }) : null;
                         utils.clearChildren(dom);
                         if (icon) dom.appendChild(icon.dom);
                         dom.hidden = !icon;
