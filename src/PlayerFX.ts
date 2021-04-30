@@ -31,10 +31,10 @@ export const playerFX = new class PlayerFX {
 };
 
 const WIDTH = 800;
-const HEIGHT = 1024;
+const HEIGHT = 600;
 
 class FXDialog extends Dialog {
-    canvas = new View<HTMLCanvasElement>({tag: 'canvas', height: HEIGHT, width: WIDTH});
+    canvas = new View<HTMLCanvasElement>({ tag: 'canvas', height: HEIGHT, width: WIDTH });
     constructor() {
         super();
         this.width = '830px';
@@ -42,11 +42,10 @@ class FXDialog extends Dialog {
     }
     postCreateDom() {
         super.postCreateDom();
-        
+
         const ctx = this.canvas.dom.getContext('2d')!;
         const imgData = ctx.createImageData(WIDTH, HEIGHT);
         const imgBuffer = imgData.data;
-        imgBuffer.fill(255);
 
         const history: Uint8Array[] = [];
 
@@ -56,19 +55,20 @@ class FXDialog extends Dialog {
             if (!this.shown) return;
             requestAnimationFrame(update);
             const analyzer = playerFX.analyser;
-            const freq = new Uint8Array(HEIGHT);
+            const freq = new Uint8Array(WIDTH);
 
             analyzer.getByteFrequencyData(freq);
 
             history.unshift(freq);
-            if (history.length > WIDTH) history.pop();
+            if (history.length > HEIGHT) history.pop();
 
             const buf = imgBuffer;
-            for (let x = 0; x < history.length; x++) {
-                for (let y = 0; y < HEIGHT; y++) {
-                    const val = history[x][y];
-                    const bufIdx = 4 * ((WIDTH - x - 1) + WIDTH * (HEIGHT - y - 1));
+            for (let y = 0; y < history.length; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const val = history[y][x];
+                    const bufIdx = 4 * ((x) + WIDTH * (HEIGHT - y - 1));
                     buf[bufIdx + 0] = buf[bufIdx + 1] = buf[bufIdx + 2] = val;
+                    buf[bufIdx + 3] = 255;
                 }
             }
 
