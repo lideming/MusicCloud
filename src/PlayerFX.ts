@@ -2,10 +2,15 @@ import { Dialog, Func, View } from "./viewlib";
 import { playerCore } from "./PlayerCore";
 
 export const playerFX = new class PlayerFX {
-    ctx = new AudioContext();
+    ctx: AudioContext;
     source: MediaElementAudioSourceNode;
     analyser: AnalyserNode;
+    get webAudioInited() { return !!this.ctx; }
     init() {
+    }
+    initWebAudio() {
+        if (this.webAudioInited) return;
+        this.ctx = new AudioContext();
         this.source = this.ctx.createMediaElementSource(playerCore.audio);
         chainNodes(
             this.source,
@@ -20,6 +25,7 @@ export const playerFX = new class PlayerFX {
         );
     }
     showUI(ev?: MouseEvent) {
+        this.initWebAudio();
         new FXDialog().show(ev);
     }
 };
