@@ -2,7 +2,7 @@ import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
 import { I, i18n, IA } from "./I18n";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
-import { utils } from "./utils";
+import { utils, jsx } from "./utils";
 import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
 import { playerFX } from "./PlayerFX";

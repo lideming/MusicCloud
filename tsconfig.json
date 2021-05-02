@@ -8,7 +8,7 @@
         "types": ["./textfile"],
         "moduleResolution": "Node",
         "jsx": "react",
-        "jsxFactory": "utils.jsxFactory",
+        "jsxFactory": "jsx",
         "sourceMap": true,
         "downlevelIteration": true,
         "noImplicitThis": true,

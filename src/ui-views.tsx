@@ -1,6 +1,6 @@
 // file: ui-views.ts
 import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, } from "./viewlib";
-import { utils, BuildDomExpr, Func, EventRegistrations, Action, Ref } from "./utils";
+import { utils, BuildDomExpr, Func, EventRegistrations, Action, Ref, jsx } from "./utils";
 import { I } from "./I18n";
 import svgSettings from "../resources/settings-24px.svg";
 import { settingsUI } from "./SettingsUI";
