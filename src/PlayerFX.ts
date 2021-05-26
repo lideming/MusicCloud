@@ -39,6 +39,7 @@ class FXDialog extends Dialog {
         super();
         this.width = '830px';
         this.addContent(this.canvas);
+        this.overlay.setFlags({ clickThrough: true });
     }
     postCreateDom() {
         super.postCreateDom();
