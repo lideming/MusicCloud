@@ -1,6 +1,6 @@
 // file: ui-views.ts
-import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, } from "./viewlib";
-import { utils, BuildDomExpr, Func, EventRegistrations, Action, Ref, jsx } from "./utils";
+import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, numLimit, objectInit, toggleClass, } from "./viewlib";
+import { BuildDomExpr, Func, EventRegistrations, Action, Ref, jsx } from "./utils";
 import { I } from "./I18n";
 import svgSettings from "../resources/settings-24px.svg";
 import { settingsUI } from "./SettingsUI";
@@ -55,7 +55,7 @@ export class SidebarItem extends ListViewItem {
     contentView: ContentView | null = null;
     constructor(init?: ObjectInit<SidebarItem>) {
         super();
-        utils.objectInit(this, init);
+        objectInit(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
@@ -116,7 +116,7 @@ export class ContentHeader extends View {
     onTitleEdit: (title: string) => void;
     constructor(init?: ObjectInit<ContentHeader>) {
         super();
-        if (init) utils.objectInit(this, init);
+        if (init) objectInit(this, init);
         this.titleView.onActive.add(async () => {
             if (!this.titleEditable) return;
             this.editHelper = this.editHelper || new EditableHelper(this.titleView.dom);
@@ -154,7 +154,7 @@ export class ContentHeader extends View {
     titleView = new View({
         tag: 'span.title.no-selection', text: () => this.title,
         update: (dom) => {
-            utils.toggleClass(dom, 'editable', !!this.titleEditable);
+            toggleClass(dom, 'editable', !!this.titleEditable);
             if (this.titleEditable) dom.title = I`Click to edit`;
             else dom.removeAttribute('title');
             dom.tabIndex = this.titleEditable ? 0 : -1;
@@ -181,7 +181,7 @@ export class ActionBtn extends TextView {
     set active(val) { this.toggleClass('active', val); }
     constructor(init?: ObjectInit<ActionBtn>) {
         super();
-        utils.objectInit(this, init);
+        objectInit(this, init);
     }
     createDom(): BuildDomExpr {
         return { tag: 'span.action.clickable.no-selection', tabIndex: 0 };
@@ -189,7 +189,7 @@ export class ActionBtn extends TextView {
 }
 
 export function setScrollableShadow(dom: HTMLElement, position: number) {
-    dom.style.boxShadow = `0 0 ${utils.numLimit(Math.log(position) * 2, 0, 10)}px var(--color-light-shadow)`;
+    dom.style.boxShadow = `0 0 ${numLimit(Math.log(position) * 2, 0, 10)}px var(--color-light-shadow)`;
 }
 
 export class CopyMenuItem extends MenuItem {
@@ -215,6 +215,6 @@ export class Icon extends View {
     set icon(val) { this.dom.innerHTML = val; }
     constructor(init?: ObjectInit<Icon>) {
         super({ tag: 'span.icon' });
-        utils.objectInit(this, init);
+        objectInit(this, init);
     }
 }

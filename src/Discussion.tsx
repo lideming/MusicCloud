@@ -2,8 +2,8 @@
 
 import { ui } from "./UI";
 import { api } from "./Api";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView, LazyListView } from "./viewlib";
-import { Lazy, Action, BuildDomExpr, utils, DataUpdatingHelper, jsx } from "./utils";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView, LazyListView, formatDateTime } from "./viewlib";
+import { Lazy, Action, BuildDomExpr, DataUpdatingHelper, jsx } from "./utils";
 import { I } from "./I18n";
 import { user } from "./User";
 import { ListContentView } from "./ListContentView";
@@ -184,7 +184,7 @@ class CommentViewItem extends ListViewItem {
     createDom(): BuildDomExpr {
         return (<div class="item comment no-transform">
             <div class="username">{() => this.comment.username}</div>
-            <div class="date">{() => utils.formatDateTime(new Date(this.comment.date))}</div>
+            <div class="date">{() => formatDateTime(new Date(this.comment.date))}</div>
             <div class="content">{() => this.comment.content}</div>
         </div>);
     }
