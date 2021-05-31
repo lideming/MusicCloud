@@ -279,6 +279,7 @@ class EditableLyricsView extends LyricsView {
 }
 
 export class LyricsSourceEditView extends InputView {
+    //@ts-expect-error
     dom: HTMLTextAreaElement;
     get value() { return this.dom.value; }
     set value(val) { this.dom.value = val; }

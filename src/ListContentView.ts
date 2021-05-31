@@ -40,6 +40,7 @@ class DataBackedListView<T extends DataBackedListViewItem, TData> extends ListVi
 
 
 export class ListContentView extends ContentView {
+    //@ts-expect-error
     dom: HTMLElement;
 
     header: ContentHeader;

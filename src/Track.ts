@@ -98,7 +98,6 @@ export class Track {
 }
 
 export class TrackDialog extends Dialog {
-    width = '500px';
     track: Track;
     inputName = new LabeledInput({ label: I`Name` });
     inputArtist = new LabeledInput({ label: I`Artist` });
@@ -111,6 +110,7 @@ export class TrackDialog extends Dialog {
     compositionWatcher: TextCompositionWatcher;
     constructor() {
         super();
+        this.width = '500px';
         this.resizable = true;
         this.contentFlex = true;
         this.inputLyrics.input = new LyricsSourceEditView();

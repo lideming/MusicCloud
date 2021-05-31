@@ -380,6 +380,7 @@ export class TrackListView extends ListContentView {
 
 export class TrackViewItem extends ListViewItem {
     track: Track;
+    //@ts-expect-error
     dom: HTMLDivElement;
     actionHandler: TrackActionHandler<this> | null = null;
     noPos: boolean = false;
