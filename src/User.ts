@@ -3,7 +3,7 @@
 import { SettingItem, Callbacks, Action, TextCompositionWatcher } from "./utils";
 import { I } from "./I18n";
 import { listIndex } from "./ListIndex";
-import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply } from "./viewlib";
+import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply } from "./viewlib";
 import { Api } from "./apidef";
 import { ui } from "./UI";
 import { api } from "./Api";
@@ -275,8 +275,8 @@ export const user = new class User {
 };
 
 class LoginDialog extends Dialog {
-    tabLogin = new TabBtn({ text: I`Login`, active: true });
-    tabCreate = new TabBtn({ text: I`Create account` });
+    tabLogin = new TextBtn({ text: I`Login`, active: true });
+    tabCreate = new TextBtn({ text: I`Create account` });
     inputUser = new LabeledInput({ label: I`Username` });
     inputPasswd = new LabeledInput({ label: I`Password`, type: 'password' });
     inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
@@ -309,7 +309,7 @@ class LoginDialog extends Dialog {
         this.btn.toggleClass('bigbtn', true);
         this.btn.dom.addEventListener('click', () => this.btnClicked());
 
-        var toggle = (btn: TabBtn) => {
+        var toggle = (btn: TextBtn) => {
             if (btn.active) return;
             this.isRegistering = !this.isRegistering;
             this.inputPasswd2.hidden = !this.isRegistering;
@@ -319,7 +319,7 @@ class LoginDialog extends Dialog {
         };
         this.inputPasswd2.hidden = true;
 
-        this.addBtn(new TabBtn({
+        this.addBtn(new TextBtn({
             text: I`Settings`, right: true,
             onActive: (ev) => {
                 settingsUI.openUI(ev);
@@ -398,7 +398,7 @@ class MeDialog extends Dialog {
             user.logout();
             this.close();
         });
-        this.addBtn(new TabBtn({
+        this.addBtn(new TextBtn({
             text: I`Settings`, right: true,
             onActive: (ev) => {
                 settingsUI.openUI(ev);

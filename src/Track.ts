@@ -1,6 +1,6 @@
 import { TextCompositionWatcher } from "./utils";
 import { I } from "./I18n";
-import { Toast, Dialog, LabeledInput, TabBtn, LoadingIndicator, objectApply, sleepAsync } from "./viewlib";
+import { Toast, Dialog, LabeledInput, TextBtn, LoadingIndicator, objectApply, sleepAsync } from "./viewlib";
 import { Api } from "./apidef";
 import { api } from "./Api";
 import { TrackList } from "./TrackList";
@@ -104,8 +104,8 @@ export class TrackDialog extends Dialog {
     inputAlbum = new LabeledInput({ label: I`Album` });
     inputAlbumArtist = new LabeledInput({ label: I`Album artist` });
     inputLyrics = new LabeledInputWithLoading({ label: I`Lyrics` });
-    btnSave = new TabBtn({ text: I`Save`, right: true });
-    btnEditLyrics = new TabBtn({ text: I`Edit Lyrics`, right: true });
+    btnSave = new TextBtn({ text: I`Save`, right: true });
+    btnEditLyrics = new TextBtn({ text: I`Edit Lyrics`, right: true });
     autoFocus = this.inputName.input;
     compositionWatcher: TextCompositionWatcher;
     constructor() {
