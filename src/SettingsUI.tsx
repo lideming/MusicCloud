@@ -2,10 +2,11 @@ import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
 import { I, i18n, IA } from "./I18n";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
-import { utils, jsx } from "./utils";
+import { jsx } from "./utils";
 import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
 import { playerFX } from "./PlayerFX";
+import { TextBtn } from "@yuuza/webfx";
 
 export const settingsUI = new class {
     dialog: SettingsDialog;
@@ -66,14 +67,12 @@ class SettingsDialog extends Dialog {
     bottom: View = new View(
         <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
             <div>{'MusicCloud ' + appVersion.currentVersion}</div>
-            <div style="color: var(--color-text-gray);">
-                <View args={[{ tag: 'div.clickable', tabIndex: 0 }]} onActive={(ev) => {
-                    new AboutDialog().show(ev);
-                    this.close();
-                }}>
-                    {() => I`About`}
-                </View>
-            </div>
+            <TextBtn onActive={(ev) => {
+                new AboutDialog().show(ev);
+                this.close();
+            }}>
+                {() => I`About`}
+            </TextBtn>
         </div>
     );
 
