@@ -1,8 +1,8 @@
 // file: TrackList.ts
 
-import { utils, BuildDomExpr, DataUpdatingHelper } from "./utils";
+import { BuildDomExpr, DataUpdatingHelper } from "./utils";
 import { I, i18n } from "./I18n";
-import { LoadingIndicator, ListView, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView } from "./viewlib";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync } from "./viewlib";
 import { ListContentView } from "./ListContentView";
 import { user } from "./User";
 import { Api } from "./apidef";
@@ -44,7 +44,7 @@ export class TrackList {
 
     loadInfo(info: Api.TrackListInfo) {
         this.id = info.id;
-        this.info = utils.objectApply(this.info ?? {}, info, ["id", "owner", "name", "version", "visibility"]) as typeof info;
+        this.info = objectApply(this.info ?? {}, info, ["id", "owner", "name", "version", "visibility"]) as typeof info;
         if (this.info.id < 0) this.info.id = 0;
         this.updateCanEdit();
     }
@@ -93,7 +93,7 @@ export class TrackList {
                 position: this.tracks.length
             }
         });
-        utils.arrayInsert(this.tracks, track, pos);
+        arrayInsert(this.tracks, track, pos);
         this.tracksSuffled?.push(track);
         this.contentView?.addItem(track, pos, false);
         return track;
@@ -141,7 +141,7 @@ export class TrackList {
     private async putCore() {
         try {
             if (this.putInProgress) await this.putInProgress;
-            await utils.sleepAsync(10);
+            await sleepAsync(10);
             await user.waitLogin(true);
             if (this.fetching) await this.fetching;
             if (this.posting) await this.posting;
@@ -223,7 +223,7 @@ export class TrackList {
         if (loopMode === 'list-seq') {
             return this.tracks[position + offset] ?? null;
         } else if (loopMode === 'list-loop') {
-            return this.tracks[utils.mod(position + offset, this.tracks.length)] ?? null;
+            return this.tracks[mod(position + offset, this.tracks.length)] ?? null;
         } else if (loopMode === 'list-shuffle') {
             if (!this.tracksSuffled) {
                 this.tracksSuffled = this.tracks.slice(0);
@@ -232,7 +232,7 @@ export class TrackList {
             var suffled = this.tracksSuffled;
             position = suffled.indexOf(track);
             if (!position || position < 0) position = suffled.findIndex(x => x.id === track.id)
-            return suffled[utils.mod(position + offset, suffled.length)] ?? null;
+            return suffled[mod(position + offset, suffled.length)] ?? null;
         } else if (loopMode === 'track-loop') {
             return track;
         } else {
@@ -398,7 +398,7 @@ export class TrackViewItem extends ListViewItem {
                 {
                     tag: 'span.pos', update: (dompos) => {
                         if (this.playing) {
-                            utils.clearChildren(dompos);
+                            clearChildren(dompos);
                             dompos.appendChild(new Icon({icon: svgPlayArrow}).dom);
                         } else if (!this.noPos) {
                             dompos.textContent = this.track._bind?.position != null
@@ -409,7 +409,7 @@ export class TrackViewItem extends ListViewItem {
                 },
                 { tag: 'span.name', text: () => this.track.name },
                 { tag: 'span.artist', text: () => this.track.artist },
-                { tag: 'span.duration', text: () => utils.formatTime(this.track.length) },
+                { tag: 'span.duration', text: () => formatTime(this.track.length) },
             ],
             draggable: true,
             _item: this
@@ -432,7 +432,7 @@ export class TrackViewItem extends ListViewItem {
             if (settings.showDownloadOptions && this.track.url) {
                 var ext = this.track.getExtensionName();
                 ext = ext ? (ext.toUpperCase() + ', ') : '';
-                var fileSize = utils.formatFileSize(this.track.size);
+                var fileSize = formatFileSize(this.track.size);
                 var files = [...(this.track.files ?? [])];
                 files.sort((a, b) => b.bitrate - a.bitrate);
                 if (!files.find(f => f.profile === ''))
@@ -512,9 +512,9 @@ export class TrackViewItem extends ListViewItem {
         let infoText = I`Track ID` + ': ' +
             selected.map(x => x.track.id).join(', ') + '\n'
             + I`Duration` + ': ' +
-            utils.formatTime(utils.arraySum(selected, x => x.track.length!)) + '\n'
+            formatTime(arraySum(selected, x => x.track.length!)) + '\n'
             + I`Size` + ': ' +
-            utils.formatFileSize(utils.arraySum(selected, x => x.track.size!));
+            formatFileSize(arraySum(selected, x => x.track.size!));
         if (selected.length == 1) {
             const my = (this.track.owner == user.info.id) ? 'my_' : '';
             infoText += '\n' + i18n.get(my + 'visibility_' + selected[0].track.visibility);

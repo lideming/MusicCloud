@@ -1,12 +1,12 @@
 import { Track } from './Track';
 import { ui } from './UI';
 import { I } from './I18n';
-import { BuildDomExpr, utils } from './utils';
+import { BuildDomExpr } from './utils';
 import { LyricsView, SpanView } from './LyricsView';
 import { router } from './Router';
 import { serialize, parse } from './Lyrics';
 import { playerCore } from './PlayerCore';
-import { Toast, InputView } from './viewlib';
+import { Toast, InputView, numLimit } from './viewlib';
 import { SidebarItem, ContentView, ContentHeader, ActionBtn } from './ui-views';
 
 export const lyricsEdit = new class {
@@ -195,7 +195,7 @@ class EditableLyricsView extends LyricsView {
         });
         this.onSpanClick.add((s) => {
             if (s.span.startTime != null && s.span.startTime >= 0)
-                playerCore.currentTime = utils.numLimit(s.span.startTime! - 3, 0, Infinity);
+                playerCore.currentTime = numLimit(s.span.startTime! - 3, 0, Infinity);
             this.setNextSpans(this.getSpans(s, 'here'));
         });
         this.dom.addEventListener('keydown', (ev) => {

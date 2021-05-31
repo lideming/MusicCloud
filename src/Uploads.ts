@@ -2,11 +2,11 @@
 
 import { TrackList, TrackListView, TrackViewItem } from "./TrackList";
 import { Track } from "./Track";
-import { Semaphore, utils, DataUpdatingHelper, CancelToken } from "./utils";
+import { Semaphore, DataUpdatingHelper, CancelToken } from "./utils";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "./User";
 import { Api } from "./apidef";
-import { ListView, LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref } from "./viewlib";
+import { LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref, buildDOM, formatFileSize, objectApply } from "./viewlib";
 import { router } from "./Router";
 import { I, i18n } from "./I18n";
 import { playerCore } from "./PlayerCore";
@@ -134,7 +134,7 @@ export const uploads = new class extends TrackList {
         updateUsage() {
             var total = 0;
             uploads.tracks.forEach(x => total += x.size ?? 0);
-            this.usage.text = total ? `(${utils.formatFileSize(total)})` : '';
+            this.usage.text = total ? `(${formatFileSize(total)})` : '';
         }
         updateView() {
             super.updateView();
@@ -350,7 +350,7 @@ class UploadViewItem extends TrackViewItem {
     postCreateDom() {
         super.postCreateDom();
         this.dom.classList.add('uploads-item');
-        this.dom.appendChild(this.domstate = utils.buildDOM<HTMLElement>({ tag: 'span.uploads-state' }));
+        this.dom.appendChild(this.domstate = buildDOM<HTMLElement>({ tag: 'span.uploads-state' }));
     }
     updateDom() {
         super.updateDom();
@@ -373,7 +373,7 @@ class UploadArea extends View {
     private domfile = new Ref<HTMLInputElement>();
     constructor(init: Partial<UploadArea>) {
         super();
-        utils.objectApply(this, init);
+        objectApply(this, init);
     }
     createDom() {
         return {

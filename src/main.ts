@@ -25,7 +25,7 @@
 
 // Why do we need React and Vue.js? ;)
 
-import { Toast, ToastsContainer } from "./viewlib";
+import { injectCss, Toast, ToastsContainer } from "./viewlib";
 import { ui } from "./UI";
 import { playerCore } from "./PlayerCore";
 import { api } from "./Api";
@@ -42,7 +42,6 @@ import * as Lyrics from "./Lyrics";
 import { lyricsEdit } from "./LyricsEdit";
 import { appVersion } from "./AppVersion";
 import { settings } from "./Settings";
-import { utils } from "./utils";
 import { playerFX } from "./PlayerFX";
 
 import * as webfx from "@yuuza/webfx";
@@ -82,7 +81,7 @@ export const app = window['app'] = {
     },
     injectStyle() {
         webfx.injectWebfxCss();
-        utils.injectCss(style, { tag: 'style#mcloud-injected-style' });
+        injectCss(style, { tag: 'style#mcloud-injected-style' });
     }
 };
 

@@ -1,7 +1,6 @@
 // file: ListContentView.ts
 
-import { View, ListViewItem, ListView, LazyListView, LoadingIndicator } from "./viewlib";
-import { utils } from "./utils";
+import { View, ListViewItem, ListView, LazyListView, LoadingIndicator, buildDOM } from "./viewlib";
 import { I } from "./I18n";
 import { ContentView, ContentHeader, ActionBtn } from "./ui-views";
 
@@ -66,7 +65,7 @@ export class ListContentView extends ContentView {
     }
 
     createDom() {
-        return utils.buildDOM({ tag: 'div.listcontentview' });
+        return buildDOM({ tag: 'div.listcontentview' });
     }
 
     postCreateDom() {

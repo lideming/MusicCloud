@@ -1,9 +1,9 @@
 // file: User.ts
 
-import { SettingItem, Callbacks, Action, TextCompositionWatcher, utils } from "./utils";
+import { SettingItem, Callbacks, Action, TextCompositionWatcher } from "./utils";
 import { I } from "./I18n";
 import { listIndex } from "./ListIndex";
-import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast } from "./viewlib";
+import { Dialog, View, TabBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply } from "./viewlib";
 import { Api } from "./apidef";
 import { ui } from "./UI";
 import { api } from "./Api";
@@ -64,7 +64,7 @@ export const user = new class User {
         this.loginDialog?.close();
     }
     getBasicAuth(info: Api.UserInfo) {
-        return 'Basic ' + utils.base64EncodeUtf8(info.username + ':' + info.passwd);
+        return 'Basic ' + base64EncodeUtf8(info.username + ':' + info.passwd);
     }
     getBearerAuth(token: string) {
         return 'Bearer ' + token;
@@ -159,7 +159,7 @@ export const user = new class User {
                 return;
             }
         }
-        utils.objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
+        objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
         this.role = undefined;
         this.siLogin.save();
         api.defaultAuth = null;
@@ -294,7 +294,7 @@ class LoginDialog extends Dialog {
         });
 
         [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(x => dig.addContent(x));
-        dig.addContent(utils.buildDOM({
+        dig.addContent(buildDOM({
             tag: 'div',
             child: [this.viewStatus, this.btn]
         }) as any);

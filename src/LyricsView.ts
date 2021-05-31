@@ -1,5 +1,5 @@
-import { View, ContainerView, ItemActiveHelper } from "./viewlib";
-import { BuildDomExpr, utils, Callbacks, Action, Timer } from "./utils";
+import { View, ContainerView, ItemActiveHelper, buildDOM, numLimit } from "./viewlib";
+import { BuildDomExpr, Callbacks, Action, Timer } from "./utils";
 import { I } from "./I18n";
 import { parse, Lyrics, Line, Span } from "./Lyrics";
 import { playerCore } from "./PlayerCore";
@@ -43,7 +43,7 @@ export class LyricsView extends View {
             if (ev.touches.length >= 2) {
                 ev.preventDefault();
                 var newdist = dist(ev.touches[0], ev.touches[1]);
-                var scale = utils.numLimit(startFontSize * newdist / distance, 20, 500);
+                var scale = numLimit(startFontSize * newdist / distance, 20, 500);
                 this.scale = scale;
             }
         });
@@ -56,7 +56,7 @@ export class LyricsView extends View {
             if (ev.ctrlKey && ev.deltaY) {
                 ev.preventDefault();
                 var scale = this.scale + (ev.deltaY > 0 ? -20 : 20);
-                scale = utils.numLimit(scale, 20, 500);
+                scale = numLimit(scale, 20, 500);
                 this.scale = scale;
             }
         });
@@ -173,7 +173,7 @@ export class LyricsView extends View {
         _render(now: number): boolean {
             if (Math.abs(this.view.getCenterPos() - this.lastPos) > 10) return false;
 
-            const t = utils.numLimit((now - this.beginTime) / this.duration, 0, 1);
+            const t = numLimit((now - this.beginTime) / this.duration, 0, 1);
 
             const pos = this.beginPos + (this.targetPos - this.beginPos) * this._easeInOutQuad(t);
             this.lastPos = pos;
@@ -317,7 +317,7 @@ export class LineView extends ContainerView<SpanView> {
         if (this.line.translation) {
             var lyrics = this.lyricsView?.lyrics;
             var tlang = lyrics && (lyrics.translationLang || lyrics.lang);
-            this.dom.appendChild(utils.buildDOM({
+            this.dom.appendChild(buildDOM({
                 tag: 'div.trans',
                 lang: tlang,
                 text: this.line.translation
@@ -357,7 +357,7 @@ export class SpanView extends View {
     }
     createDom() {
         var s = this.span;
-        return utils.buildDOM({
+        return buildDOM({
             tag: 'span.span',
             child: !s.ruby ? s.text : {
                 tag: 'ruby',

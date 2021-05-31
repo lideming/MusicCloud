@@ -1,7 +1,7 @@
 // file: ListIndex.ts
 
-import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction } from "./viewlib";
-import { utils, BuildDomExpr } from "./utils";
+import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction, clearChildren, createName, objectApply } from "./viewlib";
+import { BuildDomExpr } from "./utils";
 import { I } from "./I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
 import { user } from "./User";
@@ -203,7 +203,7 @@ export class ListIndex {
     onInfoChanged(id: number, info: Api.TrackListInfo) {
         var lvi = this.getViewItem(id);
         if (lvi) {
-            utils.objectApply(lvi.listInfo, info);
+            objectApply(lvi.listInfo, info);
             lvi.updateDom();
         }
     }
@@ -238,7 +238,7 @@ export class ListIndex {
         var list: Api.TrackListInfo = {
             id,
             owner: user.id,
-            name: utils.createName(
+            name: createName(
                 (x) => x ? I`New Playlist (${x + 1})` : I`New Playlist`,
                 (x) => !!this.listView.find((l) => l.listInfo.name === x)),
             visibility: 0,
@@ -260,7 +260,7 @@ export class ListIndexViewItem extends SidebarItem {
     playing = false;
     constructor(init: Partial<ListIndexViewItem>) {
         super({});
-        utils.objectApply(this, init);
+        objectApply(this, init);
     }
     protected createDom(): BuildDomExpr {
         return {
@@ -273,7 +273,7 @@ export class ListIndexViewItem extends SidebarItem {
                     tag: 'span.state',
                     update: (dom) => {
                         var icon = this.playing ? new Icon({ icon: svgAudio }) : null;
-                        utils.clearChildren(dom);
+                        clearChildren(dom);
                         if (icon) dom.appendChild(icon.dom);
                         dom.hidden = !icon;
                     },

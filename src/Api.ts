@@ -1,7 +1,7 @@
 // file: Api.ts
 
 import { settings } from "./Settings";
-import { Callbacks, Action, utils, CancelToken } from "./utils";
+import { Callbacks, Action, CancelToken, sleepAsync } from "./utils";
 import { Api } from "./apidef";
 
 function getAppBaseUrl() {
@@ -24,7 +24,7 @@ export const api = new class {
     onTrackDeleted = new Callbacks<Action<Api.Track>>();
 
     async _fetch(input: RequestInfo, init?: RequestInit) {
-        if (this.debugSleep) await utils.sleepAsync(this.debugSleep * (Math.random() + 1));
+        if (this.debugSleep) await sleepAsync(this.debugSleep * (Math.random() + 1));
         return await fetch(input, {
             credentials: 'same-origin',
             ...init
