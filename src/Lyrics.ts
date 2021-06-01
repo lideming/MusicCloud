@@ -1,6 +1,11 @@
 // file: Lyrics.ts
 
-export function parse(str: string) {
+/**
+ * Parse lyrics
+ * @param str String to be parsed as lyrics
+ * @returns The parsed `Lyrics` object
+ */
+export function parse(str: string): Lyrics {
     var time = Date.now();
     var r = new Parser(str).parse();
     console.log(`[Lyrics] parsed ${str.length} chars in ${Date.now() - time} ms`, r);
@@ -353,6 +358,7 @@ export class Parser {
         var match = /^((\d+)\:)?(\d+)(\.(\d+))?$/.exec(str);
         if (!curTime) curTime = 0;
         if (match) {
+            // Matched "[MM:SS.ss]" (LRC) or "[SS.ss]" (MusicCloud-extended LRC)
             let result = 0;
             if (match[2]) result += parseInt(match[2]) * 60;
             if (match[3]) result += parseInt(match[3]);
@@ -361,12 +367,13 @@ export class Parser {
             if (result < 0) result = 0;
             return { time: result, beats: null, beatsDiv: null };
         } else if (match = /^b([\d\.]+)?(\/(\d+))?$/.exec(str)) {
+            // Matched "[b/BEATS/DIV]" (MusicCloud-extended LRC)
             let result = { time: 60 / this.bpm!, beats: 1, beatsDiv: 1 };
-            if (match[1]) {
+            if (match[1]) { // beats
                 result.beats = parseFloat(match[1]);
                 result.time *= result.beats;
             }
-            if (match[3]) {
+            if (match[3]) { // div
                 result.beatsDiv = parseInt(match[3]);
                 result.time /= result.beatsDiv;
             }
@@ -380,23 +387,37 @@ export class Parser {
 export interface TimeStamp {
     /** -1: to be filled */
     time: number;
+
+    /** Set with beatsDiv to indicate the beats since last span */
     beats: number | null;
     beatsDiv: number | null;
 }
 
 export interface Line {
+    /** The time when this line starts */
     startTime: number | null;
+
+    /** Used to sort lines. Usually it's the same as `startTime` except when the `startTime` is null.  */
     orderTime: number;
+
+    /** The spans for this line, have at least one span if the line is parsed. */
     spans: Span[] | null;
+
+    /** The translation for this line */
     translation: string | null;
+
+    /** The unparsed string when the parser failed to parse this line */
     rawLine: string | null;
 }
 
 export interface Span {
     startTime: number | null;
     text: string;
+
+    /** Optional ruby text that displayed above the text */
     ruby: string | null;
-    /** For serializing */
+
+    /** Detailed time info */
     timeStamp: TimeStamp | null;
 }
 
@@ -407,10 +428,17 @@ export interface Lyrics {
     bpm: number | null;
 }
 
-export function serialize(lyrics: Lyrics) {
+/**
+ * Serialize lyrics
+ * @param lyrics The Lyrics object to be serialized
+ * @param extended Whether to generate MusicCloud-extended LRC result
+ * @returns Serialized lyrics
+ */
+export function serialize(lyrics: Lyrics, extended: boolean = false) {
     var str = '';
-    var headersPending = !!lyrics.lang || lyrics.bpm != null;
+    var headersPending = extended && (!!lyrics.lang || lyrics.bpm != null);
     lyrics.lines.forEach(l => {
+        // Emit the metadata header
         if (l.spans && headersPending) {
             headersPending = false;
             if (lyrics.lang) {
@@ -425,35 +453,55 @@ export function serialize(lyrics: Lyrics) {
             str += '\n';
         }
 
+        // Emit the body
         if (l.rawLine) {
+            // Emit unparsed line as-is
             str += l.rawLine;
         } else if (l.spans) {
+            // Emit every spans of parsed line
             l.spans.forEach(s => {
                 if (s.timeStamp) {
-                    if (s.timeStamp.beats != null) {
-                        str += '[b';
-                        if (s.timeStamp.beats != 1)
-                            str += s.timeStamp.beats;
-                        if (s.timeStamp.beatsDiv != 1)
-                            str += '/' + s.timeStamp.beatsDiv;
-                        str += ']';
-                    } else if (s.timeStamp.time === -1) {
-                        str += '[]';
+                    if (!extended) {
+                        const time = s.timeStamp.time;
+                        if (s.timeStamp.time === -1) {
+                            // omit
+                        } else {
+                            const min = padLeft(Math.floor(time / 60), 2, '0');
+                            const sec = padLeft((time % 60).toFixed(2), 5, '0');
+                            str += `[${min}:${sec}]`;
+                        }
                     } else {
-                        str += '[' + s.timeStamp.time.toFixed(3) + ']';
+                        if (s.timeStamp.beats != null) {
+                            str += '[b';
+                            if (s.timeStamp.beats != 1)
+                                str += s.timeStamp.beats;
+                            if (s.timeStamp.beatsDiv != 1)
+                                str += '/' + s.timeStamp.beatsDiv;
+                            str += ']';
+                        } else if (s.timeStamp.time === -1) {
+                            str += '[]';
+                        } else {
+                            str += '[' + s.timeStamp.time.toFixed(3) + ']';
+                        }
                     }
                 }
-                if (s.ruby != null) {
+                if (extended && s.ruby != null) {
                     str += '[' + s.text + ']{' + s.ruby + '}';
                 } else {
                     str += s.text;
                 }
             });
-            if (l.translation) {
+            if (extended && l.translation) {
                 str += '\n/' + l.translation;
             }
             str += '\n';
         }
     });
     return str;
+}
+
+function padLeft(val: string | number, length: number, pad: string): string {
+    if (typeof val == 'number') val = val.toString();
+    while (val.length < length) val = pad + val;
+    return val;
 }

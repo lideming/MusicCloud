@@ -62,4 +62,4 @@ Note that `style.css` is included in `bundle.js`.
 ## Reusable Components
 
 * [webfx](https://github.com/lideming/webfx) - Web UI framework with utilities and basic views
-* `src/Lyrics.ts` - Lyrics parser (LRC compatible)
+* `src/Lyrics.ts` - Lyrics parser/serializer (LRC with optional MusicCloud extension)
