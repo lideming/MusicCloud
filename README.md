@@ -5,7 +5,9 @@ MusicCloud is a music website built with [webfx](https://github.com/lideming/web
 This repo contains the frontend parts of MusicCloud.
 
 [The server](https://github.com/lideming/MusicCloudServer) is also open-sourced.
-You can easily run your own MusicCloud instance in Docker.
+You can easily [run your own MusicCloud instance in Docker](https://github.com/lideming/MusicCloudServer#run-in-docker-).
+
+[![Build](https://github.com/lideming/MusicCloud/actions/workflows/main.yml/badge.svg)](https://github.com/lideming/MusicCloud/actions/workflows/main.yml)
 
 
 ## Features
