@@ -2,7 +2,6 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import { terser } from "rollup-plugin-terser";
 
-import { readFile } from "fs/promises";
 import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
