@@ -1,13 +1,13 @@
-import { router } from './Router';
-import { ui } from './UI';
-import { Lazy, BuildDomExpr, SettingItem } from './utils';
-import { I } from "./I18n";
-import { playerCore } from './PlayerCore';
-import { LyricsView } from './LyricsView';
-import { api } from './Api';
-import { SidebarItem, ContentView, ContentHeader, ActionBtn, setScrollableShadow } from './ui-views';
-import { LoadingIndicator, View, ViewToggle } from './viewlib';
-import { Api } from './apidef';
+import { router } from '../Infra/Router';
+import { ui } from '../Infra/UI';
+import { Lazy, BuildDomExpr, SettingItem } from '../Infra/utils';
+import { I } from "../I18n/I18n";
+import { playerCore } from '../Player/PlayerCore';
+import { LyricsView } from '../Lyrics/LyricsView';
+import { api } from '../API/Api';
+import { SidebarItem, ContentView, ContentHeader, ActionBtn, setScrollableShadow } from '../Infra/ui-views';
+import { LoadingIndicator, View, ViewToggle } from '../Infra/viewlib';
+import { Api } from '../API/apidef';
 import { Track } from './Track';
 
 

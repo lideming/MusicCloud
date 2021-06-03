@@ -1,11 +1,11 @@
-import { Dialog, ButtonView, View, LabeledInput } from "./viewlib";
-import { I, i18n, IA } from "./I18n";
-import { ui } from "./UI";
-import { playerCore } from "./PlayerCore";
-import { jsx } from "./utils";
+import { Dialog, ButtonView, View, LabeledInput } from "../Infra/viewlib";
+import { I, i18n, IA } from "../I18n/I18n";
+import { ui } from "../Infra/UI";
+import { playerCore } from "../Player/PlayerCore";
+import { jsx } from "../Infra/utils";
 import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
-import { playerFX } from "./PlayerFX";
+import { playerFX } from "../Player/PlayerFX";
 import { TextBtn } from "@yuuza/webfx";
 
 export const settingsUI = new class {

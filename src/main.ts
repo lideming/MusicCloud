@@ -25,24 +25,24 @@
 
 // Why do we need React and Vue.js? ;)
 
-import { injectCss, Toast, ToastsContainer } from "./viewlib";
-import { ui } from "./UI";
-import { playerCore } from "./PlayerCore";
-import { api } from "./Api";
-import { user } from "./User";
-import { listIndex } from "./ListIndex";
-import { uploads } from "./Uploads";
-import { discussion, notes, comments } from "./Discussion";
-import { router } from "./Router";
-import { settingsUI } from "./SettingsUI";
-import { msgcli } from "./MessageClient";
-import { nowPlaying } from "./NowPlaying";
-import { search } from "./Search";
-import * as Lyrics from "./Lyrics";
-import { lyricsEdit } from "./LyricsEdit";
-import { appVersion } from "./AppVersion";
-import { settings } from "./Settings";
-import { playerFX } from "./PlayerFX";
+import { injectCss, Toast, ToastsContainer } from "./Infra/viewlib";
+import { ui } from "./Infra/UI";
+import { playerCore } from "./Player/PlayerCore";
+import { api } from "./API/Api";
+import { user } from "./API/User";
+import { listIndex } from "./Track/ListIndex";
+import { uploads } from "./Track/Uploads";
+import { discussion, notes, comments } from "./Comments/Discussion";
+import { router } from "./Infra/Router";
+import { settingsUI } from "./Settings/SettingsUI";
+import { msgcli } from "./API/MessageClient";
+import { nowPlaying } from "./Track/NowPlaying";
+import { search } from "./Track/Search";
+import * as Lyrics from "./Lyrics/Lyrics";
+import { lyricsEdit } from "./Lyrics/LyricsEdit";
+import { appVersion } from "./Settings/AppVersion";
+import { settings } from "./Settings/Settings";
+import { playerFX } from "./Player/PlayerFX";
 
 import * as webfx from "@yuuza/webfx";
 

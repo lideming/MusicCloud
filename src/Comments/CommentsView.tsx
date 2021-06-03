@@ -1,94 +1,14 @@
-// file: discussion.ts
+import { api } from "../API/Api";
+import { Action, BuildDomExpr, ContextMenu, formatDateTime, jsx, LazyListView, ListViewItem, LoadingIndicator, MenuInfoItem, MenuItem, View } from "../Infra/viewlib";
+import { Lazy, DataUpdatingHelper } from "../Infra/utils";
+import { I } from "../I18n/I18n";
+import { user } from "../API/User";
+import { Api } from "../API/apidef";
+import { msgcli } from "../API/MessageClient";
+import { ui } from "../Infra/UI";
+import { ListContentView } from "../Infra/ListContentView";
 
-import { ui } from "./UI";
-import { api } from "./Api";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuInfoItem, MenuItem, View, ListView, LazyListView, formatDateTime } from "./viewlib";
-import { Lazy, Action, BuildDomExpr, DataUpdatingHelper, jsx } from "./utils";
-import { I } from "./I18n";
-import { user } from "./User";
-import { ListContentView } from "./ListContentView";
-import { Api } from "./apidef";
-import { router } from "./Router";
-import { msgcli } from "./MessageClient";
-import { SidebarItem } from "./ui-views";
-import { settings } from "./Settings";
-
-class CommentsView {
-    endpoint: string;
-    eventName: string;
-    eventRegistered: boolean;
-    title: string;
-    lazyView = new Lazy(() => this.createContentView());
-    get view() { return this.lazyView.value; }
-    state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
-    async fetch(slient?: boolean) {
-        if (this.state === 'fetching' || this.state === 'waiting') {
-            console.warn('[Comments] another fetch task is running.');
-            return;
-        }
-        this.state = 'waiting';
-        var li = new LoadingIndicator();
-        if (!slient) this.view.useLoadingIndicator(li);
-        try {
-            await user.waitLogin(true);
-            this.state = 'fetching';
-            var resp = await api.get(this.endpoint + '?reverse=1') as Api.CommentList;
-            this.view.useLoadingIndicator(null);
-        } catch (error) {
-            this.state = 'error';
-            li.error(error, () => this.fetch());
-            this.view.useLoadingIndicator(li);
-            throw error;
-        }
-        const thiz = this;
-        new class extends DataUpdatingHelper<CommentViewItem, Api.Comment>{
-            items = thiz.view.listView;
-            addItem(c: Api.Comment, pos: number) { thiz.addItem(c, pos); }
-            updateItem(view: CommentViewItem, c: Api.Comment) { view.comment = c; }
-            removeItem(view: CommentViewItem) { view.remove(); }
-        }().update(resp.comments);
-        this.view.updateView();
-        this.state = 'fetched';
-        if (this.eventName && !this.eventRegistered) {
-            msgcli.listenEvent(this.eventName, () => {
-                this.fetch(true);
-            }, true);
-            this.eventRegistered = true;
-        }
-    }
-    private addItem(c: Api.Comment, pos?: number): void {
-        const comm = new CommentViewItem(c);
-        if (c.uid === user.info.id || user.isAdmin) comm.onremove = () => {
-            this.ioAction(() => api.delete({
-                path: this.endpoint + '/' + comm.comment.id
-            }));
-        };
-        return this.view.listView.add(comm, pos);
-    }
-    private async ioAction(func: () => Promise<void>) {
-        var li = new LoadingIndicator({ content: I`Submitting` });
-        this.view.useLoadingIndicator(li);
-        await li.action(async () => {
-            await func();
-            await this.fetch();
-        });
-    }
-    async post(content: string) {
-        await this.ioAction(() => api.post({
-            path: this.endpoint + '/new',
-            obj: {
-                content: content
-            }
-        }));
-    }
-    createContentView() {
-        var view = new CommentsContentView(this);
-        view.title = this.title ?? I`Comments`;
-        return view;
-    }
-}
-
-class CommentsContentView extends ListContentView {
+export class CommentsContentView extends ListContentView {
     comments: CommentsView;
     editorNew: CommentEditor;
     listView: LazyListView<CommentViewItem>;
@@ -116,61 +36,84 @@ class CommentsContentView extends ListContentView {
     }
 }
 
-export const discussion = new class extends CommentsView {
-    endpoint = 'discussion';
-    eventName = 'diss-changed';
-    init() {
-        this.title = I`Discussion`;
-        this.sidebarItem = new SidebarItem({ text: I`Discussion` });
-        router.addRoute({
-            path: ['discussion'],
-            sidebarItem: () => this.sidebarItem,
-            contentView: () => this.lazyView.value
-        });
-        ui.sidebarList.addFeatureItem(this.sidebarItem);
-        user.onSwitchedUser.add(() => {
-            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.discussionEnabled && settings.showDiscussion);
-        })();
-    }
-    sidebarItem: SidebarItem;
-};
 
-export const notes = new class extends CommentsView {
-    endpoint = 'my/notes';
-    eventName = 'note-changed';
-    init() {
-        this.title = I`Notes`;
-        this.sidebarItem = new SidebarItem({ text: I`Notes` }).bindContentView(() => this.view);
-        router.addRoute({
-            path: ['notes'],
-            sidebarItem: () => this.sidebarItem,
-            contentView: () => this.lazyView.value
-        });
-        ui.sidebarList.addFeatureItem(this.sidebarItem);
-        user.onSwitchedUser.add(() => {
-            if (this.state && notes.state !== 'waiting') this.fetch();
-        });
-        user.onSwitchedUser.add(() => {
-            this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.notesEnabled && settings.showNotes);
-        })();
+export class CommentsView {
+    endpoint: string;
+    eventName: string;
+    eventRegistered: boolean;
+    title: string;
+    lazyView = new Lazy(() => this.createContentView());
+    get view() { return this.lazyView.value; }
+    state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
+    async fetch(slient?: boolean) {
+        if (this.state === 'fetching' || this.state === 'waiting') {
+            console.warn('[Comments] another fetch task is running.');
+            return;
+        }
+        this.state = 'waiting';
+        var li = new LoadingIndicator();
+        if (!slient)
+            this.view.useLoadingIndicator(li);
+        try {
+            await user.waitLogin(true);
+            this.state = 'fetching';
+            var resp = await api.get(this.endpoint + '?reverse=1') as Api.CommentList;
+            this.view.useLoadingIndicator(null);
+        } catch (error) {
+            this.state = 'error';
+            li.error(error, () => this.fetch());
+            this.view.useLoadingIndicator(li);
+            throw error;
+        }
+        const thiz = this;
+        new class extends DataUpdatingHelper<CommentViewItem, Api.Comment> {
+            items = thiz.view.listView;
+            addItem(c: Api.Comment, pos: number) { thiz.addItem(c, pos); }
+            updateItem(view: CommentViewItem, c: Api.Comment) { view.comment = c; }
+            removeItem(view: CommentViewItem) { view.remove(); }
+        }().update(resp.comments);
+        this.view.updateView();
+        this.state = 'fetched';
+        if (this.eventName && !this.eventRegistered) {
+            msgcli.listenEvent(this.eventName, () => {
+                this.fetch(true);
+            }, true);
+            this.eventRegistered = true;
+        }
     }
-    sidebarItem: SidebarItem;
-};
-
-export const comments = new class {
-    init() {
-        router.addRoute({
-            path: ['track-comments'],
-            onNav: ({ remaining }) => {
-                var id = parseInt(remaining[0]);
-                ui.sidebarList.setActive(null);
-                var comments = new CommentsView();
-                comments.endpoint = "tracks/" + id + "/comments";
-                ui.content.setCurrent(comments.view);
+    private addItem(c: Api.Comment, pos?: number): void {
+        const comm = new CommentViewItem(c);
+        if (c.uid === user.info.id || user.isAdmin)
+            comm.onremove = () => {
+                this.ioAction(() => api.delete({
+                    path: this.endpoint + '/' + comm.comment.id
+                }));
+            };
+        return this.view.listView.add(comm, pos);
+    }
+    private async ioAction(func: () => Promise<void>) {
+        var li = new LoadingIndicator({ content: I`Submitting` });
+        this.view.useLoadingIndicator(li);
+        await li.action(async () => {
+            await func();
+            await this.fetch();
+        });
+    }
+    async post(content: string) {
+        await this.ioAction(() => api.post({
+            path: this.endpoint + '/new',
+            obj: {
+                content: content
             }
-        });
+        }));
     }
-};
+    createContentView() {
+        var view = new CommentsContentView(this);
+        view.title = this.title ?? I`Comments`;
+        return view;
+    }
+}
+
 
 class CommentViewItem extends ListViewItem {
     constructor(comment: Api.Comment) {

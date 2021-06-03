@@ -1,11 +1,11 @@
-import { TextCompositionWatcher } from "./utils";
-import { I } from "./I18n";
-import { Toast, Dialog, LabeledInput, TextBtn, LoadingIndicator, objectApply, sleepAsync } from "./viewlib";
-import { Api } from "./apidef";
-import { api } from "./Api";
+import { TextCompositionWatcher } from "../Infra/utils";
+import { I } from "../I18n/I18n";
+import { Toast, Dialog, LabeledInput, TextBtn, LoadingIndicator, objectApply, sleepAsync } from "../Infra/viewlib";
+import { Api } from "../API/apidef";
+import { api } from "../API/Api";
 import { TrackList } from "./TrackList";
-import { lyricsEdit, LyricsSourceEditView } from "./LyricsEdit";
-import { user } from "./User";
+import { lyricsEdit, LyricsSourceEditView } from "../Lyrics/LyricsEdit";
+import { user } from "../API/User";
 
 /** A track binding with list */
 export class Track {

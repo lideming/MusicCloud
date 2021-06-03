@@ -24,11 +24,11 @@ document.body.insertBefore(bottomBar.dom, mainContainer.dom.nextSibling);
 
 import { router } from "./Router";
 import { SettingItem, BuildDomExpr, Func, Callbacks, Timer, InputStateTracker, Toast, ToolTip } from "./utils";
-import { I18n, i18n, I } from "./I18n";
-import { Track } from "./Track";
-import { user } from "./User";
-import { playerCore, playingLoopModes } from "./PlayerCore";
-import { uploads } from "./Uploads";
+import { I18n, i18n, I } from "../I18n/I18n";
+import { Track } from "../Track/Track";
+import { user } from "../API/User";
+import { playerCore, playingLoopModes } from "../Player/PlayerCore";
+import { uploads } from "../Track/Uploads";
 
 export const ui = new class {
     usingKeyboardInput = false;

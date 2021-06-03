@@ -1,13 +1,13 @@
 // file: PlayerCore.ts
 
-import { Track } from "./Track";
-import { Callbacks, Action, SettingItem, CancelToken } from "./utils";
-import { I } from "./I18n";
-import { api } from "./Api";
-import { Toast } from "./viewlib";
-import { Api } from "./apidef";
-import { Timer } from "./utils";
-import { ui } from "./UI";
+import { Track } from "../Track/Track";
+import { Callbacks, Action, SettingItem, CancelToken } from "../Infra/utils";
+import { I } from "../I18n/I18n";
+import { api } from "../API/Api";
+import { Toast } from "../Infra/viewlib";
+import { Api } from "../API/apidef";
+import { Timer } from "../Infra/utils";
+import { ui } from "../Infra/UI";
 
 export const playerCore = new class PlayerCore {
     audio: HTMLAudioElement;

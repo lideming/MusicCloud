@@ -1,4 +1,4 @@
-import { Dialog, Func, View } from "./viewlib";
+import { Dialog, Func, View } from "../Infra/viewlib";
 import { playerCore } from "./PlayerCore";
 
 export const playerFX = new class PlayerFX {

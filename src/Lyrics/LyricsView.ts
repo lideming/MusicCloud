@@ -1,9 +1,9 @@
-import { View, ContainerView, ItemActiveHelper, buildDOM, numLimit } from "./viewlib";
-import { BuildDomExpr, Callbacks, Action, Timer } from "./utils";
-import { I } from "./I18n";
+import { View, ContainerView, ItemActiveHelper, buildDOM, numLimit } from "../Infra/viewlib";
+import { BuildDomExpr, Callbacks, Action, Timer } from "../Infra/utils";
+import { I } from "../I18n/I18n";
 import { parse, Lyrics, Line, Span } from "./Lyrics";
-import { playerCore } from "./PlayerCore";
-import { Track } from "./Track";
+import { playerCore } from "../Player/PlayerCore";
+import { Track } from "../Track/Track";
 
 export class LyricsView extends View {
     lines = new ContainerView<LineView>({ tag: 'div.lyrics' });

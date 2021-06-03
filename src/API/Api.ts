@@ -1,7 +1,7 @@
 // file: Api.ts
 
-import { settings } from "./Settings";
-import { Callbacks, Action, CancelToken, sleepAsync } from "./utils";
+import { settings } from "../Settings/Settings";
+import { Callbacks, Action, CancelToken, sleepAsync } from "../Infra/utils";
 import { Api } from "./apidef";
 
 function getAppBaseUrl() {

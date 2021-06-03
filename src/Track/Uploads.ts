@@ -2,17 +2,17 @@
 
 import { TrackList, TrackListView, TrackViewItem } from "./TrackList";
 import { Track } from "./Track";
-import { Semaphore, DataUpdatingHelper, CancelToken } from "./utils";
+import { Semaphore, DataUpdatingHelper, CancelToken } from "../Infra/utils";
 import { ListIndexViewItem } from "./ListIndex";
-import { user } from "./User";
-import { Api } from "./apidef";
-import { LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref, buildDOM, formatFileSize, objectApply } from "./viewlib";
-import { router } from "./Router";
-import { I, i18n } from "./I18n";
-import { playerCore } from "./PlayerCore";
-import { ui } from "./UI";
-import { api } from "./Api";
-import { ContentHeader } from "./ui-views";
+import { user } from "../API/User";
+import { Api } from "../API/apidef";
+import { LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref, buildDOM, formatFileSize, objectApply } from "../Infra/viewlib";
+import { router } from "../Infra/Router";
+import { I, i18n } from "../I18n/I18n";
+import { playerCore } from "../Player/PlayerCore";
+import { ui } from "../Infra/UI";
+import { api } from "../API/Api";
+import { ContentHeader } from "../Infra/ui-views";
 
 
 class UploadTrack extends Track {

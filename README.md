@@ -32,7 +32,7 @@ You can easily [run your own MusicCloud instance in Docker](https://github.com/l
 
 ## Configure Build
 
-Modify `src/Settings.ts` for API location, debug options etc.
+Modify `src/Settings/Settings.ts` for API location, debug options etc.
 
 
 ## Build

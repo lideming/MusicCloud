@@ -1,9 +1,9 @@
 // file: ui-views.ts
 import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, numLimit, objectInit, toggleClass, } from "./viewlib";
 import { BuildDomExpr, Func, EventRegistrations, Action, Ref, jsx } from "./utils";
-import { I } from "./I18n";
-import svgSettings from "../resources/settings-24px.svg";
-import { settingsUI } from "./SettingsUI";
+import { I } from "../I18n/I18n";
+import svgSettings from "../../resources/settings-24px.svg";
+import { settingsUI } from "../Settings/SettingsUI";
 
 export class MainContainer extends View {
     createDom() {

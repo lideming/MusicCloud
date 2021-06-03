@@ -1,14 +1,14 @@
-import { router } from './Router';
-import { ui } from './UI';
-import { Lazy, Callbacks, BuildDomExpr } from './utils';
-import { I } from "./I18n";
-import { ListContentView } from './ListContentView';
-import { InputView, View, ButtonView, LoadingIndicator, ListView, LazyListView } from './viewlib';
-import { api } from './Api';
-import { Api } from './apidef';
+import { router } from '../Infra/Router';
+import { ui } from '../Infra/UI';
+import { Lazy, Callbacks, BuildDomExpr } from '../Infra/utils';
+import { I } from "../I18n/I18n";
+import { ListContentView } from '../Infra/ListContentView';
+import { InputView, View, ButtonView, LoadingIndicator, ListView, LazyListView } from '../Infra/viewlib';
+import { api } from '../API/Api';
+import { Api } from '../API/apidef';
 import { TrackViewItem, TrackList } from './TrackList';
 import { Track } from "./Track";
-import { playerCore } from './PlayerCore';
+import { playerCore } from '../Player/PlayerCore';
 import { ListIndexViewItem } from './ListIndex';
 
 export const search = new class {

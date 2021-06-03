@@ -1,21 +1,21 @@
 // file: TrackList.ts
 
-import { BuildDomExpr, DataUpdatingHelper } from "./utils";
-import { I, i18n } from "./I18n";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync } from "./viewlib";
-import { ListContentView } from "./ListContentView";
-import { user } from "./User";
-import { Api } from "./apidef";
-import { api } from "./Api";
+import { BuildDomExpr, DataUpdatingHelper } from "../Infra/utils";
+import { I, i18n } from "../I18n/I18n";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync } from "../Infra/viewlib";
+import { ListContentView } from "../Infra/ListContentView";
+import { user } from "../API/User";
+import { Api } from "../API/apidef";
+import { api } from "../API/Api";
 import { listIndex } from "./ListIndex";
-import { playerCore, PlayingLoopMode } from "./PlayerCore";
-import { router } from "./Router";
+import { playerCore, PlayingLoopMode } from "../Player/PlayerCore";
+import { router } from "../Infra/Router";
 import { Track } from "./Track";
-import { ContentView, ContentHeader, CopyMenuItem, Icon } from "./ui-views";
-import { ui } from "./UI";
-import { msgcli } from "./MessageClient";
-import svgPlayArrow from "../resources/play_arrow-24px.svg";
-import { settings } from "./Settings";
+import { ContentView, ContentHeader, CopyMenuItem, Icon } from "../Infra/ui-views";
+import { ui } from "../Infra/UI";
+import { msgcli } from "../API/MessageClient";
+import svgPlayArrow from "../../resources/play_arrow-24px.svg";
+import { settings } from "../Settings/Settings";
 
 export class TrackList {
     info: Api.TrackListInfo | null = null;
