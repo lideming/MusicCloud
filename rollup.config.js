@@ -78,7 +78,7 @@ function transformSourcemapPath() {
     return (rel, path) => {
         rel = rel.replace(/\\/g, '/');
         if (rel.startsWith('node_modules')) {
-            var mat = rel.match(/^node_modules\/((?:@[\w\-_]+\/)?[\w\-_]+)\/(.*)$/);
+            var mat = rel.match(/node_modules\/((?:@[\w\-_]+\/)?[\w\-_]+)\/(.*)$/);
             if (!mat) {
                 console.warn(['sourcemapPathTransform', rel]);
             }
