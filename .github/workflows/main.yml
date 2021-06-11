@@ -26,12 +26,16 @@ jobs:
         with:
           node-version: 14.x
 
-      - name: Install npm dependencies
+      - name: Install pnpm
+        run: curl -f https://get.pnpm.io/v6.js | node - add --global pnpm@6
+
+      - name: Install dependencies
+        if: steps.cache_node_modules.outputs.cache-hit != 'true'
         run: |
-          npm ci
+          pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Archive production artifacts
         uses: actions/upload-artifact@v2
