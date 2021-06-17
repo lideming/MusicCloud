@@ -132,9 +132,17 @@ export const uploads = new class extends TrackList {
             if (!uploads.state) uploads.fetch();
         }
         updateUsage() {
-            var total = 0;
-            uploads.tracks.forEach(x => total += x.size ?? 0);
-            this.usage.text = total ? `(${formatFileSize(total)})` : '';
+            var original = 0;
+            var converted = 0;
+            uploads.tracks.forEach(x => {
+                x.files?.forEach(f => {
+                    if (!f.profile)
+                        original += f.size ?? 0;
+                    else
+                        converted += f.size ?? 0;
+                });
+            });
+            this.usage.text = original ? `(${formatFileSize(original)} + ${formatFileSize(converted)})` : '';
         }
         updateView() {
             super.updateView();
