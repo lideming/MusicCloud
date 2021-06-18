@@ -1,6 +1,6 @@
 // file: ListIndex.ts
 
-import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction, clearChildren, createName, objectApply } from "../Infra/viewlib";
+import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction, clearChildren, createName, objectApply, appendView } from "../Infra/viewlib";
 import { BuildDomExpr } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
@@ -117,12 +117,12 @@ export class ListIndex {
         });
         const icon = new Icon({ icon: svgAdd });
         icon.dom.style.fontSize = '1.4em';
-        this.section.addAction(jsxBuild(jsx(SectionAction, {
+        this.section.addAction(jsxBuild<SectionAction>(jsx(SectionAction, {
             onActive: () => {
                 this.newTracklist();
             }
-        } as any, [ icon ])));
-        ui.sidebarList.container.appendView(this.section);
+        }, [ icon ])));
+        appendView(ui.sidebarList.container, this.section);
         ui.sidebar.dom.addEventListener('scroll', (ev) => {
             if (ev.eventPhase === Event.AT_TARGET) {
                 var dom = this.section.headerView.dom;
@@ -267,7 +267,7 @@ export class ListIndexViewItem extends SidebarItem {
             tag: 'li.item.indexitem.no-selection',
             tabIndex: 0,
             child: [
-                { _key: 'tag', tag: 'span.tag' },
+                { _id: 'tag', tag: 'span.tag' },
                 { tag: 'span.name.flex-1', text: () => this.listInfo?.name ?? this.text },
                 {
                     tag: 'span.state',
@@ -283,7 +283,7 @@ export class ListIndexViewItem extends SidebarItem {
     }
     updateDom() {
         super.updateDom();
-        var domtag = this.domctx.dict.tag;
+        var domtag = this.getDomById('tag')!;
         var tagText = (!this.listInfo || this.listInfo.visibility == 0) ? "" :
             (this.listInfo.owner == user.id && this.listInfo.visibility == 1) ? I`my_visibility_1` :
                 I`visibility_1`;

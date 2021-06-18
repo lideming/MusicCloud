@@ -109,7 +109,7 @@ class LyricsEditContentView extends ContentView {
     setCurrentView(view: this['currentView']) {
         if (this.currentView) {
             this.currentView.onHide();
-            this.currentView.dom.remove();
+            this.removeView(this.currentView);
             this.currentView = null;
         }
         if (view) {

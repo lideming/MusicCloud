@@ -154,15 +154,16 @@ class CommentEditor extends View {
     set content(val) { this.ensureDom(); this.domcontent.value = val; }
     createDom(): BuildDomExpr {
         return {
-            _ctx: this,
             tag: 'div.comment-editor',
             child: [
-                { tag: 'textarea.input-text.content', _key: 'domcontent' },
-                { tag: 'div.btn.submit', textContent: I`Submit`, _key: 'domsubmit' }
+                { tag: 'textarea.input-text.content', _id: 'content' },
+                { tag: 'div.btn.submit', textContent: I`Submit`, _id: 'submit' }
             ]
         };
     }
     postCreateDom() {
+        this.domcontent = this.getDomById('content') as HTMLTextAreaElement;
+        this.domsubmit = this.getDomById('submit') as HTMLDivElement;
         this.domcontent.addEventListener('keydown', (ev) => {
             if (ev.ctrlKey && ev.keyCode === 13) {
                 this.onsubmit(this);

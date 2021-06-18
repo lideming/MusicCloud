@@ -90,7 +90,7 @@ export class ListContentView extends ContentView {
         this.selectAllBtn.onActive.add(() => {
             this.listView.forEach(x => this.listView.selectionHelper.toggleItemSelection(x, true));
         });
-        this.dom.appendView(this.header);
+        this.appendView(this.header);
     }
 
     protected appendScrollBox() {

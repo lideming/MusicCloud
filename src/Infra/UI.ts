@@ -1,8 +1,10 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu, buildDOM, fadeout, formatTime, listenPointerEvents, numLimit, replaceChild, toggleClass } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu, buildDOM, fadeout, formatTime, listenPointerEvents, numLimit, replaceChild, toggleClass, mountView, unmountView } from "./viewlib";
 import * as views from "./ui-views";
 import { MainContainer, BottomBar } from "./ui-views";
+
+View.debugging = true;
 
 views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.ContentView>) {
     this.onActive.add(() => {
@@ -19,8 +21,8 @@ views.SidebarItem.prototype.bindContentView = function (viewFunc: Func<views.Con
 
 const mainContainer = new MainContainer();
 const bottomBar = new BottomBar();
-document.body.insertBefore(mainContainer.dom, document.body.firstChild);
-document.body.insertBefore(bottomBar.dom, mainContainer.dom.nextSibling);
+mountView(document.body, mainContainer);
+mountView(document.body, bottomBar);
 
 import { router } from "./Router";
 import { SettingItem, BuildDomExpr, Func, Callbacks, Timer, InputStateTracker, Toast, ToolTip } from "./utils";
@@ -42,8 +44,8 @@ export const ui = new class {
         this.sidebarLogin.init();
         this.windowTitle.reset();
         this.notification.init();
-        Dialog.defaultParent = new DialogParent(this.mainContainer.dom);
-        ToastsContainer.default.parentDom = this.mainContainer.dom;
+        Dialog.defaultParent = new DialogParent(mainContainer);
+        ToastsContainer.default.parentDom = mainContainer.dom;
         ToastsContainer.default.dom.style.position = 'absolote';
         router.addRoute({
             path: ['home'],
@@ -442,21 +444,21 @@ export const ui = new class {
             if (!cur) return;
             cur.onRemove();
             if (cur.dom) {
-                this.container.removeChild(cur.dom);
+                unmountView(this.container, cur);
                 cur.onDomRemoved();
             }
         }
-        setCurrent(arg: views.ContentView | null) {
-            if (arg === this.current) return;
+        setCurrent(view: views.ContentView | null) {
+            if (view === this.current) return;
             this.removeCurrent();
-            if (arg) {
-                arg.onShow();
-                if (arg.dom) {
-                    this.container.appendChild(arg.dom);
-                    arg.onDomInserted();
+            if (view) {
+                view.onShow();
+                if (view.dom) {
+                    mountView(this.container, view);
+                    view.onDomInserted();
                 }
             }
-            this.current = arg;
+            this.current = view;
         }
     };
     windowTitle = new class {
@@ -552,8 +554,8 @@ class ProgressButton extends View {
     constructor(dom?: BuildDomExpr) {
         super(dom ?? { tag: 'div.btn' });
         this.dom.classList.add('btn-progress');
-        this.dom.appendView(this.fill);
-        this.dom.appendView(this.textSpan);
+        this.appendView(this.fill);
+        this.appendView(this.textSpan);
     }
 }
 
