@@ -1,27 +1,35 @@
 // file: ui-views.ts
-import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, numLimit, objectInit, toggleClass, } from "./viewlib";
+import { ListViewItem, TextView, View, EditableHelper, ContainerView, InputView, MenuItem, ObjectInit, numLimit, objectInit, toggleClass, ListView, FuncOrVal, } from "./viewlib";
 import { BuildDomExpr, Func, EventRegistrations, Action, Ref, jsx } from "./utils";
 import { I } from "../I18n/I18n";
 import svgSettings from "../../resources/settings-24px.svg";
 import { settingsUI } from "../Settings/SettingsUI";
 
 export class MainContainer extends View {
+    sidebar = new Sidebar();
+    contentOuter = new View(<main id="content-outer"></main>);
     createDom() {
         return (
             <div id="main-container" class="no-transition">
-                <nav id="sidebar" class="no-selection">
-                    <div id="sidebar-header">
-                        <SettingsBtn />
-                    </div>
-                    <div id="sidebar-features">
-                    </div>
-                    <div id="sidebar-list">
-                    </div>
-                </nav>
-                <main id="content-outer">
-                </main>
+                {this.sidebar}
+                {this.contentOuter}
             </div>
         );
+    }
+}
+
+export class Sidebar extends View {
+    header = new View(<div id="sidebar-header"><SettingsBtn /></div>);
+    features = new ListView(<div id="sidebar-features"></div>);
+    list = new View(<div id="sidebar-list"></div>);
+    createDom() {
+        return (
+            <nav id="sidebar" class="no-selection">
+                {this.header}
+                {this.features}
+                {this.list}
+            </nav>
+        )
     }
 }
 

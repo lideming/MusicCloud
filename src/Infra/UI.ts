@@ -396,10 +396,10 @@ export const ui = new class {
         }
     };
     sidebarLogin = new class {
-        container = document.getElementById('sidebar-header')!;
+        container = mainContainer.sidebar.header;
         loginState = new views.SidebarItem();
         init() {
-            this.container.insertBefore(this.loginState.dom, this.container.firstChild);
+            this.container.addView(this.loginState, 0);
             this.loginState.dom.id = 'login-state';
             this.loginState.onActive.add((ev) => {
                 user.openUI(undefined, ev);
@@ -421,10 +421,9 @@ export const ui = new class {
         }
     };
     sidebarList = new class {
-        container = document.getElementById('sidebar-list')!;
+        container = mainContainer.sidebar.list;
 
-        features = document.getElementById('sidebar-features')!;
-        featuresListview = new ListView(this.features);
+        featuresListview = mainContainer.sidebar.features;
 
         currentActive = new ItemActiveHelper<ListViewItem>();
 
@@ -436,7 +435,7 @@ export const ui = new class {
         }
     };
     content = new class {
-        container = document.getElementById('content-outer')!;
+        container = mainContainer.contentOuter;
         current: views.ContentView | null = null;
         removeCurrent() {
             const cur = this.current;
@@ -444,7 +443,7 @@ export const ui = new class {
             if (!cur) return;
             cur.onRemove();
             if (cur.dom) {
-                unmountView(this.container, cur);
+                this.container.removeView(cur);
                 cur.onDomRemoved();
             }
         }
@@ -454,7 +453,7 @@ export const ui = new class {
             if (view) {
                 view.onShow();
                 if (view.dom) {
-                    mountView(this.container, view);
+                    this.container.appendView(view);
                     view.onDomInserted();
                 }
             }
