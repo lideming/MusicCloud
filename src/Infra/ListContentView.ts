@@ -1,6 +1,6 @@
 // file: ListContentView.ts
 
-import { View, ListViewItem, ListView, LazyListView, LoadingIndicator, buildDOM } from "./viewlib";
+import { View, ListViewItem, ListView, LazyListView, LoadingIndicator, buildDOM, FuncOrVal } from "./viewlib";
 import { I } from "../I18n/I18n";
 import { ContentView, ContentHeader, ActionBtn } from "./ui-views";
 
@@ -74,16 +74,16 @@ export class ListContentView extends ContentView {
         this.appendScrollBox();
     }
 
-    title: string;
+    title: FuncOrVal<string>;
     protected createHeader(): ContentHeader {
         return new ContentHeader({ title: this.title });
     }
 
     protected appendHeader() {
         this.header = this.createHeader();
-        this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: I`Refresh` }));
-        this.header.actions.addView(this.selectAllBtn = new ActionBtn({ text: I`Select all` }));
-        this.header.actions.addView(this.selectBtn = new ActionBtn({ text: I`Select` }));
+        this.header.actions.addView(this.refreshBtn = new ActionBtn({ text: () => I`Refresh` }));
+        this.header.actions.addView(this.selectAllBtn = new ActionBtn({ text: () => I`Select all` }));
+        this.header.actions.addView(this.selectBtn = new ActionBtn({ text: () => I`Select` }));
         this.selectBtn.onActive.add(() => {
             this.listView.selectionHelper.enabled = !this.listView.selectionHelper.enabled;
         });
@@ -110,7 +110,7 @@ export class ListContentView extends ContentView {
         this.listView.lazy = true;
         this.listView.selectionHelper.onEnabledChanged.add(() => {
             this.selectBtn.hidden = !this.canMultiSelect && !this.listView.selectionHelper.enabled;
-            this.selectBtn.text = this.listView.selectionHelper.enabled ? I`Cancel` : I`Select`;
+            this.selectBtn.text = this.listView.selectionHelper.enabled ? () => I`Cancel` : () => I`Select`;
             this.selectAllBtn.hidden = !this.listView.selectionHelper.enabled;
         })();
         this.listView.selectionHelper.ctrlForceSelect = this.canMultiSelect;

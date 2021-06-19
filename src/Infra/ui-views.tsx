@@ -59,7 +59,9 @@ export class BottomBar extends View {
 }
 
 export class SidebarItem extends ListViewItem {
-    text: string = '';
+    _text: FuncOrVal<string> = '';
+    get text() { return getFuncVal(this._text); }
+    set text(val: FuncOrVal<string>) { this._text = val; }
     contentView: ContentView | null = null;
     constructor(init?: ObjectInit<SidebarItem>) {
         super();
@@ -69,7 +71,7 @@ export class SidebarItem extends ListViewItem {
         return {
             tag: 'li.item.no-selection',
             tabIndex: 0,
-            text: () => this.text
+            text: () => getFuncVal(this.text)
         };
     }
     bindContentView(viewFunc: Func<ContentView>) {
@@ -114,8 +116,8 @@ export class ContentView extends View {
 }
 
 export class ContentHeader extends View {
-    catalog: string;
-    title: string;
+    catalog: FuncOrVal<string>;
+    title: FuncOrVal<string>;
     titleEditable = false;
     editHelper: EditableHelper;
     actions = new ContainerView<ActionBtn>({ tag: 'div.actions' });
@@ -160,7 +162,7 @@ export class ContentHeader extends View {
         setScrollableShadow(this.dom, this.scrollbox?.scrollTop ?? 0);
     }
     titleView = new View({
-        tag: 'span.title.no-selection', text: () => this.title,
+        tag: 'span.title.no-selection', text: () => getFuncVal(this.title),
         update: (dom) => {
             toggleClass(dom, 'editable', !!this.titleEditable);
             if (this.titleEditable) dom.title = I`Click to edit`;
@@ -171,7 +173,7 @@ export class ContentHeader extends View {
     titlebar = new View({
         tag: 'div.titlebar.clearfix',
         child: [
-            { tag: 'span.catalog.no-selection', text: () => this.catalog, hidden: () => !this.catalog },
+            { tag: 'span.catalog.no-selection', text: () => getFuncVal(this.catalog), hidden: () => !this.catalog },
             this.titleView,
             this.actions
         ]
@@ -182,6 +184,10 @@ export class ContentHeader extends View {
         this.titlebar.updateDom();
         this.titleView.updateDom();
     }
+}
+
+function getFuncVal<T>(val: FuncOrVal<T>) {
+    return typeof val == 'function' ? (val as any)() : val;
 }
 
 export class ActionBtn extends TextView {

@@ -296,7 +296,7 @@ export class TrackListView extends ListContentView {
     }
     createHeader() {
         return new ContentHeader({
-            catalog: I`Playlist`,
+            catalog: () => I`Playlist`,
             title: this.list.name ?? '',
             titleEditable: !!this.list.rename,
             onTitleEdit: (newName) => this.list.rename(newName)

@@ -13,7 +13,7 @@ import { Track } from './Track';
 
 export const nowPlaying = new class {
     init() {
-        var sidebarItem = new SidebarItem({ text: I`Now Playing` });
+        var sidebarItem = new SidebarItem({ text: () => I`Now Playing` });
         router.addRoute({
             path: ['nowplaying'],
             contentView: () => this.view,

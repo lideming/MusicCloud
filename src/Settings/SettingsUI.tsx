@@ -38,9 +38,6 @@ class SettingsDialog extends Dialog {
             var langs = ['', ...ui.lang.availableLangs];
             curlang = langs[(langs.indexOf(curlang) + 1) % langs.length];
             ui.lang.siLang.set(curlang);
-            if (origUsingLang != ui.lang.curLang)
-                this.showReload();
-            this.updateDom();
         });
         this.addContent(this.inputPreferBitrate);
         this.onShown.add(() => {
@@ -100,7 +97,7 @@ class SettingsDialog extends Dialog {
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
         this.btnNotification.text = ui.notification.config.enabled ? I`Disable notification` : I`Enable notification`;
-        this.content.updateChildrenDom();
+        this.content.updateChildren();
     }
 }
 

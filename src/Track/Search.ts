@@ -13,7 +13,7 @@ import { ListIndexViewItem } from './ListIndex';
 
 export const search = new class {
     init() {
-        this.sidebarItem = new ListIndexViewItem({ text: I`Search` });
+        this.sidebarItem = new ListIndexViewItem({ text: () => I`Search` });
         router.addRoute({
             path: ['search'],
             contentView: () => this.view,

@@ -105,6 +105,9 @@ export const ui = new class {
     isVisible() {
         return !document['hidden'];
     }
+    updateAllViews() {
+        mainContainer.updateAll();
+    }
     theme = new class {
         current: 'light' | 'dark' = 'light';
         timer = new Timer(() => toggleClass(document.body, 'changing-theme', false));
@@ -136,6 +139,7 @@ export const ui = new class {
                 i18n.curLang = lang;
                 document.body.lang = lang;
                 console.info(`[UI] Current language: '${i18n.curLang}' - '${I`English`}'`);
+                ui.updateAllViews();
             });
             i18n.renderElements(document.querySelectorAll('.i18ne'));
         }

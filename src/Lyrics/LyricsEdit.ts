@@ -14,7 +14,7 @@ export const lyricsEdit = new class {
     view: LyricsEditContentView;
     startEdit(track: Track, lyrics: string) {
         if (!this.view) {
-            this.sidebarItem = new SidebarItem({ text: I`Edit Lyrics` });
+            this.sidebarItem = new SidebarItem({ text: () => I`Edit Lyrics` });
             this.view = new LyricsEditContentView();
             ui.sidebarList.addFeatureItem(this.sidebarItem);
             router.addRoute({

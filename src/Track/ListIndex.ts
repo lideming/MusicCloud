@@ -122,7 +122,7 @@ export class ListIndex {
                 this.newTracklist();
             }
         }, [ icon ])));
-        appendView(ui.sidebarList.container, this.section);
+        ui.sidebarList.container.appendView(this.section);
         ui.sidebar.dom.addEventListener('scroll', (ev) => {
             if (ev.eventPhase === Event.AT_TARGET) {
                 var dom = this.section.headerView.dom;
