@@ -6,6 +6,7 @@ import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
 
+/** @type {() => import('rollup').RollupOptions} */
 const rollupConfig = () => ({
     input: './src/main.ts',
     output: {
