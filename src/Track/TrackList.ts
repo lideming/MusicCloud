@@ -421,7 +421,7 @@ export class TrackViewItem extends ListViewItem {
     }
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
         ev.preventDefault();
-        var selected: TrackViewItem[] = this.selected ? this.selectionHelper.selectedItems : [this];
+        var selected: this[] = (this.selected && this.selectionHelper) ? this.selectionHelper.selectedItems : [this];
         var m = new ContextMenu();
         if (selected.length == 1) {
             if (item.track.id && user.state != 'none' && user.serverOptions.trackCommentsEnabled !== false) m.add(new MenuItem({
@@ -501,12 +501,12 @@ export class TrackViewItem extends ListViewItem {
                 onActive: () => this.actionHandler!.onTrackRemove?.([this])
             }));
         }
-        if (this.actionHandler?.onTrackRemove && this.selected && this.selectionHelper.count > 1
-            && this.actionHandler?.canRemove?.([...this.selectionHelper.selectedItems]) != false)
+        if (this.actionHandler?.onTrackRemove && selected.length > 1
+            && this.actionHandler?.canRemove?.([...selected]) != false)
             m.add(new MenuItem({
-                text: I`Remove ${this.selectionHelper.count} tracks`, cls: 'dangerous',
+                text: I`Remove ${selected.length} tracks`, cls: 'dangerous',
                 onActive: () => {
-                    this.actionHandler!.onTrackRemove?.([...this.selectionHelper.selectedItems]);
+                    this.actionHandler!.onTrackRemove?.([...selected]);
                 }
             }));
         let infoText = I`Track ID` + ': ' +
