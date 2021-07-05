@@ -122,37 +122,50 @@ export const msgcli = new class {
             }
         });
     }
-    sendQuery(obj: any, callback?: Action<QueryAnswer> | null) {
+    sendQuery(obj: Query, callback?: Action<QueryAnswer> | null) {
         if (!this.connected) throw new Error('not connected');
         var queryId = ++this.lastQueryId;
-        obj = {
+        const objWithId = {
             queryId,
             ...obj
         };
-        console.debug('[MsgCli] ws send', printFilter(obj));
-        this.ws!.send(JSON.stringify(obj));
+        console.debug('[MsgCli] ws send', printFilter(objWithId));
+        this.ws!.send(JSON.stringify(objWithId));
         if (callback) {
             this.queries[queryId] = callback;
         }
     }
-    sendQueryAsync(obj: any) {
+    sendQueryAsync(obj: Query) {
         return new Promise<QueryAnswer>(resolve => {
             this.sendQuery(obj, resolve);
         });
     }
-    listenEvent(evt: string, callback: Action<any>, autoRetry?: boolean) {
-        if (this.events[evt]) return; // throw new Error('the event is already registered: ' + evt);
+    listenEvent(evt: string | { events?: string[], remove?: string[]; }, callback: Action<any>, autoRetry?: boolean) {
+        if (typeof evt == 'string') {
+            evt = {
+                events: [evt],
+                remove: []
+            };
+        }
+        evt.events = (evt.events ?? []).filter(e => !this.events[e]);
+        evt.remove = evt.remove ?? [];
         if (this.connected) {
             this.sendQuery({
                 cmd: 'listenEvent',
-                events: [evt]
+                ...(evt as any)
             }, null);
-            this.events[evt] = callback;
         } else if (!autoRetry) {
             throw new Error('not connected');
         }
-        if (autoRetry) {
-            this.permEvents[evt] = callback;
+        for (const e of evt.events) {
+            this.events[e] = callback;
+            if (autoRetry) {
+                this.permEvents[e] = callback;
+            }
+        }
+        for (const e of evt.remove) {
+            delete this.events[e];
+            delete this.permEvents[e];
         }
     }
 };
@@ -168,3 +181,8 @@ export interface QueryAnswer {
     resp: string;
     queryId: number;
 }
+
+export type Query =
+    | { cmd: 'login', token: string; }
+    | { cmd: 'listenEvent', events: string[], remove: string[]; }
+    ;

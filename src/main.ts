@@ -24,6 +24,7 @@
 // TypeScript is required.
 
 // Why do we need React and Vue.js? ;)
+// Update: We have webfx now.
 
 import { injectCss, Toast, ToastsContainer } from "./Infra/viewlib";
 import { ui } from "./Infra/UI";
@@ -37,6 +38,7 @@ import { router } from "./Infra/Router";
 import { settingsUI } from "./Settings/SettingsUI";
 import { msgcli } from "./API/MessageClient";
 import { nowPlaying } from "./Track/NowPlaying";
+import { listenTogether } from "./Player/ListenTogether";
 import { search } from "./Track/Search";
 import * as Lyrics from "./Lyrics/Lyrics";
 import { lyricsEdit } from "./Lyrics/LyricsEdit";
@@ -67,6 +69,7 @@ export const app = window['app'] = {
         discussion.init();
         notes.init();
         nowPlaying.init();
+        listenTogether.init();
         comments.init();
         listIndex.init();
         msgcli.init();
