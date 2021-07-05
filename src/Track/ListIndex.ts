@@ -112,7 +112,7 @@ export class ListIndex {
             }
         });
         this.section = new Section({
-            title: I`Playlists`,
+            title: () => I`Playlists`,
             content: this.listView
         });
         const icon = new Icon({ icon: svgAdd });
