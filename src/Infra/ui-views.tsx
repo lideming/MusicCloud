@@ -4,6 +4,7 @@ import { BuildDomExpr, Func, EventRegistrations, Action, Ref, jsx } from "./util
 import { I } from "../I18n/I18n";
 import svgSettings from "../../resources/settings-24px.svg";
 import { settingsUI } from "../Settings/SettingsUI";
+import { ui } from "./UI";
 
 export class MainContainer extends View {
     sidebar = new Sidebar();
@@ -29,7 +30,7 @@ export class Sidebar extends View {
                 {this.features}
                 {this.list}
             </nav>
-        )
+        );
     }
 }
 
@@ -84,7 +85,7 @@ export class SettingsBtn extends View {
     createDom() {
         return (
             <div class="item" id="settings-btn">
-                <Icon icon={svgSettings}/>
+                <Icon icon={svgSettings} />
             </div>
         );
     }
@@ -100,10 +101,19 @@ export class ContentView extends View {
     private _isVisible = false;
     public get isVisible() { return this._isVisible; }
 
+    _lastRenderedLanguage = '';
+
     onShow() {
         this._isVisible = true;
+        if (this.domCreated && this._lastRenderedLanguage != ui.lang.curLang) {
+            this.updateAll();
+        }
     }
     onDomInserted() { }
+    updateDom() {
+        super.updateDom();
+        this._lastRenderedLanguage = ui.lang.curLang;
+    }
     onRemove() {
         this._isVisible = false;
         this._shownEvents?.removeAll();

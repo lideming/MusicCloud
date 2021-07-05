@@ -12,7 +12,7 @@ export const discussion = new class extends CommentsView {
     endpoint = 'discussion';
     eventName = 'diss-changed';
     init() {
-        this.title = I`Discussion`;
+        this.title = () => I`Discussion`;
         this.sidebarItem = new SidebarItem({ text: () => I`Discussion` });
         router.addRoute({
             path: ['discussion'],
@@ -31,7 +31,7 @@ export const notes = new class extends CommentsView {
     endpoint = 'my/notes';
     eventName = 'note-changed';
     init() {
-        this.title = I`Notes`;
+        this.title = () => I`Notes`;
         this.sidebarItem = new SidebarItem({ text: () => I`Notes` }).bindContentView(() => this.view);
         router.addRoute({
             path: ['notes'],

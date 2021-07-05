@@ -1,5 +1,5 @@
 import { api } from "../API/Api";
-import { Action, BuildDomExpr, ContextMenu, formatDateTime, jsx, LazyListView, ListViewItem, LoadingIndicator, MenuInfoItem, MenuItem, View } from "../Infra/viewlib";
+import { Action, BuildDomExpr, ContextMenu, formatDateTime, FuncOrVal, jsx, LazyListView, ListViewItem, LoadingIndicator, MenuInfoItem, MenuItem, View } from "../Infra/viewlib";
 import { Lazy, DataUpdatingHelper } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { user } from "../API/User";
@@ -41,7 +41,7 @@ export class CommentsView {
     endpoint: string;
     eventName: string;
     eventRegistered: boolean;
-    title: string;
+    title: FuncOrVal<string>;
     lazyView = new Lazy(() => this.createContentView());
     get view() { return this.lazyView.value; }
     state: false | 'waiting' | 'fetching' | 'error' | 'fetched' = false;
@@ -109,7 +109,7 @@ export class CommentsView {
     }
     createContentView() {
         var view = new CommentsContentView(this);
-        view.title = this.title ?? I`Comments`;
+        view.title = this.title ?? (() => I`Comments`);
         return view;
     }
 }
