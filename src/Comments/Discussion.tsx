@@ -32,7 +32,7 @@ export const notes = new class extends CommentsView {
     eventName = 'note-changed';
     init() {
         this.title = () => I`Notes`;
-        this.sidebarItem = new SidebarItem({ text: () => I`Notes` }).bindContentView(() => this.view);
+        this.sidebarItem = new SidebarItem({ text: () => I`Notes` });
         router.addRoute({
             path: ['notes'],
             sidebarItem: () => this.sidebarItem,
