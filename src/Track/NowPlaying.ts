@@ -52,7 +52,7 @@ class PlayingView extends ContentView {
             setScrollableShadow(this.dom, this.scrollbox!.scrollTop - this.lines.dom.offsetTop);
         }
     }({
-        title: I`Now Playing`
+        title: () => I`Now Playing`
     });
     infoView = new View({
         tag: 'div.infoview',

@@ -38,7 +38,7 @@ export const search = new class {
 };
 
 class SearchView extends ListContentView {
-    title = I`Search`;
+    title = () => I`Search`;
     searchbar = new SearchBar();
     currentQuery: string;
     tempList: TrackList | null = null;

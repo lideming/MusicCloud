@@ -57,35 +57,18 @@ class SettingsDialog extends Dialog {
         });
         this.addContent(<ButtonView onActive={(e) => {
             playerFX.showUI(e);
-        }}>Test: Player FX</ButtonView>)
-        this.addContent(this.bottom);
-    }
-
-    bottom: View = new View(
-        <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
-            <div>{'MusicCloud ' + appVersion.currentVersion}</div>
-            <TextBtn onActive={(ev) => {
-                new AboutDialog().show(ev);
-                this.close();
-            }}>
-                {() => I`About`}
-            </TextBtn>
-        </div>
-    );
-
-    reloadShown = false;
-    showReload() {
-        if (this.reloadShown) return;
-        this.reloadShown = true;
-        var reloadView = new View(
-            <div class="clickable" style='color: var(--color-primary); text-align: center; margin: 10px 0;' tabIndex="0">
-                {() => I`Reload to fully apply changes`}
+        }}>Test: Player FX</ButtonView>);
+        this.addContent(
+            <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
+                <div>{'MusicCloud ' + appVersion.currentVersion}</div>
+                <TextBtn onActive={(ev) => {
+                    new AboutDialog().show(ev);
+                    this.close();
+                }}>
+                    {() => I`About`}
+                </TextBtn>
             </div>
         );
-        reloadView.onActive.add(() => {
-            window.location.reload();
-        });
-        this.content.addView(reloadView, this.bottom.position);
     }
 
     updateDom() {
@@ -97,7 +80,6 @@ class SettingsDialog extends Dialog {
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
         this.btnNotification.text = ui.notification.config.enabled ? I`Disable notification` : I`Enable notification`;
-        this.content.updateChildren();
     }
 }
 
