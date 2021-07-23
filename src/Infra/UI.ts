@@ -391,10 +391,13 @@ export const ui = new class {
                         onclick: () => this.toggleHide(true),
                         ondragover: () => this.toggleHide(true)
                     });
-                    ui.mainContainer.dom.appendView(this.overlay);
+                    mainContainer.appendView(this.overlay);
                 } else {
-                    fadeout(this.overlay!.dom);
+                    const overlay = this.overlay!;
                     this.overlay = null;
+                    fadeout(overlay.dom).onFinished(() => {
+                        mainContainer.removeView(overlay);
+                    });
                 }
             }
         }
