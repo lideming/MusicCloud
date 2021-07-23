@@ -908,8 +908,17 @@ html, body {
 .sidebar-toggle,
 .context-menu,
 .toast,
-.dialog {
+.input-text,
+.dialog,
+.upload-area {
     border-radius: 19px;
+}
+
+#sidebar-features .item,
+#sidebar-list .item {
+    border-radius: 0 19px 19px 0;
+    margin-right: 6px;
+    margin-left: 0;
 }
 
 .item {
@@ -930,4 +939,27 @@ html, body {
 
 #login-state {
     height: 46px;
+}
+
+.sidebar-toggle {
+    left: 2px;
+    top: 2px;
+    width: 46px;
+    height: 46px;
+    background: none;
+}
+
+.sidebar-toggle:hover {
+    background: var(--color-bg-ee);
+}
+
+.trackitem .name, .trackitem .artist {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;  
+}
+
+.trackitem .duration {
+    text-align: center;
 }
