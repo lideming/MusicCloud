@@ -902,3 +902,32 @@ html, body {
         opacity: 1;
     }
 }
+
+.btn,
+.item,
+.sidebar-toggle,
+.context-menu,
+.toast,
+.dialog {
+    border-radius: 19px;
+}
+
+.item {
+    margin: 2px;
+}
+
+.context-menu .item {
+    margin: 2px 4px;
+}
+
+.context-menu {
+    padding: 2px 0;
+}
+
+#settings-btn {
+    width: 46px;
+}
+
+#login-state {
+    height: 46px;
+}
