@@ -693,7 +693,9 @@ html, body {
 }
 
 .comment-editor .submit {
+    margin: 10px 0 0 auto;
     line-height: 2;
+    width: 8em;
 }
 
 .comment {
@@ -912,6 +914,10 @@ html, body {
 .dialog,
 .upload-area {
     border-radius: 19px;
+}
+
+.input-text {
+    padding: .5em 10px;
 }
 
 #sidebar-features .item,
