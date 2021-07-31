@@ -109,17 +109,20 @@ export const ui = new class {
         mainContainer.updateAll();
     }
     theme = new class {
-        current: 'light' | 'dark' = 'light';
+        all = ['light', 'dark', 'dark-rounded', 'light-rounded'] as const;
+        current: this['all'][number] = 'light-rounded';
         timer = new Timer(() => toggleClass(document.body, 'changing-theme', false));
         private rendered = false;
-        siTheme = new SettingItem<this['current']>('mcloud-theme', 'str', 'light')
+        siTheme = new SettingItem<this['current']>('mcloud-theme', 'str', this.current)
             .render((theme) => {
                 if (this.current !== theme) {
                     this.current = theme;
                     if (this.rendered) toggleClass(document.body, 'changing-theme', true);
-                    toggleClass(document.body, 'dark', theme === 'dark');
+                    const [color, rounded] = theme.split('-');
+                    toggleClass(document.body, 'dark', color === 'dark');
+                    toggleClass(document.body, 'rounded', rounded === 'rounded');
                     var meta = document.getElementById('meta-theme-color') as HTMLMetaElement;
-                    meta.content = theme === 'dark' ? 'black' : '';
+                    meta.content = color === 'dark' ? 'black' : '';
                     if (this.rendered) this.timer.timeout(500);
                 }
                 this.rendered = true;

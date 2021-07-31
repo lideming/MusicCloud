@@ -84,7 +84,7 @@ a {
 }
 
 .changing-theme, .changing-theme * {
-    transition: background-color .3s, color .3s, border-color .3s !important;
+    transition: background-color .3s, color .3s, border-color .3s, border-radius .3s !important;
 }
 
 :focus {
@@ -910,49 +910,49 @@ html, body {
     }
 }
 
-.btn,
-.item,
-.sidebar-toggle,
-.context-menu,
-.toast,
-.input-text,
-.dialog,
-.upload-area {
+.rounded .btn,
+.rounded .item,
+.rounded .sidebar-toggle,
+.rounded .context-menu,
+.rounded .toast,
+.rounded .input-text,
+.rounded .dialog,
+.rounded .upload-area {
     border-radius: 19px;
 }
 
-.input-text {
+.rounded .input-text {
     padding: .5em 10px;
 }
 
-#sidebar-features .item,
-#sidebar-list .item {
+.rounded #sidebar-features .item,
+.rounded #sidebar-list .item {
     border-radius: 0 19px 19px 0;
     margin-right: 6px;
     margin-left: 0;
 }
 
-.item {
+.rounded .item {
     margin: 2px;
 }
 
-.context-menu .item {
+.rounded .context-menu .item {
     margin: 2px 4px;
 }
 
-.context-menu {
+.rounded .context-menu {
     padding: 2px 0;
 }
 
-#settings-btn {
+.rounded #settings-btn {
     width: 46px;
 }
 
-#login-state {
+.rounded #login-state {
     height: 46px;
 }
 
-.sidebar-toggle {
+.rounded .sidebar-toggle {
     left: 2px;
     top: 2px;
     width: 46px;
