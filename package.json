@@ -29,10 +29,10 @@
     "index.html"
   ],
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^13.0.2",
-    "@rollup/plugin-typescript": "^8.2.3",
+    "@rollup/plugin-node-resolve": "^13.0.4",
+    "@rollup/plugin-typescript": "^8.2.5",
     "@yuuza/webfx": "^1.9.6",
-    "rollup": "^2.53.3",
+    "rollup": "^2.55.1",
     "rollup-plugin-terser": "^7.0.2",
     "tslib": "^2.3.0",
     "typescript": "^4.3.5"
