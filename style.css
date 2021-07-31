@@ -638,6 +638,7 @@ html, body {
     max-height: 1.5em;
     line-height: 1.5;
     overflow: hidden;
+    cursor: pointer;
 }
 
 #sidebar-header, #sidebar-features {
@@ -838,6 +839,10 @@ html, body {
 .lyricsview .span.next {
     text-decoration: underline var(--color-primary) 2px;
     min-width: 1em;
+}
+
+.lyricsview .span {
+    cursor: pointer;
 }
 
 .lyricsview.edit .span.ts::before {
