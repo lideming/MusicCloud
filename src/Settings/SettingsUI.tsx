@@ -56,12 +56,21 @@ class SettingsDialog extends Dialog {
             ui.notification.setEnable(!ui.notification.config.enabled)
                 .then(() => this.updateDom());
         });
-        this.addContent(<ButtonView onActive={(e) => {
-            playerFX.showUI(e);
-        }}>Test: Player FX</ButtonView>);
+        const devFeatures = new View(<div>
+            <ButtonView onActive={(e) => {
+                playerFX.showUI(e);
+            }}>Test: Player FX</ButtonView>
+        </div>);
+        devFeatures.hidden = true;
+        let devClickCount = 0;
+        this.addContent(devFeatures);
         this.addContent(
             <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
-                <div>{'MusicCloud ' + appVersion.currentVersion}</div>
+                <div onclick={() => {
+                    if (++devClickCount == 5) {
+                        devFeatures.hidden = false;
+                    }
+                }}>{'MusicCloud ' + appVersion.currentVersion}</div>
                 <TextBtn onActive={(ev) => {
                     new AboutDialog().show(ev);
                     this.close();
