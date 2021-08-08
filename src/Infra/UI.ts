@@ -110,10 +110,10 @@ export const ui = new class {
     }
     theme = new class {
         all = ['light', 'dark', 'dark-rounded', 'light-rounded'] as const;
-        current: this['all'][number] = 'light-rounded';
+        current: this['all'][number] = 'light';
         timer = new Timer(() => toggleClass(document.body, 'changing-theme', false));
         private rendered = false;
-        siTheme = new SettingItem<this['current']>('mcloud-theme', 'str', this.current)
+        siTheme = new SettingItem<this['current']>('mcloud-theme', 'str', 'light-rounded')
             .render((theme) => {
                 if (this.current !== theme) {
                     this.current = theme;
