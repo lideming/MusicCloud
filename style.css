@@ -827,6 +827,10 @@ html, body {
     font-size: 60%;
 }
 
+.lyricsview .line rt::selection {
+    background: none;
+}
+
 .lyricsview .line.active {
     color: var(--color-text);
 }
@@ -908,6 +912,19 @@ html, body {
         transform: translate(-50%, -100%) scale(1);
         opacity: 1;
     }
+}
+
+.sidebar-toggle,
+.item {
+  border: solid 2px transparent;
+  transition: transform .3s, border .6s;
+}
+
+.sidebar-toggle:active,
+.item:active {
+  border: solid 2px var(--color-bg-dd);
+  transition: transform .07s, border .07s;
+  transform: scale(.97);
 }
 
 .rounded .btn,
