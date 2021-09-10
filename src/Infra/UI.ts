@@ -31,6 +31,7 @@ import { Track } from "../Track/Track";
 import { user } from "../API/User";
 import { playerCore, playingLoopModes } from "../Player/PlayerCore";
 import { uploads } from "../Track/Uploads";
+import { api } from "../API/Api";
 
 export const ui = new class {
     usingKeyboardInput = false;
@@ -522,7 +523,8 @@ export const ui = new class {
                     const track = playerCore.track!;
                     this.show(track.name, {
                         body: I`Artist` + ': ' + track?.artist,
-                        requireInteraction: false
+                        requireInteraction: false,
+                        image: !track?.picurl ? undefined : api.processUrl(track.picurl)
                     });
                 }
             });
