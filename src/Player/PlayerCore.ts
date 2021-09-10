@@ -266,7 +266,10 @@ if (navigator['mediaSession']) {
             if (!track) return;
             mediaSession.metadata = new MediaMetadata({
                 title: track?.name,
-                artist: track?.artist
+                artist: track?.artist,
+                artwork: !track?.picurl ? [] : [
+                    { src: api.processUrl(track?.picurl) }
+                ]
             });
         } catch { }
     });

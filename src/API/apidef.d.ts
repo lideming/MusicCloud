@@ -50,6 +50,7 @@ export namespace Api {
         albumArtist?: string;
         /** URL to audio file */
         url: string;
+        picurl?: string;
         lyrics?: string;
         size?: number;
         length?: number;
