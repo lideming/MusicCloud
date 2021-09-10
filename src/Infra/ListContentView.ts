@@ -130,7 +130,7 @@ export class ListContentView extends ContentView {
             this.listView.dom.style.minHeight = (this._scrollPos + this.scrollBox.dom.offsetHeight) + 'px';
             this.scrollBox.dom.scrollTop = this._scrollPos;
         }
-        this.listView.slowlyLoad(-1, 30, true).then(() => {
+        this.listView.slowlyLoad(-1, 100, true).then(() => {
             this.listView.dom.style.minHeight = '';
         });
         this.header.onScrollboxScroll();
