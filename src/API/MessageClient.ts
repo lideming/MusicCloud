@@ -184,5 +184,5 @@ export interface QueryAnswer {
 
 export type Query =
     | { cmd: 'login', token: string; }
-    | { cmd: 'listenEvent', events: string[], remove: string[]; }
+    | { cmd: 'listenEvent', events?: string[], remove?: string[]; }
     ;
