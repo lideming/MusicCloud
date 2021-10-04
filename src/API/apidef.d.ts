@@ -11,7 +11,9 @@ export namespace Api {
     interface TrackListInfo {
         id: number;
         owner: number;
+        ownerName: string;
         name: string;
+        picurl: string;
         visibility: number;
         version: number;
     }
@@ -110,7 +112,7 @@ export namespace Api {
         /** When GET me */
         serverOptions?: ServerOptions;
 
-        /** When GET me/login */
+        /** When POST me/login */
         token?: string;
     }
 
