@@ -11,9 +11,9 @@ export namespace Api {
     interface TrackListInfo {
         id: number;
         owner: number;
-        ownerName: string;
+        ownerName?: string;
         name: string;
-        picurl: string;
+        picurl?: string;
         visibility: number;
         version: number;
     }
@@ -53,7 +53,7 @@ export namespace Api {
         /** URL to audio file */
         url: string;
         picurl?: string;
-        thumburl? string;
+        thumburl?: string;
         lyrics?: string;
         size?: number;
         length?: number;

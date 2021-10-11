@@ -2,7 +2,7 @@
 
 import { BuildDomExpr, DataUpdatingHelper } from "../Infra/utils";
 import { I, i18n } from "../I18n/I18n";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync } from "../Infra/viewlib";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync, toggleClass } from "../Infra/viewlib";
 import { ListContentView } from "../Infra/ListContentView";
 import { user } from "../API/User";
 import { Api } from "../API/apidef";
@@ -413,6 +413,7 @@ export class TrackViewItem extends ListViewItem {
                                 dompos.textContent = this.track._bind?.position != null
                                     ? (this.track._bind.position + 1).toString() : '';
                             }
+                            toggleClass(dompos, "withpic", !!this.track.thumburl);
                             dompos.hidden = this.noPos && !this.playing;
                         }
                     }

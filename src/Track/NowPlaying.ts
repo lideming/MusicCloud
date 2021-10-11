@@ -61,13 +61,21 @@ class PlayingView extends ContentView {
             { tag: 'div.artist', text: () => playerCore.track?.artist },
         ]
     });
+    picView = new View({tag: 'div.lyrics-bg'});
     lyricsView = new LyricsView();
+    layersView = new View({
+        tag: 'div.lyrics-layers',
+        child: [
+            this.picView,
+            this.lyricsView,
+        ]
+    });
     loading = new LoadingIndicator();
     loadingOuter = new View({ tag: 'div', style: 'flex: 1; align-items: center;', child: this.loading });
     viewToggle = new ViewToggle({
         container: this,
         items: {
-            'normal': this.lyricsView,
+            'normal': this.layersView,
             'loading': this.loadingOuter
         }
     });
@@ -104,13 +112,7 @@ class PlayingView extends ContentView {
             tag: 'div.playingview',
             child: [
                 this.header,
-                // {
-                //     tag: 'div.pic',
-                //     child: [
-                //         { tag: 'div.nopic.no-selection', text: () => I`No album cover` }
-                //     ]
-                // },
-                this.lyricsView
+                this.layersView
             ]
         };
     }
@@ -167,6 +169,8 @@ class PlayingView extends ContentView {
         }
 
         this.viewToggle.setShownKeys(['normal']);
+
+        this.picView.dom.style.backgroundImage = newTrack?.picurl ? 'url(' + api.processUrl(newTrack.picurl) + ')' : '';
 
         this.lyricsView.track = newTrack;
 
