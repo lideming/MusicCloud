@@ -63,19 +63,21 @@ class PlayingView extends ContentView {
     });
     picView = new View({tag: 'div.lyrics-bg'});
     lyricsView = new LyricsView();
-    layersView = new View({
-        tag: 'div.lyrics-layers',
-        child: [
-            this.picView,
-            this.lyricsView,
-        ]
-    });
     loading = new LoadingIndicator();
-    loadingOuter = new View({ tag: 'div', style: 'flex: 1; align-items: center;', child: this.loading });
+    loadingOuter = new View({
+        tag: 'div',
+        child: this.loading,
+        style: {
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+        },
+    });
     viewToggle = new ViewToggle({
         container: this,
         items: {
-            'normal': this.layersView,
+            'normal': this.lyricsView,
             'loading': this.loadingOuter
         }
     });
@@ -87,6 +89,7 @@ class PlayingView extends ContentView {
     constructor() {
         super();
         this.header.lines = this.lyricsView.lines;
+        this.header.dom.style.background = 'none';
         this.lyricsView.scale = this.si.data.lyricsScale;
         this.lyricsView.onFontSizeChanged.add(() => {
             this.si.data.lyricsScale = this.lyricsView.scale;
@@ -111,8 +114,9 @@ class PlayingView extends ContentView {
         return {
             tag: 'div.playingview',
             child: [
+                this.picView,
                 this.header,
-                this.layersView
+                this.lyricsView
             ]
         };
     }
@@ -151,6 +155,8 @@ class PlayingView extends ContentView {
         this.editBtn.hidden = !newTrack;
         this.editBtn.text = newTrack?.canEdit ? I`Edit` : I`Details`;
 
+        this.picView.dom.style.backgroundImage = newTrack?.thumburl ? 'url(' + api.processUrl(newTrack.thumburl) + ')' : '';
+
         this.loadingOuter.dom.remove();
 
         if (newTrack && !newTrack.isLyricsGotten()) {
@@ -169,8 +175,6 @@ class PlayingView extends ContentView {
         }
 
         this.viewToggle.setShownKeys(['normal']);
-
-        this.picView.dom.style.backgroundImage = newTrack?.picurl ? 'url(' + api.processUrl(newTrack.picurl) + ')' : '';
 
         this.lyricsView.track = newTrack;
 

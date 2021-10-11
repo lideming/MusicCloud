@@ -3,7 +3,7 @@ lockfileVersion: 5.3
 specifiers:
   '@rollup/plugin-node-resolve': ^13.0.4
   '@rollup/plugin-typescript': ^8.2.5
-  '@yuuza/webfx': ^1.9.6
+  '@yuuza/webfx': ^1.9.7
   rollup: ^2.56.2
   rollup-plugin-terser: ^7.0.2
   tslib: ^2.3.1
@@ -12,7 +12,7 @@ specifiers:
 devDependencies:
   '@rollup/plugin-node-resolve': 13.0.4_rollup@2.56.2
   '@rollup/plugin-typescript': 8.2.5_5f9d52eb8f5b9c5f8da2582f59355eb7
-  '@yuuza/webfx': 1.9.6
+  '@yuuza/webfx': 1.9.7
   rollup: 2.56.2
   rollup-plugin-terser: 7.0.2_rollup@2.56.2
   tslib: 2.3.1
@@ -97,8 +97,8 @@ packages:
       '@types/node': 16.6.0
     dev: true
 
-  /@yuuza/webfx/1.9.6:
-    resolution: {integrity: sha512-cfo6yZdvBocLWoVefs1wsA1Hhb35Gj4AJJEXAO+VIQyX7r8X1slo3cGH71mKh+oXiyBD5Bl6Q+TPxlyXe4cGNg==}
+  /@yuuza/webfx/1.9.7:
+    resolution: {integrity: sha512-nSSikNv7p8xhJWX6ji+5gcohEVMlRWcYqAI6RGxA9ApIpTVLn6tIHTuhEylE31eBWWwuxl9EZRpZhRCwAE46uQ==}
     dev: true
 
   /ansi-styles/3.2.1:
