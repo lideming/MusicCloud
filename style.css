@@ -438,10 +438,31 @@ html, body {
     contain: content;
 }
 
-.trackitem .pos {
+.trackitem .picbox {
+    display: inline-block;
+    position: relative;
     text-align: center;
-    flex: 2em;
+    flex: 3em 0 0;
+    height: 3em;
+    margin-right: .5em;
+    background-color: var(--color-bg-f8);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.trackitem .pos {
+    display: inline-block;
+    text-align: center;
     color: var(--color-text-gray);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.trackitem .pos.withpic {
+    text-shadow: 0 0 5px var(--color-bg);
 }
 
 .trackitem .pos .icon {
@@ -504,13 +525,13 @@ html, body {
     .trackitem.uploads-item .name, .trackitem.uploads-item .uploads-state {
         display: block;
         margin: 3px 10px;
-        margin-left: 3em;
+        margin-left: 4em;
         width: auto;
     }
-    .trackitem .pos {
+    .trackitem .picbox {
         position: absolute;
-        margin: 3px;
-        width: 2em;
+        width: 3em;
+        margin-right: 0;
     }
     .trackitem.uploads-item.state-done .uploads-state {
         display: none;
@@ -936,6 +957,10 @@ html, body {
 .rounded .dialog,
 .rounded .upload-area {
     border-radius: 19px;
+}
+
+.rounded .trackitem .picbox {
+    border-radius: 8px;
 }
 
 .rounded .input-text {

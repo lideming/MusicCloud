@@ -53,6 +53,7 @@ export namespace Api {
         /** URL to audio file */
         url: string;
         picurl?: string;
+        thumburl? string;
         lyrics?: string;
         size?: number;
         length?: number;

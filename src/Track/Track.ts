@@ -16,6 +16,7 @@ export class Track {
     get artist() { return this.infoObj!.artist; }
     get url() { return this.infoObj!.url; }
     get picurl() { return this.infoObj!.picurl; }
+    get thumburl() { return this.infoObj!.thumburl; }
     get files() { return this.infoObj!.files; }
     get length() { return this.infoObj!.length; }
     get size() { return this.infoObj!.size; }

@@ -396,15 +396,25 @@ export class TrackViewItem extends ListViewItem {
             tabIndex: 0,
             child: [
                 {
-                    tag: 'span.pos', update: (dompos) => {
-                        if (this.playing) {
-                            clearChildren(dompos);
-                            dompos.appendChild(new Icon({icon: svgPlayArrow}).dom);
-                        } else if (!this.noPos) {
-                            dompos.textContent = this.track._bind?.position != null
-                                ? (this.track._bind.position + 1).toString() : '';
+                    tag: 'div.picbox', update: (dompic) => {
+                        if (this.track.thumburl) {
+                            dompic.style.backgroundImage = 'url(' + JSON.stringify(api.processUrl(this.track.thumburl)) + ')';
+                        } else {
+                            dompic.style.backgroundImage = '';
                         }
-                        dompos.hidden = this.noPos && !this.playing;
+                    },
+                    child: {
+                        tag: 'span.pos',
+                        update: (dompos) => {
+                            if (this.playing) {
+                                clearChildren(dompos);
+                                dompos.appendChild(new Icon({icon: svgPlayArrow}).dom);
+                            } else if (!this.noPos) {
+                                dompos.textContent = this.track._bind?.position != null
+                                    ? (this.track._bind.position + 1).toString() : '';
+                            }
+                            dompos.hidden = this.noPos && !this.playing;
+                        }
                     }
                 },
                 { tag: 'span.name', text: () => this.track.name },
@@ -456,6 +466,12 @@ export class TrackViewItem extends ListViewItem {
                         }
                     }));
                 });
+            }
+            if (this.track.picurl) {
+                m.add(new MenuLinkItem({
+                    text: I`Show picture`,
+                    link: api.processUrl(this.track.picurl),
+                }))
             }
         }
         if (this.track.canEdit) [0, 1].forEach(visi => {
