@@ -397,11 +397,11 @@ export class TrackViewItem extends ListViewItem {
             child: [
                 {
                     tag: 'div.picbox', update: (dompic) => {
+                        let bg = '';
                         if (this.track.thumburl) {
-                            dompic.style.backgroundImage = 'url(' + JSON.stringify(api.processUrl(this.track.thumburl)) + ')';
-                        } else {
-                            dompic.style.backgroundImage = '';
+                            bg = 'url(' + JSON.stringify(api.processUrl(this.track.thumburl)) + ')';
                         }
+                        if (bg != dompic.style.backgroundImage) dompic.style.backgroundImage = bg;
                     },
                     child: {
                         tag: 'span.pos',
