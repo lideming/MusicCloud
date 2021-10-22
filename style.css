@@ -961,14 +961,15 @@ html, body {
 .sidebar-toggle,
 .item {
   border: solid 2px transparent;
-  transition: transform .3s, border .6s;
+  transition: transform .3s, border .6s, opacity .3s;
 }
 
 .sidebar-toggle:active,
 .item:active {
   border: solid 2px var(--color-bg-dd);
-  transition: transform .07s, border .07s;
+  transition: transform .07s, border .07s, opacity .07s;
   transform: scale(.97);
+  opacity: .7;
 }
 
 .rounded .btn,
