@@ -97,6 +97,8 @@ export namespace Api {
         id?: number;
         /** When GET */
         lists?: TrackListInfo[];
+        /** When GET */
+        avatar?: string;
 
         /** When PUT */
         listids?: number[];

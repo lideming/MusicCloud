@@ -162,7 +162,7 @@ export const api = new class {
     getTrack(id: number) { return this.get('tracks/' + id) as Promise<Api.Track>; }
     getList(id: number) { return this.get('lists/' + id) as Promise<Api.Track>; }
     processUrl(url: string) {
-        if (url.match('^(https?:/)?/')) return url;
+        if (!url || url.match('^(https?:/)?/')) return url;
         if (this.storageUrlBase && url.startsWith('storage/'))
             return this.storageUrlBase + url.substr(8);
         return this.baseUrl + url;

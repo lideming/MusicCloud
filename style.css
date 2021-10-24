@@ -1047,3 +1047,22 @@ html, body {
 .trackitem .duration {
     text-align: center;
 }
+
+.user-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px;
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 40px;
+    background: var(--color-bg-cc);
+    margin-right: 24px;
+}
+
+.user-name {
+    font-size: 24px;
+}

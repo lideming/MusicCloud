@@ -3,12 +3,12 @@
 import { SettingItem, Callbacks, Action, TextCompositionWatcher } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { listIndex } from "../Track/ListIndex";
-import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply } from "../Infra/viewlib";
+import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply, Ref } from "../Infra/viewlib";
 import { Api } from "./apidef";
 import { ui } from "../Infra/UI";
 import { api } from "./Api";
 import { playerCore } from "../Player/PlayerCore";
-import { uploads } from "../Track/Uploads";
+import { FileSelector, uploads } from "../Track/Uploads";
 import { TrackList } from "../Track/TrackList";
 import { Track } from "../Track/Track";
 import { settingsUI } from "../Settings/SettingsUI";
@@ -19,6 +19,7 @@ export const user = new class User {
         username: null! as string,
         passwd: undefined as (string | undefined),
         token: null! as string,
+        avatar: null as string | null,
         lastBaseUrl: null! as string
     });
     loginDialog: LoginDialog;
@@ -126,6 +127,7 @@ export const user = new class User {
         var switchingUser = this.info.username != info.username;
         this.info.id = info.id;
         this.info.username = info.username;
+        this.info.avatar = info.avatar ?? null;
         this.info.passwd = undefined;
         if (info.token) this.info.token = info.token;
         this.info.lastBaseUrl = api.baseUrl;
@@ -376,11 +378,43 @@ class MeDialog extends Dialog {
     btnChangePassword = new ButtonView({ text: I`Change password`, type: 'big' });
     btnSwitch = new ButtonView({ text: I`Switch user`, type: 'big' });
     btnLogout = new ButtonView({ text: I`Logout`, type: 'big' });
+    btnChangeAvatar = new ButtonView({ text: I`Change avatar`, type: 'normal' });
+    fileSelector = new FileSelector({ accept: 'image/*', multiple: false });
     constructor() {
         super();
         var username = user.info.username;
-        this.title = I`User ${username}`;
-        this.addContent(new View({ tag: 'p', textContent: I`You've logged in as "${username}".` }));
+        this.title = I`User`;
+        const domimg = new Ref<HTMLImageElement>();
+        this.addContent(new View(
+            {
+                tag: 'div.user-info',
+                child: [
+                    { tag: 'img.user-avatar', ref: domimg, src: api.processUrl(user.info.avatar!) },
+                    {
+                        tag: 'div',
+                        child: [
+                            { tag: 'div.user-name', text: user.info.username },
+                            this.btnChangeAvatar,
+                        ]
+                    },
+                    this.fileSelector,
+                ]
+            }
+        ));
+        this.btnChangeAvatar.toggleClass('user-change-avatar', true);
+        this.btnChangeAvatar.onActive.add(() => {
+            this.fileSelector.open();
+        });
+        this.fileSelector.onfile = async (file) => {
+            await api.put({
+                path: 'users/me/avatar',
+                mode: 'raw',
+                obj: await file.arrayBuffer()
+            });
+            const { avatar } = await api.get("users/me");
+            user.info.avatar = avatar;
+            domimg.value!.src = api.processUrl(user.info.avatar!);
+        };
         if (user.isAdmin)
             this.addContent(new View({ tag: 'p', textContent: I`You are admin.` }));
         this.addContent(this.btnChangePassword);
