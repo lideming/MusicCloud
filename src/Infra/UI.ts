@@ -218,6 +218,7 @@ export const ui = new class {
         btnPrev = new View(document.getElementById('btn-prevtrack')!);
         btnNext = new View(document.getElementById('btn-nexttrack')!);
         btnVolume: VolumeButton;
+        canvasLoudness: View<HTMLCanvasElement> | null = null;
 
         state: typeof playerCore['state'];
 
@@ -236,7 +237,10 @@ export const ui = new class {
             this.btnPrev.onActive.add(() => playerCore.prev());
             this.btnNext.onActive.add(() => playerCore.next());
             playerCore.onLoopModeChanged.add(() => this.updateLoopMode())();
-            playerCore.onTrackChanged.add(() => this.updateLoopMode())();
+            playerCore.onTrackChanged.add(() => {
+                this.updateLoopMode();
+                this.updateLoudnessMap();
+            })();
             playerCore.onStateChanged.add(() => {
                 this.setState(playerCore.state);
                 this.setProg(playerCore.currentTime, playerCore.duration);
@@ -278,6 +282,78 @@ export const ui = new class {
             this.btnLoop.text = i18n.get('loopmode_' + playerCore.loopMode);
             this.btnNext.toggleClass('disabled', !playerCore.getNextTrack(1));
             this.btnPrev.toggleClass('disabled', !playerCore.getNextTrack(-1));
+        }
+        async updateLoudnessMap() {
+            const track = playerCore.track;
+            var louds = await track?._loudmap;
+            if (track && !louds) {
+                if (this.canvasLoudness) {
+                    const ctx = this.canvasLoudness.dom.getContext('2d')!;
+                    const { width, height } = this.canvasLoudness.dom;
+                    ctx.clearRect(0, 0, width, height);
+                }
+                louds = await (
+                    (async () => {
+                        var resp = await api.get(`tracks/${track.id}/loudnessmap`) as Response;
+                        if (!resp.ok) return null;
+                        var ab = await resp.arrayBuffer();
+                        return track._loudmap = new Uint8Array(ab);
+                    })()
+                );
+            }
+            if (playerCore.track !== track) return;
+            if (louds && louds.length > 20) {
+                const [width, height] = [Math.min(1024, louds.length / 4), 32];
+                if (!this.canvasLoudness) {
+                    this.canvasLoudness = new View({ tag: 'canvas.loudness', width, height });
+                    bottomBar.progressBar.appendView(this.canvasLoudness);
+                }
+                this.canvasLoudness.dom.width = width;
+                const scale = louds.length / width;
+                const scaleY = height / 256 * (256 / Math.log(256));
+                const ctx = this.canvasLoudness.dom.getContext('2d')!;
+                ctx.clearRect(0, 0, width, height);
+                ctx.beginPath();
+                const peakAvgs: number[] = [];
+                for (let i = 0; i < width; i += 1) {
+                    const begin = Math.floor(i * scale);
+                    const end = Math.floor(i * scale + scale);
+                    let sum = 0;
+                    for (let i = begin; i < end; i++) {
+                        sum += louds[i];
+                    }
+                    peakAvgs.push(sum / scale);
+                }
+
+                // scale after log()
+                const tmp = [...peakAvgs].filter(x => x > 0).sort((a, b) => a - b);
+                const low = Math.log(tmp[Math.floor(tmp.length * 0.01)]) * scaleY;
+                const high = Math.log(tmp[Math.floor(tmp.length * 0.99)]) * scaleY;
+                const scaleY2 = height * (0.95 - 0.2) / (high - low);
+                const offsetY2 = (height * 0.2) - (low * scaleY2);
+
+                ctx.moveTo(-1, height);
+                for (let i = 0; i < width; i++) {
+                    let y = peakAvgs[i];
+                    if (y <= 0) y = 0;
+                    else {
+                        y = Math.log(y);
+                        y = y * scaleY;
+                        y *= scaleY2;
+                        y += offsetY2;
+                    }
+                    ctx.lineTo(i, height - y);
+                    ctx.lineTo(i + 1, height - y);
+                }
+                ctx.lineTo(width, height);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+            } else {
+                if (this.canvasLoudness) {
+                    bottomBar.progressBar.removeView(this.canvasLoudness);
+                    this.canvasLoudness = null;
+                }
+            }
         }
         onProgressSeeking(cb: (percent: number) => void) {
             var call = (offsetX) => { cb(numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };

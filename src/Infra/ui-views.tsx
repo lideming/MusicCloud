@@ -35,6 +35,11 @@ export class Sidebar extends View {
 }
 
 export class BottomBar extends View {
+    progressBar = new View(
+        <div class="btn-progress" id="progressbar">
+            <div class="btn-fill" id="progressbar-fill"></div>
+        </div>
+    );
     createDom() {
         return (
             <div id="bottombar">
@@ -42,9 +47,7 @@ export class BottomBar extends View {
                     <div class="no-selection" id="progressbar-label-cur">--:--</div>
                     <div class="no-selection" id="progressbar-label-total">--:--</div>
                 </div>
-                <div class="btn-progress" id="progressbar">
-                    <div class="btn-fill" id="progressbar-fill"></div>
-                </div>
+                {this.progressBar}
                 <div id="bottombar-btns" class="flexbox-h">
                     <div id="btn-play" class="btn i18ne" tabindex="0">Play</div>
                     <div id="btn-prevtrack" class="btn i18ne" tabindex="0">prev_track</div>

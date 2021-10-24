@@ -44,7 +44,9 @@ export const api = new class {
             headers: { ...this.getHeaders(options) }
         });
         await this.checkResp(options, resp);
-        return await resp.json();
+        if (resp.headers.get("Content-Type")?.startsWith("application/json"))
+            return await resp.json();
+        return resp;
     }
     async post(arg:
         { method?: 'POST' | 'PUT' | 'DELETE'; }

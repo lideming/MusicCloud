@@ -28,6 +28,7 @@ export class Track {
         position?: number;
         list?: TrackList;
     } = undefined;
+    _loudmap: Uint8Array | Promise<Uint8Array | null> | null = null;
     get canEdit() { return user.role == 'admin' || user.info.id == this.owner; }
     constructor(init: Partial<Track>) {
         objectApply(this, init);
