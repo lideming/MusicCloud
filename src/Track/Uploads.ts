@@ -444,7 +444,7 @@ export class FileSelector extends View {
     createDom() {
         return {
             tag: 'input', type: 'file', ref: this.domfile,
-            style: 'visibility: collapse; height: 0;',
+            style: 'display: none; height: 0;',
             accept: this.accept,
             multiple: this.multiple,
         };
