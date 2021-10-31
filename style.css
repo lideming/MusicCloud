@@ -153,6 +153,7 @@ html, body {
     top: 0;
     left: 0;
     width: 200px;
+    overflow-y: auto;
     background: var(--color-bg-f8);
     border-right: 1px solid var(--color-bg-cc);
     touch-action: pan-y pinch-zoom;
