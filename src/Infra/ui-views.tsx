@@ -5,6 +5,7 @@ import { I } from "../I18n/I18n";
 import svgSettings from "../../resources/settings-24px.svg";
 import { settingsUI } from "../Settings/SettingsUI";
 import { ui } from "./UI";
+import { fadeout, FadeoutResult } from "@yuuza/webfx";
 
 export class MainContainer extends View {
     sidebar = new Sidebar();
@@ -106,6 +107,10 @@ export class ContentView extends View {
 
     _lastRenderedLanguage = '';
 
+    postCreateDom() {
+        super.postCreateDom();
+        this.toggleClass('contentview', true);
+    }
     onShow() {
         this._isVisible = true;
         if (this.domCreated && this._lastRenderedLanguage != ui.lang.curLang) {
@@ -123,6 +128,19 @@ export class ContentView extends View {
     }
     onDomRemoved() { }
     onSidebarItemReactived() { }
+
+    fadeIn() {
+        this._fadeout?.cancel();
+    }
+
+    _fadeout: FadeoutResult | null = null;
+    fadeOut() {
+        this._fadeout = fadeout(this.dom, { remove: false }).onFinished(() => {
+            this.onRemove();
+            this.removeFromParent();
+            this.onDomRemoved();
+        });
+    }
 
     _shownEvents: EventRegistrations | null = null;
     get shownEvents() { return this._shownEvents ? this._shownEvents : (this._shownEvents = new EventRegistrations()); }

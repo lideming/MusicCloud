@@ -292,14 +292,13 @@ export const ui = new class {
                     const { width, height } = this.canvasLoudness.dom;
                     ctx.clearRect(0, 0, width, height);
                 }
-                louds = await (
-                    (async () => {
-                        var resp = await api.get(`tracks/${track.id}/loudnessmap`) as Response;
-                        if (!resp.ok) return null;
-                        var ab = await resp.arrayBuffer();
-                        return track._loudmap = new Uint8Array(ab);
-                    })()
-                );
+                track._loudmap = (async () => {
+                    var resp = await api.get(`tracks/${track.id}/loudnessmap`) as Response;
+                    if (!resp.ok) return null;
+                    var ab = await resp.arrayBuffer();
+                    return track._loudmap = new Uint8Array(ab);
+                })();
+                louds = await track._loudmap;
             }
             if (playerCore.track !== track) return;
             if (louds && louds.length > 20) {
@@ -528,21 +527,19 @@ export const ui = new class {
             const cur = this.current;
             this.current = null;
             if (!cur) return;
-            cur.onRemove();
-            if (cur.dom) {
-                this.container.removeView(cur);
-                cur.onDomRemoved();
-            }
+            cur.fadeOut();
         }
         setCurrent(view: views.ContentView | null) {
             if (view === this.current) return;
+            this.container.toggleClass('content-animation-reverse', router.wasBacked);
             this.removeCurrent();
             if (view) {
-                view.onShow();
-                if (view.dom) {
+                if (!view.parentView) {
+                    view.onShow();
                     this.container.appendView(view);
                     view.onDomInserted();
                 }
+                view.fadeIn();
             }
             this.current = view;
         }

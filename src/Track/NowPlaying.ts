@@ -22,13 +22,13 @@ export const nowPlaying = new class {
         router.addRoute({
             path: ['tracks'],
             onNav: (arg) => {
-                router.nav(['track', ...arg.remaining], 'replace');
+                router.nav(['track', ...arg.remaining], { pushState: 'replace' });
             }
         });
         router.addRoute({
             path: ['track'],
             onNav: (arg) => {
-                router.nav(['nowplaying'], false);
+                router.nav(['nowplaying'], { pushState: false });
                 if (arg.remaining[0] != playerCore.track?.id as any) { // compare string to number
                     api.get('tracks/' + arg.remaining[0]).then((t: Api.Track) => {
                         playerCore.setTrack(new Track({ infoObj: t }));
@@ -61,7 +61,7 @@ class PlayingView extends ContentView {
             { tag: 'div.artist', text: () => playerCore.track?.artist },
         ]
     });
-    picView = new View({tag: 'div.lyrics-bg'});
+    picView = new View({ tag: 'div.lyrics-bg' });
     lyricsView = new LyricsView();
     loading = new LoadingIndicator();
     loadingOuter = new View({

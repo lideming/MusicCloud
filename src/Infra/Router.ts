@@ -16,16 +16,17 @@ export const router = new class {
     routes: Route[] = [];
     current: string[];
     currentStr: string;
+    wasBacked = false;
     onNavCompleted = new Callbacks<(arg: { path: string[]; }) => void>();
     init() {
         window.addEventListener('popstate', (ev) => {
-            this.navByLocation();
+            this.navByLocation(true);
         });
         this.navByLocation();
     }
-    private navByLocation() {
+    private navByLocation(back = false) {
         var hash = window.location.hash;
-        this.nav(hash ? hash.substr(1) : '', false);
+        this.nav(hash ? hash.substr(1) : '', { pushState: false, back });
     }
     addRoute(arg: Route) {
         this.routes.push(arg);
@@ -37,8 +38,9 @@ export const router = new class {
             this.nav([...arg.path]);
         });
     }
-    nav(path: string | string[], pushState?: boolean | "replace") {
+    nav(path: string | string[], options?: { pushState?: boolean | "replace", back?: boolean; }) {
         if (typeof path === 'string') path = parsePath(path);
+        // this.wasBacked = options?.back ?? false;
         for (const r of this.routes) {
             if (match(path, r)) {
                 if (r.contentView) ui.content.setCurrent(r.contentView());
@@ -50,10 +52,10 @@ export const router = new class {
         var strPath = path.map(x => encodeURIComponent(x)).join('/');
         this.current = path;
         this.currentStr = strPath;
-        if (pushState === undefined || pushState) {
+        if (options?.pushState === undefined || options.pushState) {
             const args = [{}, strPath, '#' + strPath] as const;
-            if (pushState == "replace") {
-                window.history.replaceState(...args)
+            if (options?.pushState == "replace") {
+                window.history.replaceState(...args);
             } else {
                 window.history.pushState(...args);
             }
