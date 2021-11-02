@@ -187,7 +187,7 @@ export class ContentHeader extends View {
             if (ev.eventPhase == Event.AT_TARGET) {
                 this.onScrollboxScroll();
             }
-        });
+        }, { passive: true });
     }
     onScrollboxScroll() {
         setScrollableShadow(this.dom, this.scrollbox?.scrollTop ?? 0);

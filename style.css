@@ -3,7 +3,7 @@
 }
 
 html {
-    touch-action: manipulation;
+    touch-action: auto;
 }
 
 body {
@@ -156,7 +156,6 @@ html, body {
     overflow-y: auto;
     background: var(--color-bg-f8);
     border-right: 1px solid var(--color-bg-cc);
-    touch-action: pan-y pinch-zoom;
     will-change: transform, scroll-position;
     transition: transform .3s, width .3s;
     transform: translate(0, 0);
@@ -293,6 +292,7 @@ html, body {
     animation: fadein;
     animation: contentview-fading-in 0.3s;
     transform: translate(0, 0);
+    will-change: transform;
 }
 
 .contentview.fading-out {
