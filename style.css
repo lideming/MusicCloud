@@ -229,6 +229,20 @@ html, body {
     overflow: hidden;
 }
 
+#login-state .user-avatar {
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    margin-right: -10px;
+    flex: 0 0 0;
+}
+
+#login-state .user-name {
+    overflow: hidden;
+    font-size: 16px;
+    flex: 1 1;
+}
+
 #settings-btn {
     display: flex;
     align-items: center;

@@ -484,7 +484,11 @@ export const ui = new class {
     sidebarLogin = new class {
         container = mainContainer.sidebar.header;
         loginState = new views.SidebarItem();
+        loginName = new TextView({tag: 'span.user-name'});
+        loginAvatar = new View({tag: 'img.user-avatar'});
         init() {
+            this.loginState.addView(this.loginName, 0);
+            this.loginState.addView(this.loginAvatar, 1);
             this.container.addView(this.loginState, 0);
             this.loginState.dom.id = 'login-state';
             this.loginState.onActive.add((ev) => {
@@ -492,8 +496,9 @@ export const ui = new class {
             });
         }
         update() {
-            var text = this.loginState.text;
+            var text = this.loginName.text;
             var username = user.pendingInfo?.username ?? user.info.username;
+            var avatar = api.processUrl(user.info?.avatar) ?? '';
             if (username) {
                 text = username;
                 if (user.state === 'logging') text += I` (logging in...)`;
@@ -503,7 +508,9 @@ export const ui = new class {
                 if (user.state === 'logging') text = I`(logging...)`;
                 else text = I`Guest (click to login)`;
             }
-            this.loginState.updateWith({ text });
+            this.loginName.text = text;
+            this.loginAvatar.hidden = !avatar;
+            (this.loginAvatar.dom as HTMLImageElement).src = avatar;
         }
     };
     sidebarList = new class {
