@@ -494,6 +494,8 @@ html, body {
     display: flex;
     align-items: center;
     contain: content;
+    height: 4.5em;
+    contain: strict;
 }
 
 .trackitem .picbox {
@@ -552,6 +554,14 @@ html, body {
     flex: 1 1 40%;
 }
 
+.trackitem .name, .trackitem .artist {
+    overflow: hidden;
+    display: block;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
 .trackitem .artist, #bottombar-trackinfo .artist {
     color: var(--color-text-gray);
 }
@@ -559,6 +569,7 @@ html, body {
 .trackitem .duration {
     color: var(--color-text-gray);
     display: none;
+    text-align: center;
 }
 
 .trackitem.uploads-item .uploads-state {
@@ -588,14 +599,15 @@ html, body {
     .trackitem {
         display: block;
         position: relative;
-        padding: 5px;
+        padding: .4em;
+        height: 4em;
     }
     .trackitem .name, .trackitem .artist,
     .trackitem.uploads-item .name, .trackitem.uploads-item .uploads-state {
-        display: block;
         margin: 3px 10px;
         margin-left: 4em;
         width: auto;
+        -webkit-line-clamp: 1;
     }
     .trackitem .picbox {
         position: absolute;
@@ -1093,17 +1105,6 @@ html, body {
 
 .sidebar-toggle:hover {
     background: var(--color-bg-ee);
-}
-
-.trackitem .name, .trackitem .artist {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;  
-}
-
-.trackitem .duration {
-    text-align: center;
 }
 
 .user-info {
