@@ -483,9 +483,9 @@ export const ui = new class {
     };
     sidebarLogin = new class {
         container = mainContainer.sidebar.header;
-        loginState = new views.SidebarItem();
-        loginName = new TextView({tag: 'span.user-name'});
-        loginAvatar = new View({tag: 'img.user-avatar'});
+        loginState = new View({ tag: 'div.item.no-selection', tabIndex: 0 });
+        loginName = new TextView({ tag: 'span.user-name' });
+        loginAvatar = new View({ tag: 'img.user-avatar' });
         init() {
             this.loginState.addView(this.loginAvatar, 0);
             this.loginState.addView(this.loginName, 1);
