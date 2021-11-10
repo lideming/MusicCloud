@@ -61,7 +61,6 @@ class PlayingView extends ContentView {
             { tag: 'div.artist', text: () => playerCore.track?.artist },
         ]
     });
-    picView = new View({ tag: 'div.lyrics-bg' });
     lyricsView = new LyricsView();
     loading = new LoadingIndicator();
     loadingOuter = new View({
@@ -114,7 +113,6 @@ class PlayingView extends ContentView {
         return {
             tag: 'div.playingview',
             child: [
-                this.picView,
                 this.header,
                 this.lyricsView
             ]
@@ -154,8 +152,6 @@ class PlayingView extends ContentView {
         let newLyrics = '';
         this.editBtn.hidden = !newTrack;
         this.editBtn.text = newTrack?.canEdit ? I`Edit` : I`Details`;
-
-        this.picView.dom.style.backgroundImage = newTrack?.thumburl ? 'url(' + api.processUrl(newTrack.thumburl) + ')' : '';
 
         this.loadingOuter.dom.remove();
 

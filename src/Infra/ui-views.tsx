@@ -9,7 +9,12 @@ import { fadeout, FadeoutResult } from "@yuuza/webfx";
 
 export class MainContainer extends View {
     sidebar = new Sidebar();
-    contentOuter = new View(<main id="content-outer"></main>);
+    bgView = new View({ tag: 'div.content-bg' });
+    contentOuter = new View(
+        <main id="content-outer">
+            {this.bgView}
+        </main>
+    );
     createDom() {
         return (
             <div id="main-container" class="no-transition">

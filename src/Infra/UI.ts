@@ -39,6 +39,7 @@ export const ui = new class {
         this.addErrorListener();
         this.lang.init();
         this.sidebar.init();
+        this.contentBg.init();
         this.bottomBar.init();
         this.trackinfo.init();
         this.playerControl.init();
@@ -549,6 +550,15 @@ export const ui = new class {
                 view.fadeIn();
             }
             this.current = view;
+        }
+    };
+    contentBg = new class {
+        bgView = mainContainer.bgView;
+        init() {
+            playerCore.onTrackChanged.add(() => {
+                const newTrack = playerCore.track;
+                this.bgView.dom.style.backgroundImage = newTrack?.thumburl ? 'url(' + api.processUrl(newTrack.thumburl) + ')' : '';
+            });
         }
     };
     windowTitle = new class {
