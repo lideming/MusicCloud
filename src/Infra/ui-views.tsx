@@ -93,7 +93,7 @@ export class SidebarItem extends ListViewItem {
 export class SettingsBtn extends View {
     createDom() {
         return (
-            <div class="item" id="settings-btn">
+            <div class="item" id="settings-btn" tabIndex="0">
                 <Icon icon={svgSettings} />
             </div>
         );

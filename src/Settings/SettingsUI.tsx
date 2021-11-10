@@ -18,8 +18,29 @@ export const settingsUI = new class {
     }
 };
 
+const themes = ['light', 'dark'];
+const styles = ['', '-rounded'];
+
+function loopInArray<T>(arr: T[], current: T) {
+    return arr[(arr.indexOf(current) + 1) % arr.length];
+}
+
+function getThemeAndStyle() {
+    let [theme, style] = ui.theme.current.split('-');
+    style = style ? '-' + style : '';
+    return { theme, style };
+}
+
+function setThemeAndStyle(options: { theme?: string, style?: string; }) {
+    const current = getThemeAndStyle();
+    const theme = options.theme ?? current.theme;
+    const style = options.style ?? current.style;
+    ui.theme.set(`${theme}${style}` as any);
+}
+
 class SettingsDialog extends Dialog {
     btnSwitchTheme = new ButtonView({ type: 'big' });
+    btnSwitchStyle = new ButtonView({ type: 'big' });
     btnSwitchLang = new ButtonView({ type: 'big' });
     inputPreferBitrate = new LabeledInput();
     btnNotification = new ButtonView({ type: 'big' });
@@ -28,8 +49,14 @@ class SettingsDialog extends Dialog {
         super();
         this.addContent(this.btnSwitchTheme);
         this.btnSwitchTheme.onActive.add(() => {
-            const idx = (ui.theme.all.indexOf(ui.theme.current) + 1) % ui.theme.all.length;
-            ui.theme.set(ui.theme.all[idx]);
+            const current = getThemeAndStyle();
+            setThemeAndStyle({ theme: loopInArray(themes, current.theme) });
+            this.updateDom();
+        });
+        this.addContent(this.btnSwitchStyle);
+        this.btnSwitchStyle.onActive.add(() => {
+            const current = getThemeAndStyle();
+            setThemeAndStyle({ style: loopInArray(styles, current.style) });
             this.updateDom();
         });
         this.addContent(this.btnSwitchLang);
@@ -85,7 +112,9 @@ class SettingsDialog extends Dialog {
         this.title = I`Settings`;
         this.btnClose.updateWith({ text: I`Close` });
         super.updateDom();
-        this.btnSwitchTheme.text = I`UI theme: ${i18n.get('colortheme_' + ui.theme.current)}`;
+        const { theme, style } = getThemeAndStyle();
+        this.btnSwitchTheme.text = I`UI color: ${i18n.get('colortheme_' + theme)}`;
+        this.btnSwitchStyle.text = I`UI style: ${i18n.get('styletheme_' + style)}`;
         this.btnSwitchLang.text = I`Language: ${I`English`}`;
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
