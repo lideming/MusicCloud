@@ -21,7 +21,12 @@ export class MainContainer extends View {
 }
 
 export class Sidebar extends View {
-    header = new View(<div id="sidebar-header"><SettingsBtn /></div>);
+    header = new View(
+        <div id="sidebar-header">
+            {new View(<div style="flex: 1"></div>)}
+            <SettingsBtn />
+        </div>
+    );
     features = new ListView(<div id="sidebar-features"></div>);
     list = new View(<div id="sidebar-list"></div>);
     createDom() {

@@ -487,8 +487,8 @@ export const ui = new class {
         loginName = new TextView({tag: 'span.user-name'});
         loginAvatar = new View({tag: 'img.user-avatar'});
         init() {
-            this.loginState.addView(this.loginName, 0);
-            this.loginState.addView(this.loginAvatar, 1);
+            this.loginState.addView(this.loginAvatar, 0);
+            this.loginState.addView(this.loginName, 1);
             this.container.addView(this.loginState, 0);
             this.loginState.dom.id = 'login-state';
             this.loginState.onActive.add((ev) => {
