@@ -928,7 +928,15 @@ html, body {
     background-repeat: no-repeat;
     -webkit-filter: blur(1.5vmax);
     filter: blur(1.5vmax);
-    opacity: .3;
+    animation: fadein .3s;
+}
+
+.content-bg-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-bg);
+    opacity: .7;
 }
 
 .playingview .lyricsview, .lyricsedit .lyricsview {

@@ -9,10 +9,9 @@ import { fadeout, FadeoutResult } from "@yuuza/webfx";
 
 export class MainContainer extends View {
     sidebar = new Sidebar();
-    bgView = new View({ tag: 'div.content-bg' });
     contentOuter = new View(
         <main id="content-outer">
-            {this.bgView}
+            {new View({ tag: 'div.content-bg-overlay' })}
         </main>
     );
     createDom() {
