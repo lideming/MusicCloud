@@ -111,6 +111,25 @@ a {
     background: var(--color-bg-selection);
 }
 
+::-webkit-scrollbar {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-bg-cc);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-bg-dd);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: var(--color-bg-ee);
+}
+
+* {
+    scrollbar-color: var(--color-bg-dd) transparent;
+}
 
 html, body {
     height: 100%;
@@ -166,6 +185,11 @@ html, body {
     transform: translate(0, 0);
     z-index: 1;
     animation: showing .3s;
+    scrollbar-width: thin;
+}
+
+#sidebar::-webkit-scrollbar {
+    width: 8px;
 }
 
 #content-outer {
