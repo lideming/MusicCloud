@@ -101,7 +101,7 @@
                 preload.domLoaded = true;
                 preload.update();
                 // Set the theme ASAP to avoid blinking
-                if (localStorage.getItem('mcloud-theme') === 'dark') {
+                if (['dark', 'dark-rounded'].indexOf(localStorage.getItem('mcloud-theme')) >= 0) {
                     document.body.classList.add('dark');
                     document.getElementById('meta-theme-color').content = 'black';
                 }
@@ -116,7 +116,7 @@
         })();
     </script>
     <!-- End of preload style and script -->
-    <script src="bundle.js?v=1.0.8-2" onload="window.preload && preload.onJsLoad()" defer async></script>
+    <script src="bundle.js?v=1.0.10-2" onload="window.preload && preload.onJsLoad()" defer async></script>
 </head>
 
 <body>
