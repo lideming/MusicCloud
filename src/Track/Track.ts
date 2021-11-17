@@ -6,6 +6,7 @@ import { api } from "../API/Api";
 import { TrackList } from "./TrackList";
 import { lyricsEdit, LyricsSourceEditView } from "../Lyrics/LyricsEdit";
 import { user } from "../API/User";
+import { FileSelector } from "../Infra/viewlib";
 
 /** A track binding with list */
 export class Track {
@@ -107,8 +108,10 @@ export class TrackDialog extends Dialog {
     inputAlbum = new LabeledInput({ label: I`Album` });
     inputAlbumArtist = new LabeledInput({ label: I`Album artist` });
     inputLyrics = new LabeledInputWithLoading({ label: I`Lyrics` });
+    fileSelector = new FileSelector({ accept: 'image/jpeg' });
     btnSave = new TextBtn({ text: I`Save`, right: true });
     btnEditLyrics = new TextBtn({ text: I`Edit Lyrics`, right: true });
+    btnSetPicture = new TextBtn({ text: I`Set Picture`, right: true });
     autoFocus = this.inputName.input;
     compositionWatcher: TextCompositionWatcher;
     constructor() {
@@ -127,7 +130,8 @@ export class TrackDialog extends Dialog {
             this.inputArtist,
             this.inputAlbum,
             this.inputAlbumArtist,
-            this.inputLyrics
+            this.inputLyrics,
+            this.fileSelector,
         ].forEach(x => this.addContent(x));
 
         this.addBtn(this.btnSave);
@@ -137,6 +141,32 @@ export class TrackDialog extends Dialog {
             this.close();
             lyricsEdit.startEdit(this.track, this.inputLyrics.value);
         });
+        this.addBtn(this.btnSetPicture);
+        this.btnSetPicture.onActive.add(() => {
+            this.fileSelector.open();
+        });
+
+        this.fileSelector.onfile = async (file) => {
+            try {
+                this.btnSetPicture.updateWith({ clickable: false, text: I`Uploading...` });
+                let updated = await api.put({
+                    path: `tracks/${this.track.id}/picture`,
+                    mode: 'raw',
+                    obj: await file.arrayBuffer()
+                }) as Api.Track;
+                this.btnSetPicture.updateWith({ clickable: false, text: I`Done` });
+                this.track.updateFromApiTrack(updated);
+                api.onTrackInfoChanged.invoke(updated);
+            } catch (error) {
+                console.error(error);
+                this.btnSetPicture.updateWith({ clickable: false, text: I`Error` });
+            } finally {
+                sleepAsync(2000).then(() => {
+                    this.btnSetPicture.updateWith({ clickable: true, text: I`Set Picture` });
+                });
+            }
+        };
+
         this.compositionWatcher = new TextCompositionWatcher(this.dom);
         this.dom.addEventListener('keydown', (ev) => {
             if (this.track.canEdit

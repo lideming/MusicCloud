@@ -554,21 +554,26 @@ export const ui = new class {
     };
     contentBg = new class {
         bgView: View | null = null;
+        curBg = '';
         init() {
-            playerCore.onTrackChanged.add(() => {
-                const newTrack = playerCore.track;
-                if (newTrack?.thumburl) {
-                    const url = 'url(' + api.processUrl(newTrack.thumburl) + ')';
-                    if (!this.bgView || this.bgView.dom.style.backgroundImage != url) {
-                        const newView = new View({ tag: 'div.content-bg', style: { backgroundImage: url } });
-                        ui.content.container.addView(newView, 0);
-                        this.fadeoutCurrent();
-                        this.bgView = newView;
-                    }
-                } else {
+            playerCore.onTrackChanged.add(() => this.update());
+            api.onTrackInfoChanged.add((t) => t.id === playerCore.track?.id && this.update());
+        }
+
+        update() {
+            const newTrack = playerCore.track;
+            if (newTrack?.thumburl) {
+                const url = 'url(' + api.processUrl(newTrack.thumburl) + ')';
+                if (this.curBg != url) {
+                    const newView = new View({ tag: 'div.content-bg', style: { backgroundImage: url } });
+                    ui.content.container.addView(newView, 0);
                     this.fadeoutCurrent();
+                    this.bgView = newView;
+                    this.curBg = url;
                 }
-            });
+            } else {
+                this.fadeoutCurrent();
+            }
         }
 
         fadeoutCurrent() {
@@ -577,6 +582,7 @@ export const ui = new class {
                 fadeout(oldbg.dom, { remove: false }).onFinished(() => {
                     oldbg!.removeFromParent();
                 });
+                this.curBg = '';
             }
         }
     };

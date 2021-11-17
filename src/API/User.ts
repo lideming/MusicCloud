@@ -3,12 +3,12 @@
 import { SettingItem, Callbacks, Action, TextCompositionWatcher } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { listIndex } from "../Track/ListIndex";
-import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply, Ref } from "../Infra/viewlib";
+import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply, Ref, FileSelector } from "../Infra/viewlib";
 import { Api } from "./apidef";
 import { ui } from "../Infra/UI";
 import { api } from "./Api";
 import { playerCore } from "../Player/PlayerCore";
-import { FileSelector, uploads } from "../Track/Uploads";
+import { uploads } from "../Track/Uploads";
 import { TrackList } from "../Track/TrackList";
 import { Track } from "../Track/Track";
 import { settingsUI } from "../Settings/SettingsUI";
