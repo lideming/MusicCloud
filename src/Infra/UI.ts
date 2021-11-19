@@ -554,22 +554,25 @@ export const ui = new class {
     };
     contentBg = new class {
         bgView: View | null = null;
-        curBg = '';
+        imgView: View | null = null;
+        curImg = '';
         init() {
             playerCore.onTrackChanged.add(() => this.update());
             api.onTrackInfoChanged.add((t) => t.id === playerCore.track?.id && this.update());
+            this.bgView = new View({ tag: 'div.content-bg' });
+            ui.content.container.addView(this.bgView, 0);
         }
 
         update() {
             const newTrack = playerCore.track;
             if (newTrack?.thumburl) {
                 const url = 'url(' + api.processUrl(newTrack.thumburl) + ')';
-                if (this.curBg != url) {
-                    const newView = new View({ tag: 'div.content-bg', style: { backgroundImage: url } });
-                    ui.content.container.addView(newView, 0);
+                if (this.curImg != url) {
+                    const newView = new View({ tag: 'div.content-bg-img', style: { backgroundImage: url } });
+                    this.bgView!.addView(newView, 0);
                     this.fadeoutCurrent();
-                    this.bgView = newView;
-                    this.curBg = url;
+                    this.imgView = newView;
+                    this.curImg = url;
                 }
             } else {
                 this.fadeoutCurrent();
@@ -577,12 +580,12 @@ export const ui = new class {
         }
 
         fadeoutCurrent() {
-            const oldbg = this.bgView;
+            const oldbg = this.imgView;
             if (oldbg) {
                 fadeout(oldbg.dom, { remove: false }).onFinished(() => {
                     oldbg!.removeFromParent();
                 });
-                this.curBg = '';
+                this.curImg = '';
             }
         }
     };

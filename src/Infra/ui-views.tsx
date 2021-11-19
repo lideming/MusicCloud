@@ -11,7 +11,6 @@ export class MainContainer extends View {
     sidebar = new Sidebar();
     contentOuter = new View(
         <main id="content-outer">
-            {new View({ tag: 'div.content-bg-overlay' })}
         </main>
     );
     createDom() {
