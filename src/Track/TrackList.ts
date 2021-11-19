@@ -231,7 +231,7 @@ export class TrackList {
             }
             var suffled = this.tracksSuffled;
             position = suffled.indexOf(track);
-            if (!position || position < 0) position = suffled.findIndex(x => x.id === track.id)
+            if (!position || position < 0) position = suffled.findIndex(x => x.id === track.id);
             return suffled[mod(position + offset, suffled.length)] ?? null;
         } else if (loopMode === 'track-loop') {
             return track;
@@ -319,10 +319,14 @@ export class TrackListView extends ListContentView {
         super.onRemove();
     }
     onSidebarItemReactived() {
-        this.curPlaying.current?.dom.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
+        const current = this.curPlaying.current;
+        if (current) {
+            this.scrollBox.dom.scrollTo({
+                top: current.dom.offsetTop + current.dom.offsetHeight / 2
+                    - this.scrollBox.dom.clientHeight / 2,
+                behavior: 'smooth',
+            });
+        }
     }
     protected appendListView() {
         super.appendListView();
@@ -408,7 +412,7 @@ export class TrackViewItem extends ListViewItem {
                         update: (dompos) => {
                             if (this.playing) {
                                 clearChildren(dompos);
-                                dompos.appendChild(new Icon({icon: svgPlayArrow}).dom);
+                                dompos.appendChild(new Icon({ icon: svgPlayArrow }).dom);
                             } else if (!this.noPos) {
                                 dompos.textContent = this.track._bind?.position != null
                                     ? (this.track._bind.position + 1).toString() : '';
@@ -472,7 +476,7 @@ export class TrackViewItem extends ListViewItem {
                 m.add(new MenuLinkItem({
                     text: I`Show picture`,
                     link: api.processUrl(this.track.picurl),
-                }))
+                }));
             }
         }
         if (this.track.canEdit) [0, 1].forEach(visi => {
