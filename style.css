@@ -540,14 +540,17 @@ html, body {
     overflow: hidden;
 }
 
-.trackitem .picbox::before {
-    content: "";
-    display: block;
+.trackitem .picbox .pic {
     position: absolute;
-    height: 100%;
+    left: 0;
+    top: 0;
     width: 100%;
-    background: var(--color-bg);
-    opacity: 0.3;
+    height: 100%;
+    opacity: .7;
+}
+
+.trackitem .picbox .pic.nopic {
+    display: none;
 }
 
 .trackitem .pos {
@@ -1193,4 +1196,17 @@ html, body {
     --color-bg-cc: #ffffff44;
     --color-bg-transparent: #00000033;
     --color-bg-selection: hsla(5, 100%, 50%, .3);
+}
+
+@media only screen and (max-width: 500px) {
+    .dialog {
+        height: 100%;
+        width: 100% !important;
+        left: 0;
+        bottom: 0;
+        border-radius: 0 !important;
+    }
+    .dialog-content {
+        resize: none;
+    }
 }

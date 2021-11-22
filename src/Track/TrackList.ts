@@ -400,27 +400,37 @@ export class TrackViewItem extends ListViewItem {
             tabIndex: 0,
             child: [
                 {
-                    tag: 'div.picbox', update: (dompic) => {
-                        let bg = '';
-                        if (this.track.thumburl) {
-                            bg = 'url(' + JSON.stringify(api.processUrl(this.track.thumburl)) + ')';
-                        }
-                        if (bg != dompic.style.backgroundImage) dompic.style.backgroundImage = bg;
-                    },
-                    child: {
-                        tag: 'span.pos',
-                        update: (dompos) => {
-                            if (this.playing) {
-                                clearChildren(dompos);
-                                dompos.appendChild(new Icon({ icon: svgPlayArrow }).dom);
-                            } else if (!this.noPos) {
-                                dompos.textContent = this.track._bind?.position != null
-                                    ? (this.track._bind.position + 1).toString() : '';
+                    tag: 'div.picbox',
+                    child: [
+                        {
+                            tag: 'img.pic',
+                            loading: 'lazy',
+                            height: 128,
+                            width: 128,
+                            update: (dompic: HTMLImageElement) => {
+                                let bg = '';
+                                if (this.track.thumburl) {
+                                    bg = api.processUrl(this.track.thumburl) ?? '';
+                                }
+                                if (bg != dompic.src) dompic.src = bg;
+                                toggleClass(dompic, "nopic", !bg);
+                            },
+                        },
+                        {
+                            tag: 'span.pos',
+                            update: (dompos) => {
+                                if (this.playing) {
+                                    clearChildren(dompos);
+                                    dompos.appendChild(new Icon({ icon: svgPlayArrow }).dom);
+                                } else if (!this.noPos) {
+                                    dompos.textContent = this.track._bind?.position != null
+                                        ? (this.track._bind.position + 1).toString() : '';
+                                }
+                                toggleClass(dompos, "withpic", !!this.track.thumburl);
+                                dompos.hidden = this.noPos && !this.playing;
                             }
-                            toggleClass(dompos, "withpic", !!this.track.thumburl);
-                            dompos.hidden = this.noPos && !this.playing;
                         }
-                    }
+                    ]
                 },
                 { tag: 'span.name', text: () => this.track.name },
                 { tag: 'span.artist', text: () => this.track.artist },
