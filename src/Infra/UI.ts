@@ -402,6 +402,7 @@ export const ui = new class {
     };
     sidebar = new class {
         dom = document.getElementById('sidebar')!;
+        header = mainContainer.sidebar.header;
         btn: SidebarToggle;
         overlay: Overlay | null;
         private _float = false;

@@ -291,9 +291,10 @@ html, body {
 
 #sidebar-list .section-header {
     position: sticky;
-    top: 0;
-    padding-top: 60px;
-    margin-top: -50px;
+    /* top: 0; */
+    /* padding-top: 60px; */
+    /* margin-top: -50px; */
+    top: 50px;
     z-index: 1;
 }
 

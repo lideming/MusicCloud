@@ -125,8 +125,16 @@ export class ListIndex {
         ui.sidebarList.container.appendView(this.section);
         ui.sidebar.dom.addEventListener('scroll', (ev) => {
             if (ev.eventPhase === Event.AT_TARGET) {
-                var dom = this.section.headerView.dom;
-                setScrollableShadow(dom, dom.offsetTop + dom.offsetHeight - this.listView.dom.offsetTop);
+                var firstHeader = ui.sidebar.header.dom;
+                var secondHeader = this.section.headerView.dom;
+                if (secondHeader.offsetTop <= firstHeader.offsetTop + firstHeader.offsetHeight) {
+                    setScrollableShadow(firstHeader, 0);
+                    secondHeader.style.zIndex = '';
+                } else {
+                    setScrollableShadow(firstHeader, ui.sidebar.dom.scrollTop);
+                    secondHeader.style.zIndex = '4';
+                }
+                setScrollableShadow(secondHeader, secondHeader.offsetTop + secondHeader.offsetHeight - this.listView.dom.offsetTop);
             }
         }, { passive: true });
         this.listView.scrollBox = ui.sidebar.dom;
