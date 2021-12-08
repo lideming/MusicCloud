@@ -49,15 +49,10 @@ Start the building process:
 pnpm build
 ```
 
-Then `bundle.js` should be generated from source files.
-
 
 ## Deploy
 
-Copy `index.html` and `bundle.js` to the static website folder (see `staticdir` in [server side configration](https://github.com/lideming/MusicCloudServer/blob/master/appsettings.json)).
-
-Note that `style.css` is included in `bundle.js`.
-
+Copy `dist/*` to the static website folder (see `staticdir` in [server side configration](https://github.com/lideming/MusicCloudServer/blob/master/appsettings.json)).
 
 ## Reusable Components
 

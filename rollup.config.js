@@ -1,6 +1,7 @@
 import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import { terser } from "rollup-plugin-terser";
+import copy from 'rollup-plugin-copy';
 
 import { promisify } from "util";
 import { exec } from "child_process";
@@ -11,7 +12,7 @@ const rollupConfig = () => ([
     {
         input: './src/main.ts',
         output: {
-            file: './bundle.js',
+            file: './dist/bundle.js',
             format: 'umd',
             name: 'mcloud',
             plugins: [
@@ -30,13 +31,28 @@ const rollupConfig = () => ([
             typescript(),
             myText(),
             jsonLoader(),
+            copy({
+                targets: [
+                    {
+                        src: [
+                            'index.html',
+                            'manifest.json',
+                        ],
+                        dest: './dist/',
+                    },
+                    {
+                        src: 'resources/app_icon.svg',
+                        dest: './dist/resources/',
+                    }
+                ]
+            })
         ],
         context: 'window'
     },
     {
         input: './src/ServiceWorker/sw.ts',
         output: {
-            file: './sw.bundle.js',
+            file: './dist/sw.bundle.js',
             format: 'iife',
             plugins: [
                 // terser({
