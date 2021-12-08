@@ -3,3 +3,5 @@
 /node_modules/
 /bundle.js
 /bundle.js.map
+/sw.bundle.js
+/sw.bundle.js.map

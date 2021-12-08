@@ -45,6 +45,7 @@ import { lyricsEdit } from "./Lyrics/LyricsEdit";
 import { appVersion } from "./Settings/AppVersion";
 import { settings } from "./Settings/Settings";
 import { playerFX } from "./Player/PlayerFX";
+import { serviceWorkerClient } from "./ServiceWorker/client";
 
 import * as webfx from "@yuuza/webfx";
 
@@ -75,6 +76,7 @@ export const app = window['app'] = {
         msgcli.init();
         router.init();
         appVersion.showUpdatedToast();
+        serviceWorkerClient.init();
         console.timeEnd('[Main] app.init()');
     },
     checkMode() {
