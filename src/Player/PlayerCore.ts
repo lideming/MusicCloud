@@ -107,11 +107,9 @@ export const playerCore = new class PlayerCore {
         this.audio.addEventListener('error', (e) => {
             console.error('[PlayerCore] audio error', e);
             var wasPlaying = this.state !== 'paused' && this.state !== 'stalled';
-            this.state = 'paused';
-            this.audioLoaded = false;
             if (this.track && this.track.url) {
                 let msg = I`Player error:` + '\n' + (e.message || I`Unknown error.`);
-                if (wasPlaying && this._loadRetryCount++ < 3) {
+                if (wasPlaying && this.state != 'playing' && this._loadRetryCount++ < 3) {
                     msg += '\n' + I`Retry after ${3} sec...`;
                     this._loadRetryTimer.timeout(3000);
                 }
