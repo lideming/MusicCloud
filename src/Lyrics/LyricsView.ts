@@ -118,7 +118,7 @@ export class LyricsView extends View {
         this.curTime = time;
         var prev = this.curLine.current;
         var line = this.getLineByTime(time, prev);
-        var laterLine = this.getLineByTime(time + this.scrollAnimator.duration * 0.0005 * playerCore.playbackRate, line);
+        var laterLine = this.getLineByTime(time + this.scrollAnimator.duration / 1000 * 0.5 * playerCore.playbackRate, line);
         line?.setCurrentTime(time);
         this.curLine.set(line);
         if (scroll && scroll !== 'smooth' && line && (prev !== line || scroll === 'force')) {
