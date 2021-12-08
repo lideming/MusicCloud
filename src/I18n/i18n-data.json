@@ -111,6 +111,7 @@
         ["UI color: {0}", "界面色彩：{0}"],
         ["UI style: {0}", "界面样式：{0}"],
         ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）"],
+        ["Custom server URL", "自定义服务器 URL"],
         ["Enable notification", "启用通知"],
         ["Disable notification", "禁用通知"],
         ["Now Playing", "正在播放"],

@@ -7,6 +7,8 @@ import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
 import { playerFX } from "../Player/PlayerFX";
 import { TextBtn } from "@yuuza/webfx";
+import { settings } from "./Settings";
+import { api } from "../API/Api";
 
 export const settingsUI = new class {
     dialog: SettingsDialog;
@@ -43,6 +45,7 @@ class SettingsDialog extends Dialog {
     btnSwitchStyle = new ButtonView({ type: 'big' });
     btnSwitchLang = new ButtonView({ type: 'big' });
     inputPreferBitrate = new LabeledInput();
+    inputServer = new LabeledInput();
     btnNotification = new ButtonView({ type: 'big' });
 
     constructor() {
@@ -78,6 +81,13 @@ class SettingsDialog extends Dialog {
                 playerCore.siPlayer.save();
             }
         });
+        this.addContent(this.inputServer);
+        this.inputServer.value = localStorage.getItem('mcloud-server') || '';
+        this.inputServer.dominput.placeholder = settings.defaultApiBaseUrl;
+        this.inputServer.dominput.addEventListener('change', (e) => {
+            localStorage.setItem('mcloud-server', this.inputServer.value);
+            settings.apiBaseUrl = this.inputServer.value;
+        });
         this.addContent(this.btnNotification);
         this.btnNotification.onActive.add(() => {
             ui.notification.setEnable(!ui.notification.config.enabled)
@@ -108,6 +118,11 @@ class SettingsDialog extends Dialog {
         );
     }
 
+    show(ev?: MouseEvent): void {
+        this.inputServer.hidden = !!api.defaultAuth;
+        super.show(ev);
+    }
+
     updateDom() {
         this.title = I`Settings`;
         this.btnClose.updateWith({ text: I`Close` });
@@ -118,6 +133,7 @@ class SettingsDialog extends Dialog {
         this.btnSwitchLang.text = I`Language: ${I`English`}`;
         if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
         this.inputPreferBitrate.updateWith({ label: I`Preferred bitrate (0: original file)` });
+        this.inputServer.updateWith({ label: I`Custom server URL` });
         this.btnNotification.text = ui.notification.config.enabled ? I`Disable notification` : I`Enable notification`;
     }
 }

@@ -1,9 +1,14 @@
 export const settings = {
-    apiBaseUrl: 'api/',
-    // apiBaseUrl: 'http://127.0.0.1:5000/api/',
+    defaultApiBaseUrl: 'api/',
+    apiBaseUrl: '',
     debug: true,
     apiDebugDelay: 0,
     showDownloadOptions: true,
     showDiscussion: true,
     showNotes: true,
+
+    init() {
+        var server = localStorage.getItem('mcloud-server');
+        this.apiBaseUrl = server || this.defaultApiBaseUrl;
+    }
 };

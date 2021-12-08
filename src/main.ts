@@ -59,6 +59,7 @@ export const app = window['app'] = {
     msgcli,
     init() {
         console.time('[Main] app.init()');
+        settings.init();
         app.checkMode();
         app.injectStyle();
         ui.init();

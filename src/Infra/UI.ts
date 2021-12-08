@@ -643,7 +643,8 @@ export const ui = new class {
                     this.show(track.name, {
                         body: I`Artist` + ': ' + track?.artist,
                         requireInteraction: false,
-                        image: !track?.picurl ? undefined : api.processUrl(track.picurl)
+                        image: !track?.picurl ? undefined : api.processUrl(track.picurl)!,
+                        silent: true,
                     });
                 }
             });
