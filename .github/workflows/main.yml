@@ -42,7 +42,4 @@ jobs:
         with:
           name: dist
           path: |
-            index.html
-            bundle.js
-            bundle.js.map
-
+            dist/*
