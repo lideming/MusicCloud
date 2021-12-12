@@ -1203,11 +1203,22 @@ html, body {
     .dialog {
         height: 100%;
         width: 100% !important;
-        left: 0;
-        bottom: 0;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
         border-radius: 0 !important;
+    }
+    .dialog-title {
+        padding: 0 .5em;
+    }
+    .dialog-title .textbtn {
+        padding: 1em;
     }
     .dialog-content {
         resize: none;
+        padding: 1em;
+    }
+    .btn-big {
+        padding: .5em;
     }
 }
