@@ -405,16 +405,22 @@ export const ui = new class {
         header = mainContainer.sidebar.header;
         btn: SidebarToggle;
         overlay: Overlay | null;
+
         private _float = false;
         get float() { return this._float; }
+
         private _hide = false;
         private _hideMobile = true;
         private _hideLarge = false;
         get hide() { return this._hide && this._float; }
+
         private _btnShown = false;
         get btnShown() { return this._btnShown; }
+
         private _isMobile = false;
+
         init() {
+            this.initPanHandler();
             this.toggleBtn(true);
             this.checkWidth();
             window.addEventListener('resize', () => this.checkWidth());
@@ -429,6 +435,42 @@ export const ui = new class {
             });
             this.dom.addEventListener('dragover', () => this.toggleHide(false));
         }
+
+
+        private _panxHandler: TouchPanListener = null!;
+        private _movingPos: number | null = null;
+        private get movingPos() { return this._movingPos; }
+        private set movingPos(pos: number | null) {
+            this._movingPos = pos;
+            this.dom.style.transform = pos == null ? '' : `translate(${pos}px, 0)`;
+            this.dom.style.transition = pos == null ? '' : 'none';
+            this.overlay!.dom.style.opacity = pos == null ? '' : `${1 + pos / this.dom.clientWidth}`;
+            this.overlay!.dom.style.transition = pos == null ? 'opacity .3s' : 'none';
+        }
+
+        initPanHandler() {
+            this._panxHandler = new TouchPanListener(mainContainer.dom, 'x');
+            this._panxHandler.filter = (e) => {
+                return this.dom.contains(e.target as Node)
+                    || this.overlay?.dom.contains(e.target as Node)
+                    || ui.content.container.dom.contains(e.target as Node);
+            };
+            this._panxHandler.onStart.add(() => {
+                this.toggleHide(false);
+                this.movingPos = this.dom.getBoundingClientRect().left;
+            });
+            var lastDelta = 0;
+            this._panxHandler.onMove.add(({ deltaX }) => {
+                lastDelta = deltaX;
+                this.movingPos = numLimit(this.movingPos! + deltaX, -this.dom.offsetWidth, 0);
+            });
+            this._panxHandler.onEnd.add(() => {
+                var hide = this.movingPos! + lastDelta * 10 < -this.dom.offsetWidth / 2;
+                this.movingPos = null;
+                this.toggleHide(hide);
+            });
+        }
+
         isMobile() {
             var width = window.innerWidth;
             return width < 800;
@@ -440,9 +482,10 @@ export const ui = new class {
                 this.toggleHide(mobile ? (this._hideMobile || this._hideLarge) : (this._hideLarge && this._hideMobile));
             }
         }
-        toggleFloat(float?) {
+        toggleFloat(float?: boolean) {
             if (float !== undefined && !!float === this._float) return;
             this._float = toggleClass(document.body, 'float-sidebar', float);
+            this._panxHandler.enabled = this._float;
             this.updateOverlay();
         }
         toggleBtn(show: boolean) {
@@ -468,14 +511,18 @@ export const ui = new class {
             if (showOverlay != !!this.overlay) {
                 if (showOverlay) {
                     this.overlay = new Overlay({
-                        tag: 'div.overlay', style: 'z-index: 99;',
+                        tag: 'div.overlay', style: 'z-index: 99; animation: none; transition: opacity .3s;',
                         onclick: () => this.toggleHide(true),
                         ondragover: () => this.toggleHide(true)
                     });
+                    this.overlay.dom.style.opacity = '0';
                     mainContainer.appendView(this.overlay);
+                    this.overlay.dom.offsetLeft;
+                    this.overlay.dom.style.opacity = '1';
                 } else {
                     const overlay = this.overlay!;
                     this.overlay = null;
+                    overlay.dom.style.opacity = '0';
                     fadeout(overlay.dom).onFinished(() => {
                         mainContainer.removeView(overlay);
                     });
@@ -803,4 +850,72 @@ class SidebarToggle extends View {
             }
         };
     }
+}
+
+class TouchPanListener {
+    onStart = new Callbacks<() => void>();
+    onMove = new Callbacks<(data: { deltaX: number; deltaY: number; }) => void>();
+    onEnd = new Callbacks<() => void>();
+    filter: (e: TouchEvent) => boolean;
+    constructor(
+        readonly element: HTMLElement,
+        public mode: 'x' | 'y' | 'both' = 'both',
+    ) { }
+
+    private _enabled = false;
+    get enabled() { return this._enabled; }
+    set enabled(v: boolean) {
+        if (v == this._enabled) return;
+        this._enabled = v;
+        if (v) {
+            this.element.addEventListener('touchstart', this._listener, true);
+        } else {
+            this.element.removeEventListener('touchstart', this._listener, true);
+        }
+    }
+
+    private _listener = (ev: TouchEvent) => {
+        if (this.filter && !this.filter(ev)) return;
+        if (ev.touches.length > 1) return;
+        var startX = ev.touches[0].pageX;
+        var startY = ev.touches[0].pageY;
+        var state: 'begin' | 'moving' | 'ignore' = 'begin';
+        const move = (ev: TouchEvent) => {
+            const x = ev.touches[0].pageX;
+            const y = ev.touches[0].pageY;
+            // console.info({ state, x, y, startX, startY });
+            if (state == 'ignore') return;
+            else if (state == 'moving') {
+                var deltaX = x - startX;
+                var deltaY = y - startY;
+                this.onMove.invoke({ deltaX, deltaY });
+                startX = x;
+                startY = y;
+            } else { // begin
+                if (this.mode == 'x' && Math.abs(y - startY) > 10 && Math.abs(y - startY) > Math.abs(x - startX)) {
+                    state = 'ignore';
+                } else if (this.mode == 'y' && Math.abs(x - startX) > 10 && Math.abs(x - startX) > Math.abs(y - startY)) {
+                    state = 'ignore';
+                } else if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) {
+                    state = 'moving';
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    this.onStart.invoke();
+                }
+            }
+        };
+        const end = (ev: TouchEvent) => {
+            if (ev.touches.length == 0) {
+                if (state == 'moving') {
+                    this.onEnd.invoke();
+                }
+                this.element.removeEventListener('touchmove', move, true);
+                this.element.removeEventListener('touchend', end, true);
+                this.element.removeEventListener('touchcancel', end, true);
+            }
+        };
+        this.element.addEventListener('touchmove', move, true);
+        this.element.addEventListener('touchend', end, true);
+        this.element.addEventListener('touchcancel', end, true);
+    };
 }
