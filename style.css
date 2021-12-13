@@ -1222,3 +1222,12 @@ html, body {
         padding: .5em;
     }
 }
+
+/* .float-sidebar #content-outer > .contentview {
+    transition: transform .3s;
+    transform: scale(1);
+}
+
+.float-sidebar #content-outer.sidebar-shown > .contentview {
+    transform: scale(0.95);
+} */

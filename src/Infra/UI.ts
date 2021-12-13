@@ -446,6 +446,10 @@ export const ui = new class {
             this.dom.style.transition = pos == null ? '' : 'none';
             this.overlay!.dom.style.opacity = pos == null ? '' : `${1 + pos / this.dom.clientWidth}`;
             this.overlay!.dom.style.transition = pos == null ? 'opacity .3s' : 'none';
+            // if (ui.content.current) {
+            //     ui.content.current.dom.style.transition = pos == null ? '' : 'none';
+            //     ui.content.current.dom.style.transform = pos == null ? '' : `scale(${1 - (1 + pos / this.dom.clientWidth) * 0.05})`;
+            // }
         }
 
         initPanHandler() {
@@ -504,6 +508,7 @@ export const ui = new class {
             if (this.isMobile()) this._hideMobile = this._hide;
             else this._hideLarge = this._hide;
             this.toggleFloat(this.isMobile() || this._hide);
+            ui.content.container.toggleClass('sidebar-shown', !this._hide);
             this.updateOverlay();
         }
         updateOverlay() {
@@ -886,6 +891,8 @@ class TouchPanListener {
             // console.info({ state, x, y, startX, startY });
             if (state == 'ignore') return;
             else if (state == 'moving') {
+                ev.preventDefault();
+                ev.stopPropagation();
                 var deltaX = x - startX;
                 var deltaY = y - startY;
                 this.onMove.invoke({ deltaX, deltaY });
