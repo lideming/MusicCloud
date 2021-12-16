@@ -438,18 +438,25 @@ export const ui = new class {
 
 
         private _panxHandler: TouchPanListener = null!;
+        private _leftPadding = 500;
+        private _getWidth() { return this.dom.offsetWidth - 500; }
         private _movingPos: number | null = null;
         private get movingPos() { return this._movingPos; }
         private set movingPos(pos: number | null) {
             this._movingPos = pos;
+            const width = this._getWidth();
+            console.info({pos, width})
+            if (pos != null) pos = numSoftLimit(pos, -width, 0, 0.15);
+            const ratio = 1 + pos! / width;
+            this.overlay!.dom.style.opacity = pos == null ? '' : `${ratio}`;
+            this.overlay!.dom.style.transition = pos == null ? 'opacity .3s' : 'none';
             this.dom.style.transform = pos == null ? '' : `translate(${pos}px, 0)`;
             this.dom.style.transition = pos == null ? '' : 'none';
-            this.overlay!.dom.style.opacity = pos == null ? '' : `${1 + pos / this.dom.clientWidth}`;
-            this.overlay!.dom.style.transition = pos == null ? 'opacity .3s' : 'none';
-            // if (ui.content.current) {
-            //     ui.content.current.dom.style.transition = pos == null ? '' : 'none';
-            //     ui.content.current.dom.style.transform = pos == null ? '' : `scale(${1 - (1 + pos / this.dom.clientWidth) * 0.05})`;
-            // }
+            if (ui.content.current) {
+                ui.content.current.dom.style.transition = pos == null ? '' : 'none';
+                ui.content.current.dom.style.transform = pos == null ? '' : `translate(${30 * ratio}%, 0) scale(${1 - ratio * 0.05})`;
+            }
+            this.dom.style.boxShadow = pos == null ? '' : `0 0 ${numLimit((width + pos) / 5, 0, 20)}px var(--color-shadow)`;
         }
 
         initPanHandler() {
@@ -461,15 +468,15 @@ export const ui = new class {
             };
             this._panxHandler.onStart.add(() => {
                 this.toggleHide(false);
-                this.movingPos = this.dom.getBoundingClientRect().left;
+                this.movingPos = this.dom.getBoundingClientRect().left + this._leftPadding;
             });
             var lastDelta = 0;
             this._panxHandler.onMove.add(({ deltaX }) => {
                 lastDelta = deltaX;
-                this.movingPos = numLimit(this.movingPos! + deltaX, -this.dom.offsetWidth, 0);
+                this.movingPos! += deltaX;
             });
             this._panxHandler.onEnd.add(() => {
-                var hide = this.movingPos! + lastDelta * 10 < -this.dom.offsetWidth / 2;
+                var hide = this.movingPos! + lastDelta * 10 < -this._getWidth() / 2;
                 this.movingPos = null;
                 this.toggleHide(hide);
             });
@@ -925,4 +932,13 @@ class TouchPanListener {
         this.element.addEventListener('touchend', end, true);
         this.element.addEventListener('touchcancel', end, true);
     };
+}
+
+function numSoftLimit(num: number, low: number, high: number, factor: number) {
+    if (num > high) {
+        return high + (num - high) * factor;
+    } else if (num < low) {
+        return low + (num - low) * factor;
+    }
+    return num;
 }
