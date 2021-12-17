@@ -445,7 +445,6 @@ export const ui = new class {
         private set movingPos(pos: number | null) {
             this._movingPos = pos;
             const width = this._getWidth();
-            console.info({pos, width})
             if (pos != null) pos = numSoftLimit(pos, -width, 0, 0.15);
             const ratio = 1 + pos! / width;
             this.overlay!.dom.style.opacity = pos == null ? '' : `${ratio}`;
@@ -457,6 +456,13 @@ export const ui = new class {
                 ui.content.current.dom.style.transform = pos == null ? '' : `translate(${30 * ratio}%, 0) scale(${1 - ratio * 0.05})`;
             }
             this.dom.style.boxShadow = pos == null ? '' : `0 0 ${numLimit((width + pos) / 5, 0, 20)}px var(--color-shadow)`;
+            if (pos != null && pos > 0) {
+                this.btn.dom.style.transform = `translate(${pos}px, 0)`;
+                this.btn.dom.style.transition = 'none';
+            } else {
+                this.btn.dom.style.transform = '';
+                this.btn.dom.style.transition = '';
+            }
         }
 
         initPanHandler() {

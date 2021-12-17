@@ -314,6 +314,7 @@ html, body {
     width: 50px;
     background: var(--color-bg-ee);
     color: var(--color-primary-dark);
+    transition: transform .3s;
 }
 
 .sidebar-toggle .logo {
