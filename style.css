@@ -1177,6 +1177,20 @@ html, body {
     margin-left: -10px;
 }
 
+.rounded .trackitem {
+    margin: 0 2px;
+}
+
+.rounded .trackitem.selected.prev-selected {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.rounded .trackitem.selected.next-selected {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
 .sidebar-toggle:hover {
     background: var(--color-bg-ee);
 }

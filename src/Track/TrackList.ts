@@ -349,6 +349,10 @@ export class TrackListView extends ListContentView {
                 router.nav('nowplaying');
             }
         };
+        lv.selectionHelper.onSelectedItemsChanged.add((action, item) => {
+            this.listView.get(item.position! - 1)?.toggleClass('next-selected', action === 'add');
+            this.listView.get(item.position! + 1)?.toggleClass('prev-selected', action === 'add');
+        });
         this.list.tracks.forEach(t => this.addItem(t, undefined, false));
         if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);
         this.updateView();
