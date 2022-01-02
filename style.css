@@ -687,17 +687,18 @@ html, body {
     height: 60px;
     transform: translate(0, 0);
     transition: transform .3s;
-    background: var(--color-bg-dd);
-    box-shadow: 0 0px 3px var(--color-shadow);
+    background: var(--color-bg);
+    box-shadow: 0 0px 5px var(--color-shadow);
     z-index: 10001;
     contain: layout;
     will-change: transform;
 }
 
 .bottompinned #bottombar {
-    box-sizing: content-box;
+    /* box-sizing: content-box;
     box-shadow: none;
-    border-top: 1px solid var(--color-bg-cc);
+    border-top: 1px solid var(--color-bg-cc); */
+    box-shadow: 0 0px 3px var(--color-shadow);
 }
 
 #bottombar.show {
@@ -1228,11 +1229,10 @@ html, body {
     }
 }
 
-.float-sidebar #content-outer > .contentview {
+.float-sidebar #content-outer {
     transition: transform .3s;
-    transform: scale(1);
 }
 
-.float-sidebar #content-outer.sidebar-shown > .contentview {
-    transform: translate(30%, 0) scale(0.95);
+.float-sidebar #content-outer.sidebar-shown {
+    transform: translate(30%, 0);
 }

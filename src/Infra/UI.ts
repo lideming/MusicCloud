@@ -451,10 +451,8 @@ export const ui = new class {
             this.overlay!.dom.style.transition = pos == null ? 'opacity .3s' : 'none';
             this.dom.style.transform = pos == null ? '' : `translate(${pos}px, 0)`;
             this.dom.style.transition = pos == null ? '' : 'none';
-            if (ui.content.current) {
-                ui.content.current.dom.style.transition = pos == null ? '' : 'none';
-                ui.content.current.dom.style.transform = pos == null ? '' : `translate(${30 * ratio}%, 0) scale(${1 - ratio * 0.05})`;
-            }
+            ui.content.container.dom.style.transition = pos == null ? '' : 'none';
+            ui.content.container.dom.style.transform = pos == null ? '' : `translate(${30 * ratio}%, 0)`;
             this.dom.style.boxShadow = pos == null ? '' : `0 0 ${numLimit((width + pos) / 5, 0, 20)}px var(--color-shadow)`;
             if (pos != null && pos > 0) {
                 this.btn.dom.style.transform = `translate(${pos}px, 0)`;
