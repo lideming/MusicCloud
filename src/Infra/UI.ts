@@ -309,13 +309,14 @@ export const ui = new class {
                     bottomBar.progressBar.appendView(this.canvasLoudness);
                 }
                 this.canvasLoudness.dom.width = width;
-                const scale = louds.length / width;
+                const smoothWindow = 2;
+                const scale = louds.length / (width + (smoothWindow - 1));
                 const scaleY = height / 256 * (256 / Math.log(256));
                 const ctx = this.canvasLoudness.dom.getContext('2d')!;
                 ctx.clearRect(0, 0, width, height);
                 ctx.beginPath();
-                const peakAvgs: number[] = [];
-                for (let i = 0; i < width; i += 1) {
+                let peakAvgs: number[] = [];
+                for (let i = 0; i < width + (smoothWindow - 1); i += 1) {
                     const begin = Math.floor(i * scale);
                     const end = Math.floor(i * scale + scale);
                     let sum = 0;
@@ -325,9 +326,11 @@ export const ui = new class {
                     peakAvgs.push(sum / scale);
                 }
 
+                peakAvgs = this.smooth(peakAvgs);
+
                 // scale after log()
                 const tmp = [...peakAvgs].filter(x => x > 0).sort((a, b) => a - b);
-                const low = Math.log(tmp[Math.floor(tmp.length * 0.01)]) * scaleY;
+                const low = Math.log(tmp[Math.floor(tmp.length * 0.02)]) * scaleY;
                 const high = Math.log(tmp[Math.floor(tmp.length * 0.99)]) * scaleY;
                 const scaleY2 = height * (0.95 - 0.2) / (high - low);
                 const offsetY2 = (height * 0.2) - (low * scaleY2);
@@ -354,6 +357,18 @@ export const ui = new class {
                     this.canvasLoudness = null;
                 }
             }
+        }
+        private smooth(arr: number[]) {
+            var val = arr[0];
+            var r: number[] = [];
+            for (let i = 1; i < arr.length; i++) {
+                var cur = arr[i];
+                val += (cur - val) * 0.25;
+                if (Math.abs(val) < 1) val = 0;
+                r.push(val);
+            }
+            console.info({arr, r});
+            return r;
         }
         onProgressSeeking(cb: (percent: number) => void) {
             var call = (offsetX) => { cb(numLimit(offsetX / this.progbar.clientWidth, 0, 1)); };
