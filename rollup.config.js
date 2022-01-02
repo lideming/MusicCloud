@@ -23,7 +23,7 @@ const rollupConfig = () => ([
             ],
             sourcemap: true,
             // sourcemapExcludeSources: true,
-            sourcemapPathTransform: transformSourcemapPath(),
+            // sourcemapPathTransform: transformSourcemapPath(),
         },
         plugins: [
             buildInfo(),

@@ -1,6 +1,6 @@
 // file: TrackList.ts
 
-import { BuildDomExpr, DataUpdatingHelper } from "../Infra/utils";
+import { BuildDomExpr, DataUpdatingHelper, ScrollAnimator } from "../Infra/utils";
 import { I, i18n } from "../I18n/I18n";
 import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync, toggleClass } from "../Infra/viewlib";
 import { ListContentView } from "../Infra/ListContentView";
@@ -286,6 +286,8 @@ export class TrackListView extends ListContentView {
         funcSetActive: function (item, val) { item.updateWith({ playing: val }); }
     });
     trackActionHandler: TrackActionHandler<TrackViewItem> = {};
+    currentTracking = false;
+    scrollAnimator: ScrollAnimator | undefined = undefined;
     constructor(list: TrackList) {
         super();
         this.canMultiSelect = true;
@@ -319,13 +321,13 @@ export class TrackListView extends ListContentView {
         super.onRemove();
     }
     onSidebarItemReactived() {
+        this.centerCurrentTrack();
+    }
+    private centerCurrentTrack() {
+        this.currentTracking = true;
         const current = this.curPlaying.current;
         if (current) {
-            this.scrollBox.dom.scrollTo({
-                top: current.dom.offsetTop + current.dom.offsetHeight / 2
-                    - this.scrollBox.dom.clientHeight / 2,
-                behavior: 'smooth',
-            });
+            this.scrollAnimator?.scrollTo(current.dom.offsetTop + current.dom.offsetHeight / 2);
         }
     }
     protected appendListView() {
@@ -337,6 +339,7 @@ export class TrackListView extends ListContentView {
         if (this.list.canEdit) lv.moveByDragging = true;
         lv.onItemMoved = () => this.list.updateTracksFromListView();
         lv.onItemClicked = (item) => {
+            this.currentTracking = true;
             if (item.track === playerCore.track && playerCore.isPlaying) {
                 router.nav('nowplaying');
                 return;
@@ -346,6 +349,9 @@ export class TrackListView extends ListContentView {
         this.list.tracks.forEach(t => this.addItem(t, undefined, false));
         if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);
         this.updateView();
+
+        this.scrollAnimator = new ScrollAnimator(this.scrollBox);
+        this.scrollAnimator.posType = 'center';
     }
     addItem(t: Track, pos?: number, updateView?: boolean) {
         var item = this.createViewItem(t);
@@ -379,6 +385,9 @@ export class TrackListView extends ListContentView {
     }
     private trackChanged = () => {
         this.updateCurPlaying();
+        if (this.currentTracking) {
+            this.centerCurrentTrack();
+        }
     };
 };
 
@@ -463,7 +472,7 @@ export class TrackViewItem extends ListViewItem {
                 if (!files.find(f => f.profile === ''))
                     m.add(new MenuLinkItem({
                         text: I`Download` + ' (' + ext + fileSize + ')',
-                        link: api.processUrl(this.track.url),
+                        link: api.processUrl(this.track.url)!,
                         download: this.track.artist + ' - ' + this.track.name + '.' + ext
                     }));
                 files.forEach(f => {
@@ -471,7 +480,7 @@ export class TrackViewItem extends ListViewItem {
                     var url = this.track.getFileUrl(f);
                     if (url) m.add(new MenuLinkItem({
                         text: I`Download` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
-                        link: api.processUrl(url),
+                        link: api.processUrl(url)!,
                         download: this.track.artist + ' - ' + this.track.name + '.' + format
                     }));
                     else if (this.track.canEdit) m.add(new MenuItem({
@@ -485,7 +494,7 @@ export class TrackViewItem extends ListViewItem {
             if (this.track.picurl) {
                 m.add(new MenuLinkItem({
                     text: I`Show picture`,
-                    link: api.processUrl(this.track.picurl),
+                    link: api.processUrl(this.track.picurl)!,
                 }));
             }
         }

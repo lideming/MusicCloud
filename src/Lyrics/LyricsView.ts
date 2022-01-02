@@ -1,5 +1,5 @@
 import { View, ContainerView, ItemActiveHelper, buildDOM, numLimit } from "../Infra/viewlib";
-import { BuildDomExpr, Callbacks, Action, Timer } from "../Infra/utils";
+import { BuildDomExpr, Callbacks, Action, Timer, ScrollAnimator } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { parse, Lyrics, Line, Span } from "./Lyrics";
 import { playerCore } from "../Player/PlayerCore";
@@ -19,6 +19,10 @@ export class LyricsView extends View {
     constructor() {
         super();
         this.setLyrics('');
+        this.scrollAnimator.posType = 'center';
+        this.scrollAnimator.onUserScroll.add(() => {
+            this.setScrollingPause(5000);
+        });
     }
     createDom(): BuildDomExpr {
         return {
@@ -60,12 +64,6 @@ export class LyricsView extends View {
                 this.scale = scale;
             }
         });
-        this.dom.addEventListener('scroll', (ev) => {
-            if (!this._posChanged) {
-                this.setScrollingPause(5000);
-            }
-            this._posChanged = false;
-        }, { passive: true });
     }
     setLyrics(lyrics: string | Lyrics) {
         let msg = '';
@@ -123,7 +121,7 @@ export class LyricsView extends View {
         this.curLine.set(line);
         if (scroll && scroll !== 'smooth' && line && (prev !== line || scroll === 'force')) {
             this.scrollAnimator.cancel();
-            this.setCenterPos(line.dom.offsetTop + line.dom.offsetHeight / 2);
+            this.scrollAnimator.currentPos = line.dom.offsetTop + line.dom.offsetHeight / 2;
         } else if (scroll === 'smooth' && !this.isScrollingPaused()
             && laterLine !== this.scrollingTarget) {
             this.scrollingTarget = laterLine;
@@ -135,68 +133,7 @@ export class LyricsView extends View {
             }
         }
     }
-    scrollAnimator = {
-        view: this,
-        duration: 300,
-        beginTime: -1,
-        beginPos: 0,
-        lastPos: 0,
-        targetPos: 0,
-        rafHandle: -1,
-        cancel() {
-            if (this.rafHandle >= 0) {
-                cancelAnimationFrame(this.rafHandle);
-                this.rafHandle = -1;
-            }
-        },
-        scrollTo(pos: number) {
-            this.targetPos = pos;
-            this.lastPos = this.beginPos = this.view.getCenterPos();
-            if (this.rafHandle < 0) {
-                this._startRaf();
-            }
-            this.beginTime = performance.now();
-        },
-        _rafCallback: null as Action<number> | null,
-        _startRaf() {
-            if (!this._rafCallback) {
-                this._rafCallback = (now) => {
-                    if (this._render(now)) {
-                        this.rafHandle = requestAnimationFrame(this._rafCallback!);
-                    } else {
-                        this.rafHandle = -1;
-                    }
-                };
-            }
-            this.rafHandle = requestAnimationFrame(this._rafCallback);
-        },
-        _render(now: number): boolean {
-            if (Math.abs(this.view.getCenterPos() - this.lastPos) > 10) return false;
-
-            const t = numLimit((now - this.beginTime) / this.duration, 0, 1);
-
-            const pos = this.beginPos + (this.targetPos - this.beginPos) * this._easeInOutQuad(t);
-            this.lastPos = pos;
-
-            this.view.setCenterPos(pos);
-
-            return t !== 1;
-        },
-        _easeInOutQuad(t: number) {
-            return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-        }
-    };
-    _posChanged = false;
-    getCenterPos() {
-        return this.dom.scrollTop + this.dom.offsetHeight / 2;
-    }
-    setCenterPos(centerY: number) {
-        var targetPos = centerY - this.dom.offsetHeight / 2;
-        if (this.dom.scrollTop != targetPos) {
-            this._posChanged = true;
-            this.dom.scrollTop = targetPos;
-        }
-    }
+    scrollAnimator = new ScrollAnimator(this);
     resize() {
         if (this.domCreated) {
             const boxHeight = this.dom.offsetHeight;
@@ -226,13 +163,13 @@ export class LyricsView extends View {
         this.dom.scrollTop = this.scrollPos = 0;
     }
     onShow() {
-        this.setCenterPos(this.scrollPos);
+        this.scrollAnimator.currentPos = this.scrollPos;
         if (this.isTrackPlaying()) this.setCurrentTime(playerCore.currentTime);
         requestAnimationFrame(this._resize);
         window.addEventListener('resize', this._resize);
     }
     onHide() {
-        this.scrollPos = this.getCenterPos();
+        this.scrollPos = this.scrollAnimator.currentPos;
         window.removeEventListener('resize', this._resize);
         this.timer.tryCancel();
     }
