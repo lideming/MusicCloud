@@ -130,6 +130,7 @@ export class ContentView extends View {
         super.updateDom();
         this._lastRenderedLanguage = ui.lang.curLang;
     }
+    onHiding() { }
     onRemove() {
         this._isVisible = false;
         this._shownEvents?.removeAll();
@@ -143,6 +144,7 @@ export class ContentView extends View {
 
     _fadeout: FadeoutResult | null = null;
     fadeOut() {
+        this.onHiding();
         this._fadeout = fadeout(this.dom, { remove: false }).onFinished(() => {
             this.onRemove();
             this.removeFromParent();

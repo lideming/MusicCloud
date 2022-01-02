@@ -345,6 +345,9 @@ export class TrackListView extends ListContentView {
                 return;
             }
             playerCore.playTrack(item.track);
+            if (item.track.type == 'video') {
+                router.nav('nowplaying');
+            }
         };
         this.list.tracks.forEach(t => this.addItem(t, undefined, false));
         if (this.list.loadIndicator) this.useLoadingIndicator(this.list.loadIndicator);

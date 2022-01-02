@@ -911,7 +911,6 @@ html, body {
 .playingview, .lyricsedit {
     display: flex;
     height: 100%;
-    justify-content: center;
     align-items: stretch;
     flex-direction: column;
 }
@@ -959,6 +958,7 @@ html, body {
     height: 100%;
     opacity: .3;
     overflow: hidden;
+    transition: opacity .3s;
 }
 
 .content-bg-img {
@@ -972,6 +972,29 @@ html, body {
     -webkit-filter: blur(1.5vmax);
     filter: blur(1.5vmax);
     animation: fadein .3s;
+}
+
+.content-bg video {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    display: none;
+    /* transition: filter .3s; */
+}
+
+.content-bg.has-video video {
+    display: block;
+    -webkit-filter: blur(1.5vmax);
+    filter: blur(1.5vmax);
+}
+
+.content-bg.has-video.full-video {
+    opacity: 1;
+}
+
+.content-bg.has-video.full-video video {
+    -webkit-filter: none;
+    filter: none;
 }
 
 .playingview .lyricsview, .lyricsedit .lyricsview {

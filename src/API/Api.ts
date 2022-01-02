@@ -161,11 +161,11 @@ export const api = new class {
     }
     getTrack(id: number) { return this.get('tracks/' + id) as Promise<Api.Track>; }
     getList(id: number) { return this.get('lists/' + id) as Promise<Api.Track>; }
-    processUrl(url: string | null | undefined) {
+    processUrl<T extends string | null | undefined>(url: T): T {
         if (!url || url.match('^(https?:/)?/')) return url;
         if (this.storageUrlBase && url.startsWith('storage/'))
-            return this.storageUrlBase + url.substr(8);
-        return this.baseUrl + url;
+            return this.storageUrlBase + url.substring(8) as T;
+        return this.baseUrl + url as T;
     }
 };
 

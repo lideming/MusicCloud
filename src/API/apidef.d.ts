@@ -47,6 +47,7 @@ export namespace Api {
         id: number;
         owner?: number;
         name: string;
+        type?: 'audio' | 'video';
         artist: string;
         album?: string;
         albumArtist?: string;

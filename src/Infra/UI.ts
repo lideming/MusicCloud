@@ -619,12 +619,24 @@ export const ui = new class {
     contentBg = new class {
         bgView: View | null = null;
         imgView: View | null = null;
+        videoView: View | null = null;
         curImg = '';
         init() {
             playerCore.onTrackChanged.add(() => this.update());
+            playerCore.onAudioCreated.add(() => {
+                this.videoView = new View(playerCore.audio);
+                this.bgView!.addView(this.videoView);
+            });
+            playerCore.onStateChanged.add(() => {
+                this.bgView!.toggleClass('has-video', playerCore.track?.infoObj?.type === 'video');
+            });
             api.onTrackInfoChanged.add((t) => t.id === playerCore.track?.id && this.update());
             this.bgView = new View({ tag: 'div.content-bg' });
             ui.content.container.addView(this.bgView, 0);
+        }
+
+        toggleFullVideo(full: boolean) {
+            this.bgView!.toggleClass('full-video', full);
         }
 
         update() {

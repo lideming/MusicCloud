@@ -14,6 +14,7 @@ export class Track {
     get id() { return this.infoObj!.id; }
     get owner() { return this.infoObj!.owner; }
     get name() { return this.infoObj!.name; }
+    get type() { return this.infoObj!.type; }
     get artist() { return this.infoObj!.artist; }
     get url() { return this.infoObj!.url; }
     get picurl() { return this.infoObj!.picurl; }
