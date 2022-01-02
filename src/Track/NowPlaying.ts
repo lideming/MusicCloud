@@ -125,7 +125,6 @@ class PlayingView extends ContentView {
     onShow() {
         super.onShow();
         this.ensureDom();
-        ui.contentBg.toggleFullVideo(true);
     }
     onDomInserted() {
         super.onDomInserted();
@@ -137,6 +136,10 @@ class PlayingView extends ContentView {
             }
         });
         this.lyricsView.onShow();
+    }
+    onShowing() {
+        super.onShowing();
+        ui.contentBg.toggleFullVideo(true);
     }
     onHiding() {
         super.onHiding();

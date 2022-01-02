@@ -126,6 +126,7 @@ export class ContentView extends View {
         }
     }
     onDomInserted() { }
+    onShowing() { }
     updateDom() {
         super.updateDom();
         this._lastRenderedLanguage = ui.lang.curLang;
@@ -140,6 +141,7 @@ export class ContentView extends View {
 
     fadeIn() {
         this._fadeout?.cancel();
+        this.onShowing();
     }
 
     _fadeout: FadeoutResult | null = null;
