@@ -223,8 +223,9 @@ html, body {
     max-width: 80vw;
     box-shadow: 0 0 20px var(--color-shadow);
 
-    padding-left: 500px;
-    margin-left: -500px;
+    --leftpadding: 200px;
+    padding-left: var(--leftpadding);
+    margin-left: calc(0px - var(--leftpadding));
 }
 
 .float-sidebar #content-outer {
@@ -233,13 +234,13 @@ html, body {
 }
 
 .float-sidebar #sidebar.hide {
-    transform: translate(calc(-100% + 500px), 0);
+    transform: translate(calc(-100% + var(--leftpadding)), 0);
     transition: transform .3s, opacity .3s .3s, width 0s .3s;
     box-shadow: none;
 }
 
 .float-sidebar #sidebar.hide.peek {
-    transform: translate(calc(-100% + 500px + 50px), 0);
+    transform: translate(calc(-100% + var(--leftpadding) + 50px), 0);
     opacity: .3;
     transition: transform .3s, opacity .3s;
 }
@@ -818,7 +819,7 @@ html, body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100px;
+    min-height: min(100px, 15vh);
     background: var(--color-bg-ee);
     /* animation: showing-top .3s; */
 }
@@ -1268,6 +1269,7 @@ html, body {
 
 .float-sidebar #content-outer {
     transition: transform .3s;
+    will-change: transform;
 }
 
 .float-sidebar #content-outer.sidebar-shown {

@@ -453,8 +453,8 @@ export const ui = new class {
 
 
         private _panxHandler: TouchPanListener = null!;
-        private _leftPadding = 500;
-        private _getWidth() { return this.dom.offsetWidth - 500; }
+        private _leftPadding = 200;
+        private _getWidth() { return this.dom.offsetWidth - 200; }
         private _movingPos: number | null = null;
         private get movingPos() { return this._movingPos; }
         private set movingPos(pos: number | null) {
@@ -656,7 +656,7 @@ export const ui = new class {
 
         update() {
             const newTrack = playerCore.track;
-            if (newTrack?.thumburl) {
+            if (newTrack?.thumburl && newTrack.type != 'video') {
                 const url = 'url(' + api.processUrl(newTrack.thumburl) + ')';
                 if (this.curImg != url) {
                     const newView = new View({ tag: 'div.content-bg-img', style: { backgroundImage: url } });
