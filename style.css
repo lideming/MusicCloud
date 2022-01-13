@@ -812,7 +812,7 @@ html, body {
 }
 
 .upload-area {
-    margin: 10px;
+    margin: 0 10px 10px;
     padding: 10px;
     text-align: center;
     display: flex;
@@ -829,6 +829,7 @@ html, body {
 }
 
 .comment-editor-new {
+    margin: 0 20px 10px;
     /* animation: showing-top .3s; */
 }
 
@@ -1069,7 +1070,7 @@ html, body {
 .searchbar {
     display: flex;
     align-items: center;
-    margin: 5px 10px 10px;
+    margin: 0 10px 10px;
 }
 
 .searchbar .input-text {
