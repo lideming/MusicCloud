@@ -222,6 +222,7 @@ html, body {
     width: 250px;
     max-width: 80vw;
     box-shadow: 0 0 20px var(--color-shadow);
+    animation: none;
 
     --leftpadding: 200px;
     padding-left: var(--leftpadding);
