@@ -393,7 +393,7 @@ html, body {
 
 .titlebar {
     padding: 10px;
-    transition: padding-left .3s;
+    /* transition: padding-left .3s; */
 }
 
 .float-sidebar .content-header .titlebar {
@@ -555,6 +555,7 @@ html, body {
     width: 100%;
     height: 100%;
     opacity: .7;
+    object-fit: contain;
 }
 
 .trackitem .picbox .pic.nopic {
