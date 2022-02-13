@@ -114,19 +114,36 @@ export namespace Api {
         role?: 'admin' | 'user';
 
         /** When GET me */
-        serverOptions?: ServerOptions;
+        serverOptions?: ServerConfig;
 
         /** When POST me/login */
         token?: string;
     }
 
-    interface ServerOptions {
+    /**
+     * [Get server configuration about enabled features, login methods, etc.]
+     */
+    interface ServerConfig {
         msg?: string;
         storageUrlBase?: string;
         notesEnabled?: boolean;
         discussionEnabled?: boolean;
         trackCommentsEnabled?: boolean;
+
+        passwordLogin?: boolean;
+        allowRegistration?: boolean;
+        socialLogin?: SocialLoginConfig[];
     }
+
+    interface SocialLoginConfig {
+        id: string;
+        name: string;
+        icon: string;
+    }
+    // To start social login:
+    // GET {api}/users/me/socialLogin?provider={id}&returnUrl={url} with no body
+    // After the user completes the login,
+    // the server will redirect to the returnUrl with #token={token}
 
     interface Error {
         error: string;

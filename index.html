@@ -54,6 +54,7 @@
                 jsLoaded: false,
                 jsError: false,
                 preLoginTask: null,
+                inputToken: null,
                 jsOk() {
                     this.jsLoaded = true
                     this.update();
@@ -113,12 +114,22 @@
                 document.getElementById('js-error-msg').textContent = "" + e.error;
                 preload.update();
             };
+
+            var handleToken = function () {
+                var splits = window.location.href.split('#token=');
+                if (splits.length > 1) {
+                    preload.inputToken = splits[1];
+                    window.history.replaceState(null, null, splits[0]);
+                }
+            };
+
             window.addEventListener('error', onerror);
+            handleToken();
             preload.preLogin();
         })();
     </script>
     <!-- End of preload style and script -->
-    <script src="bundle.js?v=1.0.11-3" onload="window.preload && preload.onJsLoad()" defer async></script>
+    <script src="bundle.js?v=1.0.11-4" onload="window.preload && preload.onJsLoad()" defer async></script>
 </head>
 
 <body>

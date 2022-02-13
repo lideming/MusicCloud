@@ -1,6 +1,6 @@
 // file: User.ts
 
-import { SettingItem, Callbacks, Action, TextCompositionWatcher } from "../Infra/utils";
+import { SettingItem, Callbacks, Action, TextCompositionWatcher, LoadingIndicator } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { listIndex } from "../Track/ListIndex";
 import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply, Ref, FileSelector } from "../Infra/viewlib";
@@ -19,7 +19,7 @@ export const user = new class User {
         username: null! as string,
         passwd: undefined as (string | undefined),
         token: null! as string,
-        avatar: null as string | null,
+        avatar: undefined as string | undefined,
         lastBaseUrl: null! as string
     });
     loginDialog: LoginDialog;
@@ -29,7 +29,7 @@ export const user = new class User {
     role?: Api.UserInfo['role'];
     get isAdmin() { return this.role === 'admin'; }
 
-    private _serverOptions: Api.ServerOptions = {};
+    private _serverOptions: Api.ServerConfig = {};
     get serverOptions() { return this._serverOptions; }
 
     state: 'none' | 'logging' | 'error' | 'logged' = 'none';
@@ -43,7 +43,10 @@ export const user = new class User {
     init() {
         playerCore.onTrackChanged.add(() => this.playingTrackChanged());
         const preLogin = window['preload']?.preLoginTask;
-        if (this.info.username || preLogin) {
+        if (window['preload']?.['inputToken']) {
+            this.info.token = window['preload']['inputToken'];
+        }
+        if (this.info.username || this.info.token || preLogin) {
             this.login(preLogin ? { preLogin: preLogin } : { info: this.info }).then(null, (err) => {
                 Toast.show(I`Failed to login.` + '\n' + err, 5000);
             });
@@ -79,6 +82,7 @@ export const user = new class User {
                 if (arg.info) {
                     const info = arg.info;
                     const token = info.token;
+                    console.info({ info, token });
                     resp = token ?
                         await api.get('users/me', {
                             auth: this.getBearerAuth(token)
@@ -127,7 +131,7 @@ export const user = new class User {
         var switchingUser = this.info.username != info.username;
         this.info.id = info.id;
         this.info.username = info.username;
-        this.info.avatar = info.avatar ?? null;
+        this.info.avatar = info.avatar ?? undefined;
         this.info.passwd = undefined;
         if (info.token) this.info.token = info.token;
         this.info.lastBaseUrl = api.baseUrl;
@@ -284,6 +288,7 @@ class LoginDialog extends Dialog {
     inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
     viewStatus = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
     btn = new ButtonView({ text: I`Login`, type: 'big' });
+    socialLogins: ButtonView[] = [];
     isRegistering = false;
     compositionWatcher: TextCompositionWatcher;
     constructor() {
@@ -318,6 +323,7 @@ class LoginDialog extends Dialog {
             this.btn.text = btn.text;
             this.tabLogin.updateWith({ active: !this.isRegistering });
             this.tabCreate.updateWith({ active: this.isRegistering });
+            this.socialLogins.forEach(x => x.hidden = this.isRegistering);
         };
         this.inputPasswd2.hidden = true;
 
@@ -328,6 +334,38 @@ class LoginDialog extends Dialog {
                 this.close();
             }
         }));
+
+        this.tabCreate.hidden = true;
+        this.inputUser.hidden = this.inputPasswd.hidden = this.btn.hidden = true;
+
+        const onServerconfig = (serverConfig: Api.ServerConfig) => {
+            this.tabCreate.hidden = serverConfig.allowRegistration == false;
+            this.inputUser.hidden = this.inputPasswd.hidden = this.btn.hidden = serverConfig.passwordLogin == false;
+            serverConfig.socialLogin?.forEach(l => {
+                const btn = new ButtonView({
+                    text: I`Login via ${l.name}`, type: 'big', onActive: () => {
+                        window.location.href = api.processUrl(`users/me/socialLogin?provider=${l.id}&returnUrl=${encodeURIComponent(window.location.href)}`);
+                    }
+                });
+                this.socialLogins.push(btn);
+                this.addContent(btn);
+            });
+        };
+
+        if (user.state == "logged") {
+            onServerconfig(user.serverOptions);
+        } else {
+            const li = new LoadingIndicator({});
+            this.addContent(li);
+            api.get("users/me/serverconfig")
+                .then(config => {
+                    li.removeFromParent();
+                    onServerconfig(config);
+                })
+                .catch((e) => {
+                    li.error(e);
+                });
+        }
     }
 
     show(...args: Parameters<Dialog['show']>) {
@@ -389,7 +427,11 @@ class MeDialog extends Dialog {
             {
                 tag: 'div.user-info',
                 child: [
-                    { tag: 'img.user-avatar', ref: domimg, src: api.processUrl(user.info.avatar!) },
+                    {
+                        tag: 'img.user-avatar', ref: domimg,
+                        src: user.info.avatar ? api.processUrl(user.info.avatar!) : '',
+                        hidden: !user.info.avatar,
+                    },
                     {
                         tag: 'div',
                         child: [

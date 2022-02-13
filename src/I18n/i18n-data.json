@@ -13,6 +13,7 @@
         [" (logging in...)", " （登录中...）"],
         ["Guest (click to login)", "游客（点击登录）"],
         ["Login", "登录"],
+        ["Login via {0}", "使用 {0} 登录"],
         ["Create account", "创建账户"],
         ["Close", "关闭"],
         ["Username", "用户名"],
