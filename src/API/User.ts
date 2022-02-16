@@ -533,14 +533,21 @@ class LoginSettingsDialog extends Dialog {
 class SocialLogins extends View {
     constructor() {
         super({ tag: 'div' });
+        this.appendView(new View({ tag: 'h3', textContent: I`Linked accounts` }));
         this.initAsync();
     }
 
     async initAsync() {
-        await user.waitLogin(true)
+        const statusView = new TextView({ tag: 'div', text: I`Loading`, style: 'color: var(--text-gray)' });
+        this.appendView(statusView);
+        await user.waitLogin(true);
         const { links } = await api.get("users/me/socialLinks")
-        if (!links || links.length == 0) return;
-        this.appendView(new View({ tag: 'h3', textContent: I`Linked accounts` }));
+        if (!links || links.length == 0) {
+            statusView.text = I`(Not available)`;
+            return;
+        } else {
+            statusView.removeFromParent();
+        }
         links.forEach(x => {
             this.appendView(new SocialLoginItem(x));
         });

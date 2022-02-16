@@ -17,6 +17,7 @@
         ["Create account", "创建账户"],
         ["Login settings", "登录设置"],
         ["Linked accounts", "关联账户"],
+        ["(Not available)", "(不可用)"],
         ["Link", "关联"],
         ["Unlink", "解除"],
         ["Account has been linked successfully.", "账户关联成功。"],
