@@ -15,6 +15,13 @@
         ["Login", "登录"],
         ["Login via {0}", "使用 {0} 登录"],
         ["Create account", "创建账户"],
+        ["Login settings", "登录设置"],
+        ["Linked accounts", "关联账户"],
+        ["Link", "关联"],
+        ["Unlink", "解除"],
+        ["Account has been linked successfully.", "账户关联成功。"],
+        ["Account has been unlinked successfully.", "账户解除关联成功。"],
+        ["Account linking error: {0}", "账户关联错误: {0}"],
         ["Close", "关闭"],
         ["Username", "用户名"],
         ["Password", "密码"],
@@ -159,6 +166,7 @@
         ["make_it_visibility_0", "Make it private", "转为私有"],
         ["make_it_visibility_1", "Make it public", "转为公开"],
         ["make_{0}_visibility_0", "Make {0} items private", "转换 {0} 个项目为私有"],
-        ["make_{0}_visibility_1", "Make {0} items public", "转换 {0} 个项目为公开"]
+        ["make_{0}_visibility_1", "Make {0} items public", "转换 {0} 个项目为公开"],
+        ["social-link-error_already-linked", "The account has been already linked.", "该账户已经被关联。"]
     ]
 ]

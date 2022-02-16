@@ -1278,3 +1278,20 @@ html, body {
 .float-sidebar #content-outer.sidebar-shown {
     transform: translate(30%, 0);
 }
+
+.dialog h3 {
+    margin: 5px 0;
+    font-weight: 400;
+    font-size: 16px;
+    color: var(--color-text-gray);
+}
+
+.social-login-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.social-login-item .btn {
+    display: inline-block;
+    margin: 0;
+}

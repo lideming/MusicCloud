@@ -1,6 +1,6 @@
 // file: User.ts
 
-import { SettingItem, Callbacks, Action, TextCompositionWatcher, LoadingIndicator } from "../Infra/utils";
+import { SettingItem, Callbacks, Action, TextCompositionWatcher, LoadingIndicator, i18n } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { listIndex } from "../Track/ListIndex";
 import { Dialog, View, TextBtn, LabeledInput, TextView, ButtonView, Toast, base64EncodeUtf8, buildDOM, objectApply, Ref, FileSelector } from "../Infra/viewlib";
@@ -53,6 +53,19 @@ export const user = new class User {
         } else {
             this.setState('none');
             this.openUI();
+        }
+
+        if (window.location.href.indexOf("#social-link-success") >= 0) {
+            window.history.replaceState(null, "", window.location.href.split("#social-link-success")[0]);
+            Toast.show(I`Account has been linked successfully.`, 5000);
+            new LoginSettingsDialog().show();
+        }
+        if (window.location.href.indexOf("#social-link-error") >= 0) {
+            var splits = window.location.href.split("#social-link-error=");
+            window.history.replaceState(null, "", splits[0]);
+            var error = splits[1];
+            Toast.show(I`Account linking error: ${i18n.get('social-link-error_' + error)}`, 5000);
+            new LoginSettingsDialog().show();
         }
     }
     openUI(login?: boolean, ev?: MouseEvent) {
@@ -413,7 +426,7 @@ class LoginDialog extends Dialog {
 }
 
 class MeDialog extends Dialog {
-    btnChangePassword = new ButtonView({ text: I`Change password`, type: 'big' });
+    btnLoginSettings = new ButtonView({ text: I`Login settings`, type: 'big' });
     btnSwitch = new ButtonView({ text: I`Switch user`, type: 'big' });
     btnLogout = new ButtonView({ text: I`Logout`, type: 'big' });
     btnChangeAvatar = new ButtonView({ text: I`Change avatar`, type: 'normal' });
@@ -459,11 +472,11 @@ class MeDialog extends Dialog {
         };
         if (user.isAdmin)
             this.addContent(new View({ tag: 'p', textContent: I`You are admin.` }));
-        this.addContent(this.btnChangePassword);
+        this.addContent(this.btnLoginSettings);
         this.addContent(this.btnSwitch);
         this.addContent(this.btnLogout);
-        this.btnChangePassword.onActive.add((ev) => {
-            new ChangePasswordDialog().show(ev);
+        this.btnLoginSettings.onActive.add((ev) => {
+            new LoginSettingsDialog().show(ev);
             this.close();
         });
         this.btnSwitch.onActive.add((ev) => {
@@ -484,25 +497,81 @@ class MeDialog extends Dialog {
     }
 }
 
-class ChangePasswordDialog extends Dialog {
+class LoginSettingsDialog extends Dialog {
     inputPasswd = new LabeledInput({ label: I`New password`, type: 'password' });
     inputPasswd2 = new LabeledInput({ label: I`Confirm password`, type: 'password' });
-    status = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap; color: red;' });
+    status = new TextView({ tag: 'div.input-label', style: 'white-space: pre-wrap;' });
     btnChangePassword = new ButtonView({ text: I`Change password`, type: 'big' });
     constructor() {
         super();
-        this.title = I`Change password`;
-        [this.inputPasswd, this.inputPasswd2, this.status, this.btnChangePassword]
-            .forEach(x => this.addContent(x));
+        this.title = I`Login settings`;
+        [
+            new SocialLogins(),
+            new View({ tag: 'h3', textContent: I`Change password` }),
+            this.inputPasswd,
+            this.inputPasswd2,
+            this.status,
+            this.btnChangePassword,
+        ].forEach(x => this.addContent(x));
         this.btnChangePassword.onActive.add(() => {
             if (!this.inputPasswd.value) {
                 this.status.text = (I`Please input the new password!`);
+                this.status.dom.style.color = 'red';
             } else if (this.inputPasswd.value !== this.inputPasswd2.value) {
                 this.status.text = (I`Password confirmation does not match!`);
+                this.status.dom.style.color = 'red';
             } else {
-                user.changePassword(this.inputPasswd.value);
-                this.close();
+                user.changePassword(this.inputPasswd.value).then(() => {
+                    this.status.text = I`Password changed.`;
+                    this.status.dom.style.color = '#00FF00';
+                });
             }
+        });
+    }
+}
+
+class SocialLogins extends View {
+    constructor() {
+        super({ tag: 'div' });
+        this.initAsync();
+    }
+
+    async initAsync() {
+        await user.waitLogin(true)
+        const { links } = await api.get("users/me/socialLinks")
+        if (!links || links.length == 0) return;
+        this.appendView(new View({ tag: 'h3', textContent: I`Linked accounts` }));
+        links.forEach(x => {
+            this.appendView(new SocialLoginItem(x));
+        });
+    }
+}
+
+class SocialLoginItem extends View {
+    constructor(data: { id: string, name: string, username: string | null }) {
+        var btn: ButtonView;
+        super({
+            tag: 'div.social-login-item',
+            child: [
+                { tag: 'span.name', text: data.name + (data.username ? ` (${data.username})` : '') },
+                btn = new ButtonView({
+                    text: () => data.username ? I`Unlink` : I`Link`,
+                    onActive: () => {
+                        if (data.username) {
+                            api.delete({path: `users/me/socialLinks/${data.id}`}).then(() => {
+                                data.username = null;
+                                btn.updateDom();
+                                Toast.show(I`Account has been unlinked successfully.`, 5000);
+                            });
+                        } else {
+                            btn.disabled = true;
+                            api.post({path: `users/me/socialLinks/${data.id}?returnUrl=${encodeURIComponent(window.location.href)}`}).then(({url}) => {
+                                window.location.href = url;
+                            });
+                        }
+                    }
+                }),
+            ]
         });
     }
 }
