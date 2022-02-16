@@ -36,12 +36,14 @@ const rollupConfig = () => ([
                     {
                         src: [
                             'index.html',
-                            'manifest.json',
                         ],
                         dest: './dist/',
                     },
                     {
-                        src: 'resources/app_icon.svg',
+                        src: [
+                            'resources/app_icon.svg',
+                            'resources/manifest.json',
+                        ],
                         dest: './dist/resources/',
                     }
                 ]
