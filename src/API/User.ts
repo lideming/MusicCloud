@@ -178,7 +178,7 @@ export const user = new class User {
                 return;
             }
         }
-        objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined });
+        objectApply(this.info, { id: -1, username: undefined, passwd: undefined, token: undefined, avatar: undefined });
         this.role = undefined;
         this.siLogin.save();
         api.defaultAuth = null;
