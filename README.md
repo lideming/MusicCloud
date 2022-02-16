@@ -19,6 +19,7 @@ You can easily [run your own MusicCloud instance in Docker](https://github.com/l
 * Search tracks
 * Lyrics with translation and ruby annotations, extended from LRC.
 * Comment and discussion
+* Login with OpenID Connect
 * More in [TODO](https://github.com/lideming/MusicCloud/projects/1)
 
 
