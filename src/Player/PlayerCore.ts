@@ -171,8 +171,8 @@ export const playerCore = new class PlayerCore {
         this.track = track;
         this._loadRetryTimer.tryCancel();
         var sameTrack = oldTrack === track
-            || (oldTrack?.url === track?.url
-                || (track?.blob && track.blob === oldTrack?.blob));
+            || (track?.url && oldTrack?.url === track?.url)
+                || (track?.blob && track.blob === oldTrack?.blob);
         if (!sameTrack) {
             if (playNow && track) {
                 await this.loadTrack(track);
