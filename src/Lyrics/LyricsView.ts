@@ -139,9 +139,9 @@ export class LyricsView extends View {
             const boxHeight = this.dom.offsetHeight;
             const contentHeight = this.lines.dom.scrollHeight;
             if (contentHeight > boxHeight / 2) {
-                this.lines.dom.style.margin = (boxHeight / 2) + 'px 0';
+                this.lines.dom.style.margin = ((boxHeight - 1) / 2) + 'px 0';
             } else {
-                this.lines.dom.style.margin = ((boxHeight - contentHeight) / 2) + 'px 0';
+                this.lines.dom.style.margin = ((boxHeight - contentHeight - 1) / 2) + 'px 0';
             }
         }
         if (!this.isScrollingPaused())
