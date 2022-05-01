@@ -1,8 +1,8 @@
 // file: TrackList.ts
 
-import { BuildDomExpr, DataUpdatingHelper, ScrollAnimator } from "../Infra/utils";
+import { BuildDomExpr, DataUpdatingHelper, formatDuration, ScrollAnimator } from "../Infra/utils";
 import { I, i18n } from "../I18n/I18n";
-import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, formatTime, mod, objectApply, sleepAsync, toggleClass } from "../Infra/viewlib";
+import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, mod, objectApply, sleepAsync, toggleClass } from "../Infra/viewlib";
 import { ListContentView } from "../Infra/ListContentView";
 import { user } from "../API/User";
 import { Api } from "../API/apidef";
@@ -450,7 +450,7 @@ export class TrackViewItem extends ListViewItem {
                 },
                 { tag: 'span.name', text: () => this.track.name },
                 { tag: 'span.artist', text: () => this.track.artist },
-                { tag: 'span.duration', text: () => formatTime(this.track.length) },
+                { tag: 'span.duration', text: () => formatDuration(this.track.length) },
             ],
             draggable: true,
             _item: this
@@ -559,7 +559,7 @@ export class TrackViewItem extends ListViewItem {
         let infoText = I`Track ID` + ': ' +
             selected.map(x => x.track.id).join(', ') + '\n'
             + I`Duration` + ': ' +
-            formatTime(arraySum(selected, x => x.track.length!)) + '\n'
+            formatDuration(arraySum(selected, x => x.track.length!)) + '\n'
             + I`Size` + ': ' +
             formatFileSize(arraySum(selected, x => x.track.size!));
         if (selected.length == 1) {

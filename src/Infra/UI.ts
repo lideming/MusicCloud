@@ -1,6 +1,6 @@
 // file: UI.ts
 
-import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu, buildDOM, fadeout, formatTime, listenPointerEvents, numLimit, replaceChild, toggleClass, mountView, unmountView } from "./viewlib";
+import { ListView, ListViewItem, Dialog, ToastsContainer, TextView, View, DialogParent, MessageBox, Overlay, ItemActiveHelper, dragManager, ContextMenu, buildDOM, fadeout, formatDuration, listenPointerEvents, numLimit, replaceChild, toggleClass, mountView, unmountView } from "./viewlib";
 import * as views from "./ui-views";
 import { MainContainer, BottomBar } from "./ui-views";
 
@@ -275,8 +275,8 @@ export const ui = new class {
             var prog = cur! / total!;
             prog = numLimit(prog, 0, 1);
             this.fill.style.width = (prog * 100) + '%';
-            this.labelCur.textContent = formatTime(cur!);
-            this.labelTotal.textContent = formatTime(total!);
+            this.labelCur.textContent = formatDuration(cur!);
+            this.labelTotal.textContent = formatDuration(total!);
         }
         updateLoopMode() {
             this.btnLoop.hidden = false;
