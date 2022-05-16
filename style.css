@@ -264,12 +264,13 @@ html, body {
     align-items: center;
     height: 50px;
     overflow: hidden;
+    padding-right: 5px;
 }
 
 #login-state .user-avatar {
     width: 40px;
     height: 40px;
-    margin: 0 10px 0 0;
+    margin: 0 5px 0 0;
     flex: 0 0 0;
 }
 
@@ -706,19 +707,20 @@ html, body {
 .bottombar .progress-bar {
     display: flex;
     align-items: center;
+    margin-top: 2px;
 }
 
 .bottombar .progress-bar .background {
     flex: 1;
     background: var(--color-primary-really-light);
-    height: 12px;
+    height: 14px;
     border-radius: 8px;
     overflow: hidden;
 }
 
 .bottombar .progress-bar .fill {
     background: var(--color-primary);
-    height: 12px;
+    height: 14px;
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
 }
@@ -729,7 +731,7 @@ html, body {
     font-size: 12px;
     line-height: 1;
     font-weight: 300;
-    margin: 0 4px;
+    margin: 0 2px;
 }
 
 .bottombar .control-split-h {
