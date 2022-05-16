@@ -43,33 +43,6 @@ export class Sidebar extends View {
     }
 }
 
-export class BottomBar extends View {
-    progressBar = new View(
-        <div class="btn-progress" id="progressbar">
-            <div class="btn-fill" id="progressbar-fill"></div>
-        </div>
-    );
-    createDom() {
-        return (
-            <div id="bottombar">
-                <div id="progress-outer">
-                    <div class="no-selection" id="progressbar-label-cur">--:--</div>
-                    <div class="no-selection" id="progressbar-label-total">--:--</div>
-                </div>
-                {this.progressBar}
-                <div id="bottombar-btns" class="flexbox-h">
-                    <div id="btn-play" class="btn i18ne" tabindex="0">Play</div>
-                    <div id="btn-prevtrack" class="btn i18ne" tabindex="0">prev_track</div>
-                    <div id="btn-nexttrack" class="btn i18ne" tabindex="0">next_track</div>
-                    <div id="btn-volume" class="btn" tabindex="0"></div>
-                    <div id="btn-loop" class="btn" tabindex="0" hidden></div>
-                    <div id="bottombar-trackinfo" class="flex-1"></div>
-                    <div class="btn" id="btnPin" tabindex="0">Pin</div>
-                </div>
-            </div>
-        );
-    }
-}
 
 export class SidebarItem extends ListViewItem {
     _text: FuncOrVal<string> = '';
