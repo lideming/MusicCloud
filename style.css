@@ -814,6 +814,33 @@ html, body {
     content: " - ";
 }
 
+.bottombar .lyrics {
+    flex: 1;
+    text-align: center;
+    height: 30px;
+    overflow: hidden;
+    position: relative;
+}
+
+.bottombar .lyrics .line {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    transform: translate(0, -50%);
+    animation: fadein .3s;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.bottombar .lyrics .span.active {
+    color: var(--color-primary);
+}
+
 #sidebar-header, #sidebar-features {
     border-bottom: 1px solid var(--color-bg-cc);
 }

@@ -87,10 +87,16 @@ export class LyricsView extends View {
 
         const time = Date.now();
 
+        const context: LyricsViewContext = {
+            lyrics: parsed!,
+            onSpanClicked: (span) => this.onSpanClick.invoke(span),
+            enableTranslation: true,
+        }
+
         if (parsed) {
             parsed.lines.forEach(l => {
                 if (l.spans) {
-                    this.lines.addView(new LineView(l, this));
+                    this.lines.addView(new LineView(l, context));
                     this.hasVisibleLyrics = true;
                 }
             });
@@ -102,7 +108,7 @@ export class LyricsView extends View {
                 spans: [
                     { text: msg || I`No lyrics` }
                 ]
-            } as any, this));
+            } as any, context));
         }
 
         console.log(`[LyricsView] rendered ${[this.lines.length]} lines in ${Date.now() - time} ms`);
@@ -239,20 +245,26 @@ export class LyricsView extends View {
     }
 }
 
+interface LyricsViewContext {
+    lyrics: Lyrics;
+    onSpanClicked: (span: SpanView) => void;
+    enableTranslation: boolean;
+}
+
 export class LineView extends ContainerView<SpanView> {
     line: Line;
     get spans() { return this.items; }
     currentIndex = 0;
-    lyricsView: LyricsView;
-    constructor(line: Line, lyricsView: LyricsView) {
+    context?: LyricsViewContext;
+    constructor(line: Line, context?: LyricsViewContext) {
         super({ tag: 'p.line' });
+        this.context = context;
         this.line = line;
-        this.lyricsView = lyricsView;
         this.line.spans!.forEach(s => {
             this.addView(new SpanView(s, this));
         });
-        if (this.line.translation) {
-            var lyrics = this.lyricsView?.lyrics;
+        if (this.context?.enableTranslation && this.line.translation) {
+            const lyrics = context?.lyrics;
             var tlang = lyrics && (lyrics.translationLang || lyrics.lang);
             this.dom.appendChild(buildDOM({
                 tag: 'div.trans',
@@ -317,7 +329,7 @@ export class SpanView extends View {
         this.dom.addEventListener('click', (ev) => {
             if (Math.abs(ev.offsetX - startX) <= 3 && Math.abs(ev.offsetY - startY) <= 3) {
                 ev.preventDefault();
-                this.lineView.lyricsView.onSpanClick.invoke(this);
+                this.lineView.context?.onSpanClicked?.(this);
             }
         });
     }

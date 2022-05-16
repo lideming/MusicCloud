@@ -1,4 +1,4 @@
-import { Ref } from "@yuuza/webfx";
+import { fadeout, Ref, Timer } from "@yuuza/webfx";
 import { api } from "../API/Api";
 import {
   playerCore,
@@ -10,8 +10,6 @@ import {
   BuildDomExpr,
   Callbacks,
   formatDuration,
-  I,
-  i18n,
   InputStateTracker,
   jsx,
   listenPointerEvents,
@@ -19,7 +17,6 @@ import {
   TextView,
   ToolTip,
   View,
-  ViewToggle,
 } from "./viewlib";
 import play from "../../resources/play.svg";
 import pause from "../../resources/pause.svg";
@@ -31,9 +28,10 @@ import order_repeat from "../../resources/order_repeat.svg";
 import order_repeat_1 from "../../resources/order_repeat_1.svg";
 import volume from "../../resources/volume.svg";
 import expand from "../../resources/expand.svg";
-import { Icon } from "./ui-views";
 import type { Track } from "../Track/Track";
 import { router } from "./Router";
+import { Line, Lyrics, parse } from "../Lyrics/Lyrics";
+import { LineView } from "../Lyrics/LyricsView";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -70,6 +68,7 @@ export class BottomBar extends View {
       </span>
     )
   );
+  lyrics = new SimpleLyricsView();
   btnFullscreen = new ControlButton({ icon: expand });
 
   track?: Track;
@@ -87,6 +86,7 @@ export class BottomBar extends View {
             {this.btnOrder}
             {this.btnVolume}
             {this.trackInfo}
+            {this.lyrics}
             {this.btnFullscreen}
           </div>
         </div>
@@ -117,6 +117,7 @@ export class BottomBar extends View {
     })();
     this.progressBar.bindPlayer(player);
     this.btnVolume.bindPlayer(player);
+    this.lyrics.bindPlayer(player);
 
     this.btnPlay.onActive.add((e) => {
       e.preventDefault();
@@ -138,10 +139,10 @@ export class BottomBar extends View {
     });
     this.btnFullscreen.onActive.add((e) => {
       e.preventDefault();
-      router.nav('nowplaying');
+      router.nav("nowplaying");
       ui.sidebar.toggleHide(true);
       document.documentElement.requestFullscreen();
-    })
+    });
   }
 }
 
@@ -451,5 +452,65 @@ class VolumeButton extends ProgressButton {
       this.showUsage = false;
       player.volume = r;
     });
+  }
+}
+
+class SimpleLyricsView extends View {
+  lyrics: Lyrics | null = null;
+  currentLine: Line | null = null;
+  lineView: LineView | null = null;
+  createDom() {
+    return <div class="lyrics"></div>;
+  }
+  bindPlayer(player: typeof playerCore) {
+    player.onTrackChanged.add(async () => {
+      const track = player.track;
+      if (!track) {
+        this.lyrics = null;
+        this.fadeoutCurrentLineView();
+        return;
+      }
+      this.fadeoutCurrentLineView();
+      const raw = await track.getLyrics();
+      this.lyrics = parse(raw);
+    });
+
+    const updateLine = () => {
+      if (!this.lyrics) return;
+      const time = player.currentTime + 0.1;
+      let line: Line | null = null;
+      for (const x of this.lyrics.lines) {
+        if (x.startTime == null) continue;
+        if (x.startTime > time) break;
+        line = x;
+      }
+      if (this.currentLine !== line) {
+        this.currentLine = line;
+        this.fadeoutCurrentLineView();
+        if (line) {
+          this.lineView = new LineView(line);
+          this.addView(this.lineView);
+        }
+      }
+      if (this.lineView) {
+        this.lineView.setCurrentTime(time);
+      }
+      timer.timeout(100);
+    };
+
+    const timer = new Timer(updateLine)
+
+    player.onProgressChanged.add(() => {
+      updateLine();
+    });
+  }
+  fadeoutCurrentLineView() {
+    const view = this.lineView;
+    if (view) {
+      this.lineView = null;
+      fadeout(view.dom, { remove: false }).onFinished(() => {
+        this.removeView(view);
+      });
+    }
   }
 }
