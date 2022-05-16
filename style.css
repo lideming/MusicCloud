@@ -1029,6 +1029,12 @@ html, body {
     overflow: auto;
     will-change: transform;
     /* animation: showing .3s; */
+    scrollbar-width: thin;
+}
+
+.playingview .lyricsview::-webkit-scrollbar,
+.lyricsedit .lyricsview::-webkit-scrollbar {
+    width: 8px;
 }
 
 .lyricsview .line {
