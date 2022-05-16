@@ -58,6 +58,8 @@ export const playerCore = new class PlayerCore {
     }
     onProgressChanged = new Callbacks<Action>();
 
+    get isVideo() { return this.track?.type == "video"; }
+
     get volume() { return this.audio?.volume ?? 1; }
     set volume(val) {
         this.audio.volume = val;

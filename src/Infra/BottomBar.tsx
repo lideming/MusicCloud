@@ -30,6 +30,7 @@ import order_random from "../../resources/order_random.svg";
 import order_repeat from "../../resources/order_repeat.svg";
 import order_repeat_1 from "../../resources/order_repeat_1.svg";
 import volume from "../../resources/volume.svg";
+import expand from "../../resources/expand.svg";
 import { Icon } from "./ui-views";
 import type { Track } from "../Track/Track";
 import { router } from "./Router";
@@ -69,6 +70,8 @@ export class BottomBar extends View {
       </span>
     )
   );
+  btnFullscreen = new ControlButton({ icon: expand });
+
   track?: Track;
 
   createDom() {
@@ -84,6 +87,7 @@ export class BottomBar extends View {
             {this.btnOrder}
             {this.btnVolume}
             {this.trackInfo}
+            {this.btnFullscreen}
           </div>
         </div>
       </div>
@@ -101,6 +105,7 @@ export class BottomBar extends View {
       this.trackImg.toggleClass("noimg", !player.track?.thumburl);
       this.track = player.track!;
       updatePrevNext();
+      this.btnFullscreen.hidden = !player.isVideo;
       this.trackInfo.updateDom();
     })();
     player.onStateChanged.add(() => {
@@ -131,6 +136,12 @@ export class BottomBar extends View {
       player.loopMode =
         modes[(modes.indexOf(player.loopMode) + 1) % modes.length];
     });
+    this.btnFullscreen.onActive.add((e) => {
+      e.preventDefault();
+      router.nav('nowplaying');
+      ui.sidebar.toggleHide(true);
+      document.documentElement.requestFullscreen();
+    })
   }
 }
 
