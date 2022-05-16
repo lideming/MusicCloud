@@ -118,6 +118,9 @@ export class BottomBar extends View {
     this.progressBar.bindPlayer(player);
     this.btnVolume.bindPlayer(player);
     this.lyrics.bindPlayer(player);
+    this.lyrics.onLyricsChanged.add(() => {
+      this.toggleClass("has-lyrics", !!this.lyrics.lyrics?.lines?.length);
+    });
 
     this.btnPlay.onActive.add((e) => {
       e.preventDefault();
@@ -459,6 +462,7 @@ class SimpleLyricsView extends View {
   lyrics: Lyrics | null = null;
   currentLine: Line | null = null;
   lineView: LineView | null = null;
+  onLyricsChanged = new Callbacks<() => void>();
   createDom() {
     return <div class="lyrics"></div>;
   }
@@ -468,11 +472,14 @@ class SimpleLyricsView extends View {
       if (!track) {
         this.lyrics = null;
         this.fadeoutCurrentLineView();
+        this.onLyricsChanged.invoke();
         return;
       }
       this.fadeoutCurrentLineView();
       const raw = await track.getLyrics();
       this.lyrics = parse(raw);
+      this.hidden = !raw;
+      this.onLyricsChanged.invoke();
     });
 
     const updateLine = () => {
@@ -498,7 +505,7 @@ class SimpleLyricsView extends View {
       timer.timeout(100);
     };
 
-    const timer = new Timer(updateLine)
+    const timer = new Timer(updateLine);
 
     player.onProgressChanged.add(() => {
       updateLine();

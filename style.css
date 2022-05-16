@@ -841,6 +841,16 @@ html, body {
     color: var(--color-primary);
 }
 
+@media only screen  and (max-width: 800px) {
+    .bottombar.has-lyrics .track-info {
+        display: none;
+    }
+    .bottombar .lyrics {
+        text-align: left;
+        text-align: start;
+    }
+}
+
 #sidebar-header, #sidebar-features {
     border-bottom: 1px solid var(--color-bg-cc);
 }
