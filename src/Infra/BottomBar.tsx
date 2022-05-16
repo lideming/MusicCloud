@@ -56,6 +56,7 @@ export class BottomBar extends View {
   btnPrev = new ControlButton({ icon: prev });
   btnNext = new ControlButton({ icon: next });
   btnOrder = new ControlButton({ icon: order_random });
+  btnVolume = new VolumeButton();
   trackInfo = new TextView(
     (
       <span
@@ -81,6 +82,7 @@ export class BottomBar extends View {
             {this.btnPrev}
             {this.btnNext}
             {this.btnOrder}
+            {this.btnVolume}
             {this.trackInfo}
           </div>
         </div>
@@ -109,6 +111,7 @@ export class BottomBar extends View {
       updatePrevNext();
     })();
     this.progressBar.bindPlayer(player);
+    this.btnVolume.bindPlayer(player);
 
     this.btnPlay.onActive.add((e) => {
       e.preventDefault();
@@ -351,6 +354,8 @@ class VolumeButton extends ProgressButton {
 
   constructor(dom?: HTMLElement) {
     super(dom);
+    this.addView(new View(<span innerHTML={volume} />));
+    this.toggleClass("volume-btn", true);
     this.tipView.toggleClass("volume-tip", true);
     this.InputStateTracker = new InputStateTracker(this.dom);
     this.InputStateTracker.onChanged.add(() => this.updateTip());
@@ -425,15 +430,15 @@ class VolumeButton extends ProgressButton {
     }
   }
 
-  bindToPlayer() {
-    playerCore.onVolumeChanged.add(() => {
-      this.progress = playerCore.volume;
+  bindPlayer(player: typeof playerCore) {
+    player.onVolumeChanged.add(() => {
+      this.progress = player.volume;
     })();
     this.onChanging.add((x) => {
       var r = numLimit(x, 0, 1);
       r = Math.round(r * 100) / 100;
       this.showUsage = false;
-      playerCore.volume = r;
+      player.volume = r;
     });
   }
 }
