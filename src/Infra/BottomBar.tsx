@@ -59,7 +59,7 @@ export class BottomBar extends View {
   trackInfo = new TextView(
     (
       <span
-        class="track-info"
+        class="track-info clickable"
         onclick={() => router.nav("nowplaying")}
         hidden={() => !this.track}
       >
@@ -466,7 +466,13 @@ class SimpleLyricsView extends View {
   lineView: LineView | null = null;
   onLyricsChanged = new Callbacks<() => void>();
   createDom() {
-    return <div class="lyrics"></div>;
+    return <div class="lyrics clickable"></div>;
+  }
+  postCreateDom() {
+    super.postCreateDom();
+    this.onActive.add(() => {
+      router.nav("nowplaying");
+    });
   }
   bindPlayer(player: typeof playerCore) {
     player.onTrackChanged.add(async () => {

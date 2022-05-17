@@ -708,6 +708,7 @@ html, body {
     display: flex;
     align-items: center;
     margin-top: 2px;
+    cursor: pointer;
 }
 
 .bottombar .progress-bar .background {
@@ -743,7 +744,7 @@ html, body {
 .bottombar .bottom-controls {
     display: flex; 
     align-items: center;
-    margin-top: 2px;
+    margin-top: 4px;
     padding-left: 8px;
 }
 
