@@ -80,12 +80,12 @@ export class BottomBar extends View {
         <div class="control-split-h">
           {this.progressBar}
           <div class="bottom-controls">
-            {this.btnPlay}
-            {this.btnPrev}
-            {this.btnNext}
-            {this.btnOrder}
-            {this.btnVolume}
             {this.trackInfo}
+            {this.btnOrder}
+            {this.btnPrev}
+            {this.btnPlay}
+            {this.btnNext}
+            {this.btnVolume}
             {this.lyrics}
             {this.btnFullscreen}
           </div>
@@ -119,7 +119,9 @@ export class BottomBar extends View {
     this.btnVolume.bindPlayer(player);
     this.lyrics.bindPlayer(player);
     this.lyrics.onLyricsChanged.add(() => {
-      this.toggleClass("has-lyrics", !!this.lyrics.lyrics?.lines?.length);
+      const hasLyrics = !!this.lyrics.lyrics?.lines?.length;
+      this.toggleClass("has-lyrics", hasLyrics);
+      this.toggleClass("no-lyrics", !hasLyrics);
     });
 
     this.btnPlay.onActive.add((e) => {
@@ -478,7 +480,6 @@ class SimpleLyricsView extends View {
       this.fadeoutCurrentLineView();
       const raw = await track.getLyrics();
       this.lyrics = parse(raw);
-      this.hidden = !raw;
       this.onLyricsChanged.invoke();
     });
 

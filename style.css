@@ -741,7 +741,7 @@ html, body {
 }
 
 .bottombar .bottom-controls {
-    display: flex;
+    display: flex; 
     align-items: center;
     margin-top: 2px;
     padding-left: 8px;
@@ -820,6 +820,7 @@ html, body {
     height: 30px;
     overflow: hidden;
     position: relative;
+    margin-left: 8px;
 }
 
 .bottombar .lyrics .line {
@@ -842,7 +843,13 @@ html, body {
 }
 
 @media only screen  and (max-width: 800px) {
+    .bottombar .track-info {
+        order: 1;
+    }
     .bottombar.has-lyrics .track-info {
+        display: none;
+    }
+    .bottombar.no-lyrics .lyrics {
         display: none;
     }
     .bottombar .lyrics {
