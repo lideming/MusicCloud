@@ -779,7 +779,7 @@ html, body {
 .bottombar .volume-btn {
     width: 55px;
     margin: 0 8px;
-    height: 17px;
+    height: 14px;
 }
 
 .bottombar .volume-btn span {
@@ -787,7 +787,7 @@ html, body {
     left: 4px;
     top: 0;
     font-size: 0;
-    line-height: 17px;
+    line-height: 14px;
 }
 
 .bottombar .volume-btn span svg {
