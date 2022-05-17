@@ -38,8 +38,10 @@ export const router = new class {
             this.nav([...arg.path]);
         });
     }
-    nav(path: string | string[], options?: { pushState?: boolean | "replace", back?: boolean; }) {
+    nav(path: string | string[], options?: { pushState?: boolean | "replace", back?: boolean, evenIsCurrent?: boolean }) {
         if (typeof path === 'string') path = parsePath(path);
+        var strPath = path.map(x => encodeURIComponent(x)).join('/');
+        if (this.currentStr === strPath && !options?.evenIsCurrent) return;
         // this.wasBacked = options?.back ?? false;
         for (const r of this.routes) {
             if (match(path, r)) {
@@ -49,7 +51,6 @@ export const router = new class {
                 break;
             }
         }
-        var strPath = path.map(x => encodeURIComponent(x)).join('/');
         this.current = path;
         this.currentStr = strPath;
         if (options?.pushState === undefined || options.pushState) {
