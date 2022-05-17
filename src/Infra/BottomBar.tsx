@@ -489,7 +489,12 @@ class SimpleLyricsView extends View {
       let line: Line | null = null;
       for (const x of this.lyrics.lines) {
         if (x.startTime == null) continue;
-        if (x.startTime > time) break;
+        if (
+          x.startTime > time &&
+          line &&
+          !(line.spans?.length == 1 && !line.spans[0].text)
+        )
+          break;
         line = x;
       }
       if (this.currentLine !== line) {
