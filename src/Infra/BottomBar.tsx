@@ -1,4 +1,4 @@
-import { fadeout, Ref, Timer } from "@yuuza/webfx";
+import { ContextMenu, fadeout, FadeoutResult, Ref, Timer } from "@yuuza/webfx";
 import { api } from "../API/Api";
 import {
   playerCore,
@@ -179,6 +179,7 @@ class ProgressBar extends View {
   refTotalTime = new Ref<HTMLElement>();
   refBackground = new Ref<HTMLElement>();
   refFill = new Ref<HTMLElement>();
+  loudnessMap = new LoudnessMap();
   createDom() {
     return (
       <div class="progress-bar">
@@ -187,6 +188,7 @@ class ProgressBar extends View {
         </span>
         <div ref={this.refBackground} class="background">
           <div ref={this.refFill} class="fill"></div>
+          {this.loudnessMap}
         </div>
         <span ref={this.refTotalTime} class="time">
           --:--
@@ -199,6 +201,7 @@ class ProgressBar extends View {
       this.refTotalTime.value!.textContent = formatDuration(
         player.track?.length
       );
+      this.loudnessMap.updateLoudnessMap(player);
     });
     player.onProgressChanged.add(() => {
       this.refCurrentTime.value!.textContent = formatDuration(
@@ -223,103 +226,97 @@ class ProgressBar extends View {
   }
 }
 
-// TODO
-// const playerControl = new (class {
-//   async updateLoudnessMap() {
-//     const track = playerCore.track;
-//     var louds = await track?._loudmap;
-//     if (track && !louds) {
-//       if (this.canvasLoudness) {
-//         const ctx = this.canvasLoudness.dom.getContext("2d")!;
-//         const { width, height } = this.canvasLoudness.dom;
-//         ctx.clearRect(0, 0, width, height);
-//       }
-//       track._loudmap = (async () => {
-//         var resp = (await api.get(
-//           `tracks/${track.id}/loudnessmap`
-//         )) as Response;
-//         if (!resp.ok) return null;
-//         var ab = await resp.arrayBuffer();
-//         return (track._loudmap = new Uint8Array(ab));
-//       })();
-//       louds = await track._loudmap;
-//     }
-//     if (playerCore.track !== track) return;
-//     if (louds && louds.length > 20) {
-//       const [width, height] = [Math.min(1024, louds.length / 4), 32];
-//       if (!this.canvasLoudness) {
-//         this.canvasLoudness = new View({
-//           tag: "canvas.loudness",
-//           width,
-//           height,
-//         });
-//         // TODO
-//         // bottomBar.progressBar.appendView(this.canvasLoudness);
-//       }
-//       this.canvasLoudness.dom.width = width;
-//       const smoothWindow = 2;
-//       const scale = louds.length / (width + (smoothWindow - 1));
-//       const scaleY = (height / 256) * (256 / Math.log(256));
-//       const ctx = this.canvasLoudness.dom.getContext("2d")!;
-//       ctx.clearRect(0, 0, width, height);
-//       ctx.beginPath();
-//       let peakAvgs: number[] = [];
-//       for (let i = 0; i < width + (smoothWindow - 1); i += 1) {
-//         const begin = Math.floor(i * scale);
-//         const end = Math.floor(i * scale + scale);
-//         let sum = 0;
-//         for (let i = begin; i < end; i++) {
-//           sum += louds[i];
-//         }
-//         peakAvgs.push(sum / scale);
-//       }
+class LoudnessMap extends View<HTMLCanvasElement> {
+  createDom() {
+    return (
+      <canvas class="loudness-map" height="32" width="1024" />
+    )
+  }
 
-//       peakAvgs = this.smooth(peakAvgs);
+  async updateLoudnessMap(player: typeof playerCore) {
+    const track = player.track;
+    var louds = await track?._loudmap;
+    if (track && !louds) {
+      if (this.dom) {
+        const ctx = this.dom.getContext("2d")!;
+        const { width, height } = this.dom;
+        ctx.clearRect(0, 0, width, height);
+      }
+      track._loudmap = (async () => {
+        var resp = (await api.get(
+          `tracks/${track.id}/loudnessmap`
+        )) as Response;
+        if (!resp.ok) return null;
+        var ab = await resp.arrayBuffer();
+        return (track._loudmap = new Uint8Array(ab));
+      })();
+      louds = await track._loudmap;
+    }
+    if (player.track !== track) return;
+    if (louds && louds.length > 20) {
+      const [width, height] = [Math.min(1024, louds.length / 4), 32];
+      this.dom.width = width;
+      const smoothWindow = 2;
+      const scale = louds.length / (width + (smoothWindow - 1));
+      const scaleY = (height / 256) * (256 / Math.log(256));
+      const ctx = this.dom.getContext("2d")!;
+      ctx.clearRect(0, 0, width, height);
+      ctx.beginPath();
+      let peakAvgs: number[] = [];
+      for (let i = 0; i < width + (smoothWindow - 1); i += 1) {
+        const begin = Math.floor(i * scale);
+        const end = Math.floor(i * scale + scale);
+        let sum = 0;
+        for (let i = begin; i < end; i++) {
+          sum += louds[i];
+        }
+        peakAvgs.push(sum / scale);
+      }
 
-//       // scale after log()
-//       const tmp = [...peakAvgs].filter((x) => x > 0).sort((a, b) => a - b);
-//       const low = Math.log(tmp[Math.floor(tmp.length * 0.02)]) * scaleY;
-//       const high = Math.log(tmp[Math.floor(tmp.length * 0.99)]) * scaleY;
-//       const scaleY2 = (height * (0.95 - 0.2)) / (high - low);
-//       const offsetY2 = height * 0.2 - low * scaleY2;
+      peakAvgs = this.smooth(peakAvgs);
 
-//       ctx.moveTo(-1, height);
-//       for (let i = 0; i < width; i++) {
-//         let y = peakAvgs[i];
-//         if (y <= 0) y = 0;
-//         else {
-//           y = Math.log(y);
-//           y = y * scaleY;
-//           y *= scaleY2;
-//           y += offsetY2;
-//         }
-//         ctx.lineTo(i, height - y);
-//         ctx.lineTo(i + 1, height - y);
-//       }
-//       ctx.lineTo(width, height);
-//       ctx.fillStyle = "white";
-//       ctx.fill();
-//     } else {
-//       if (this.canvasLoudness) {
-//         // TODO
-//         // bottomBar.progressBar.removeView(this.canvasLoudness);
-//         this.canvasLoudness = null;
-//       }
-//     }
-//   }
-//   private smooth(arr: number[]) {
-//     var val = arr[0];
-//     var r: number[] = [];
-//     for (let i = 1; i < arr.length; i++) {
-//       var cur = arr[i];
-//       val += (cur - val) * 0.25;
-//       if (Math.abs(val) < 1) val = 0;
-//       r.push(val);
-//     }
-//     console.info({ arr, r });
-//     return r;
-//   }
-// })();
+      // scale after log()
+      const tmp = [...peakAvgs].filter((x) => x > 0).sort((a, b) => a - b);
+      const low = Math.log(tmp[Math.floor(tmp.length * 0.02)]) * scaleY;
+      const high = Math.log(tmp[Math.floor(tmp.length * 0.99)]) * scaleY;
+      const scaleY2 = (height * (0.95 - 0.2)) / (high - low);
+      const offsetY2 = height * 0.2 - low * scaleY2;
+
+      ctx.moveTo(-1, height);
+      for (let i = 0; i < width; i++) {
+        let y = peakAvgs[i];
+        if (y <= 0) y = 0;
+        else {
+          y = Math.log(y);
+          y = y * scaleY;
+          y *= scaleY2;
+          y += offsetY2;
+        }
+        ctx.lineTo(i, height - y);
+        ctx.lineTo(i + 1, height - y);
+      }
+      ctx.lineTo(width, height);
+      ctx.fillStyle = "white";
+      ctx.fill();
+      this.hidden = false;
+    } else {
+      this.hidden = true;
+    }
+  }
+
+  smooth(arr: number[]) {
+    var val = arr[0];
+    var r: number[] = [];
+    for (let i = 1; i < arr.length; i++) {
+      var cur = arr[i];
+      val += (cur - val) * 0.25;
+      if (Math.abs(val) < 1) val = 0;
+      r.push(val);
+    }
+    console.info({ arr, r });
+    return r;
+  }
+}
 
 class ProgressButton extends View {
   fill = new View({
@@ -523,13 +520,20 @@ class SimpleLyricsView extends View {
       updateLine();
     });
   }
+  currentFadingout: FadeoutResult | null = null;
   fadeoutCurrentLineView() {
     const view = this.lineView;
     if (view) {
+      if (this.currentFadingout) {
+        this.currentFadingout.cancel(true);
+      }
       this.lineView = null;
-      fadeout(view.dom, { remove: false }).onFinished(() => {
-        this.removeView(view);
-      });
+      this.currentFadingout = fadeout(view.dom, { remove: false }).onFinished(
+        () => {
+          this.removeView(view);
+          this.currentFadingout = null;
+        }
+      );
     }
   }
 }

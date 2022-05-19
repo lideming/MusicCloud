@@ -717,6 +717,7 @@ html, body {
     height: 14px;
     border-radius: 8px;
     overflow: hidden;
+    position: relative;
 }
 
 .bottombar .progress-bar .fill {
@@ -724,6 +725,15 @@ html, body {
     height: 14px;
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
+}
+
+.bottombar .progress-bar .loudness-map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: .3;
 }
 
 .bottombar .progress-bar .time {
