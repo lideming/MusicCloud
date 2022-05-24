@@ -790,6 +790,7 @@ html, body {
     width: 55px;
     margin: 0 8px;
     height: 14px;
+    border-radius: 100px;
 }
 
 .bottombar .volume-btn span {
