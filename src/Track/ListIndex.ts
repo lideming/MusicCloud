@@ -295,7 +295,7 @@ export class ListIndexViewItem extends SidebarItem {
         var tagText = (!this.listInfo || this.listInfo.visibility == 0) ? "" :
             (this.listInfo.owner == user.id && this.listInfo.visibility == 1) ? I`my_visibility_1` :
                 this.listInfo.ownerName;
-        domtag.textContent = tagText;
+        domtag.textContent = tagText ?? '';
         domtag.style.display = tagText ? 'block' : 'none';
         this.dom.style.paddingTop = tagText ? '6px' : '';
         this.dom.style.paddingBottom = tagText ? '20px' : '';

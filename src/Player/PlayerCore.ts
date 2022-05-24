@@ -251,22 +251,8 @@ export const playingLoopModes = ['list-seq', 'list-loop', 'list-shuffle', 'track
 
 export type PlayingLoopMode = typeof playingLoopModes[number];
 
-// Media Session API
-// https://developers.google.com/web/updates/2017/02/media-session
-interface MediaSession {
-    setActionHandler(
-        type: 'play' | 'pause' | 'seekbackward' | 'seekforward'
-            | 'seekto' | 'skipad' | 'previoustrack' | 'nexttrack',
-        callback: Action
-    ): void;
-    metadata: any;
-    playbackState: 'none' | 'paused' | 'playing';
-    constructor;
-};
-declare var MediaMetadata;
-
 if (navigator['mediaSession']) {
-    let mediaSession = navigator['mediaSession'] as MediaSession;
+    let mediaSession = navigator['mediaSession'];
     playerCore.onTrackChanged.add(() => {
         try {
             var track = playerCore.track;
