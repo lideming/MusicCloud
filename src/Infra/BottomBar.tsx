@@ -32,6 +32,7 @@ import type { Track } from "../Track/Track";
 import { router } from "./Router";
 import { Line, Lyrics, parse } from "../Lyrics/Lyrics";
 import { LineView } from "../Lyrics/LyricsView";
+import { I, i18n } from "../I18n/I18n";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -52,9 +53,9 @@ export class BottomBar extends View {
   );
   progressBar = new ProgressBar();
   btnPlay = new PlayButton();
-  btnPrev = new ControlButton({ icon: prev });
-  btnNext = new ControlButton({ icon: next });
-  btnOrder = new ControlButton({ icon: order_random });
+  btnPrev = new ControlButton({ icon: prev, title: () => I`prev_track` });
+  btnNext = new ControlButton({ icon: next, title: () => I`next_track` });
+  btnOrder = new ControlButton({ icon: order_random, title: () => i18n.get("loopmode_" + this.loopMode) });
   btnVolume = new VolumeButton();
   trackInfo = new TextView(
     (
@@ -69,13 +70,14 @@ export class BottomBar extends View {
     )
   );
   lyrics = new SimpleLyricsView();
-  btnFullscreen = new ControlButton({ icon: expand });
+  btnFullscreen = new ControlButton({ icon: expand, title: () => I`Fullscreen` });
 
   track?: Track;
+  loopMode: PlayingLoopMode = "list-seq";
 
   createDom() {
     return (
-      <div class="bottombar">
+      <div class="bottombar no-lyrics">
         {this.trackImg}
         <div class="control-split-h">
           {this.progressBar}
@@ -112,7 +114,9 @@ export class BottomBar extends View {
       this.btnPlay.setAction(player.isPlaying ? "pause" : "play");
     });
     player.onLoopModeChanged.add(() => {
+      this.loopMode = player.loopMode;
       this.btnOrder.icon = loopModeToIcon[player.loopMode];
+      this.btnOrder.updateDom();
       updatePrevNext();
     })();
     this.progressBar.bindPlayer(player);
@@ -152,9 +156,11 @@ export class BottomBar extends View {
 }
 
 class ControlButton extends View {
-  constructor({ icon }: { icon: string }) {
+  title: () => string = () => "";
+  constructor({ icon, title }: { icon: string; title: () => string }) {
     super(<div class="control-btn clickable"></div>);
     this.icon = icon;
+    this.title = title;
   }
   set icon(val: string) {
     this.dom.innerHTML = val;
@@ -162,15 +168,25 @@ class ControlButton extends View {
   set disabled(val: boolean) {
     this.toggleClass("disabled", val);
   }
+  override updateDom() {
+    super.updateDom();
+    this.dom.title = this.title?.() ?? "";
+  }
 }
 
 class PlayButton extends ControlButton {
   constructor() {
-    super({ icon: play });
+    super({
+      icon: play,
+      title: () => (this._action == "play" ? I`Play` : I`Pause`),
+    });
     this.toggleClass("play-btn", true);
   }
+  _action: "play" | "pause";
   setAction(action: "play" | "pause") {
+    this._action = action;
     this.dom.innerHTML = action == "play" ? play : pause;
+    this.updateDom();
   }
 }
 
@@ -228,9 +244,7 @@ class ProgressBar extends View {
 
 class LoudnessMap extends View<HTMLCanvasElement> {
   createDom() {
-    return (
-      <canvas class="loudness-map" height="32" width="1024" />
-    )
+    return <canvas class="loudness-map" height="32" width="1024" />;
   }
 
   async updateLoudnessMap(player: typeof playerCore) {

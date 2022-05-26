@@ -108,6 +108,7 @@ export const ui = new class {
     }
     updateAllViews() {
         mainContainer.updateAll();
+        bottomBar.updateAll();
     }
     theme = new class {
         all = ['light', 'dark', 'dark-rounded', 'light-rounded'] as const;
