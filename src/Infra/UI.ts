@@ -43,7 +43,7 @@ export const ui = new class {
         this.contentBg.init();
         bottomBar.bindPlayer(playerCore);
         this.sidebarLogin.init();
-        this.windowTitle.reset();
+        this.windowTitle.init();
         this.notification.init();
         Dialog.defaultParent = new DialogParent(mainContainer);
         ToastsContainer.default.parentDom = mainContainer.dom;
@@ -423,6 +423,12 @@ export const ui = new class {
     };
     windowTitle = new class {
         appName = I`Music Cloud`;
+        init() {
+            this.reset();
+            playerCore.onTrackChanged.add(() => {
+                ui.windowTitle.setFromTrack(playerCore.track);
+            });
+        }
         reset() { this.setTitle(null); }
         setTitle(title: string | null) {
             if (title) title += ' - ' + this.appName;
