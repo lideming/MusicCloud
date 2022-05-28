@@ -1,13 +1,13 @@
 {
     "name": "MusicCloud",
     "short_name": "MusicCloud",
-    "start_url": ".",
-    "display": "standalone",
+    "start_url": "..",
+    "display": "minimal-ui",
     "background_color": "#fff",
     "description": "MusicCloud for Web",
     "icons": [
         {
-            "src": "resources/app_icon.svg",
+            "src": "app_icon.svg",
             "sizes": "any",
             "type": "image/svg"
         }
