@@ -28,7 +28,7 @@ const rollupConfig = () => ([
         plugins: [
             buildInfo(),
             resolve(),
-            typescript(),
+            typescript({ sourceMap: true, inlineSources: true  }),
             myText(),
             jsonLoader(),
             copy({
@@ -64,7 +64,7 @@ const rollupConfig = () => ([
             ],
             sourcemap: true,
             // sourcemapExcludeSources: true,
-            sourcemapPathTransform: transformSourcemapPath(),
+            // sourcemapPathTransform: transformSourcemapPath(),
         },
         plugins: [
             buildInfo(),
