@@ -224,18 +224,15 @@ export function setScrollableShadow(dom: HTMLElement, position: number) {
 
 export class CopyMenuItem extends MenuItem {
     textToCopy: string;
-    private textView: InputView | null = null;
     constructor(init: ObjectInit<CopyMenuItem>) {
         super(init);
         this.onActive.add(() => {
-            this.dom.textContent = "";
-            if (!this.textView) {
-                this.textView = new InputView();
-                this.addChild(this.textView);
-                this.textView.value = this.textToCopy;
-            }
-            (this.textView.dom as HTMLInputElement).select();
+            const inputView = new InputView();
+            this.addView(inputView);
+            inputView.value = this.textToCopy;
+            (inputView.dom as HTMLInputElement).select();
             document.execCommand('copy');
+            this.removeView(inputView);
         });
     }
 }
