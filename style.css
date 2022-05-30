@@ -318,7 +318,7 @@ html, body {
     height: 50px;
     width: 50px;
     background: var(--color-bg-ee);
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
     transition: transform .3s;
 }
 
@@ -332,7 +332,6 @@ html, body {
 }
 
 .sidebar-toggle:hover .logo {
-    color: var(--color-primary);
     transform: scale(1.2);
     transition: transform .2s, color .2s;
 }
@@ -846,6 +845,7 @@ html, body {
     line-height: 1.1;
     overflow: hidden;
     display: -webkit-box;
+    color: var(--color-text-gray);
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
 }
@@ -1308,7 +1308,8 @@ html, body {
     background: none;
 }
 
-#content-outer {
+#content-outer,
+.sidebar-toggle {
     --color-fg-11: #000000ee;
     --color-fg-22: #000000dd;
     --color-fg-33: #000000cc;
@@ -1320,7 +1321,8 @@ html, body {
     --color-bg-selection: hsl(5, 100%, 50%, .3);
 }
 
-.dark #content-outer {
+.dark #content-outer,
+.dark .sidebar-toggle {
     --color-fg-11: #ffffffdd;
     --color-fg-22: #ffffffcc;
     --color-fg-33: #ffffffbb;
