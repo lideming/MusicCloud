@@ -17,12 +17,14 @@ body {
     --color-bg-selection: hsl(5, 100%, 85%);
     --color-primary: hsl(5, 100%, 67%);
     --color-primary-darker: hsl(5, 100%, 60%);
-    --color-primary-dark: hsl(5, 100%, 40%);
-    --color-primary-dark-depends: hsl(5, 100%, 40%);
+    --color-primary-dark: hsl(5, 100%, 30%);
     --color-primary-verydark: hsl(5, 100%, 20%);
     --color-primary-lighter: hsl(5, 100%, 70%);
     --color-primary-light: hsl(5, 100%, 83%);
-    --color-primary-really-light: hsl(5, 100%, 90%);
+    --color-primary-verylight: hsl(5, 100%, 90%);
+    --color-primary-dark-depends: var(--color-primary-dark);
+    --color-primary-light-depends: var(--color-primary-light);
+    --color-primary-verylight-depends: var(--color-primary-verylight);
     --color-fg-11: #111111;
     --color-fg-22: #222222;
     --color-fg-33: #333333;
@@ -42,6 +44,8 @@ body.dark {
     --color-text-gray: #aaa;
     --color-bg-selection: hsl(5, 100%, 20%);
     --color-primary-dark-depends: hsl(5, 100%, 83%);
+    --color-primary-light-depends: var(--color-primary-dark);
+    --color-primary-verylight-depends: var(--color-primary-verydark);
     --color-fg-11: #dddddd;
     --color-fg-22: #cccccc;
     --color-fg-33: #bbbbbb;
@@ -712,7 +716,7 @@ html, body {
 
 .bottombar .progress-bar .background {
     flex: 1;
-    background: var(--color-primary-really-light);
+    background: var(--color-primary-verylight-depends);
     height: 14px;
     border-radius: 8px;
     overflow: hidden;
@@ -950,15 +954,15 @@ html, body {
 }
 
 .btn-progress, .keyboard-input .btn-progress:focus {
-    background: var(--color-primary-really-light);
+    background: var(--color-primary-verylight-depends);
 }
 
 .btn-progress:hover, .keyboard-input .btn-progress:focus:hover {
-    background-color: var(--color-primary-really-light);
+    background-color: var(--color-primary-verylight-depends);
 }
 
 .btn-progress.btn-down, .btn-progress:active {
-    background-color: var(--color-primary-light);
+    background-color: var(--color-primary-light-depends);
 }
 
 .btn-progress .text {
