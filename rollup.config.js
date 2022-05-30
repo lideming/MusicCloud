@@ -38,6 +38,7 @@ const rollupConfig = () => ([
                             'index.html',
                         ],
                         dest: './dist/',
+                        transform: (content, path) => content.toString().replace('_BUILD_DATE_', _buildDate),
                     },
                     {
                         src: [
@@ -75,11 +76,12 @@ const rollupConfig = () => ([
 ]);
 
 let _buildInfo = null;
+const _buildDate = new Date().toISOString();
 
 async function getBuildInfo() {
     return _buildInfo || (_buildInfo = JSON.stringify({
         version: require('./package.json').version,
-        buildDate: new Date().toISOString(),
+        buildDate: _buildDate,
         commits: await getCommits(),
     }));
 }
