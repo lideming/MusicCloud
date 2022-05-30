@@ -49,7 +49,10 @@ export const playerCore = new class PlayerCore {
     });
 
     get currentTime() { return this.audio?.currentTime; }
-    set currentTime(val) { this.audio.currentTime = val; }
+    set currentTime(val) {
+        this.audio.currentTime = val;
+        this.onProgressChanged.invoke();
+    }
     get duration() {
         if (this.audio && this.audioLoaded && this.audio.readyState >= HTMLMediaElement.HAVE_METADATA)
             return this.audio.duration;
@@ -185,10 +188,10 @@ export const playerCore = new class PlayerCore {
             } else {
                 this.loadUrl(null);
             }
+            this.currentTime = 0;
             this.state = !track ? 'none' : playNow ? 'stalled' : 'paused';
         }
         this.onTrackChanged.invoke();
-        this.onProgressChanged.invoke();
         if (playNow && track) await this.playTrack(track);
     }
     async playTrack(track: Track, forceStart?: boolean) {
