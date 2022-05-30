@@ -509,12 +509,14 @@ class SimpleLyricsView extends View {
 
     const updateLine = () => {
       if (!this.lyrics) return;
-      const time = player.currentTime + 0.1;
+      const time = player.currentTime;
+      const timeForLine = time + 0.3;
+      const timeForSpan = time + 0.1;
       let line: Line | null = null;
       for (const x of this.lyrics.lines) {
         if (x.startTime == null) continue;
         if (
-          x.startTime > time &&
+          x.startTime > timeForLine &&
           line &&
           !(line.spans?.length == 1 && !line.spans[0].text)
         )
@@ -530,7 +532,7 @@ class SimpleLyricsView extends View {
         }
       }
       if (this.lineView) {
-        this.lineView.setCurrentTime(time);
+        this.lineView.setCurrentTime(timeForSpan);
       }
       timer.timeout(100);
     };
