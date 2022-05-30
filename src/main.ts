@@ -62,8 +62,8 @@ export const app = window['app'] = {
         settings.init();
         app.checkMode();
         app.injectStyle();
-        ui.init();
         playerCore.init();
+        ui.init();
         playerFX.init();
         user.init();
         uploads.init();

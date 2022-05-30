@@ -85,6 +85,12 @@ export const playerCore = new class PlayerCore {
 
         this.audio = document.createElement('video');
         this.initAudio();
+
+        api.onTrackInfoChanged.add((newTrack) => {
+            if (newTrack.id && newTrack.id === this.track?.id) {
+                this.track.infoObj = newTrack;
+            }
+        });
     }
     initAudio() {
         this.audio.crossOrigin = 'anonymous';

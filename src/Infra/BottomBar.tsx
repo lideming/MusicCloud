@@ -486,7 +486,7 @@ class SimpleLyricsView extends View {
     });
   }
   bindPlayer(player: typeof playerCore) {
-    player.onTrackChanged.add(async () => {
+    const updateLyrics = async () => {
       const track = player.track;
       if (!track) {
         this.lyrics = null;
@@ -498,6 +498,13 @@ class SimpleLyricsView extends View {
       const raw = await track.getLyrics();
       this.lyrics = parse(raw);
       this.onLyricsChanged.invoke();
+    };
+
+    player.onTrackChanged.add(updateLyrics);
+    api.onTrackInfoChanged.add(newTrack => {
+      if (newTrack.id && newTrack.id === player.track?.id) {
+        updateLyrics();
+      }
     });
 
     const updateLine = () => {
