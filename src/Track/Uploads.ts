@@ -142,7 +142,11 @@ export const uploads = new class extends TrackList {
                         converted += f.size ?? 0;
                 });
             });
-            this.usage.text = original ? `(${formatFileSize(original)} + ${formatFileSize(converted)})` : '';
+            this.usage.text = original ? `(${uploads.tracks.length}, ${formatFileSize(original)})` : '';
+            this.usage.dom.title = 
+                `Tracks count: ${uploads.tracks.length}\n` +
+                `Total original files size: ${formatFileSize(original)}\n` +
+                `Total converted files size: ${formatFileSize(converted)}`;
         }
         updateView() {
             super.updateView();
