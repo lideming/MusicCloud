@@ -124,7 +124,11 @@ export const ui = new class {
                     toggleClass(document.body, 'dark', color === 'dark');
                     toggleClass(document.body, 'rounded', rounded === 'rounded');
                     var meta = document.getElementById('meta-theme-color') as HTMLMetaElement;
-                    meta.content = color === 'dark' ? 'black' : '';
+                    if (meta) {
+                        meta.content = color === 'dark' ? 'black' : '';
+                    } else {
+                        console.warn('[UI] Failed to get the "meta-theme-color" element');
+                    }
                     if (this.rendered) this.timer.timeout(500);
                 }
                 this.rendered = true;
