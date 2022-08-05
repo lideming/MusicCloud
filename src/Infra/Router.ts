@@ -16,17 +16,18 @@ export const router = new class {
     routes: Route[] = [];
     current: string[];
     currentStr: string;
+    currentIdx = 1;
     wasBacked = false;
     onNavCompleted = new Callbacks<(arg: { path: string[]; }) => void>();
     init() {
         window.addEventListener('popstate', (ev) => {
-            this.navByLocation(true);
+            this.navByLocation(false);
         });
-        this.navByLocation();
+        this.navByLocation(true);
     }
-    private navByLocation(back = false) {
+    private navByLocation(replaceState: boolean) {
         var hash = window.location.hash;
-        this.nav(hash ? hash.substr(1) : '', { pushState: false, back });
+        this.nav(hash ? hash.substring(1) : '', { pushState: replaceState ? 'replace' : false, idx: window.history.state?.idx });
     }
     addRoute(arg: Route) {
         this.routes.push(arg);
@@ -38,11 +39,29 @@ export const router = new class {
             this.nav([...arg.path]);
         });
     }
-    nav(path: string | string[], options?: { pushState?: boolean | "replace", back?: boolean, evenIsCurrent?: boolean }) {
+    nav(path: string | string[], options?: { pushState?: boolean | "replace", evenIsCurrent?: boolean, idx?: number }) {
         if (typeof path === 'string') path = parsePath(path);
         var strPath = path.map(x => encodeURIComponent(x)).join('/');
         if (this.currentStr === strPath && !options?.evenIsCurrent) return;
-        // this.wasBacked = options?.back ?? false;
+
+        this.current = path;
+        this.currentStr = strPath;
+        const oldIdx = this.currentIdx;
+        this.currentIdx = options?.idx ?? (this.currentIdx + 1);
+        if (options?.idx || options?.pushState)
+            this.wasBacked = this.currentIdx < oldIdx;
+
+        if (options?.pushState === undefined || options.pushState) {
+            const state = { idx: this.currentIdx };
+            const url = strPath ? '#' + strPath : undefined;
+            const args = [state, '', url] as const;
+            if (options?.pushState == "replace") {
+                window.history.replaceState(...args);
+            } else {
+                window.history.pushState(...args);
+            }
+        }
+
         for (const r of this.routes) {
             if (match(path, r)) {
                 if (r.contentView) ui.content.setCurrent(r.contentView());
@@ -51,16 +70,7 @@ export const router = new class {
                 break;
             }
         }
-        this.current = path;
-        this.currentStr = strPath;
-        if (options?.pushState === undefined || options.pushState) {
-            const args = [{}, strPath, '#' + strPath] as const;
-            if (options?.pushState == "replace") {
-                window.history.replaceState(...args);
-            } else {
-                window.history.pushState(...args);
-            }
-        }
+
         this.onNavCompleted.invoke({ path });
     }
 };
