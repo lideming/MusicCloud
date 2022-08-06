@@ -356,11 +356,11 @@ html, body {
 }
 
 .content-animation-reverse > .contentview {
-    animation: contentview-fading-out 0.3s reverse;
+    animation: contentview-fading-in-back .3s;
 }
 
 .content-animation-reverse > .contentview.fading-out {
-    animation: contentview-fading-in 0.3s reverse;
+    animation: contentview-fading-out-back .3s;
 }
 
 @keyframes contentview-fading-in {
@@ -381,6 +381,28 @@ html, body {
   }
   100% {
     transform: scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes contentview-fading-in-back {
+  0% {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes contentview-fading-out-back {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
     opacity: 0;
   }
 }

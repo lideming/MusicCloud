@@ -48,10 +48,10 @@ export const router = new class {
         this.currentStr = strPath;
         const oldIdx = this.currentIdx;
         this.currentIdx = options?.idx ?? (this.currentIdx + 1);
-        if (options?.idx || options?.pushState)
+        if (options?.idx || options?.pushState !== false)
             this.wasBacked = this.currentIdx < oldIdx;
 
-        if (options?.pushState === undefined || options.pushState) {
+        if (options?.pushState !== false) {
             const state = { idx: this.currentIdx };
             const url = strPath ? '#' + strPath : undefined;
             const args = [state, '', url] as const;
