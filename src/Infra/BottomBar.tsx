@@ -510,7 +510,7 @@ class SimpleLyricsView extends View {
     const updateLine = () => {
       if (!this.lyrics) return;
       const time = player.currentTime;
-      const timeForLine = time + 0.3;
+      const timeForLine = time + 0.5;
       const timeForSpan = time + 0.1;
       let line: Line | null = null;
       for (const x of this.lyrics.lines) {
