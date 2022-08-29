@@ -1,7 +1,7 @@
 // file: ListIndex.ts
 
 import { ListView, Section, LoadingIndicator, ContextMenu, MenuItem, MenuInfoItem, Toast, i18n, jsx, jsxBuild, SectionAction, clearChildren, createName, objectApply, appendView } from "../Infra/viewlib";
-import { BuildDomExpr } from "../Infra/utils";
+import { BuildDomExpr, View } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
 import { user } from "../API/User";
@@ -265,6 +265,7 @@ export class ListIndex {
 export class ListIndexViewItem extends SidebarItem {
     index: ListIndex;
     listInfo: Api.TrackListInfo;
+    viewState: View | null = null;
     playing = false;
     constructor(init: Partial<ListIndexViewItem>) {
         super({});
@@ -277,15 +278,6 @@ export class ListIndexViewItem extends SidebarItem {
             child: [
                 { _id: 'tag', tag: 'span.tag' },
                 { tag: 'span.name.flex-1', text: () => this.listInfo?.name ?? this.text },
-                {
-                    tag: 'span.state',
-                    update: (dom) => {
-                        var icon = this.playing ? new Icon({ icon: svgAudio }) : null;
-                        clearChildren(dom);
-                        if (icon) dom.appendChild(icon.dom);
-                        dom.hidden = !icon;
-                    },
-                }
             ]
         };
     }
@@ -299,6 +291,16 @@ export class ListIndexViewItem extends SidebarItem {
         domtag.style.display = tagText ? 'block' : 'none';
         this.dom.style.paddingTop = tagText ? '6px' : '';
         this.dom.style.paddingBottom = tagText ? '20px' : '';
+        if (this.playing && !this.viewState) {
+            this.viewState = new View({
+                tag: 'span.state',
+                child: new Icon({ icon: svgAudio }),
+            });
+            this.appendView(this.viewState);
+        } else if (!this.playing && this.viewState) {
+            this.removeView(this.viewState);
+            this.viewState = null;
+        }
     }
     onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
         var m = new ContextMenu();

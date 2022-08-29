@@ -163,7 +163,7 @@ export const ui = new class {
     sidebar = new class {
         dom = document.getElementById('sidebar')!;
         header = mainContainer.sidebar.header;
-        btn: SidebarToggle;
+        sidebarToggle = mainContainer.sidebarToggle;
         overlay: Overlay | null;
 
         private _float = false;
@@ -215,11 +215,11 @@ export const ui = new class {
             ui.content.container.dom.style.transform = pos == null ? '' : `translate(${30 * ratio}%, 0)`;
             this.dom.style.boxShadow = pos == null ? '' : `0 0 ${numLimit((width + pos) / 5, 0, 20)}px var(--color-shadow)`;
             if (pos != null && pos > 0) {
-                this.btn.dom.style.transform = `translate(${pos}px, 0)`;
-                this.btn.dom.style.transition = 'none';
+                this.sidebarToggle.dom.style.transform = `translate(${pos}px, 0)`;
+                this.sidebarToggle.dom.style.transition = 'none';
             } else {
-                this.btn.dom.style.transform = '';
-                this.btn.dom.style.transition = '';
+                this.sidebarToggle.dom.style.transform = '';
+                this.sidebarToggle.dom.style.transition = '';
             }
         }
 
@@ -264,14 +264,7 @@ export const ui = new class {
             this.updateOverlay();
         }
         toggleBtn(show: boolean) {
-            if (show == this._btnShown) return;
-            this._btnShown = show;
-            if (show) {
-                this.btn = this.btn || new SidebarToggle();
-                this.dom.parentElement!.appendChild(this.btn.dom);
-            } else {
-                this.btn.dom.remove();
-            }
+            this.sidebarToggle.hidden = !show;
         }
 
         toggleHide(hide?) {
@@ -508,24 +501,6 @@ export const ui = new class {
         });
     }
 }; // ui
-
-class SidebarToggle extends View {
-    createDom(): BuildDomExpr {
-        return {
-            tag: 'div.sidebar-toggle.clickable.no-selection',
-            child: {
-                tag: 'div.logo',
-                text: 'M'
-            },
-            onclick: (ev) => {
-                ui.sidebar.toggleHide();
-            },
-            ondragover: (ev) => {
-                ui.sidebar.toggleHide(false);
-            }
-        };
-    }
-}
 
 class TouchPanListener {
     onStart = new Callbacks<() => void>();

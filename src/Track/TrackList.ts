@@ -1,6 +1,6 @@
 // file: TrackList.ts
 
-import { BuildDomExpr, DataUpdatingHelper, formatDuration, ScrollAnimator } from "../Infra/utils";
+import { BuildDomExpr, DataUpdatingHelper, formatDuration, ScrollAnimator, TextView, View } from "../Infra/utils";
 import { I, i18n } from "../I18n/I18n";
 import { LoadingIndicator, ListViewItem, ContextMenu, MenuItem, MenuLinkItem, MenuInfoItem, Toast, ItemActiveHelper, LazyListView, arrayInsert, arraySum, clearChildren, formatFileSize, mod, objectApply, sleepAsync, toggleClass } from "../Infra/viewlib";
 import { ListContentView } from "../Infra/ListContentView";
@@ -402,6 +402,7 @@ export class TrackViewItem extends ListViewItem {
     track: Track;
     //@ts-expect-error
     dom: HTMLDivElement;
+    viewPos: TextView;
     actionHandler: TrackActionHandler<this> | null = null;
     noPos: boolean = false;
     playing: boolean = false;
@@ -432,20 +433,9 @@ export class TrackViewItem extends ListViewItem {
                                 toggleClass(dompic, "nopic", !bg);
                             },
                         },
-                        {
-                            tag: 'span.pos',
-                            update: (dompos) => {
-                                if (this.playing) {
-                                    clearChildren(dompos);
-                                    dompos.appendChild(new Icon({ icon: svgPlayArrow }).dom);
-                                } else if (!this.noPos) {
-                                    dompos.textContent = this.track._bind?.position != null
-                                        ? (this.track._bind.position + 1).toString() : '';
-                                }
-                                toggleClass(dompos, "withpic", !!this.track.thumburl);
-                                dompos.hidden = this.noPos && !this.playing;
-                            }
-                        }
+                        this.viewPos = new TextView({
+                            tag: 'span.pos'
+                        }),
                     ]
                 },
                 { tag: 'span.name', text: () => this.track.name },
@@ -459,6 +449,17 @@ export class TrackViewItem extends ListViewItem {
     updateDom() {
         super.updateDom();
         this.toggleClass('selected', !!this.selected);
+
+        if (this.playing) {
+            this.viewPos.removeAllView();
+            this.viewPos.text = '';
+            this.viewPos.appendView(new Icon({ icon: svgPlayArrow }));
+        } else if (!this.noPos) {
+            this.viewPos.text = this.track._bind?.position != null
+                ? (this.track._bind.position + 1).toString() : '';
+        }
+        this.viewPos.toggleClass("withpic", !!this.track.thumburl);
+        this.viewPos.hidden = this.noPos && !this.playing;
     }
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
         ev.preventDefault();
