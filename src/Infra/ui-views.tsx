@@ -9,6 +9,7 @@ import { fadeout, FadeoutResult } from "@yuuza/webfx";
 
 export class MainContainer extends View {
     sidebar = new Sidebar();
+    sidebarToggle = new SidebarToggle();
     contentOuter = new View(
         <main id="content-outer">
         </main>
@@ -18,6 +19,7 @@ export class MainContainer extends View {
             <div id="main-container" class="no-transition">
                 {this.sidebar}
                 {this.contentOuter}
+                {this.sidebarToggle}
             </div>
         );
     }
@@ -243,5 +245,24 @@ export class Icon extends View {
     constructor(init?: ObjectInit<Icon>) {
         super({ tag: 'span.icon' });
         objectInit(this, init);
+    }
+}
+
+
+class SidebarToggle extends View {
+    createDom(): BuildDomExpr {
+        return {
+            tag: 'div.sidebar-toggle.clickable.no-selection',
+            child: {
+                tag: 'div.logo',
+                text: 'M'
+            },
+            onclick: (ev) => {
+                ui.sidebar.toggleHide();
+            },
+            ondragover: (ev) => {
+                ui.sidebar.toggleHide(false);
+            }
+        };
     }
 }
