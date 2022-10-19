@@ -36,6 +36,8 @@ body {
     --color-light-shadow: rgba(0, 0, 0, .3);
     background: var(--color-bg);
     color: var(--color-text);
+
+    --bottombar-height: 70px;
 }
 
 body.dark {
@@ -167,7 +169,7 @@ html, body {
 
 #main-container {
     /* height: calc(100% - 15px); */
-    height: calc(100% - 60px);
+    height: calc(100% - var(--bottombar-height));
     position: relative;
     contain: strict;
 }
@@ -711,15 +713,15 @@ html, body {
     bottom: 0;
     width: 100%;
     display: flex;
-    height: 60px;
+    height: var(--bottombar-height);
     align-items: center;
     padding: 0 8px;
     box-shadow: 0 0px 3px var(--color-shadow);
 }
 
 .bottombar .trackpic {
-    height: 50px;
-    width: 50px;
+    height: 60px;
+    width: 60px;
     border-radius: 8px;
     transition: width .3s, opacity .3s;
 }
@@ -739,7 +741,7 @@ html, body {
 .bottombar .progress-bar .background {
     flex: 1;
     background: var(--color-primary-verylight-depends);
-    height: 14px;
+    height: 16px;
     border-radius: 8px;
     overflow: hidden;
     position: relative;
@@ -747,7 +749,7 @@ html, body {
 
 .bottombar .progress-bar .fill {
     background: var(--color-primary);
-    height: 14px;
+    height: 100%;
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
 }
@@ -764,7 +766,7 @@ html, body {
 .bottombar .progress-bar .time {
     text-align: center;
     width: 3.5em;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     font-weight: 300;
     margin: 0 2px;
@@ -779,15 +781,15 @@ html, body {
 .bottombar .bottom-controls {
     display: flex; 
     align-items: center;
-    margin-top: 4px;
+    margin-top: 6px;
     padding-left: 8px;
 }
 
 .bottombar .control-btn {
     display: grid;
     place-content: center;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     margin: 0 4px;
     border-radius: 50%;
 }
@@ -803,8 +805,8 @@ html, body {
 
 .bottombar .play-btn {
     background: var(--color-primary);
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
 }
 
 .bottombar .play-btn svg {
