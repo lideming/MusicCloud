@@ -898,6 +898,12 @@ html, body {
     }
 }
 
+@media only screen  and (max-width: 500px) {
+    .bottombar .volume-btn.full-volume {
+        display: none;
+    }
+}
+
 #sidebar-header, #sidebar-features {
     border-bottom: 1px solid var(--color-bg-cc);
 }

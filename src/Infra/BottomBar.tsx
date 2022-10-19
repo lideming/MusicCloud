@@ -362,10 +362,8 @@ class ProgressButton extends View {
   }
 }
 
-// TODO
 class VolumeButton extends ProgressButton {
   onChanging = new Callbacks<(delta: number) => void>();
-  showUsage = false;
   tipView = new ToolTip();
   InputStateTracker: InputStateTracker;
   get state() {
@@ -378,6 +376,7 @@ class VolumeButton extends ProgressButton {
   set progress(val: number) {
     super.progress = val;
     this.updateTip();
+    this.toggleClass('full-volume', this.progress == 1);
   }
 
   constructor(dom?: HTMLElement) {
@@ -389,7 +388,7 @@ class VolumeButton extends ProgressButton {
     this.InputStateTracker.onChanged.add(() => this.updateTip());
     this.dom.addEventListener("wheel", (ev) => {
       ev.preventDefault();
-      var delta = Math.sign(ev.deltaY) * -0.05;
+      var delta = ev.deltaY * -0.01;
       this.onChanging.invoke(this.progress + delta);
     });
     var startX: number;
@@ -416,7 +415,6 @@ class VolumeButton extends ProgressButton {
       this.updateTip();
     });
     this.dom.addEventListener("click", (e) => {
-      this.showUsage = true;
       this.updateTip();
     });
     const mapKeyAdjustment = {
@@ -465,7 +463,6 @@ class VolumeButton extends ProgressButton {
     this.onChanging.add((x) => {
       var r = numLimit(x, 0, 1);
       r = Math.round(r * 100) / 100;
-      this.showUsage = false;
       player.volume = r;
     });
   }
