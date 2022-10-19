@@ -5,6 +5,9 @@ import copy from 'rollup-plugin-copy';
 
 import { promisify } from "util";
 import { exec } from "child_process";
+
+import packageJson from './package.json' assert { type: 'json' };
+
 const execAsync = promisify(exec);
 
 /** @type {() => import('rollup').RollupOptions[]} */
@@ -80,7 +83,7 @@ const _buildDate = new Date().toISOString();
 
 async function getBuildInfo() {
     return _buildInfo || (_buildInfo = JSON.stringify({
-        version: require('./package.json').version,
+        version: packageJson.version,
         buildDate: _buildDate,
         commits: await getCommits(),
     }));
