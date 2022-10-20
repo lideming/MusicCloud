@@ -506,6 +506,41 @@ export class TrackViewItem extends ListViewItem {
                 }));
             }
         }
+        const targetGroup = (item.track.groupId || null) ?? item.track.id;
+        const nonSameGroupItems = selected.filter(x => x != item && x.track.groupId !== targetGroup);
+        if (nonSameGroupItems.length > 0) {
+            m.add(new MenuItem({
+                text: I`Group to this`,
+                onActive: async () => {
+                    if (!item.track.groupId) {
+                        await item.track.put({
+                            ...item.track.infoObj,
+                            groupId: item.track.id,
+                        });
+                    }
+                    await Promise.all(nonSameGroupItems.map(other => {
+                        return other.track.put({
+                            ...other.track.infoObj,
+                            groupId: item.track.groupId,
+                        });
+                    }));
+                }
+            }))
+        }
+        const groupedItems = selected.filter(x => x.track.groupId && x.track.groupId !== x.track.id);
+        if (groupedItems.length > 0) {
+            m.add(new MenuItem({
+                text: I`Ungroup`,
+                onActive: async () => {
+                    await Promise.all(groupedItems.map(x => {
+                        return x.track.put({
+                            ...x.track.infoObj,
+                            groupId: x.track.id,
+                        });
+                    }));
+                }
+            }))
+        }
         if (this.track.canEdit) [0, 1].forEach(visi => {
             var count = 0;
             for (const item of selected) {

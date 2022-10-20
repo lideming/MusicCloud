@@ -173,7 +173,7 @@ export const playerCore = new class PlayerCore {
         }
         this.audio.load();
     }
-    async setTrack(track: Track | null, playNow = false) {
+    async setTrack(track: Track | null, playNow: boolean | number = false) {
         console.info('[PlayerCore] set track: '
             + (track ? `id ${track.id}: ${track.name} - ${track.artist}` : '(null)'));
         var oldTrack = this.track;
@@ -183,16 +183,16 @@ export const playerCore = new class PlayerCore {
             || (track?.url && oldTrack?.url === track?.url)
                 || (track?.blob && track.blob === oldTrack?.blob);
         if (!sameTrack) {
-            if (playNow && track) {
+            if (playNow !== false && track) {
                 await this.loadTrack(track);
             } else {
                 this.loadUrl(null);
             }
-            this.currentTime = 0;
-            this.state = !track ? 'none' : playNow ? 'stalled' : 'paused';
+            this.currentTime = typeof playNow === 'number' ? playNow : 0;
+            this.state = !track ? 'none' : (playNow !== false) ? 'stalled' : 'paused';
         }
         this.onTrackChanged.invoke();
-        if (playNow && track) await this.playTrack(track);
+        if (playNow !== false && track) await this.playTrack(track);
     }
     async playTrack(track: Track, forceStart?: boolean) {
         if (track !== this.track) {

@@ -1,20 +1,6 @@
 // file: Uploads.ts
 
-import { TrackList, TrackListView, TrackViewItem } from "./TrackList";
 import { Track } from "./Track";
-import { Semaphore, DataUpdatingHelper, CancelToken } from "../Infra/utils";
-import { ListIndexViewItem } from "./ListIndex";
-import { user } from "../API/User";
-import { Api } from "../API/apidef";
-import { LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref, buildDOM, formatFileSize, objectApply } from "../Infra/viewlib";
-import { router } from "../Infra/Router";
-import { I, i18n } from "../I18n/I18n";
-import { playerCore } from "../Player/PlayerCore";
-import { ui } from "../Infra/UI";
-import { api } from "../API/Api";
-import { ContentHeader } from "../Infra/ui-views";
-
-
 class UploadTrack extends Track {
     constructor(init: Partial<UploadTrack>) {
         super(init);
@@ -37,6 +23,19 @@ class UploadTrack extends Track {
         cancelToken?: CancelToken;
     };
 }
+
+import { TrackList, TrackListView, TrackViewItem } from "./TrackList";
+import { Semaphore, DataUpdatingHelper, CancelToken } from "../Infra/utils";
+import { ListIndexViewItem } from "./ListIndex";
+import { user } from "../API/User";
+import { Api } from "../API/apidef";
+import { LoadingIndicator, View, Toast, MessageBox, TextView, LazyListView, Ref, buildDOM, formatFileSize, objectApply } from "../Infra/viewlib";
+import { router } from "../Infra/Router";
+import { I, i18n } from "../I18n/I18n";
+import { playerCore } from "../Player/PlayerCore";
+import { ui } from "../Infra/UI";
+import { api } from "../API/Api";
+import { ContentHeader } from "../Infra/ui-views";
 
 export const uploads = new class extends TrackList {
     tracks: UploadTrack[] = [];

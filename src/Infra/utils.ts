@@ -1,6 +1,4 @@
-import { Callbacks } from "@yuuza/webfx";
-import { Action, numLimit, View } from "./viewlib";
-
+import { Callbacks, Action, numLimit, View } from "@yuuza/webfx";
 export * from "@yuuza/webfx";
 
 export class ScrollAnimator {

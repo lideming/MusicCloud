@@ -3,7 +3,7 @@ import { I } from "../I18n/I18n";
 import { Toast, Dialog, LabeledInput, TextBtn, LoadingIndicator, objectApply, sleepAsync } from "../Infra/viewlib";
 import { Api } from "../API/apidef";
 import { api } from "../API/Api";
-import { TrackList } from "./TrackList";
+import type { TrackList } from "./TrackList";
 import { lyricsEdit, LyricsSourceEditView } from "../Lyrics/LyricsEdit";
 import { user } from "../API/User";
 import { FileSelector } from "../Infra/viewlib";
@@ -25,6 +25,7 @@ export class Track {
     get lyrics() { return this.infoObj!.lyrics; }
     get visibility() { return this.infoObj!.visibility; }
     get displayName() { return this.artist + ' - ' + this.name; }
+    get groupId() { return this.infoObj!.groupId; }
     blob: Blob | null = null;
     _bind?: {
         position?: number;
@@ -99,6 +100,23 @@ export class Track {
             return this._lyricsFetchTask;
         }
         return Promise.resolve(this.lyrics!);
+    }
+
+    async put(newInfo: Partial<Api.Track>) {
+        const resp = await api.put({
+            path: 'tracks/' + this.id,
+            obj: newInfo,
+        }) as Api.Track;
+        if (resp['error']) {
+            throw new Error(resp['error']);
+        }
+        if (resp.id != this.id) throw new Error('Bad ID in response');
+        this.infoObj = resp;
+        api.onTrackInfoChanged.invoke(resp);
+    }
+
+    getGroup(): Promise<{tracks: Api.Track[]}> {
+        return api.get(`tracks/group/${this.groupId ?? this.id}`);
     }
 }
 
@@ -205,35 +223,20 @@ export class TrackDialog extends Dialog {
             throw new Error('btnSave is not clickable.');
         this.btnSave.updateWith({ clickable: false, text: I`Saving...` });
         try {
-            var newinfo = await api.put({
-                path: 'tracks/' + this.track.id,
-                obj: {
-                    id: this.track.id,
-                    name: this.inputName.value,
-                    artist: this.inputArtist.value,
-                    album: this.inputAlbum.value,
-                    albumArtist: this.inputAlbumArtist.value,
-                    lyrics: this.inputLyrics.loaded ? this.inputLyrics.value : undefined,
-                    version: this.track.infoObj?.version
-                } as Api.Track
-            }) as Api.Track;
-            if (newinfo['error']) {
-                if (newinfo['error'] == 'track_changed') {
-                    Toast.show(I`The track was changed from somewhere else.`, 5000);
-                    newinfo = newinfo['track'];
-                    if (newinfo.id != this.track.id) throw new Error('Bad ID in response');
-                    this.track.updateFromApiTrack(newinfo);
-                    api.onTrackInfoChanged.invoke(newinfo);
-                    this.setTrack(this.track);
-                } else {
-                    throw new Error("Unknown track update error");
-                }
-            } else {
-                if (newinfo.id != this.track.id) throw new Error('Bad ID in response');
-                api.onTrackInfoChanged.invoke(newinfo);
-                this.close();
-            }
+            await this.track.put({
+                id: this.track.id,
+                name: this.inputName.value,
+                artist: this.inputArtist.value,
+                album: this.inputAlbum.value,
+                albumArtist: this.inputAlbumArtist.value,
+                lyrics: this.inputLyrics.loaded ? this.inputLyrics.value : undefined,
+                version: this.track.infoObj?.version
+            });
         } catch (error) {
+            if (error.message == 'track_changed') {
+                Toast.show(I`The track was changed from somewhere else.`, 5000);
+                return;
+            }
             console.error('[Track] saving error', error);
             this.btnSave.updateWith({ clickable: false, text: I`Error` });
             await sleepAsync(3000);

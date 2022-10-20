@@ -55,8 +55,12 @@ export class BottomBar extends View {
   btnPlay = new PlayButton();
   btnPrev = new ControlButton({ icon: prev, title: () => I`prev_track` });
   btnNext = new ControlButton({ icon: next, title: () => I`next_track` });
-  btnOrder = new ControlButton({ icon: order_random, title: () => i18n.get("loopmode_" + this.loopMode) });
+  btnOrder = new ControlButton({
+    icon: order_random,
+    title: () => i18n.get("loopmode_" + this.loopMode),
+  });
   btnVolume = new VolumeButton();
+  btnGroup = new ControlButton({ icon: order_random, title: () => I`Next in group` });
   trackInfo = new TextView(
     (
       <span
@@ -70,7 +74,10 @@ export class BottomBar extends View {
     )
   );
   lyrics = new SimpleLyricsView();
-  btnFullscreen = new ControlButton({ icon: expand, title: () => I`Fullscreen` });
+  btnFullscreen = new ControlButton({
+    icon: expand,
+    title: () => I`Fullscreen`,
+  });
 
   track?: Track;
   loopMode: PlayingLoopMode = "list-seq";
@@ -90,6 +97,7 @@ export class BottomBar extends View {
             {this.btnVolume}
             {this.lyrics}
             {this.btnFullscreen}
+            {this.btnGroup}
           </div>
         </div>
       </div>
@@ -108,6 +116,7 @@ export class BottomBar extends View {
       this.track = player.track!;
       updatePrevNext();
       this.btnFullscreen.hidden = !player.isVideo;
+      this.btnGroup.hidden = !player.track?.groupId;
       this.trackInfo.updateDom();
     })();
     player.onStateChanged.add(() => {
@@ -151,6 +160,24 @@ export class BottomBar extends View {
       router.nav("nowplaying");
       ui.sidebar.toggleHide(true);
       document.documentElement.requestFullscreen();
+    });
+    this.btnGroup.onActive.add((e) => {
+      e.preventDefault();
+      const current = playerCore.track!;
+      playerCore.track!.getGroup().then((group) => {
+        let next =
+          group.tracks[
+            (group.tracks.findIndex((x) => x.id == current.id) + 1) %
+              group.tracks.length
+          ];
+        // TODO: import Track won't run because of circular deps
+        const Track = Object.getPrototypeOf(current).constructor;
+        const nextTrack =
+          current._bind?.list?.tracks.find((x) => x.id === next.id) ??
+          new Track({ infoObj: next });
+        const time = playerCore.currentTime;
+        playerCore.setTrack(nextTrack, time);
+      });
     });
   }
 }
@@ -376,7 +403,7 @@ class VolumeButton extends ProgressButton {
   set progress(val: number) {
     super.progress = val;
     this.updateTip();
-    this.toggleClass('full-volume', this.progress == 1);
+    this.toggleClass("full-volume", this.progress == 1);
   }
 
   constructor(dom?: HTMLElement) {
@@ -498,7 +525,7 @@ class SimpleLyricsView extends View {
     };
 
     player.onTrackChanged.add(updateLyrics);
-    api.onTrackInfoChanged.add(newTrack => {
+    api.onTrackInfoChanged.add((newTrack) => {
       if (newTrack.id && newTrack.id === player.track?.id) {
         updateLyrics();
       }
