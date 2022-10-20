@@ -415,7 +415,7 @@ class VolumeButton extends ProgressButton {
     this.InputStateTracker.onChanged.add(() => this.updateTip());
     this.dom.addEventListener("wheel", (ev) => {
       ev.preventDefault();
-      var delta = ev.deltaY * -0.01;
+      var delta = ev.deltaY * -0.0005;
       this.onChanging.invoke(this.progress + delta);
     });
     var startX: number;
