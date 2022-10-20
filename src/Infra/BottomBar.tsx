@@ -174,7 +174,7 @@ export class BottomBar extends View {
         const Track = Object.getPrototypeOf(current).constructor;
         const nextTrack =
           current._bind?.list?.tracks.find((x) => x.id === next.id) ??
-          new Track({ infoObj: next });
+          new Track({ infoObj: next, _bind: current._bind });
         const time = playerCore.currentTime;
         playerCore.setTrack(nextTrack, time);
       });
