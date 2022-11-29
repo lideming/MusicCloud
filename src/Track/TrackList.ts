@@ -16,6 +16,7 @@ import { ui } from "../Infra/UI";
 import { msgcli } from "../API/MessageClient";
 import svgPlayArrow from "../../resources/play_arrow-24px.svg";
 import { settings } from "../Settings/Settings";
+import { trackContextMenu } from "./TrackContextMenu";
 
 export class TrackList {
     info: Api.TrackListInfo | null = null;
@@ -462,148 +463,8 @@ export class TrackViewItem extends ListViewItem {
         this.viewPos.hidden = this.noPos && !this.playing;
     }
     onContextMenu = (item: TrackViewItem, ev: MouseEvent) => {
-        ev.preventDefault();
-        var selected: this[] = (this.selected && this.selectionHelper) ? this.selectionHelper.selectedItems : [this];
-        var m = new ContextMenu();
-        if (selected.length == 1) {
-            if (item.track.id && user.state != 'none' && user.serverOptions.trackCommentsEnabled !== false) m.add(new MenuItem({
-                text: I`Comments`, onActive: () => {
-                    router.nav(['track-comments', item.track.id.toString()]);
-                }
-            }));
-            if (settings.showDownloadOptions && this.track.url) {
-                var ext = this.track.getExtensionName();
-                ext = ext ? (ext.toUpperCase() + ', ') : '';
-                var fileSize = formatFileSize(this.track.size);
-                var files = [...(this.track.files ?? [])];
-                files.sort((a, b) => b.bitrate - a.bitrate);
-                if (!files.find(f => f.profile === ''))
-                    m.add(new MenuLinkItem({
-                        text: I`Download` + ' (' + ext + fileSize + ')',
-                        link: api.processUrl(this.track.url)!,
-                        download: this.track.artist + ' - ' + this.track.name + '.' + ext
-                    }));
-                files.forEach(f => {
-                    var format = f.format?.toUpperCase();
-                    var url = this.track.getFileUrl(f);
-                    if (url) m.add(new MenuLinkItem({
-                        text: I`Download` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
-                        link: api.processUrl(url)!,
-                        download: this.track.artist + ' - ' + this.track.name + '.' + format
-                    }));
-                    else if (this.track.canEdit) m.add(new MenuItem({
-                        text: I`Convert` + ' (' + format + ', ' + f.bitrate + ' Kbps)',
-                        onActive: () => {
-                            this.track.requestFileUrl(f);
-                        }
-                    }));
-                });
-            }
-            if (this.track.picurl) {
-                m.add(new MenuLinkItem({
-                    text: I`Show picture`,
-                    link: api.processUrl(this.track.picurl)!,
-                }));
-            }
-        }
-        const targetGroup = (item.track.groupId || null) ?? item.track.id;
-        const nonSameGroupItems = selected.filter(x => x != item && x.track.groupId !== targetGroup);
-        if (nonSameGroupItems.length > 0) {
-            m.add(new MenuItem({
-                text: I`Group to this`,
-                onActive: async () => {
-                    if (!item.track.groupId) {
-                        await item.track.put({
-                            ...item.track.infoObj,
-                            groupId: item.track.id,
-                        });
-                    }
-                    await Promise.all(nonSameGroupItems.map(other => {
-                        return other.track.put({
-                            ...other.track.infoObj,
-                            groupId: item.track.groupId,
-                        });
-                    }));
-                }
-            }))
-        }
-        const groupedItems = selected.filter(x => x.track.groupId && x.track.groupId !== x.track.id);
-        if (groupedItems.length > 0) {
-            m.add(new MenuItem({
-                text: I`Ungroup`,
-                onActive: async () => {
-                    await Promise.all(groupedItems.map(x => {
-                        return x.track.put({
-                            ...x.track.infoObj,
-                            groupId: x.track.id,
-                        });
-                    }));
-                }
-            }))
-        }
-        if (this.track.canEdit) [0, 1].forEach(visi => {
-            var count = 0;
-            for (const item of selected) {
-                if (item.track.visibility != visi) count++;
-            }
-            if (!count) return;
-            m.add(new MenuItem({
-                text: i18n.get(
-                    (count == 1) ?
-                        'make_it_visibility_' + visi :
-                        'make_{0}_visibility_' + visi,
-                    [count]
-                ),
-                onActive: () => {
-                    api.post({
-                        path: 'tracks/visibility',
-                        obj: {
-                            trackids: selected.map(x => x.track.id),
-                            visibility: visi
-                        } as Api.VisibilityChange
-                    }).then(r => {
-                        selected.forEach(t => {
-                            t.track.infoObj!.visibility = visi;
-                            api.onTrackInfoChanged.invoke(t.track.infoObj!);
-                        });
-                    });
-                }
-            }));
-        });
-        if (selected.length == 1) {
-            if (this.track.visibility == 1) m.add(new CopyMenuItem({
-                text: I`Copy link`,
-                textToCopy: api.appBaseUrl + '#track/' + this.track.id
-            }));
-            m.add(new MenuItem({
-                text: this.track.canEdit ? I`Edit` : I`Details`,
-                onActive: (ev) => this.track.startEdit(ev)
-            }));
-            if (this.actionHandler?.onTrackRemove && this.actionHandler?.canRemove?.([this]) != false) m.add(new MenuItem({
-                text: I`Remove`, cls: 'dangerous',
-                onActive: () => this.actionHandler!.onTrackRemove?.([this])
-            }));
-        }
-        if (this.actionHandler?.onTrackRemove && selected.length > 1
-            && this.actionHandler?.canRemove?.([...selected]) != false)
-            m.add(new MenuItem({
-                text: I`Remove ${selected.length} tracks`, cls: 'dangerous',
-                onActive: () => {
-                    this.actionHandler!.onTrackRemove?.([...selected]);
-                }
-            }));
-        let infoText = I`Track ID` + ': ' +
-            selected.map(x => x.track.id).join(', ') + '\n'
-            + I`Duration` + ': ' +
-            formatDuration(arraySum(selected, x => x.track.length!)) + '\n'
-            + I`Size` + ': ' +
-            formatFileSize(arraySum(selected, x => x.track.size!));
-        if (selected.length == 1) {
-            const my = (this.track.owner == user.info.id) ? 'my_' : '';
-            infoText += '\n' + i18n.get(my + 'visibility_' + selected[0].track.visibility);
-        }
-        m.add(new MenuInfoItem({ text: infoText }));
-        ui.showContextMenuForItem(selected, m, { ev: ev });
+        var selected: TrackViewItem[] = (item.selected && item.selectionHelper) ? item.selectionHelper.selectedItems : [item];
+        trackContextMenu(selected.map(x => x.track), ev, selected);
     };
 }
 

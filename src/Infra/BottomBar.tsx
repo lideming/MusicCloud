@@ -33,6 +33,7 @@ import { router } from "./Router";
 import { Line, Lyrics, parse } from "../Lyrics/Lyrics";
 import { LineView } from "../Lyrics/LyricsView";
 import { I, i18n } from "../I18n/I18n";
+import { trackContextMenu } from "../Track/TrackContextMenu";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -47,6 +48,7 @@ export class BottomBar extends View {
       <img
         class="trackpic clickable"
         onclick={() => router.nav("nowplaying")}
+        oncontextmenu={(ev) => this.onContextMenu(ev)}
         src=""
       />
     )
@@ -66,6 +68,7 @@ export class BottomBar extends View {
       <span
         class="track-info clickable"
         onclick={() => router.nav("nowplaying")}
+        oncontextmenu={(ev) => this.onContextMenu(ev)}
         hidden={() => !this.track}
       >
         <span class="name">{() => this.track?.name}</span>
@@ -102,6 +105,12 @@ export class BottomBar extends View {
         </div>
       </div>
     );
+  }
+
+  onContextMenu(ev: MouseEvent) {
+    if (this.track) {
+      trackContextMenu([this.track], ev);
+    }
   }
 
   bindPlayer(player: typeof playerCore) {
