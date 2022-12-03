@@ -1,4 +1,4 @@
-import { TextCompositionWatcher } from "../Infra/utils";
+import { MessageBox, TextCompositionWatcher } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { Toast, Dialog, LabeledInput, TextBtn, LoadingIndicator, objectApply, sleepAsync } from "../Infra/viewlib";
 import { Api } from "../API/apidef";
@@ -16,6 +16,8 @@ export class Track {
     get name() { return this.infoObj!.name; }
     get type() { return this.infoObj!.type; }
     get artist() { return this.infoObj!.artist; }
+    get album() { return this.infoObj!.album; }
+    get albumArtist() { return this.infoObj!.albumArtist; }
     get url() { return this.infoObj!.url; }
     get picurl() { return this.infoObj!.picurl; }
     get thumburl() { return this.infoObj!.thumburl; }
@@ -218,6 +220,31 @@ export class TrackDialog extends Dialog {
         }
         this.updateDom();
     }
+    checkIfChanged() {
+        return this.track.name !== this.inputName.value
+            || this.track.artist !== this.inputArtist.value
+            || this.track.album !== this.inputAlbum.value
+            || this.track.albumArtist !== this.inputAlbumArtist.value
+            || (this.inputLyrics.loaded && this.track.lyrics !== this.inputLyrics.value);
+    }
+    close() {
+        if (this.checkIfChanged()) {
+            new MessageBox()
+                .setTitle(I`Save changes?`)
+                .addText(I`There are unsaved changes.`)
+                .addResultBtns(["cancel", "no", "yes"])
+                .showAndWaitResult()
+                .then((result) => {
+                    if (result === "yes") {
+                        this.save();
+                    } else if (result === "no") {
+                        super.close();
+                    } // else noop
+                })
+            return;
+        }
+        super.close();
+    }
     async save() {
         if (!this.btnSave.clickable)
             throw new Error('btnSave is not clickable.');
@@ -232,6 +259,7 @@ export class TrackDialog extends Dialog {
                 lyrics: this.inputLyrics.loaded ? this.inputLyrics.value : undefined,
                 version: this.track.infoObj?.version
             });
+            this.close();
         } catch (error) {
             if (error.message == 'track_changed') {
                 Toast.show(I`The track was changed from somewhere else.`, 5000);
