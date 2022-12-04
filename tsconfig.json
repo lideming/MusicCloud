@@ -1,6 +1,7 @@
 {
-    "files": ["src/main.ts"],
-    "include": ["./src"],
+    // "files": ["src/main.ts"],
+    // "include": ["./src"],
+    "exclude": ["dist/"],
     "compilerOptions": {
         "module": "ES2015",
         "target": "ES2017",

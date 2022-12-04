@@ -1,9 +1,11 @@
-import { View, ContainerView, ItemActiveHelper, buildDOM, numLimit } from "../Infra/viewlib";
+import { View, ContainerView, ItemActiveHelper, numLimit } from "../Infra/viewlib";
 import { BuildDomExpr, Callbacks, Action, Timer, ScrollAnimator } from "../Infra/utils";
 import { I } from "../I18n/I18n";
-import { parse, Lyrics, Line, Span } from "./Lyrics";
+import { parse, Lyrics } from "./Lyrics";
 import { playerCore } from "../Player/PlayerCore";
 import { Track } from "../Track/Track";
+import { LineView } from "./LineView";
+import { SpanView } from "./SpanView";
 
 export class LyricsView extends View {
     lines = new ContainerView<LineView>({ tag: 'div.lyrics' });
@@ -245,92 +247,8 @@ export class LyricsView extends View {
     }
 }
 
-interface LyricsViewContext {
+export interface LyricsViewContext {
     lyrics: Lyrics;
     onSpanClicked: (span: SpanView) => void;
     enableTranslation: boolean;
-}
-
-export class LineView extends ContainerView<SpanView> {
-    line: Line;
-    get spans() { return this.items; }
-    currentIndex = 0;
-    context?: LyricsViewContext;
-    constructor(line: Line, context?: LyricsViewContext) {
-        super({ tag: 'p.line' });
-        this.context = context;
-        this.line = line;
-        this.line.spans!.forEach(s => {
-            this.addView(new SpanView(s, this));
-        });
-        if (this.context?.enableTranslation && this.line.translation) {
-            const lyrics = context?.lyrics;
-            var tlang = lyrics && (lyrics.translationLang || lyrics.lang);
-            this.dom.appendChild(buildDOM({
-                tag: 'div.trans',
-                lang: tlang,
-                text: this.line.translation
-            }));
-        }
-    }
-    setCurrentTime(time: number) {
-        const items = this.items; // assume it's sorted
-        let i = this.currentIndex;
-        while (1) {
-            if (i < items.length && items[i].startTime! <= time) {
-                items[i].toggleClass('active', true);
-                i++;
-            } else if (i > 0 && items[i - 1].startTime! > time) {
-                items[i - 1].toggleClass('active', false);
-                i--;
-            } else break;
-        }
-        this.currentIndex = i;
-    }
-}
-
-export class SpanView extends View {
-    span: Span;
-    lineView: LineView;
-    get timeStamp() { return this.span.timeStamp; }
-    set timeStamp(val) { this.span.timeStamp = val; }
-    get startTime() { return this.span.startTime; }
-    set startTime(val) { this.span.startTime = val; }
-    get isNext() { return this.dom.classList.contains('next'); }
-    set isNext(val) { this.toggleClass('next', val); }
-
-    constructor(span: Span, lineView: LineView) {
-        super();
-        this.span = span;
-        this.lineView = lineView;
-    }
-    createDom() {
-        var s = this.span;
-        return buildDOM({
-            tag: 'span.span',
-            child: !s.ruby ? s.text : {
-                tag: 'ruby',
-                child: [
-                    s.text,
-                    { tag: 'rp', text: '(' },
-                    { tag: 'rt', text: s.ruby },
-                    { tag: 'rp', text: ')' }
-                ]
-            }
-        });
-    }
-    postCreateDom() {
-        super.postCreateDom();
-        var startX, startY;
-        this.dom.addEventListener('mousedown', (ev) => {
-            startX = ev.offsetX;
-            startY = ev.offsetY;
-        });
-        this.dom.addEventListener('click', (ev) => {
-            if (Math.abs(ev.offsetX - startX) <= 3 && Math.abs(ev.offsetY - startY) <= 3) {
-                ev.preventDefault();
-                this.lineView.context?.onSpanClicked?.(this);
-            }
-        });
-    }
 }

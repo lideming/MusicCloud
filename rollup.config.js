@@ -11,72 +11,126 @@ import packageJson from './package.json' assert { type: 'json' };
 const execAsync = promisify(exec);
 
 /** @type {() => import('rollup').RollupOptions[]} */
-const rollupConfig = () => ([
-    {
-        input: './src/main.ts',
-        output: {
-            file: './dist/bundle.js',
-            format: 'umd',
-            name: 'mcloud',
+const rollupConfig = (args) => {
+    const id = args.id;
+    const buildFor = (x) => !id || id == x;
+    delete args.id;
+    return [
+        buildFor("main") && {
+            input: './src/main.ts',
+            output: {
+                file: './dist/bundle.js',
+                format: 'umd',
+                name: 'mcloud',
+                plugins: [
+                    terser({
+                        keep_classnames: true,
+                        keep_fnames: true,
+                    }),
+                ],
+                sourcemap: true,
+                // sourcemapExcludeSources: true,
+                // sourcemapPathTransform: transformSourcemapPath(),
+            },
             plugins: [
-                terser({
-                    keep_classnames: true,
-                    keep_fnames: true,
-                }),
+                buildInfo(),
+                resolve(),
+                typescript({ sourceMap: true, inlineSources: true }),
+                textLoader(),
+                jsonLoader(),
+                copy({
+                    targets: [
+                        {
+                            src: [
+                                'index.html',
+                                'resources/overlay.html',
+                            ],
+                            dest: './dist/',
+                            transform: (content, path) => content.toString().replace('_BUILD_DATE_', _buildDate),
+                        },
+                        {
+                            src: [
+                                'resources/app_icon.svg',
+                                'resources/manifest.json',
+                            ],
+                            dest: './dist/resources/',
+                        }
+                    ]
+                })
             ],
-            sourcemap: true,
-            // sourcemapExcludeSources: true,
-            // sourcemapPathTransform: transformSourcemapPath(),
+            context: 'window'
         },
-        plugins: [
-            buildInfo(),
-            resolve(),
-            typescript({ sourceMap: true, inlineSources: true  }),
-            myText(),
-            jsonLoader(),
-            copy({
-                targets: [
-                    {
-                        src: [
-                            'index.html',
-                        ],
-                        dest: './dist/',
-                        transform: (content, path) => content.toString().replace('_BUILD_DATE_', _buildDate),
-                    },
-                    {
-                        src: [
-                            'resources/app_icon.svg',
-                            'resources/manifest.json',
-                        ],
-                        dest: './dist/resources/',
-                    }
-                ]
-            })
-        ],
-        context: 'window'
-    },
-    {
-        input: './src/ServiceWorker/sw.ts',
-        output: {
-            file: './dist/sw.bundle.js',
-            format: 'iife',
+        buildFor("sw") && {
+            input: './src/ServiceWorker/sw.ts',
+            output: {
+                file: './dist/sw.bundle.js',
+                format: 'iife',
+                plugins: [
+                    // terser({
+                    //     keep_classnames: true,
+                    //     keep_fnames: true,
+                    // }),
+                ],
+                sourcemap: true,
+                // sourcemapExcludeSources: true,
+                // sourcemapPathTransform: transformSourcemapPath(),
+            },
             plugins: [
-                // terser({
-                //     keep_classnames: true,
-                //     keep_fnames: true,
-                // }),
+                buildInfo(),
+                resolve(),
+                typescript(),
             ],
-            sourcemap: true,
-            // sourcemapExcludeSources: true,
-            // sourcemapPathTransform: transformSourcemapPath(),
         },
-        plugins: [
-            buildInfo(),
-            resolve(),
-            typescript(),
-        ],
-    },
-]);
+        buildFor("electron") && {
+            input: './src/Electron/main.ts',
+            output: {
+                file: './dist/electron.main.cjs',
+                format: 'commonjs',
+                plugins: [],
+                sourcemap: true,
+            },
+            external: [
+                "electron"
+            ],
+            plugins: [
+                buildInfo(),
+                resolve(),
+                typescript(),
+            ],
+        },
+        buildFor("electron") && {
+            input: './src/Electron/rendererPreload.ts',
+            output: {
+                file: './dist/electron.preload.js',
+                format: 'commonjs',
+                sourcemap: true,
+            },
+            external: [
+                "electron"
+            ],
+            plugins: [
+                buildInfo(),
+                resolve(),
+                typescript(),
+            ],
+        },
+        buildFor("overlay") && {
+            input: './src/Overlay/main.ts',
+            output: {
+                file: './dist/overlay.bundle.js',
+                format: 'umd',
+                sourcemap: true,
+            },
+            plugins: [
+                buildInfo(),
+                resolve(),
+                typescript(),
+                textLoader(),
+                jsonLoader(),
+            ],
+        },
+    ].filter(x => !!x);
+};
 
 let _buildInfo = null;
 const _buildDate = new Date().toISOString();
@@ -138,7 +192,7 @@ function transformSourcemapPath() {
     };
 }
 
-function myText() {
+function textLoader() {
     function match(id) {
         return /\.(css|svg)$/.test(id);
     }
@@ -169,4 +223,7 @@ function jsonLoader() {
     };
 }
 
-export default rollupConfig();
+export default (args) => {
+    const r = rollupConfig(args);
+    return r;
+}

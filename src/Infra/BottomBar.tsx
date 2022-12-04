@@ -31,7 +31,7 @@ import expand from "../../resources/expand.svg";
 import type { Track } from "../Track/Track";
 import { router } from "./Router";
 import { Line, Lyrics, parse } from "../Lyrics/Lyrics";
-import { LineView } from "../Lyrics/LyricsView";
+import { LineView } from "../Lyrics/LineView";
 import { I, i18n } from "../I18n/I18n";
 import { trackContextMenu } from "../Track/TrackContextMenu";
 

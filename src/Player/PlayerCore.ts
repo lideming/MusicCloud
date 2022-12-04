@@ -290,6 +290,7 @@ if (navigator['mediaSession']) {
 
 window.addEventListener('beforeunload', (ev) => {
     if (!playerCore.track || playerCore.audio.paused) return;
+    if (window['_mcDesktop']) return;
     ev.preventDefault();
     return ev.returnValue = 'The player is running. Are you sure to leave?';
 });

@@ -1417,3 +1417,47 @@ html, body {
     display: inline-block;
     margin: 0;
 }
+
+.mc-overlay {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-items: center;
+
+    /* TODO */
+    background: #6661;
+    border: solid 1px #6665;
+}
+.mc-overlay:hover {
+    background: #6661;
+    border: solid 1px #6665;
+}
+
+.mc-overlay .lyrics {
+    flex: 1;
+    text-align: center;
+    height: 40px;
+    overflow: hidden;
+    position: relative;
+}
+
+.mc-overlay .lyrics .line {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    transform: translate(0, -50%);
+    animation: fadein .3s;
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.1;
+    overflow: hidden;
+    display: -webkit-box;
+    color: var(--color-text-gray);
+    text-shadow: 0 0 2px #3335;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.mc-overlay .lyrics .span.active {
+    color: var(--color-primary);
+}

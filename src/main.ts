@@ -46,6 +46,7 @@ import { appVersion } from "./Settings/AppVersion";
 import { settings } from "./Settings/Settings";
 import { playerFX } from "./Player/PlayerFX";
 import { serviceWorkerClient } from "./ServiceWorker/client";
+import { infoProvider } from "./Overlay/infoProvider";
 
 import * as webfx from "@yuuza/webfx";
 
@@ -78,6 +79,7 @@ export const app = window['app'] = {
         router.init();
         appVersion.showUpdatedToast();
         serviceWorkerClient.init();
+        infoProvider.bindToPlayer(playerCore);
         console.timeEnd('[Main] app.init()');
     },
     checkMode() {
