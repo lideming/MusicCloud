@@ -10,6 +10,7 @@ export const infoProvider = {
         track: track?.infoObj,
       });
       (track?.getLyrics() ?? Promise.resolve(null)).then((lyrics) => {
+        if (track !== player.track) return;
         channel.postMessage({
           type: "lyrics",
           trackId: track?.id,

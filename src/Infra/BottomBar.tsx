@@ -529,6 +529,7 @@ class SimpleLyricsView extends View {
       }
       this.fadeoutCurrentLineView();
       const raw = await track.getLyrics();
+      if (track !== player.track) return;
       this.lyrics = parse(raw);
       this.onLyricsChanged.invoke();
     };
