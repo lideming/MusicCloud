@@ -42,3 +42,7 @@ channel.addEventListener("message", (ev) => {
     lyricsView.timeUpdated(time);
   }
 });
+
+channel.postMessage({
+  type: "request_state",
+});

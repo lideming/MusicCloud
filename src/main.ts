@@ -79,7 +79,7 @@ export const app = window['app'] = {
         router.init();
         appVersion.showUpdatedToast();
         serviceWorkerClient.init();
-        infoProvider.bindToPlayer(playerCore);
+        infoProvider.init(playerCore);
         console.timeEnd('[Main] app.init()');
     },
     checkMode() {
