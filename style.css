@@ -1129,12 +1129,15 @@ html, body {
     width: 8px;
 }
 
+.lyrics .line {
+    text-align: center;
+    color: var(--color-text-gray);
+}
+
 .lyricsview .line {
     margin: 1em 10px;
     min-height: 1em;
     line-height: 1.3;
-    text-align: center;
-    color: var(--color-text-gray);
 }
 
 .lyricsview .line rt {
@@ -1143,15 +1146,6 @@ html, body {
 
 .lyricsview .line rt::selection {
     background: none;
-}
-
-.lyricsview .line.active {
-    color: var(--color-text);
-}
-
-.lyricsview .line.active .span.active {
-    color: var(--color-primary);
-    animation: lryics-span-active .2s;
 }
 
 .lyricsview .span.next {
@@ -1175,8 +1169,36 @@ html, body {
     opacity: 1;
 }
 
-.lyricsview .line .trans {
+.lyrics .line .trans {
     font-size: 80%;
+}
+
+.mc-overlay .lyrics .line {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    transform: translate(0, -50%);
+    animation: fadein .3s;
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.1;
+    text-shadow: 0 0 2px #3335;
+}
+
+.mc-overlay .lyrics .line .spans {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.lyrics .line.active {
+    color: var(--color-text);
+}
+
+.lyrics .line.active .span.active {
+    color: var(--color-primary);
+    animation: lryics-span-active .2s;
 }
 
 @keyframes lryics-span-active {
@@ -1439,25 +1461,4 @@ html, body {
     height: 40px;
     overflow: hidden;
     position: relative;
-}
-
-.mc-overlay .lyrics .line {
-    position: absolute;
-    width: 100%;
-    top: 50%;
-    transform: translate(0, -50%);
-    animation: fadein .3s;
-    margin: 0;
-    font-size: 20px;
-    line-height: 1.1;
-    overflow: hidden;
-    display: -webkit-box;
-    color: var(--color-text-gray);
-    text-shadow: 0 0 2px #3335;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-}
-
-.mc-overlay .lyrics .span.active {
-    color: var(--color-primary);
 }

@@ -72,11 +72,15 @@ export class OverlayLyricsView extends View {
       this.currentLine = line;
       this.fadeoutCurrentLineView();
       if (line) {
-        this.lineView = new LineView(line);
+        this.lineView = new LineView(line, { enableTranslation: true });
         this.addView(this.lineView);
       }
     }
     if (this.lineView) {
+      this.lineView.toggleClass(
+        "active",
+        this.lineView.line.startTime! <= timeForSpan
+      );
       this.lineView.setCurrentTime(timeForSpan);
     }
   }

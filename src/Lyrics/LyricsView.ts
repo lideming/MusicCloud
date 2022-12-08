@@ -248,7 +248,7 @@ export class LyricsView extends View {
 }
 
 export interface LyricsViewContext {
-    lyrics: Lyrics;
-    onSpanClicked: (span: SpanView) => void;
-    enableTranslation: boolean;
+    lyrics?: Lyrics;
+    onSpanClicked?: (span: SpanView) => void;
+    enableTranslation?: boolean;
 }

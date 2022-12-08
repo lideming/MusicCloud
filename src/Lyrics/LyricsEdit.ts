@@ -240,12 +240,12 @@ class EditableLyricsView extends LyricsView {
             while (line.spans && !line.spans[colPos].timeStamp) {
                 if (colPos-- === 0) {
                     line = this.lines.get(line.position! - 1);
-                    colPos = line.length - 1;
+                    colPos = line.spans.length - 1;
                 }
             }
         } else if (go === 'forward') {
             do {
-                if (line && ++colPos === line.length) {
+                if (line && ++colPos === line.spans.length) {
                     line = this.lines.get(line.position! + 1);
                     colPos = 0;
                 }
@@ -254,7 +254,7 @@ class EditableLyricsView extends LyricsView {
             do {
                 if (line && colPos-- === 0) {
                     line = this.lines.get(line.position! - 1);
-                    colPos = line.length - 1;
+                    colPos = line.spans.length - 1;
                 }
             } while (line && (line.spans && !line.spans[colPos].timeStamp));
         }
@@ -264,7 +264,7 @@ class EditableLyricsView extends LyricsView {
             do {
                 spans.push(line.spans[colPos]);
                 colPos++;
-            } while (colPos < line.length && !line.spans[colPos].timeStamp);
+            } while (colPos < line.spans.length && !line.spans[colPos].timeStamp);
         }
         return spans;
     }
