@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { getResourcePath } from "./utils";
 
 let mainWindow: BrowserWindow | null = null;
@@ -41,7 +41,8 @@ function openOverlayWindow() {
 }
 
 app.whenReady().then(() => {
-  openOverlayWindow();
+  console.info("electron app ready");
+  // openOverlayWindow();
   openMainWindow();
   app.on("activate", () => {
     if (
@@ -55,4 +56,24 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+});
+
+ipcMain.handle("toggle_desktop_lyrics", (ev, shown?: boolean) => {
+  const currentShown = overlayWindow !== null;
+  if (shown === currentShown) return;
+  if (shown === undefined) {
+    shown = !currentShown;
+  }
+  if (shown) {
+    openOverlayWindow();
+  } else {
+    overlayWindow?.close();
+    overlayWindow = null;
+  }
+});
+
+ipcMain.handle("get_state", (ev) => {
+  return {
+    desktopLyrics: overlayWindow !== null,
+  };
 });

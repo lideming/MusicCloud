@@ -34,6 +34,7 @@ import { Line, Lyrics, parse } from "../Lyrics/Lyrics";
 import { LineView } from "../Lyrics/LineView";
 import { I, i18n } from "../I18n/I18n";
 import { trackContextMenu } from "../Track/TrackContextMenu";
+import { desktopApi } from "./desktopApi";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -515,6 +516,10 @@ class SimpleLyricsView extends View {
   postCreateDom() {
     super.postCreateDom();
     this.onActive.add(() => {
+      if (desktopApi?.toggleDesktopLyrics) {
+        desktopApi.toggleDesktopLyrics();
+        return;
+      }
       router.nav("nowplaying");
     });
   }
