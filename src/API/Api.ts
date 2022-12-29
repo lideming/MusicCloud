@@ -30,12 +30,11 @@ export const api = new class {
             ...init
         });
     }
-    getHeaders(arg: FetchOptions) {
-        arg = arg || {};
+    getHeaders(arg?: FetchOptions) {
         var headers = {};
-        var auth = arg.auth ?? this.defaultAuth;
+        var auth = arg?.auth ?? this.defaultAuth;
         if (auth) headers['Authorization'] = auth;
-        if (arg.cache != true) headers['Cache-Control'] = 'no-store';
+        if (arg?.cache != true) headers['Cache-Control'] = 'no-store';
         return headers;
     }
     async get(path: string, options?: FetchOptions): Promise<any> {
@@ -131,7 +130,7 @@ export const api = new class {
             complete
         };
     }
-    private async checkResp(options: { status?: number | false; }, resp: Response) {
+    async checkResp(options: { status?: number | false; }, resp: Response) {
         if (options.status !== false &&
             ((options.status !== undefined && resp.status != options.status)
                 || resp.status >= 400)) {
