@@ -47,6 +47,7 @@ import { settings } from "./Settings/Settings";
 import { playerFX } from "./Player/PlayerFX";
 import { serviceWorkerClient } from "./ServiceWorker/client";
 import { infoProvider } from "./Overlay/infoProvider";
+import { userStore, UserStoreFields } from "./API/UserStore";
 
 import * as webfx from "@yuuza/webfx";
 
@@ -107,6 +108,8 @@ export {
   ui,
   uploads,
   user,
+  userStore,
+  UserStoreFields,
   webfx,
 };
 
