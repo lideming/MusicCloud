@@ -33,7 +33,7 @@ import { api } from "./API/Api";
 import { user } from "./API/User";
 import { listIndex } from "./Track/ListIndex";
 import { uploads } from "./Track/Uploads";
-import { discussion, notes, comments } from "./Comments/Discussion";
+import { comments, discussion, notes } from "./Comments/Discussion";
 import { router } from "./Infra/Router";
 import { settingsUI } from "./Settings/SettingsUI";
 import { msgcli } from "./API/MessageClient";
@@ -52,47 +52,64 @@ import * as webfx from "@yuuza/webfx";
 
 import style from "../style.css";
 
-export const app = window['app'] = {
-    webfx,
-    settings, settingsUI,
-    ui, api, playerCore, router, listIndex, user, uploads, discussion, notes, nowPlaying, lyricsEdit, playerFX,
-    Toast, ToastsContainer, Lyrics,
-    msgcli,
-    init() {
-        console.time('[Main] app.init()');
-        settings.init();
-        app.checkMode();
-        app.injectStyle();
-        playerCore.init();
-        ui.init();
-        playerFX.init();
-        user.init();
-        uploads.init();
-        search.init();
-        discussion.init();
-        notes.init();
-        nowPlaying.init();
-        listenTogether.init();
-        comments.init();
-        listIndex.init();
-        msgcli.init();
-        router.init();
-        appVersion.showUpdatedToast();
-        serviceWorkerClient.init();
-        infoProvider.init(playerCore);
-        console.timeEnd('[Main] app.init()');
-    },
-    checkMode() {
-        if (localStorage.getItem("mcloud-dev") == "1") {
-            webfx.startBlockingDetect();
-        }
-    },
-    injectStyle() {
-        webfx.injectWebfxCss();
-        injectCss(style, { tag: 'style#mcloud-injected-style' });
-    }
+function init() {
+  console.time("[Main] app init()");
+  settings.init();
+  checkMode();
+  injectStyle();
+  playerCore.init();
+  ui.init();
+  playerFX.init();
+  user.init();
+  uploads.init();
+  search.init();
+  discussion.init();
+  notes.init();
+  nowPlaying.init();
+  listenTogether.init();
+  comments.init();
+  listIndex.init();
+  msgcli.init();
+  router.init();
+  appVersion.showUpdatedToast();
+  serviceWorkerClient.init();
+  infoProvider.init(playerCore);
+  console.timeEnd("[Main] app init()");
+}
+
+function checkMode() {
+  if (localStorage.getItem("mcloud-dev") == "1") {
+    webfx.startBlockingDetect();
+  }
+}
+
+function injectStyle() {
+  webfx.injectWebfxCss();
+  injectCss(style, { tag: "style#mcloud-injected-style" });
+}
+
+export {
+  api,
+  discussion,
+  listIndex,
+  Lyrics,
+  lyricsEdit,
+  msgcli,
+  notes,
+  nowPlaying,
+  playerCore,
+  playerFX,
+  router,
+  settings,
+  settingsUI,
+  Toast,
+  ToastsContainer,
+  ui,
+  uploads,
+  user,
+  webfx,
 };
 
-app.init();
+init();
 
-window['preload'].jsOk();
+window["preload"]?.jsOk();
