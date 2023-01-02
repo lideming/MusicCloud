@@ -7,6 +7,7 @@
   },
   "main": "dist/bundle.js",
   "type": "module",
+  "typings": "src/main.ts",
   "scripts": {
     "build": "concurrently 'npm:build:*'",
     "build:main": "rollup -c --id=main",
@@ -31,7 +32,8 @@
   },
   "homepage": "https://github.com/lideming/MusicCloud",
   "files": [
-    "dist/"
+    "dist/",
+    "src/"
   ],
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.1",
