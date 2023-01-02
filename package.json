@@ -1,6 +1,6 @@
 {
   "name": "@yuuza/mcloud",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "The MusicCloud website.",
   "publishConfig": {
     "access": "public"
