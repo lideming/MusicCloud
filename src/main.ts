@@ -118,4 +118,6 @@ export {
 
 init();
 
-window["preload"]?.jsOk();
+Promise.resolve().then(() => {
+  window["preload"]?.jsOk();
+});
