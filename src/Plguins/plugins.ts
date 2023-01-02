@@ -1,6 +1,6 @@
-import { buildDOM } from "@yuuza/webfx";
+import { buildDOM, Semaphore } from "@yuuza/webfx";
 import { UserStoreItem } from "../API/UserStore";
-import { userStore } from "../main";
+import { user, userStore } from "../main";
 
 export interface PluginInfo {
   name: string;
@@ -18,13 +18,16 @@ interface PluginListItem {
 
 export const plugins = new class Plugins {
   userPluginList = new UserStoreItem({
+    key: "plugins",
     value: { plugins: [] as PluginListItem[] },
     revision: 0,
   });
   loadedPlugin = new Map<string, PluginInfo>();
 
   init() {
-    this.loadUserPlguins();
+    user.waitLogin().then(() => {
+      this.loadUserPlguins();
+    });
   }
 
   async loadUserPlguins() {
@@ -54,57 +57,50 @@ export const plugins = new class Plugins {
       return await this.loadPluginFromURL(url);
     }
   }
-
-  private _loadId = 0;
   private _currentRegisterCallback: null | ((info: PluginInfo) => void) = null;
-  private _urlLoadCallbacks = {};
+  private _loadingLock = new Semaphore({ maxCount: 1 });
 
   // Load "https://" script
   async loadPluginFromURL(url: string) {
-    const id = ++this._loadId;
+    // Prefetch the script before waiting for the lock
+    try {
+      await fetch(url);
+    } catch (error) {
+      // Network/CORS error
+    }
 
-    let afterLoadResolve;
-    let afterLoadReject;
-    const afterLoadPromise = new Promise((res, rej) => {
-      afterLoadResolve = res;
-      afterLoadReject = rej;
-    });
+    await this._loadingLock.enter();
 
     let info: PluginInfo = null!;
-
-    this._urlLoadCallbacks[id] = {
-      before: () => {
-        this._currentRegisterCallback = (_info) => {
-          info = _info;
-        };
-      },
-      after: () => {
-        this._currentRegisterCallback = null;
-        delete this._urlLoadCallbacks[id];
-        afterLoadResolve();
-      },
+    this._currentRegisterCallback = (_info) => {
+      info = _info;
     };
 
-    [
-      buildDOM({
-        tag: "script",
-        text: `mcloud.plugins._urlLoadCallbacks[${id}].before()`,
-      }),
-      buildDOM({
+    try {
+      let afterLoadResolve;
+      let afterLoadReject;
+      const afterLoadPromise = new Promise((res, rej) => {
+        afterLoadResolve = res;
+        afterLoadReject = rej;
+      });
+
+      document.body.appendChild(buildDOM({
         tag: "script",
         src: url,
         onerror: (error) => {
           console.error("loading plugin script", error);
           afterLoadReject(error);
         },
-      }),
-      buildDOM({
-        tag: "script",
-        text: `mcloud.plugins._urlLoadCallbacks[${id}].after()`,
-      }),
-    ].forEach((dom) => document.head.appendChild(dom));
+        onload: () => {
+          afterLoadResolve();
+        },
+      }));
 
-    await afterLoadPromise;
+      await afterLoadPromise;
+    } finally {
+      this._currentRegisterCallback = null;
+      this._loadingLock.exit();
+    }
 
     this._afterPluginLoad(url, info);
 
