@@ -1,11 +1,31 @@
+import { ObjectInit, objectInit } from "@yuuza/webfx";
 import { api } from "./Api";
 
 const TypedArray = Object.getPrototypeOf(Uint8Array);
 
+export type UserStoreValueType = "json" | "text" | "raw";
+
 class UserStore {
+  async get<T = any>(
+    key: string,
+    type?: "json",
+  ): Promise<null | ({ value: T } & UserStoreFields)>;
   async get(
     key: string,
-    type: "json" | "raw" = "json", // try parse as JSON and return as object
+    type: "text",
+  ): Promise<null | ({ value: string } & UserStoreFields)>;
+  async get(
+    key: string,
+    type: "raw",
+  ): Promise<null | ({ value: ArrayBuffer } & UserStoreFields)>;
+  async get(
+    key: string,
+    type: UserStoreValueType,
+  ): Promise<null | ({ value: any } & UserStoreFields)>;
+
+  async get(
+    key: string,
+    type: UserStoreValueType = "json",
   ): Promise<null | ({ value: any } & UserStoreFields)> {
     var resp = await api._fetch(`${api.baseUrl}my/store/${key}`, {
       headers: api.getHeaders(),
@@ -14,6 +34,8 @@ class UserStore {
     let value;
     if (type === "json") {
       value = await resp.json();
+    } else if (type === "text") {
+      value = await resp.text();
     } else if (type === "raw") {
       value = await resp.arrayBuffer();
     } else {
@@ -32,7 +54,10 @@ class UserStore {
     data: { value: any } & Partial<UserStoreFields>,
   ): Promise<void> {
     let { value } = data;
-    if (!(value instanceof ArrayBuffer || value instanceof TypedArray || value instanceof Blob)) {
+    if (
+      !(value instanceof ArrayBuffer || value instanceof TypedArray ||
+        value instanceof Blob)
+    ) {
       value = JSON.stringify(value);
     }
     const headers = api.getHeaders();
@@ -71,6 +96,28 @@ class UserStore {
 export const userStore = new UserStore();
 
 export interface UserStoreFields {
+  revision?: number;
+  visibility?: number;
+}
+
+export class UserStoreItem<T = any> implements UserStoreFields {
+  key: string;
+  value: T;
+  type: UserStoreValueType = "json";
   revision: number;
   visibility: number;
+
+  constructor(init?: ObjectInit<UserStoreItem<T>>) {
+    objectInit(this, init);
+  }
+
+  async fetch() {
+    const result = await userStore.get(this.key, this.type);
+    if (result) Object.assign(this, result);
+  }
+
+  async put() {
+    await userStore.set(this.key, this);
+    this.revision++;
+  }
 }

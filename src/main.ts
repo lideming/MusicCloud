@@ -48,6 +48,7 @@ import { playerFX } from "./Player/PlayerFX";
 import { serviceWorkerClient } from "./ServiceWorker/client";
 import { infoProvider } from "./Overlay/infoProvider";
 import { userStore, UserStoreFields } from "./API/UserStore";
+import { plugins } from "./Plguins/plugins";
 
 import * as webfx from "@yuuza/webfx";
 
@@ -74,6 +75,7 @@ function init() {
   router.init();
   appVersion.showUpdatedToast();
   serviceWorkerClient.init();
+  plugins.init();
   infoProvider.init(playerCore);
   console.timeEnd("[Main] app init()");
 }
@@ -100,6 +102,7 @@ export {
   nowPlaying,
   playerCore,
   playerFX,
+  plugins,
   router,
   settings,
   settingsUI,
