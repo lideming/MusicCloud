@@ -1,4 +1,4 @@
-import { ObjectInit, objectInit } from "@yuuza/webfx";
+import { ObjectInit, objectInit, Ref, sleepAsync } from "@yuuza/webfx";
 import { api } from "./Api";
 
 const TypedArray = Object.getPrototypeOf(Uint8Array);
@@ -100,24 +100,77 @@ export interface UserStoreFields {
   visibility?: number;
 }
 
-export class UserStoreItem<T = any> implements UserStoreFields {
-  key: string;
-  value: T;
+export class UserStoreItem<T = any> extends Ref<T> implements UserStoreFields {
+  key: string = undefined!;
   type: UserStoreValueType = "json";
-  revision: number;
-  visibility: number;
+  revision: number = 0;
+  visibility: number = undefined!;
+  fetched = false;
+
+  private _putInProgress: Promise<void> | null = null;
+  private _putPending: Promise<void> | null = null;
 
   constructor(init?: ObjectInit<UserStoreItem<T>>) {
+    super();
     objectInit(this, init);
   }
 
   async fetch() {
     const result = await userStore.get(this.key, this.type);
     if (result) Object.assign(this, result);
+    this.fetched = true;
   }
 
-  async put() {
-    await userStore.set(this.key, this);
-    this.revision++;
+  async get() {
+    if (!this.fetched) await this.fetch();
+    return this.value!;
+  }
+
+  put() {
+    if (this._putPending) return this._putPending;
+    let pendingTask;
+    pendingTask = (async () => {
+      if (this._putInProgress) {
+        this._putPending = pendingTask;
+        try {
+          await this._putInProgress;
+        } catch (error) {}
+        this._putPending = null;
+      }
+      const putTask = this._putInProgress = (async () => {
+        await userStore.set(this.key, this);
+        this.revision++;
+        this._putInProgress = null;
+      })();
+      await putTask;
+    })();
+    return pendingTask;
+  }
+
+  async concurrencyAwareUpdate(effect: (oldValue: T) => Promise<T> | T) {
+    if (!this.fetched) await this.fetch();
+    let retries = 0;
+    while (true) {
+      this.value = await effect(this.value!);
+      try {
+        await this.put();
+      } catch (error) {
+        if (error.message == "concurrency_error") {
+          retries++;
+          if (retries == 5) {
+            throw new Error(`Update failed after ${retries} retries`);
+          }
+          if (retries > 1) {
+            await sleepAsync(500 + Math.random() * 2500);
+          }
+          console.info(`[UserStore] update retries=${retries} for ${this.key}`);
+          await this.fetch();
+          continue;
+        } else {
+          throw error;
+        }
+      }
+      break;
+    }
   }
 }

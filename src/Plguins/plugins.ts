@@ -17,12 +17,12 @@ interface PluginListItem {
 }
 
 export const plugins = new class Plugins {
-  userPluginList = new UserStoreItem({
+  private userPluginList = new UserStoreItem({
     key: "plugins",
     value: { plugins: [] as PluginListItem[] },
     revision: 0,
   });
-  loadedPlugin = new Map<string, PluginInfo>();
+  private loadedPlugin = new Map<string, PluginInfo>();
 
   init() {
     user.waitLogin().then(() => {
@@ -30,22 +30,34 @@ export const plugins = new class Plugins {
     });
   }
 
+  async getUserPlugins() {
+    return (await this.userPluginList.get()).plugins;
+  }
+
   async loadUserPlguins() {
-    await this.userPluginList.fetch();
-    for (const plugin of this.userPluginList.value.plugins) {
+    for (const plugin of await this.getUserPlugins()) {
       this.loadPlugin(plugin.url);
     }
   }
 
   async addUserPlugin(url: string) {
     const info = await this.loadPlugin(url);
-    this.userPluginList.value.plugins.push({
-      name: info.name,
-      url,
-      description: info.description,
-      enabled: true,
+    await this.userPluginList.concurrencyAwareUpdate((value) => {
+      value.plugins.push({
+        name: info.name,
+        url,
+        description: info.description,
+        enabled: true,
+      });
+      return value;
     });
-    await this.userPluginList.put();
+  }
+
+  async removeUserPlugin(url: string) {
+    await this.userPluginList.concurrencyAwareUpdate((value) => {
+      value.plugins = value.plugins.filter((x) => x.url != url);
+      return value;
+    });
   }
 
   async loadPlugin(url: string) {
@@ -57,6 +69,7 @@ export const plugins = new class Plugins {
       return await this.loadPluginFromURL(url);
     }
   }
+
   private _currentRegisterCallback: null | ((info: PluginInfo) => void) = null;
   private _loadingLock = new Semaphore({ maxCount: 1 });
 
