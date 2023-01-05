@@ -48,7 +48,7 @@ import { playerFX } from "./Player/PlayerFX";
 import { serviceWorkerClient } from "./ServiceWorker/client";
 import { infoProvider } from "./Overlay/infoProvider";
 import { userStore, UserStoreFields } from "./API/UserStore";
-import { plugins } from "./Plguins/plugins";
+import { plugins } from "./Plugins/plugins";
 
 import * as webfx from "@yuuza/webfx";
 

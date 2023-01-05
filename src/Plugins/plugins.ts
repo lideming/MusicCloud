@@ -9,7 +9,7 @@ export interface PluginInfo {
   version: string;
 }
 
-interface PluginListItem {
+export interface PluginListItem {
   url: string;
   name: string;
   description: string;
@@ -34,29 +34,48 @@ export const plugins = new class Plugins {
     return (await this.userPluginList.get()).plugins;
   }
 
+  getLoadedPlugins() {
+    return this.loadedPlugin;
+  }
+
   async loadUserPlguins() {
     for (const plugin of await this.getUserPlugins()) {
-      this.loadPlugin(plugin.url);
+      if (plugin.enabled) {
+        this.loadPlugin(plugin.url);
+      }
     }
   }
 
   async addUserPlugin(url: string) {
     const info = await this.loadPlugin(url);
     await this.userPluginList.concurrencyAwareUpdate((value) => {
-      value.plugins.push({
-        name: info.name,
-        url,
-        description: info.description,
-        enabled: true,
-      });
-      return value;
+      return {
+        ...value,
+        plugins: [...value.plugins, {
+          name: info.name,
+          url,
+          description: info.description,
+          enabled: true,
+        }],
+      };
     });
   }
 
   async removeUserPlugin(url: string) {
     await this.userPluginList.concurrencyAwareUpdate((value) => {
-      value.plugins = value.plugins.filter((x) => x.url != url);
-      return value;
+      return {
+        ...value,
+        plugins: value.plugins.filter((x) => x.url != url),
+      };
+    });
+  }
+
+  async toggleUserPlugin(url: string, enabled: boolean) {
+    await this.userPluginList.concurrencyAwareUpdate((value) => {
+      return {
+        ...value,
+        plugins: value.plugins.map((x) => x.url == url ? { ...x, enabled } : x),
+      };
     });
   }
 

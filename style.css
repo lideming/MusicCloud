@@ -1440,6 +1440,21 @@ html, body {
     margin: 0;
 }
 
+.plugin-list {
+    height: 300px;
+    overflow-y: auto;
+}
+
+.plugin-item {
+    padding: 10px 0;
+    border-bottom: solid 1px var(--color-bg-cc);
+}
+
+.plugin-item > .btn, .plugin-status {
+    float: right;
+    margin: 0 5px;
+}
+
 .mc-overlay {
     height: 100%;
     display: flex;

@@ -9,6 +9,7 @@ import { playerFX } from "../Player/PlayerFX";
 import { TextBtn } from "@yuuza/webfx";
 import { settings } from "./Settings";
 import { api } from "../API/Api";
+import { PluginsUI } from "../Plugins/pluginsUI";
 
 export const settingsUI = new class {
     dialog: SettingsDialog;
@@ -93,6 +94,13 @@ class SettingsDialog extends Dialog {
             ui.notification.setEnable(!ui.notification.config.enabled)
                 .then(() => this.updateDom());
         });
+        this.addContent(new ButtonView({
+            text: () => I`Plugins`,
+            type: "big",
+            onActive: (ev) => {
+                new PluginsUI().show(ev);
+            },
+        }));
         const devFeatures = new View(<div>
             <ButtonView onActive={(e) => {
                 playerFX.showUI(e);
