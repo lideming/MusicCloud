@@ -16,10 +16,10 @@ const rollupConfig = (args) => {
     const buildFor = (x) => !id || id == x;
     delete args.id;
     return [
-        buildFor("main") && {
+        ...["main", "bundle"].map(id => buildFor(id) && {
             input: './src/main.ts',
             output: {
-                file: './dist/bundle.js',
+                file: `./dist/${id}.js`,
                 format: 'umd',
                 name: 'mcloud',
                 plugins: [
@@ -32,6 +32,7 @@ const rollupConfig = (args) => {
                 // sourcemapExcludeSources: true,
                 // sourcemapPathTransform: transformSourcemapPath(),
             },
+            external: id === 'main' ? ["@yuuza/webfx"] : [],
             plugins: [
                 buildInfo(),
                 resolve(),
@@ -59,7 +60,7 @@ const rollupConfig = (args) => {
                 })
             ],
             context: 'window'
-        },
+        }),
         buildFor("sw") && {
             input: './src/ServiceWorker/sw.ts',
             output: {

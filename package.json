@@ -5,12 +5,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "dist/bundle.js",
-  "type": "module",
+  "main": "dist/main.js",
   "typings": "src/main.ts",
   "scripts": {
     "build": "concurrently 'npm:build:*'",
     "build:main": "rollup -c --id=main",
+    "build:bundle": "rollup -c --id=bundle",
     "build:sw": "rollup -c --id=sw",
     "build:electron": "rollup -c --id=electron",
     "build:overlay": "rollup -c --id=overlay",
@@ -35,11 +35,13 @@
     "dist/",
     "src/"
   ],
+  "dependencies": {
+    "@yuuza/webfx": "^1.10.1"
+  },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-terser": "^0.1.0",
     "@rollup/plugin-typescript": "^9.0.2",
-    "@yuuza/webfx": "^1.10.1",
     "concurrently": "^7.6.0",
     "electron": "^22.0.0",
     "rollup": "^3.5.0",

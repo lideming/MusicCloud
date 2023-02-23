@@ -12,11 +12,13 @@ specifiers:
   tslib: ^2.4.1
   typescript: ^4.9.3
 
+dependencies:
+  '@yuuza/webfx': 1.10.1
+
 devDependencies:
   '@rollup/plugin-node-resolve': 15.0.1_rollup@3.5.0
   '@rollup/plugin-terser': 0.1.0_rollup@3.5.0
   '@rollup/plugin-typescript': 9.0.2_3qldpvhx2vwhgdtnpkk4u5tuly
-  '@yuuza/webfx': 1.10.1
   concurrently: 7.6.0
   electron: 22.0.0
   rollup: 3.5.0
@@ -247,18 +249,16 @@ packages:
 
   /@yuuza/i18n/1.2.3:
     resolution: {integrity: sha512-OCncYfVJuYEBGo31/HMMALJOHbshL5NZP/lCJ0Z1ZwtHqnSrXeaW4jxR7u7itE7tQABYulmFsKviJnSPvbnLwA==}
-    dev: true
 
   /@yuuza/utils/1.0.2:
     resolution: {integrity: sha512-ZTfQ0Lxj/mofYvk064EDts62ox3y9y1aarn22IkveVbXFeQCGWBSS2MbMy6E6XLCz3DdanRmeBuUQNphruDmtA==}
-    dev: true
 
   /@yuuza/webfx/1.10.1:
     resolution: {integrity: sha512-eEScgSdmzqCH6+vWelFsHA5PtHohDU0RQHpQYJLuEMgNLJj0GXoMGiHqqXY3Z8+U1QrgGOcVjOoGPaBL3vJVow==}
     dependencies:
       '@yuuza/i18n': 1.2.3
       '@yuuza/utils': 1.0.2
-    dev: true
+    dev: false
 
   /acorn/8.8.1:
     resolution: {integrity: sha512-7zFpHzhnqYKrkYdUjF1HI1bzd0VygEGX8lFk4k5zVMqHEoES+P+7TKI+EvLO9WVMJ8eekdO0aDEK044xTXwPPA==}
