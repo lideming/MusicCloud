@@ -297,9 +297,7 @@ export class LyricsSourceEditView extends InputView {
                 const start = this.dom.selectionStart;
                 const end = this.dom.selectionEnd;
                 const origstr = this.dom.value;
-                this.dom.value = origstr.substring(0, start)
-                    + '[' + origstr.substring(start, end) + ']{}'
-                    + origstr.substring(end);
+                this.dom.setRangeText('[' + origstr.substring(start, end) + ']{}');
                 const cursorPos = start == end ? start + 1 : end + 3;
                 this.dom.setSelectionRange(cursorPos, cursorPos);
             }
