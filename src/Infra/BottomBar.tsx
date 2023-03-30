@@ -44,15 +44,17 @@ const loopModeToIcon: Record<PlayingLoopMode, string> = {
 };
 
 export class BottomBar extends View {
-  trackImg = new View<HTMLImageElement>(
+  trackImg = new View<HTMLImageElement>(<img src="" />);
+  trackImgOuter = new View(
     (
-      <img
+      <div
         class="trackpic clickable"
         onclick={() => router.nav("nowplaying")}
         oncontextmenu={(ev) => this.onContextMenu(ev)}
-        src=""
-      />
-    )
+      >
+        {this.trackImg}
+      </div>
+    ),
   );
   progressBar = new ProgressBar();
   btnPlay = new PlayButton();
@@ -63,7 +65,10 @@ export class BottomBar extends View {
     title: () => i18n.get("loopmode_" + this.loopMode),
   });
   btnVolume = new VolumeButton();
-  btnGroup = new ControlButton({ icon: order_random, title: () => I`Next in group` });
+  btnGroup = new ControlButton({
+    icon: order_random,
+    title: () => I`Next in group`,
+  });
   trackInfo = new TextView(
     (
       <span
@@ -75,7 +80,7 @@ export class BottomBar extends View {
         <span class="name">{() => this.track?.name}</span>
         <span class="artist">{() => this.track?.artist}</span>
       </span>
-    )
+    ),
   );
   lyrics = new SimpleLyricsView();
   btnFullscreen = new ControlButton({
@@ -89,7 +94,7 @@ export class BottomBar extends View {
   createDom() {
     return (
       <div class="bottombar no-lyrics">
-        {this.trackImg}
+        {this.trackImgOuter}
         <div class="control-split-h">
           {this.progressBar}
           <div class="bottom-controls">
@@ -122,7 +127,7 @@ export class BottomBar extends View {
     player.onTrackChanged.add(() => {
       if (player.track?.thumburl)
         this.trackImg.dom.src = api.processUrl(player.track?.thumburl)!;
-      this.trackImg.toggleClass("noimg", !player.track?.thumburl);
+      this.trackImgOuter.toggleClass("noimg", !player.track?.thumburl);
       this.track = player.track!;
       updatePrevNext();
       this.btnFullscreen.hidden = !player.isVideo;
@@ -252,18 +257,18 @@ class ProgressBar extends View {
   bindPlayer(player: typeof playerCore) {
     player.onTrackChanged.add(() => {
       this.refTotalTime.value!.textContent = formatDuration(
-        player.track?.length
+        player.track?.length,
       );
       this.loudnessMap.updateLoudnessMap(player);
     });
     player.onProgressChanged.add(() => {
       this.refCurrentTime.value!.textContent = formatDuration(
-        player.currentTime
+        player.currentTime,
       );
       this.refFill.value!.style.width = `${numLimit(
         (player.currentTime / (player.track?.length ?? 0)) * 100,
         0,
-        100
+        100,
       )}%`;
     });
     listenPointerEvents(this.refBackground.value!, (e) => {
@@ -295,7 +300,7 @@ class LoudnessMap extends View<HTMLCanvasElement> {
       }
       track._loudmap = (async () => {
         var resp = (await api.get(
-          `tracks/${track.id}/loudnessmap`
+          `tracks/${track.id}/loudnessmap`,
         )) as Response;
         if (!resp.ok) return null;
         var ab = await resp.arrayBuffer();
@@ -594,7 +599,7 @@ class SimpleLyricsView extends View {
         () => {
           this.removeView(view);
           this.currentFadingout = null;
-        }
+        },
       );
     }
   }
