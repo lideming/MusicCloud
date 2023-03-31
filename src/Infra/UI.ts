@@ -138,7 +138,7 @@ export const ui = new class {
         }
     };
     lang = new class {
-        availableLangs = ['en', 'zh'];
+        availableLangs = ['en', 'zh', 'ja'];
         siLang = new SettingItem('mcloud-lang', 'str', '');
         curLang: string;
         init() {
