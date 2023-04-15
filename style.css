@@ -14,14 +14,15 @@ body {
     --color-bg-transparent: var(--color-bg);
     --color-text: black;
     --color-text-gray: #666;
-    --color-bg-selection: hsl(5, 100%, 85%);
-    --color-primary: hsl(5, 100%, 67%);
-    --color-primary-darker: hsl(5, 100%, 60%);
-    --color-primary-dark: hsl(5, 100%, 30%);
-    --color-primary-verydark: hsl(5, 100%, 20%);
-    --color-primary-lighter: hsl(5, 100%, 70%);
-    --color-primary-light: hsl(5, 100%, 83%);
-    --color-primary-verylight: hsl(5, 100%, 90%);
+    --color-hs: 5, 100%;
+    --color-bg-selection: hsl(var(--color-hs), 85%);
+    --color-primary: hsl(var(--color-hs), 67%);
+    --color-primary-darker: hsl(var(--color-hs), 60%);
+    --color-primary-dark: hsl(var(--color-hs), 30%);
+    --color-primary-verydark: hsl(var(--color-hs), 20%);
+    --color-primary-lighter: hsl(var(--color-hs), 70%);
+    --color-primary-light: hsl(var(--color-hs), 83%);
+    --color-primary-verylight: hsl(var(--color-hs), 90%);
     --color-primary-dark-depends: var(--color-primary-dark);
     --color-primary-light-depends: var(--color-primary-light);
     --color-primary-verylight-depends: var(--color-primary-verylight);
@@ -44,8 +45,8 @@ body.dark {
     --color-bg: black;
     --color-text: #ddd;
     --color-text-gray: #aaa;
-    --color-bg-selection: hsl(5, 100%, 20%);
-    --color-primary-dark-depends: hsl(5, 100%, 83%);
+    --color-bg-selection: hsl(var(--color-hs), 20%);
+    --color-primary-dark-depends: hsl(var(--color-hs), 83%);
     --color-primary-light-depends: var(--color-primary-dark);
     --color-primary-verylight-depends: var(--color-primary-verydark);
     --color-fg-11: #dddddd;
@@ -1022,7 +1023,7 @@ html, body {
 }
 
 .btn-progress.btn-down .btn-fill, .btn-progress:active .btn-fill {
-    background: hsl(5, 100%, 50%);
+    background: hsl(var(--color-hs), 50%);
 }
 
 .messagebox-text {
@@ -1382,7 +1383,7 @@ html, body {
     --color-bg-ee: #00000011;
     --color-bg-f8: #00000008;
     --color-bg-transparent: #ffffff33;
-    --color-bg-selection: hsl(5, 100%, 50%, .3);
+    --color-bg-selection: hsl(var(--color-hs), 50%, .3);
 }
 
 .dark #content-outer,
