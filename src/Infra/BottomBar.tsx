@@ -28,6 +28,7 @@ import order_repeat from "../../resources/order_repeat.svg";
 import order_repeat_1 from "../../resources/order_repeat_1.svg";
 import volume from "../../resources/volume.svg";
 import expand from "../../resources/expand.svg";
+import icon_switch from "../../resources/switch.svg";
 import type { Track } from "../Track/Track";
 import { router } from "./Router";
 import { Line, Lyrics, parse } from "../Lyrics/Lyrics";
@@ -66,7 +67,7 @@ export class BottomBar extends View {
   });
   btnVolume = new VolumeButton();
   btnGroup = new ControlButton({
-    icon: order_random,
+    icon: icon_switch,
     title: () => I`Next in group`,
   });
   trackInfo = new TextView(
@@ -103,10 +104,10 @@ export class BottomBar extends View {
             {this.btnPrev}
             {this.btnPlay}
             {this.btnNext}
+            {this.btnGroup}
             {this.btnVolume}
             {this.lyrics}
             {this.btnFullscreen}
-            {this.btnGroup}
           </div>
         </div>
       </div>
