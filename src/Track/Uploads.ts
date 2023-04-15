@@ -52,7 +52,7 @@ export const uploads = new class extends TrackList {
             contentView: () => this.view
         });
         ui.sidebarList.addFeatureItem(this.sidebarItem);
-        user.onSwitchedUser.add(() => {
+        user.onSwitchedUser.add((_) => {
             if (this.state !== false && this.state !== 'waiting') {
                 this.tracks = [];
                 this.state = false;
@@ -65,7 +65,7 @@ export const uploads = new class extends TrackList {
         });
         user.onSwitchedUser.add(() => {
             this.sidebarItem.hidden = user.state != 'logged';
-        })();
+        })(null);
         playerCore.onTrackChanged.add(() => {
             this.sidebarItem.updateWith({ playing: !!this.tracks.find(x => x === playerCore.track) });
         });

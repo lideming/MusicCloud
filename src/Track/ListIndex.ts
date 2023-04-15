@@ -157,12 +157,29 @@ export class ListIndex {
                 item.contentView = content;
             }
         });
+
+        let initialPlayingList: number | null = null;
+        user.onSwitchedUser.add((userInfo) => {
+            if (userInfo) {
+                this.setIndex({ lists: userInfo.lists!});
+                initialPlayingList = userInfo.playing?.listid ?? null;
+            } else {
+                this.setIndex(null);
+            }
+        });
         router.addRoute({
             path: [''],
             onNav: async (arg) => {
                 if (await user.waitLogin(false)) {
-                    if (this.listView.length > 0)
-                        router.nav(['list', this.listView.get(0).listInfo.id.toString()], { pushState: false });
+                    let id: number | null = null
+                    if (initialPlayingList !== null) {
+                        id = initialPlayingList;
+                    } else if (this.listView.length > 0) {
+                        id = this.listView.get(0).listInfo.id;
+                    }
+                    if (id !== null) {
+                        router.nav(['list', id.toString()], { pushState: false });
+                    }
                 }
             }
         });

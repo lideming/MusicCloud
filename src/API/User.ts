@@ -33,7 +33,7 @@ export const user = new class User {
     get serverOptions() { return this._serverOptions; }
 
     state: 'none' | 'logging' | 'error' | 'logged' = 'none';
-    onSwitchedUser = new Callbacks<Action>();
+    onSwitchedUser = new Callbacks<Action<Api.UserInfo | null>>();
     loggingin: Promise<void> | null = null;
     pendingInfo: User['info'] | null = null;
     setState(state: User['state']) {
@@ -159,10 +159,9 @@ export const user = new class User {
 
         api.defaultAuth = this.getBearerAuth(this.info.token);
         ui.sidebarLogin.update();
-        listIndex.setIndex(info as any);
         this.setState('logged');
         this.loggingin = null;
-        this.onSwitchedUser.invoke();
+        this.onSwitchedUser.invoke(info);
 
         if (info.playing && !playerCore.track) this.tryRestorePlaying(info.playing);
     }
@@ -183,10 +182,9 @@ export const user = new class User {
         this.siLogin.save();
         api.defaultAuth = null;
         ui.content.setCurrent(null);
-        listIndex.setIndex(null);
         this.setState('none');
         this.loggingin = null;
-        this.onSwitchedUser.invoke();
+        this.onSwitchedUser.invoke(null);
     }
     async setListids(listids: number[]) {
         var obj: Api.UserInfo = {

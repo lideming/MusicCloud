@@ -314,7 +314,7 @@ export class TrackListView extends ListContentView {
     onShow() {
         super.onShow();
         this.shownEvents.add(playerCore.onTrackChanged, this.trackChanged);
-        this.shownEvents.add(user.onSwitchedUser, () => { this.list.updateCanEdit(); })();
+        this.shownEvents.add(user.onSwitchedUser, () => { this.list.updateCanEdit(); })(null);
         this.list.fetch();
         this.trackChanged();
     }

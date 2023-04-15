@@ -22,7 +22,7 @@ export const discussion = new class extends CommentsView {
         ui.sidebarList.addFeatureItem(this.sidebarItem);
         user.onSwitchedUser.add(() => {
             this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.discussionEnabled && settings.showDiscussion);
-        })();
+        })(null);
     }
     sidebarItem: SidebarItem;
 };
@@ -44,7 +44,7 @@ export const notes = new class extends CommentsView {
         });
         user.onSwitchedUser.add(() => {
             this.sidebarItem.hidden = !(user.state == 'logged' && user.serverOptions.notesEnabled && settings.showNotes);
-        })();
+        })(null);
     }
     sidebarItem: SidebarItem;
 };
