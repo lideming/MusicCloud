@@ -5,4 +5,4 @@ export { I18n, i18n, I };
 
 export const IA = createArrayBuilder(i18n);
 
-data.forEach(x => i18n.add2dArray(x));
+data.forEach((x) => i18n.add2dArray(x));

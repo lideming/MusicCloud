@@ -46,17 +46,15 @@ app.whenReady().then(() => {
   openMainWindow();
   app.on("activate", () => {
     if (
-      BrowserWindow.getAllWindows()
-        .filter((x) => x != overlayWindow)
-        .length === 0
+      BrowserWindow.getAllWindows().filter((x) => x != overlayWindow).length ===
+      0
     ) {
       openMainWindow();
     }
   });
 });
 
-app.on("window-all-closed", () => {
-});
+app.on("window-all-closed", () => {});
 
 ipcMain.handle("toggle_desktop_lyrics", (ev, shown?: boolean) => {
   const currentShown = overlayWindow !== null;

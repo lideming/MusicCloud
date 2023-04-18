@@ -5,7 +5,9 @@ export const infoProvider = {
     const channel = new BroadcastChannel("mc-player");
 
     channel.addEventListener("message", (ev) => {
-      const { data: { type } } = ev;
+      const {
+        data: { type },
+      } = ev;
       if (type === "request_state") {
         postTrack();
         postLyrics();

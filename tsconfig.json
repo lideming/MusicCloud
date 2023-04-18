@@ -1,19 +1,19 @@
 {
-    // "files": ["src/main.ts"],
-    // "include": ["./src"],
-    "exclude": ["dist/"],
-    "compilerOptions": {
-        "module": "ES2015",
-        "target": "ES2017",
-        "lib": ["DOM", "ES2017"],
-        "types": ["./src/textfile"],
-        "moduleResolution": "Node",
-        "jsx": "react",
-        "jsxFactory": "jsx",
-        "sourceMap": true,
-        "downlevelIteration": true,
-        "noImplicitThis": true,
-        "strictNullChecks": true,
-        "noEmitHelpers": true
-    }
+  // "files": ["src/main.ts"],
+  // "include": ["./src"],
+  "exclude": ["dist/"],
+  "compilerOptions": {
+    "module": "ES2015",
+    "target": "ES2017",
+    "lib": ["DOM", "ES2017"],
+    "types": ["./src/textfile"],
+    "moduleResolution": "Node",
+    "jsx": "react",
+    "jsxFactory": "jsx",
+    "sourceMap": true,
+    "downlevelIteration": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "noEmitHelpers": true
+  }
 }

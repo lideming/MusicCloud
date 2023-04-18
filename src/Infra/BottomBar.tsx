@@ -55,7 +55,7 @@ export class BottomBar extends View {
       >
         {this.trackImg}
       </div>
-    ),
+    )
   );
   progressBar = new ProgressBar();
   btnPlay = new PlayButton();
@@ -81,7 +81,7 @@ export class BottomBar extends View {
         <span class="name">{() => this.track?.name}</span>
         <span class="artist">{() => this.track?.artist}</span>
       </span>
-    ),
+    )
   );
   lyrics = new SimpleLyricsView();
   btnFullscreen = new ControlButton({
@@ -258,18 +258,18 @@ class ProgressBar extends View {
   bindPlayer(player: typeof playerCore) {
     player.onTrackChanged.add(() => {
       this.refTotalTime.value!.textContent = formatDuration(
-        player.track?.length,
+        player.track?.length
       );
       this.loudnessMap.updateLoudnessMap(player);
     });
     player.onProgressChanged.add(() => {
       this.refCurrentTime.value!.textContent = formatDuration(
-        player.currentTime,
+        player.currentTime
       );
       this.refFill.value!.style.width = `${numLimit(
         (player.currentTime / (player.track?.length ?? 0)) * 100,
         0,
-        100,
+        100
       )}%`;
     });
     listenPointerEvents(this.refBackground.value!, (e) => {
@@ -301,7 +301,7 @@ class LoudnessMap extends View<HTMLCanvasElement> {
       }
       track._loudmap = (async () => {
         var resp = (await api.get(
-          `tracks/${track.id}/loudnessmap`,
+          `tracks/${track.id}/loudnessmap`
         )) as Response;
         if (!resp.ok) return null;
         var ab = await resp.arrayBuffer();
@@ -600,7 +600,7 @@ class SimpleLyricsView extends View {
         () => {
           this.removeView(view);
           this.currentFadingout = null;
-        },
+        }
       );
     }
   }

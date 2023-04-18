@@ -13,9 +13,7 @@ class OverlayView extends View {
   createDom() {
     return {
       tag: "div.mc-overlay",
-      child: [
-        this.lyricsView,
-      ],
+      child: [this.lyricsView],
     };
   }
 }

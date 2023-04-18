@@ -1,150 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,user-scalable=0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta id="meta-theme-color" name="theme-color" content="">
-    <link rel="manifest" href="resources/manifest.json">
-    <link rel="icon" href="resources/app_icon.svg" type="image/svg+xml">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,user-scalable=0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta id="meta-theme-color" name="theme-color" content="" />
+    <link rel="manifest" href="resources/manifest.json" />
+    <link rel="icon" href="resources/app_icon.svg" type="image/svg+xml" />
     <title>Music Cloud</title>
     <!-- Preload style -->
     <style>
-        * {
-            box-sizing: border-box;
-        }
+      * {
+        box-sizing: border-box;
+      }
 
-        #preload-overlay {
-            position: fixed;
-            left: 0;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1000;
-            text-align: center;
-            background: white;
-            color: black;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
+      #preload-overlay {
+        position: fixed;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1000;
+        text-align: center;
+        background: white;
+        color: black;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
 
-        .dark #preload-overlay {
-            background: black;
-            color: #ccc;
-        }
+      .dark #preload-overlay {
+        background: black;
+        color: #ccc;
+      }
 
-        #preload-overlay h1 {
-            margin: 10px 5px;
-        }
+      #preload-overlay h1 {
+        margin: 10px 5px;
+      }
 
-        #preload-overlay p {
-            margin: 10px 5px;
-        }
+      #preload-overlay p {
+        margin: 10px 5px;
+      }
     </style>
     <!-- Preload script which waits for main script loading and displays status -->
     <script>
-        (function () {
-            var preload = window.preload = {
-                domLoaded: false,
-                jsLoaded: false,
-                jsError: false,
-                preLoginTask: null,
-                inputToken: null,
-                jsOk() {
-                    this.jsLoaded = true
-                    this.update();
-                },
-                onJsLoad() {
-                    setTimeout(function (thiz) {
-                        if (!thiz.jsLoaded) {
-                            console.error('js loaded without calling callback');
-                            thiz.jsError = true;
-                            thiz.update();
-                        }
-                    }, 1000, this);
-                },
-                update() {
-                    if (!this.domLoaded) return;
-                    document.getElementById('js-ok').hidden = !preload.jsLoaded;
-                    document.getElementById('js-error').hidden = !preload.jsError;
-                    document.getElementById('js-error-msg').hidden = !preload.jsError;
-                    if (this.jsLoaded) this.end();
-                },
-                end() {
-                    mcloud.ui.endPreload();
-                    window.removeEventListener('error', onerror);
-                },
-                preLogin() {
-                    // Try to prefetch the user info even before we can run the main script.
-                    // Make it about 1 RTT + 50 ms (script download + execution time) faster.
-                    var strLogin = localStorage.getItem('mcloud-login');
-                    if (!strLogin) return;
-                    var login = JSON.parse(strLogin);
-                    if (!login || !login.token || !login.lastBaseUrl) return;
-                    preload.preLoginTask = fetch(login.lastBaseUrl + 'users/me', {
-                        credentials: 'same-origin',
-                        headers: {
-                            'Authorization': 'Bearer ' + login.token,
-                            'Cache-Control': 'no-store'
-                        }
-                    }).then(function (resp) {
-                        if (!resp.ok) {
-                            throw new Error('HTTP status ' + resp.status);
-                        }
-                        return resp.json()
-                    });
+      (function () {
+        var preload = (window.preload = {
+          domLoaded: false,
+          jsLoaded: false,
+          jsError: false,
+          preLoginTask: null,
+          inputToken: null,
+          jsOk() {
+            this.jsLoaded = true;
+            this.update();
+          },
+          onJsLoad() {
+            setTimeout(
+              function (thiz) {
+                if (!thiz.jsLoaded) {
+                  console.error("js loaded without calling callback");
+                  thiz.jsError = true;
+                  thiz.update();
                 }
-            };
-            window.addEventListener('DOMContentLoaded', function () {
-                preload.domLoaded = true;
-                preload.update();
-                // Set the theme ASAP to avoid blinking
-                if (['dark', 'dark-rounded'].indexOf(localStorage.getItem('mcloud-theme')) >= 0) {
-                    document.body.classList.add('dark');
-                    document.getElementById('meta-theme-color').content = 'black';
-                }
+              },
+              1000,
+              this
+            );
+          },
+          update() {
+            if (!this.domLoaded) return;
+            document.getElementById("js-ok").hidden = !preload.jsLoaded;
+            document.getElementById("js-error").hidden = !preload.jsError;
+            document.getElementById("js-error-msg").hidden = !preload.jsError;
+            if (this.jsLoaded) this.end();
+          },
+          end() {
+            mcloud.ui.endPreload();
+            window.removeEventListener("error", onerror);
+          },
+          preLogin() {
+            // Try to prefetch the user info even before we can run the main script.
+            // Make it about 1 RTT + 50 ms (script download + execution time) faster.
+            var strLogin = localStorage.getItem("mcloud-login");
+            if (!strLogin) return;
+            var login = JSON.parse(strLogin);
+            if (!login || !login.token || !login.lastBaseUrl) return;
+            preload.preLoginTask = fetch(login.lastBaseUrl + "users/me", {
+              credentials: "same-origin",
+              headers: {
+                Authorization: "Bearer " + login.token,
+                "Cache-Control": "no-store",
+              },
+            }).then(function (resp) {
+              if (!resp.ok) {
+                throw new Error("HTTP status " + resp.status);
+              }
+              return resp.json();
             });
-            var onerror = function (e) {
-                preload.jsError = true;
-                document.getElementById('js-error-msg').textContent = "" + e.error;
-                preload.update();
-            };
+          },
+        });
+        window.addEventListener("DOMContentLoaded", function () {
+          preload.domLoaded = true;
+          preload.update();
+          // Set the theme ASAP to avoid blinking
+          if (
+            ["dark", "dark-rounded"].indexOf(
+              localStorage.getItem("mcloud-theme")
+            ) >= 0
+          ) {
+            document.body.classList.add("dark");
+            document.getElementById("meta-theme-color").content = "black";
+          }
+        });
+        var onerror = function (e) {
+          preload.jsError = true;
+          document.getElementById("js-error-msg").textContent = "" + e.error;
+          preload.update();
+        };
 
-            var handleToken = function () {
-                var splits = window.location.href.split('#token=');
-                if (splits.length > 1) {
-                    preload.inputToken = splits[1];
-                    window.history.replaceState(null, null, splits[0]);
-                }
-            };
+        var handleToken = function () {
+          var splits = window.location.href.split("#token=");
+          if (splits.length > 1) {
+            preload.inputToken = splits[1];
+            window.history.replaceState(null, null, splits[0]);
+          }
+        };
 
-            window.addEventListener('error', onerror);
-            handleToken();
-            preload.preLogin();
-        })();
+        window.addEventListener("error", onerror);
+        handleToken();
+        preload.preLogin();
+      })();
     </script>
     <!-- End of preload style and script -->
-    <script src="bundle.js?v=_BUILD_DATE_" onload="window.preload && preload.onJsLoad()" defer async></script>
-</head>
+    <script
+      src="bundle.js?v=_BUILD_DATE_"
+      onload="window.preload && preload.onJsLoad()"
+      defer
+      async
+    ></script>
+  </head>
 
-<body>
+  <body>
     <div id="preload-overlay" lang="en">
-        <h1>MusicCloud</h1>
-        <div style="min-height: 6em;">
-            <p>Loading...</p>
-            <p hidden style="color: gray;" id="js-ok">JavaScript OK</p>
-            <p hidden style="color: red;" id="js-error">JavaScript Error</p>
-            <p hidden id="js-error-msg"></p>
-        </div>
-        <noscript>
-            <p>JavaScript is required to run this application.</p>
-        </noscript>
+      <h1>MusicCloud</h1>
+      <div style="min-height: 6em">
+        <p>Loading...</p>
+        <p hidden style="color: gray" id="js-ok">JavaScript OK</p>
+        <p hidden style="color: red" id="js-error">JavaScript Error</p>
+        <p hidden id="js-error-msg"></p>
+      </div>
+      <noscript>
+        <p>JavaScript is required to run this application.</p>
+      </noscript>
     </div>
-</body>
-
+  </body>
 </html>

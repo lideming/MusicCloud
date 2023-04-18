@@ -16,7 +16,7 @@ export interface PluginListItem {
   enabled: boolean;
 }
 
-export const plugins = new class Plugins {
+export const plugins = new (class Plugins {
   private userPluginList = new UserStoreItem({
     key: "plugins",
     value: { plugins: [] as PluginListItem[] },
@@ -51,12 +51,15 @@ export const plugins = new class Plugins {
     await this.userPluginList.concurrencyAwareUpdate((value) => {
       return {
         ...value,
-        plugins: [...value.plugins, {
-          name: info.name,
-          url,
-          description: info.description,
-          enabled: true,
-        }],
+        plugins: [
+          ...value.plugins,
+          {
+            name: info.name,
+            url,
+            description: info.description,
+            enabled: true,
+          },
+        ],
       };
     });
   }
@@ -74,7 +77,9 @@ export const plugins = new class Plugins {
     await this.userPluginList.concurrencyAwareUpdate((value) => {
       return {
         ...value,
-        plugins: value.plugins.map((x) => x.url == url ? { ...x, enabled } : x),
+        plugins: value.plugins.map((x) =>
+          x.url == url ? { ...x, enabled } : x
+        ),
       };
     });
   }
@@ -82,7 +87,7 @@ export const plugins = new class Plugins {
   async loadPlugin(url: string) {
     if (url.startsWith("user-store:")) {
       return await this.loadPluginFromUserStore(
-        url.substring("user-store:".length),
+        url.substring("user-store:".length)
       );
     } else {
       return await this.loadPluginFromURL(url);
@@ -116,17 +121,19 @@ export const plugins = new class Plugins {
         afterLoadReject = rej;
       });
 
-      document.body.appendChild(buildDOM({
-        tag: "script",
-        src: url,
-        onerror: (error) => {
-          console.error("loading plugin script", error);
-          afterLoadReject(error);
-        },
-        onload: () => {
-          afterLoadResolve();
-        },
-      }));
+      document.body.appendChild(
+        buildDOM({
+          tag: "script",
+          src: url,
+          onerror: (error) => {
+            console.error("loading plugin script", error);
+            afterLoadReject(error);
+          },
+          onload: () => {
+            afterLoadResolve();
+          },
+        })
+      );
 
       await afterLoadPromise;
     } finally {
@@ -177,10 +184,10 @@ export const plugins = new class Plugins {
     if (!this._currentRegisterCallback) {
       throw new Error(
         "Currently no plugin loading task (registerPlugin must be" +
-          " call during the script execution, usually in top level).",
+          " call during the script execution, usually in top level)."
       );
     }
     this._currentRegisterCallback(info);
     this._currentRegisterCallback = null;
   }
-}();
+})();
