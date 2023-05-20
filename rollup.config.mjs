@@ -10,6 +10,27 @@ import packageJson from "./package.json" assert { type: "json" };
 
 const execAsync = promisify(exec);
 
+const basicPlugins = () => [
+  buildInfo(),
+  resolve(),
+  typescript({ sourceMap: true, inlineSources: true }),
+];
+
+const umdOutput = (path, umdName = undefined) => ({
+  file: `./dist/${path}.js`,
+  format: "umd",
+  name: umdName,
+  plugins: [
+    terser({
+      keep_classnames: true,
+      keep_fnames: true,
+    }),
+  ],
+  sourcemap: true,
+  // sourcemapExcludeSources: true,
+  // sourcemapPathTransform: transformSourcemapPath(),
+});
+
 /** @type {() => import('rollup').RollupOptions[]} */
 const rollupConfig = (args) => {
   const id = args.id;
@@ -20,25 +41,10 @@ const rollupConfig = (args) => {
       (id) =>
         buildFor(id) && {
           input: "./src/main.ts",
-          output: {
-            file: `./dist/${id}.js`,
-            format: "umd",
-            name: "mcloud",
-            plugins: [
-              terser({
-                keep_classnames: true,
-                keep_fnames: true,
-              }),
-            ],
-            sourcemap: true,
-            // sourcemapExcludeSources: true,
-            // sourcemapPathTransform: transformSourcemapPath(),
-          },
+          output: umdOutput(id, "mcloud"),
           external: id === "main" ? ["@yuuza/webfx"] : [],
           plugins: [
-            buildInfo(),
-            resolve(),
-            typescript({ sourceMap: true, inlineSources: true }),
+            ...basicPlugins(),
             textLoader(),
             jsonLoader(),
             copy({
@@ -57,24 +63,12 @@ const rollupConfig = (args) => {
             }),
           ],
           context: "window",
-        }
+        },
     ),
     buildFor("sw") && {
       input: "./src/ServiceWorker/sw.ts",
-      output: {
-        file: "./dist/sw.bundle.js",
-        format: "iife",
-        plugins: [
-          // terser({
-          //     keep_classnames: true,
-          //     keep_fnames: true,
-          // }),
-        ],
-        sourcemap: true,
-        // sourcemapExcludeSources: true,
-        // sourcemapPathTransform: transformSourcemapPath(),
-      },
-      plugins: [buildInfo(), resolve(), typescript()],
+      output: umdOutput("sw.bundle"),
+      plugins: basicPlugins(),
     },
     buildFor("electron") && {
       input: "./src/Electron/main.ts",
@@ -85,7 +79,7 @@ const rollupConfig = (args) => {
         sourcemap: true,
       },
       external: ["electron"],
-      plugins: [buildInfo(), resolve(), typescript()],
+      plugins: basicPlugins(),
     },
     buildFor("electron") && {
       input: "./src/Electron/rendererPreload.ts",
@@ -95,22 +89,12 @@ const rollupConfig = (args) => {
         sourcemap: true,
       },
       external: ["electron"],
-      plugins: [buildInfo(), resolve(), typescript()],
+      plugins: basicPlugins(),
     },
     buildFor("overlay") && {
       input: "./src/Overlay/main.ts",
-      output: {
-        file: "./dist/overlay.bundle.js",
-        format: "umd",
-        sourcemap: true,
-      },
-      plugins: [
-        buildInfo(),
-        resolve(),
-        typescript(),
-        textLoader(),
-        jsonLoader(),
-      ],
+      output: umdOutput("overlay.bundle"),
+      plugins: [...basicPlugins(), textLoader(), jsonLoader()],
     },
   ].filter((x) => !!x);
 };
