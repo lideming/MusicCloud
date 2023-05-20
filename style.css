@@ -330,7 +330,7 @@ body {
   align-items: center;
   height: 50px;
   width: 50px;
-  background: var(--color-bg-ee);
+  /* background: var(--color-bg-ee); */
   color: var(--color-primary);
   transition: transform 0.3s;
 }
@@ -1287,6 +1287,10 @@ body {
   transition: transform 0.3s, border 0.6s, opacity 0.3s;
 }
 
+.menu-info {
+  padding: 5px 12px;
+}
+
 .sidebar-toggle:active,
 .item:active {
   border: solid 2px var(--color-bg-dd);
@@ -1325,13 +1329,15 @@ body {
   margin: 2px;
 }
 
-.rounded .context-menu .item {
-  margin: 2px 4px;
-}
-
 .rounded .context-menu {
   padding: 2px 0;
 }
+
+.rounded .menu-info {
+  padding: 5px 14px;
+}
+
+.rounded .context-menu 
 
 .rounded #settings-btn {
   width: 46px;
