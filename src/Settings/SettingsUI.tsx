@@ -1,4 +1,4 @@
-import { Dialog, ButtonView, View, LabeledInput } from "../Infra/viewlib";
+import { ButtonView, Dialog, LabeledInput, View } from "../Infra/viewlib";
 import { I, i18n, IA } from "../I18n/I18n";
 import { ui } from "../Infra/UI";
 import { playerCore } from "../Player/PlayerCore";
@@ -103,7 +103,7 @@ class SettingsDialog extends Dialog {
         onActive: (ev) => {
           new PluginsUI().show(ev);
         },
-      })
+      }),
     );
     const devFeatures = new View(
       (
@@ -116,7 +116,7 @@ class SettingsDialog extends Dialog {
             Test: Player FX
           </ButtonView>
         </div>
-      )
+      ),
     );
     devFeatures.hidden = true;
     let devClickCount = 0;
@@ -140,7 +140,7 @@ class SettingsDialog extends Dialog {
         >
           {() => I`About`}
         </TextBtn>
-      </div>
+      </div>,
     );
   }
 
@@ -184,53 +184,116 @@ class AboutDialog extends Dialog {
                 ? I`Build Date` +
                   ": " +
                   new Date(appVersion.currentDate).toLocaleString(
-                    ui.lang.curLang
+                    ui.lang.curLang,
                   )
                 : ""}
             </p>
-            <p>{IA`This project is ${(
-              <a
-                href="https://github.com/lideming/MusicCloud"
-                class="clickable"
-                target="_blank"
-              >
-                {() => I`open-sourced`}
-              </a>
-            )} under MIT license.`}</p>
-            <p>{IA`This project is based on ${(
-              <a
-                href="https://github.com/lideming/webfx"
-                class="clickable"
-                target="_blank"
-              >
-                webfx
-              </a>
-            )}.`}</p>
+            <p>
+              {IA`This project is ${(
+                <a
+                  href="https://github.com/lideming/MusicCloud"
+                  class="clickable"
+                  target="_blank"
+                >
+                  {() => I`open-sourced`}
+                </a>
+              )} under MIT license.`}
+            </p>
+            <p>
+              {IA`This project is based on ${(
+                <a
+                  href="https://github.com/lideming/webfx"
+                  class="clickable"
+                  target="_blank"
+                >
+                  webfx
+                </a>
+              )}.`}
+            </p>
             <h3>{I`Recent changes:`}</h3>
-            <div style="max-height: 300px; overflow-y: auto;">
-              <table>
-                <tr>
-                  <th>Id</th>
-                  <th>Message</th>
-                </tr>
-                {buildInfo.commits.map((c) => (
-                  <tr>
-                    <td>
-                      <a
-                        href={`https://github.com/lideming/MusicCloud/commit/${c.id}`}
-                        target="_blank"
-                      >
-                        <code>{c.id}</code>
-                      </a>
-                    </td>
-                    <td>{c.message}</td>
-                  </tr>
-                ))}
-              </table>
-            </div>
+            {this.createCommitsTable()}
           </div>
-        )
-      )
+        ),
+      ),
     );
+  }
+
+  private createCommitsTable() {
+    let loading = false;
+    let lastSha = "";
+    let allLoaded = false;
+
+    const table = new View(
+      (
+        <table>
+          <tr>
+            <th>Id</th>
+            <th>Message</th>
+          </tr>
+        </table>
+      ),
+    );
+    const addCommit = (commit) => {
+      table.addView(
+        new View(
+          (
+            <tr>
+              <td>
+                <a
+                  href={`https://github.com/lideming/MusicCloud/commit/${commit.id}`}
+                  target="_blank"
+                >
+                  <code>{commit.id}</code>
+                </a>
+              </td>
+              <td>{commit.message}</td>
+            </tr>
+          ),
+        ),
+      );
+      lastSha = commit.id;
+    };
+    for (const commit of buildInfo.commits) {
+      addCommit(commit);
+    }
+    const loadMore = async () => {
+      loading = true;
+      const resp = await fetch(
+        `https://api.github.com/repos/lideming/musiccloud/commits?per_page=100&sha=${lastSha}`,
+      );
+      const json = await resp.json();
+      for (const item of json) {
+        if (item.sha.startsWith(lastSha)) continue;
+        addCommit({
+          id: (item.sha as string).slice(0, 7),
+          message: item.commit.message,
+        });
+      }
+      if (json.at(-1).parents.length === 0) {
+        allLoaded = true;
+      }
+      loading = false;
+      checkToLoadMore();
+    };
+    const checkToLoadMore = () => {
+      const { dom } = scrollBox;
+      if (dom.scrollTop / (dom.scrollHeight - dom.clientHeight) > 0.7) {
+        if (!loading && !allLoaded) {
+          loadMore();
+        }
+      }
+    };
+    loadMore();
+    const scrollBox = new View(
+      (
+        <div
+          style="height: 300px; overflow-y: auto;"
+          onscroll={checkToLoadMore}
+        >
+          {table}
+        </div>
+      ),
+    );
+    return scrollBox;
   }
 }

@@ -114,7 +114,7 @@ async function getBuildInfo() {
 }
 
 async function getCommits() {
-  var execResult = await execAsync('git log --pretty=format:"%h %cI %s" -n 20');
+  var execResult = await execAsync('git log --pretty=format:"%h %cI %s" -n 1');
   return execResult.stdout.split("\n").map((x) => {
     var s = x.split(" ", 2);
     return {
