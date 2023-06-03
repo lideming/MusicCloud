@@ -2,7 +2,7 @@
     [
         ["en", "zh", "ja"],
         ["English", "中文", "日本語"],
-        ["Language: {0}", "语言：{0}", "言語：{0}"],
+        ["Language:", "语言：", "言語："],
         [" (auto-detected)", "（自动检测）", "（自動検出）"],
         ["Reload to fully apply changes", "刷新以完全应用更改", "変更を完全に反映するにはリロードしてください"],
         ["Pin", "固定", "ピン留め"],
@@ -119,12 +119,13 @@
         ["Select all", "全选", "すべて選択"],
         ["Cancel", "取消", "キャンセル"],
         ["Settings", "设置", "設定"],
-        ["UI color: {0}", "界面色彩：{0}", "UIの色：{0}"],
-        ["UI style: {0}", "界面样式：{0}", "UIのスタイル：{0}"],
-        ["Preferred bitrate (0: original file)", "首选码率（0：原始文件）", "望ましいビットレート（0: オリジナルファイル）"],
+        ["UI color:", "界面色彩：", "UIの色："],
+        ["UI style:", "界面样式：", "UIのスタイル："],
+        ["Preferred bitrate:", "首选码率：", "ビットレート："],
         ["Custom server URL", "自定义服务器 URL", "カスタムサーバーURL"],
-        ["Enable notification", "启用通知", "通知を有効にする"],
-        ["Disable notification", "禁用通知", "通知を無効にする"],
+        ["Notification:", "通知：", "通知："],
+        ["enabled", "启用", "有効"],
+        ["disabled", "禁用", "無効"],
         ["Now Playing", "正在播放", "再生中"],
         ["Lyrics", "歌词", "歌詞"],
         ["Edit Lyrics", "编辑歌词", "歌詞を編集する"],
@@ -170,6 +171,8 @@
         ["make_it_visibility_1", "Make it public", "转为公开", "公開に変更する"],
         ["make_{0}_visibility_0", "Make {0} items private", "转换 {0} 个项目为私有", "{0} 個アイテムを非公開に変更する"],
         ["make_{0}_visibility_1", "Make {0} items public", "转换 {0} 个项目为公开", "{0} 個アイテムを公開に変更する"],
-        ["social-link-error_already-linked", "The account has been already linked.", "该账户已经被关联。", "そのアカウントはすでにリンクされています。"]
+        ["social-link-error_already-linked", "The account has been already linked.", "该账户已经被关联。", "そのアカウントはすでにリンクされています。"],
+        ["language_auto", "(auto)", "(自动)", "(auto)"],
+        ["bitrate_original", "original", "原始", "オリジナル"]
     ]
 ]

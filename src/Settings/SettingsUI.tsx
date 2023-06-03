@@ -6,7 +6,15 @@ import { jsx } from "../Infra/utils";
 import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
 import { playerFX } from "../Player/PlayerFX";
-import { TextBtn } from "@yuuza/webfx";
+import {
+  Action,
+  BuildDomExpr,
+  Callbacks,
+  ContainerView,
+  ItemActiveHelper,
+  TextBtn,
+  TextView,
+} from "@yuuza/webfx";
 import { settings } from "./Settings";
 import { api } from "../API/Api";
 import { PluginsUI } from "../Plugins/pluginsUI";
@@ -22,10 +30,7 @@ export const settingsUI = new (class {
 
 const themes = ["light", "dark"];
 const styles = ["", "-rounded"];
-
-function loopInArray<T>(arr: T[], current: T) {
-  return arr[(arr.indexOf(current) + 1) % arr.length];
-}
+const bitrates = [128, 256, 0];
 
 function getThemeAndStyle() {
   let [theme, style] = ui.theme.current.split("-");
@@ -40,49 +45,167 @@ function setThemeAndStyle(options: { theme?: string; style?: string }) {
   ui.theme.set(`${theme}${style}` as any);
 }
 
+class RadioContainer extends ContainerView<RadioOption> {
+  currentValue: any = null;
+  currentActive = new ItemActiveHelper<RadioOption>({
+    funcSetActive: (item, val) => {
+      if (val) item.select();
+      else item.unselect();
+    },
+  });
+  onCurrentChange = new Callbacks<Action<RadioOption>>();
+  setCurrent(current: RadioOption) {
+    this.currentActive.set(current);
+    this.onCurrentChange.invoke(current);
+  }
+  protected createDom(): BuildDomExpr {
+    return <div class="radio-container" tabIndex="0"></div>;
+  }
+  protected postCreateDom(): void {
+    super.postCreateDom();
+    this.dom.addEventListener("keydown", (ev) => {
+      if (ev.code === "ArrowLeft" || ev.code === "ArrowRight") {
+        const next = this.childViews[
+          (this.childViews.length +
+            (this.currentActive.current?._position ?? 0) +
+            (ev.code === "ArrowRight" ? 1 : -1)) %
+            this.childViews.length
+        ] as RadioOption;
+        this.setCurrent(next);
+      }
+    });
+  }
+  addView(view: RadioOption, pos?: number) {
+    super.addView(view, pos);
+    if (this.currentValue !== null && view.value === this.currentValue) {
+      this.setCurrent(view);
+    }
+  }
+}
+
+class RadioOption extends TextView {
+  protected createDom(): BuildDomExpr {
+    return <div class="radio-option btn" onclick={() => this.select()}></div>;
+  }
+  value: any = null;
+  select() {
+    const parent = this.parentView as RadioContainer;
+    if (parent.currentActive.current !== this) {
+      parent.setCurrent(this);
+    }
+    this.toggleClass("selected", true);
+  }
+  unselect() {
+    this.toggleClass("selected", false);
+  }
+}
+
+class SettingItem extends View {
+  label: () => string;
+  protected createDom(): BuildDomExpr {
+    return (
+      <div class="setting-item">
+        <span class="setting-label">{this.label}</span>
+      </div>
+    );
+  }
+}
+
 class SettingsDialog extends Dialog {
-  btnSwitchTheme = new ButtonView({ type: "big" });
-  btnSwitchStyle = new ButtonView({ type: "big" });
-  btnSwitchLang = new ButtonView({ type: "big" });
-  inputPreferBitrate = new LabeledInput();
   inputServer = new LabeledInput();
   btnNotification = new ButtonView({ type: "big" });
 
   constructor() {
     super();
-    this.addContent(this.btnSwitchTheme);
-    this.btnSwitchTheme.onActive.add(() => {
-      const current = getThemeAndStyle();
-      setThemeAndStyle({ theme: loopInArray(themes, current.theme) });
-      this.updateDom();
-    });
-    this.addContent(this.btnSwitchStyle);
-    this.btnSwitchStyle.onActive.add(() => {
-      const current = getThemeAndStyle();
-      setThemeAndStyle({ style: loopInArray(styles, current.style) });
-      this.updateDom();
-    });
-    this.addContent(this.btnSwitchLang);
-    this.btnSwitchLang.onActive.add(() => {
-      var origUsingLang = ui.lang.curLang;
-      var curlang = ui.lang.siLang.data;
-      var langs = ["", ...ui.lang.availableLangs];
-      curlang = langs[(langs.indexOf(curlang) + 1) % langs.length];
-      ui.lang.siLang.set(curlang);
-    });
-    this.addContent(this.inputPreferBitrate);
-    this.onShown.add(() => {
-      this.inputPreferBitrate.value = (
-        playerCore.siPlayer.data.preferBitrate ?? "0"
-      ).toString();
-    });
-    this.onClose.add(() => {
-      var val = parseInt(this.inputPreferBitrate.value);
-      if (!isNaN(val)) {
-        playerCore.siPlayer.data.preferBitrate = val;
-        playerCore.siPlayer.save();
-      }
-    });
+    const { theme, style } = getThemeAndStyle();
+    this.addContent(
+      <SettingItem label={() => I`UI color:`}>
+        <RadioContainer
+          currentValue={theme}
+          onCurrentChange={(option) => {
+            setThemeAndStyle({ theme: option.value });
+          }}
+        >
+          {themes.map((option) => (
+            <RadioOption value={option}>
+              {() => i18n.get("colortheme_" + option)}
+            </RadioOption>
+          ))}
+        </RadioContainer>
+      </SettingItem>,
+    );
+
+    this.addContent(
+      <SettingItem label={() => I`UI style:`}>
+        <RadioContainer
+          currentValue={style}
+          onCurrentChange={(option) => {
+            setThemeAndStyle({ style: option.value });
+          }}
+        >
+          {styles.map((option) => (
+            <RadioOption value={option}>
+              {() => i18n.get("styletheme_" + option)}
+            </RadioOption>
+          ))}
+        </RadioContainer>
+      </SettingItem>,
+    );
+
+    this.addContent(
+      <SettingItem label={() => I`Language:`}>
+        <RadioContainer
+          currentValue={ui.lang.siLang.data}
+          onCurrentChange={(option) => {
+            ui.lang.siLang.set(option.value);
+          }}
+        >
+          {["", ...ui.lang.availableLangs].map((option) => (
+            <RadioOption value={option}>
+              {() =>
+                option ? i18n.get2("English", [], option) : I`language_auto`
+              }
+            </RadioOption>
+          ))}
+        </RadioContainer>
+      </SettingItem>,
+    );
+
+    this.addContent(
+      <SettingItem label={() => I`Preferred bitrate:`}>
+        <RadioContainer
+          currentValue={playerCore.siPlayer.data.preferBitrate ?? 0}
+          onCurrentChange={(option) => {
+            playerCore.siPlayer.data.preferBitrate = option.value;
+            playerCore.siPlayer.save();
+          }}
+        >
+          {bitrates.map((option) => (
+            <RadioOption value={option}>
+              {() => (option ? `${option}k` : I`bitrate_original`)}
+            </RadioOption>
+          ))}
+        </RadioContainer>
+      </SettingItem>,
+    );
+
+    this.addContent(
+      <SettingItem label={() => I`Notification:`}>
+        <RadioContainer
+          currentValue={ui.notification.config.enabled}
+          onCurrentChange={(option) => {
+            ui.notification.setEnable(option.value);
+          }}
+        >
+          {[true, false].map((option) => (
+            <RadioOption value={option}>
+              {() => (option ? I`enabled` : I`disabled`)}
+            </RadioOption>
+          ))}
+        </RadioContainer>
+      </SettingItem>,
+    );
+
     this.addContent(this.inputServer);
     this.inputServer.value = localStorage.getItem("mcloud-server") || "";
     this.inputServer.dominput.placeholder = settings.defaultApiBaseUrl;
@@ -90,12 +213,7 @@ class SettingsDialog extends Dialog {
       localStorage.setItem("mcloud-server", this.inputServer.value);
       settings.apiBaseUrl = this.inputServer.value;
     });
-    this.addContent(this.btnNotification);
-    this.btnNotification.onActive.add(() => {
-      ui.notification
-        .setEnable(!ui.notification.config.enabled)
-        .then(() => this.updateDom());
-    });
+
     this.addContent(
       new ButtonView({
         text: () => I`Plugins`,
@@ -105,6 +223,7 @@ class SettingsDialog extends Dialog {
         },
       }),
     );
+
     const devFeatures = new View(
       (
         <div>
@@ -121,6 +240,7 @@ class SettingsDialog extends Dialog {
     devFeatures.hidden = true;
     let devClickCount = 0;
     this.addContent(devFeatures);
+
     this.addContent(
       <div style="margin: 5px 0; display: flex; flex-wrap: wrap; justify-content: space-between;">
         <div
@@ -153,14 +273,6 @@ class SettingsDialog extends Dialog {
     this.title = I`Settings`;
     this.btnClose.updateWith({ text: I`Close` });
     super.updateDom();
-    const { theme, style } = getThemeAndStyle();
-    this.btnSwitchTheme.text = I`UI color: ${i18n.get("colortheme_" + theme)}`;
-    this.btnSwitchStyle.text = I`UI style: ${i18n.get("styletheme_" + style)}`;
-    this.btnSwitchLang.text = I`Language: ${I`English`}`;
-    if (!ui.lang.siLang.data) this.btnSwitchLang.text += I` (auto-detected)`;
-    this.inputPreferBitrate.updateWith({
-      label: I`Preferred bitrate (0: original file)`,
-    });
     this.inputServer.updateWith({ label: I`Custom server URL` });
     this.btnNotification.text = ui.notification.config.enabled
       ? I`Disable notification`
