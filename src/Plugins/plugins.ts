@@ -1,4 +1,4 @@
-import { buildDOM, Semaphore } from "@yuuza/webfx";
+import { buildDOM, I, Semaphore, sleepAsync, Toast } from "@yuuza/webfx";
 import { UserStoreItem } from "../API/UserStore";
 import { user, userStore } from "../main";
 import { nanoid } from "../Infra/nanoid";
@@ -42,7 +42,21 @@ export const plugins = new (class Plugins {
   async loadUserPlguins() {
     for (const plugin of await this.getUserPlugins()) {
       if (plugin.enabled) {
-        this.loadPlugin(plugin.url);
+        let loaded = false;
+        const loadingTask = this.loadPlugin(plugin.url).finally(() => {
+          loaded = true;
+        });
+        Promise.race([
+          sleepAsync(5000),
+          loadingTask,
+        ]).then(() => {
+          if (!loaded) {
+            const toast = Toast.show(
+              I`Plugin "${plugin.name}" loading...`,
+            );
+            loadingTask.finally(() => toast.close());
+          }
+        });
       }
     }
   }

@@ -148,6 +148,7 @@
         ["Disable", "禁用"],
         ["Edit plugin code", "编辑插件代码"],
         ["Plugin code", "插件代码"],
+        ["Plugin \"{0}\" loading...", "插件 \"{0}\" 加载中……"],
         ["Music Cloud", "Music Cloud", "Music Cloud"]
     ],
     [
