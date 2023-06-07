@@ -8,24 +8,24 @@ export type UserStoreValueType = "json" | "text" | "raw";
 class UserStore {
   async get<T = any>(
     key: string,
-    type?: "json"
+    type?: "json",
   ): Promise<null | ({ value: T } & UserStoreFields)>;
   async get(
     key: string,
-    type: "text"
+    type: "text",
   ): Promise<null | ({ value: string } & UserStoreFields)>;
   async get(
     key: string,
-    type: "raw"
+    type: "raw",
   ): Promise<null | ({ value: ArrayBuffer } & UserStoreFields)>;
   async get(
     key: string,
-    type: UserStoreValueType
+    type: UserStoreValueType,
   ): Promise<null | ({ value: any } & UserStoreFields)>;
 
   async get(
     key: string,
-    type: UserStoreValueType = "json"
+    type: UserStoreValueType = "json",
   ): Promise<null | ({ value: any } & UserStoreFields)> {
     var resp = await api._fetch(`${api.baseUrl}my/store/${key}`, {
       headers: api.getHeaders(),
@@ -42,7 +42,7 @@ class UserStore {
       throw new Error("unknown type");
     }
     const fields = new URLSearchParams(
-      resp.headers.get("x-mcloud-store-fields")!
+      resp.headers.get("x-mcloud-store-fields")!,
     );
     const visibility = +fields.get("visibility")!;
     const revision = +fields.get("revision")!;
@@ -51,16 +51,21 @@ class UserStore {
 
   async set(
     key: string,
-    data: { value: any } & Partial<UserStoreFields>
+    data: { value: any } & Partial<UserStoreFields>,
+    type?: UserStoreValueType,
   ): Promise<void> {
     let { value } = data;
     if (
+      !type &&
       !(
         value instanceof ArrayBuffer ||
         value instanceof TypedArray ||
         value instanceof Blob
       )
     ) {
+      type = "json";
+    }
+    if (type === "json") {
       value = JSON.stringify(value);
     }
     const headers = api.getHeaders();
@@ -82,12 +87,7 @@ class UserStore {
 
   async delete(
     key: string,
-    data: { value: any } & Partial<UserStoreFields>
   ): Promise<void> {
-    let { value } = data;
-    if (!(value instanceof ArrayBuffer || value instanceof Blob)) {
-      value = JSON.stringify(value);
-    }
     var resp = await api._fetch(`${api.baseUrl}my/store/${key}`, {
       method: "DELETE",
       headers: api.getHeaders(),
@@ -131,17 +131,17 @@ export class UserStoreItem<T = any> extends Ref<T> implements UserStoreFields {
 
   put() {
     if (this._putPending) return this._putPending;
-    let pendingTask;
+    let pendingTask: Promise<void>;
     pendingTask = (async () => {
       if (this._putInProgress) {
-        this._putPending = pendingTask;
+        this._putPending = pendingTask!;
         try {
           await this._putInProgress;
         } catch (error) {}
         this._putPending = null;
       }
       const putTask = (this._putInProgress = (async () => {
-        await userStore.set(this.key, this);
+        await userStore.set(this.key, this, this.type);
         this.revision++;
         this._putInProgress = null;
       })());

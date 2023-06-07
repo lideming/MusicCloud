@@ -1,6 +1,7 @@
 import { buildDOM, Semaphore } from "@yuuza/webfx";
 import { UserStoreItem } from "../API/UserStore";
 import { user, userStore } from "../main";
+import { nanoid } from "../Infra/nanoid";
 
 export interface PluginInfo {
   name: string;
@@ -71,24 +72,36 @@ export const plugins = new (class Plugins {
         plugins: value.plugins.filter((x) => x.url != url),
       };
     });
+    const { type, key } = this.parsePluginURL(url);
+    if (type === "user-store") {
+      await this.deletePluginCode(key);
+    }
   }
 
   async toggleUserPlugin(url: string, enabled: boolean) {
     await this.userPluginList.concurrencyAwareUpdate((value) => {
       return {
         ...value,
-        plugins: value.plugins.map((x) =>
-          x.url == url ? { ...x, enabled } : x
-        ),
+        plugins: value.plugins.map((x) => x.url == url ? { ...x, enabled } : x),
       };
     });
   }
 
-  async loadPlugin(url: string) {
+  parsePluginURL(url: string) {
     if (url.startsWith("user-store:")) {
-      return await this.loadPluginFromUserStore(
-        url.substring("user-store:".length)
-      );
+      return {
+        type: "user-store" as const,
+        key: url.substring("user-store:".length),
+      };
+    } else {
+      return { type: "url" as const, url };
+    }
+  }
+
+  async loadPlugin(url: string) {
+    const { type, key } = this.parsePluginURL(url);
+    if (type === "user-store") {
+      return await this.loadPluginFromUserStore(key);
     } else {
       return await this.loadPluginFromURL(url);
     }
@@ -132,7 +145,7 @@ export const plugins = new (class Plugins {
           onload: () => {
             afterLoadResolve();
           },
-        })
+        }),
       );
 
       await afterLoadPromise;
@@ -146,8 +159,38 @@ export const plugins = new (class Plugins {
     return info;
   }
 
+  getUserStorePluginKey(key: string) {
+    return "plugins." + key;
+  }
+
+  getPluginCodeItem(key: string) {
+    return new UserStoreItem({
+      key: this.getUserStorePluginKey(key),
+      type: "text",
+    });
+  }
+
+  async setPluginCode(key: string, code: string) {
+    await userStore.set(
+      this.getUserStorePluginKey(key),
+      { value: code },
+      "text",
+    );
+  }
+
+  async addPluginCode(code: string) {
+    const key = nanoid();
+    await this.setPluginCode(key, code);
+    await this.addUserPlugin("user-store:" + key);
+  }
+
+  async deletePluginCode(key: string) {
+    await userStore.delete(this.getUserStorePluginKey(key));
+  }
+
   // Load "user-store:" script
   async loadPluginFromUserStore(key: string) {
+    key = this.getUserStorePluginKey(key);
     const keyValue = await userStore.get(key, "text");
     if (!keyValue) throw new Error("userStore key not found: " + key);
 
@@ -184,7 +227,7 @@ export const plugins = new (class Plugins {
     if (!this._currentRegisterCallback) {
       throw new Error(
         "Currently no plugin loading task (registerPlugin must be" +
-          " call during the script execution, usually in top level)."
+          " call during the script execution, usually in top level).",
       );
     }
     this._currentRegisterCallback(info);

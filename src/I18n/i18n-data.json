@@ -140,6 +140,14 @@
         ["This project is based on {0}.", "此项目基于 {0}。", "このプロジェクトは {0} に基づいています。"],
         ["open-sourced", "开源", "オープンソース"],
         ["Recent changes:", "最近更改:", "最近の変更:"],
+        ["Plugins", "插件"],
+        ["Add plugin by URL", "添加插件 URL"],
+        ["Add", "添加"],
+        ["Add plugin by code", "添加插件代码"],
+        ["Enable", "启用"],
+        ["Disable", "禁用"],
+        ["Edit plugin code", "编辑插件代码"],
+        ["Plugin code", "插件代码"],
         ["Music Cloud", "Music Cloud", "Music Cloud"]
     ],
     [

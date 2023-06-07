@@ -1540,3 +1540,12 @@ body {
   box-shadow: none;
   border: none;
 }
+
+.add-plugins {
+  display: flex;
+  align-items: center;
+}
+
+.add-plugins > .btn {
+  margin: 0 5px;
+}
