@@ -146,6 +146,7 @@
         ["Add plugin by code", "添加插件代码"],
         ["Enable", "启用"],
         ["Disable", "禁用"],
+        ["Are you sure to remove plugin \"{0}\"?", "确定要移除插件 \"{0}\" 吗？"],
         ["Edit plugin code", "编辑插件代码"],
         ["Plugin code", "插件代码"],
         ["Plugin \"{0}\" loading...", "插件 \"{0}\" 加载中……"],

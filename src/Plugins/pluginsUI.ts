@@ -7,6 +7,7 @@ import {
   InputView,
   ListView,
   ListViewItem,
+  MessageBox,
   TextBtn,
 } from "@yuuza/webfx";
 import { PluginListItem, plugins } from "./plugins";
@@ -170,9 +171,20 @@ export class PluginListViewItem extends ListViewItem {
           text: () => I`Remove`,
           type: "inline",
           onActive: () => {
-            plugins
-              .removeUserPlugin(this.data.url)
-              .then(() => this.onChange.invoke());
+            new MessageBox()
+              .setTitle(I`Warning`)
+              .addText(
+                I`Are you sure to remove plugin "${this.data.name}"?`,
+              )
+              .addResultBtns(["cancel", "ok"])
+              .allowCloseWithResult("cancel")
+              .showAndWaitResult()
+              .then((r) => {
+                if (r !== "ok") return;
+                plugins
+                  .removeUserPlugin(this.data.url)
+                  .then(() => this.onChange.invoke());
+              });
           },
         }),
         {
