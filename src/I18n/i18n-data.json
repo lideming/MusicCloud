@@ -171,6 +171,7 @@
         ["msgbox_cancel", "Cancel", "取消", "キャンセル"],
         ["colortheme_light", "light", "亮色", "ライト"],
         ["colortheme_dark", "dark", "暗色", "ダーク"],
+        ["colortheme_auto", "auto", "自动", "auto"],
         ["styletheme_", "classic", "经典", "クラシック"],
         ["styletheme_-rounded", "rounded", "圆角", "角丸"],
         ["visibility_0", "Private", "私有", "非公開"],
@@ -182,7 +183,7 @@
         ["make_{0}_visibility_0", "Make {0} items private", "转换 {0} 个项目为私有", "{0} 個アイテムを非公開に変更する"],
         ["make_{0}_visibility_1", "Make {0} items public", "转换 {0} 个项目为公开", "{0} 個アイテムを公開に変更する"],
         ["social-link-error_already-linked", "The account has been already linked.", "该账户已经被关联。", "そのアカウントはすでにリンクされています。"],
-        ["language_auto", "(auto)", "(自动)", "(auto)"],
+        ["language_auto", "auto", "自动", "auto"],
         ["bitrate_original", "original", "原始", "オリジナル"]
     ]
 ]

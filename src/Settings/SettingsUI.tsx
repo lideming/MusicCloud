@@ -28,8 +28,6 @@ export const settingsUI = new (class {
   }
 })();
 
-const themes = ["light", "dark"];
-const styles = ["", "-rounded"];
 const bitrates = [128, 256, 0];
 
 function getThemeAndStyle() {
@@ -126,7 +124,7 @@ class SettingsDialog extends Dialog {
             setThemeAndStyle({ theme: option.value });
           }}
         >
-          {themes.map((option) => (
+          {ui.theme.colors.map((option) => (
             <RadioOption value={option}>
               {() => i18n.get("colortheme_" + option)}
             </RadioOption>
@@ -143,7 +141,7 @@ class SettingsDialog extends Dialog {
             setThemeAndStyle({ style: option.value });
           }}
         >
-          {styles.map((option) => (
+          {ui.theme.styles.map((option) => (
             <RadioOption value={option}>
               {() => i18n.get("styletheme_" + option)}
             </RadioOption>
@@ -160,7 +158,7 @@ class SettingsDialog extends Dialog {
             ui.lang.siLang.set(option.value);
           }}
         >
-          {["", ...ui.lang.availableLangs].map((option) => (
+          {[...ui.lang.availableLangs, ""].map((option) => (
             <RadioOption value={option}>
               {() =>
                 option ? i18n.get2("English", [], option) : I`language_auto`
@@ -197,7 +195,7 @@ class SettingsDialog extends Dialog {
             ui.notification.setEnable(option.value);
           }}
         >
-          {[true, false].map((option) => (
+          {[false, true].map((option) => (
             <RadioOption value={option}>
               {() => (option ? I`enabled` : I`disabled`)}
             </RadioOption>

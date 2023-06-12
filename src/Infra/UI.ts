@@ -72,6 +72,7 @@ export const ui = new (class {
   init() {
     this.addErrorListener();
     this.lang.init();
+    this.theme.init();
     this.sidebar.init();
     this.contentBg.init();
     bottomBar.bindPlayer(playerCore);
@@ -155,37 +156,65 @@ export const ui = new (class {
     bottomBar.updateAll();
   }
   theme = new (class {
-    all = ["light", "dark", "dark-rounded", "light-rounded"] as const;
-    current: this["all"][number] = "light";
+    colors = ['light', 'dark', 'auto'] as const;
+    styles = ['', '-rounded'] as const;
+    current: `${typeof this.colors[number]}${typeof this.styles[number]}` = "light";
     timer = new Timer(() =>
       toggleClass(document.body, "changing-theme", false)
     );
-    private rendered = false;
     siTheme = new SettingItem<this["current"]>(
       "mcloud-theme",
       "str",
       "light-rounded"
-    ).render((theme) => {
-      if (this.current !== theme) {
-        this.current = theme;
-        if (this.rendered) toggleClass(document.body, "changing-theme", true);
-        const [color, rounded] = theme.split("-");
-        toggleClass(document.body, "dark", color === "dark");
-        toggleClass(document.body, "rounded", rounded === "rounded");
-        var meta = document.getElementById(
-          "meta-theme-color"
-        ) as HTMLMetaElement;
-        if (meta) {
-          meta.content = color === "dark" ? "black" : "";
-        } else {
-          console.warn('[UI] Failed to get the "meta-theme-color" element');
+    );
+
+    init() {
+      this.siTheme.render(this.render);
+    }
+
+    private rendered = false;
+    render = () => {
+      const theme = this.siTheme.data;
+      this.current = theme;
+      if (this.rendered) toggleClass(document.body, "changing-theme", true);
+      const [color, rounded] = theme.split("-");
+      let computedColor = color;
+      if (computedColor === 'auto') {
+        if ('matchMedia' in window) {
+          this._toggleColorSchemeWatcher(true);
+          computedColor = this._watchingColorSchema?.matches ? 'dark' : 'light';
         }
-        if (this.rendered) this.timer.timeout(500);
+      } else {
+        this._toggleColorSchemeWatcher(false);
       }
+      toggleClass(document.body, "dark", computedColor === "dark");
+      toggleClass(document.body, "rounded", rounded === "rounded");
+      var meta = document.getElementById(
+        "meta-theme-color"
+      ) as HTMLMetaElement;
+      if (meta) {
+        meta.content = computedColor === "dark" ? "black" : "";
+      } else {
+        console.warn('[UI] Failed to get the "meta-theme-color" element');
+      }
+      if (this.rendered) this.timer.timeout(500);
       this.rendered = true;
-    });
+    };
+    
     set(theme: this["current"]) {
       this.siTheme.set(theme);
+    }
+
+    private _watchingColorSchema: MediaQueryList | null = null;
+    private _toggleColorSchemeWatcher(enable: boolean) {
+      if (!!this._watchingColorSchema === enable || !('matchMedia' in window)) return;
+      if (enable) {
+        this._watchingColorSchema = window.matchMedia('(prefers-color-scheme: dark)');
+        this._watchingColorSchema.addEventListener('change', this.render);
+      } else {
+        this._watchingColorSchema!.removeEventListener('change', this.render);
+        this._watchingColorSchema = null;
+      }
     }
   })();
   lang = new (class {
