@@ -204,9 +204,9 @@ export const plugins = new (class Plugins {
 
   // Load "user-store:" script
   async loadPluginFromUserStore(key: string) {
-    key = this.getUserStorePluginKey(key);
-    const keyValue = await userStore.get(key, "text");
-    if (!keyValue) throw new Error("userStore key not found: " + key);
+    const storeKey = this.getUserStorePluginKey(key);
+    const keyValue = await userStore.get(storeKey, "text");
+    if (!keyValue) throw new Error("userStore key not found: " + storeKey);
 
     // It might be running between "before"/"plugin"/"after" scripts,
     // so we save the current callback and restore it later.
