@@ -49,8 +49,19 @@ export class PluginsUI extends Dialog {
     this.fetchList();
   }
 
+  private _firstFetch = true;
+
   fetchList = () => {
     plugins.getUserPlugins().then((list) => {
+      // Move enabled plugins to the top, but prevent moving them after changing
+      // the plugin state from the UI here.
+      if (this._firstFetch) {
+        this._firstFetch = false;
+        // NOTE: it changes the internal array in `plugins.userPluginList`
+        // intentionally, because we want to keep this sort when putting the
+        // plugin list.
+        list.sort((a, b) => +b.enabled - +a.enabled);
+      }
       const loadedPlugins = plugins.getLoadedPlugins();
       this.pluginListView.removeAll();
       for (const plugin of list) {
