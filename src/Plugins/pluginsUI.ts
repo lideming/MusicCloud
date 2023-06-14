@@ -157,17 +157,6 @@ export class PluginListViewItem extends ListViewItem {
     return {
       tag: "div.plugin-item",
       child: [
-        type === "user-store" && new ButtonView({
-          text: () => I`Edit`,
-          type: "inline",
-          onActive: async (ev) => {
-            const item = plugins.getPluginCodeItem(key);
-            await item.get();
-            const dialog = new PluginCodeDialog("edit", item);
-            dialog.onSubmit.add(() => this.onChange.invoke());
-            dialog.show(ev);
-          },
-        }),
         new ButtonView({
           text: () => (this.data.enabled ? I`Disable` : I`Enable`),
           type: "inline",
@@ -198,8 +187,24 @@ export class PluginListViewItem extends ListViewItem {
               });
           },
         }),
+        type === "user-store" && new ButtonView({
+          text: () => I`Edit`,
+          type: "inline",
+          onActive: async (ev) => {
+            const item = plugins.getPluginCodeItem(key);
+            await item.get();
+            const dialog = new PluginCodeDialog("edit", item);
+            dialog.onSubmit.add(() => this.onChange.invoke());
+            dialog.show(ev);
+          },
+        }),
         {
           tag: "div.plugin-status",
+          update: (dom) => {
+            dom.style.color = this.data.loaded || this.data.enabled
+              ? ""
+              : "var(--color-text-gray)";
+          },
           text: () =>
             [
               this.data.enabled ? I`enabled` : I`disabled`,
