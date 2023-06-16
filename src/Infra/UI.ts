@@ -139,7 +139,10 @@ export const ui = new (class {
   }
   addErrorListener() {
     window.addEventListener("error", (e) => {
-      Toast.show(I`Application Error:` + "\n" + e.error, 5000);
+      Toast.show(I`Error:` + "\n" + e.error, 5000);
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      Toast.show(I`Error:` + "\n" + e.reason, 5000);
     });
   }
   endPreload() {
