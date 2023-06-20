@@ -41,90 +41,65 @@
         margin: 10px 5px;
       }
 
-      #preload-overlay p {
+      #preload-infos p {
         margin: 10px 5px;
+      }
+
+      #preload-infos p.info {
+        color: gray;
+      }
+      #preload-infos p.error {
+        color: red;
       }
     </style>
     <!-- Preload script which waits for main script loading and displays status -->
     <script>
       (function () {
         var preload = (window.preload = {
-          domLoaded: false,
           jsLoaded: false,
-          jsError: false,
           preLoginTask: null,
           inputToken: null,
-          jsOk() {
-            this.jsLoaded = true;
-            this.update();
-          },
           onJsLoad() {
             setTimeout(
               function (thiz) {
                 if (!thiz.jsLoaded) {
                   console.error("js loaded without calling callback");
-                  thiz.jsError = true;
-                  thiz.update();
                 }
               },
               1000,
-              this
+              this,
             );
           },
-          update() {
-            if (!this.domLoaded) return;
-            document.getElementById("js-ok").hidden = !preload.jsLoaded;
-            document.getElementById("js-error").hidden = !preload.jsError;
-            document.getElementById("js-error-msg").hidden = !preload.jsError;
-            if (this.jsLoaded) this.end();
+          jsOk() {
+            preload.jsLoaded = true;
           },
           end() {
-            mcloud.ui.endPreload();
             window.removeEventListener("error", onerror);
           },
-          preLogin() {
-            // Try to prefetch the user info even before we can run the main script.
-            // Make it about 1 RTT + 50 ms (script download + execution time) faster.
-            var strLogin = localStorage.getItem("mcloud-login");
-            if (!strLogin) return;
-            var login = JSON.parse(strLogin);
-            if (!login || !login.token || !login.lastBaseUrl) return;
-            preload.preLoginTask = fetch(login.lastBaseUrl + "users/me", {
-              credentials: "same-origin",
-              headers: {
-                Authorization: "Bearer " + login.token,
-                "Cache-Control": "no-store",
-              },
-            }).then(function (resp) {
-              if (!resp.ok) {
-                throw new Error("HTTP status " + resp.status);
-              }
-              return resp.json();
-            });
-          },
         });
+
         window.addEventListener("DOMContentLoaded", function () {
-          preload.domLoaded = true;
-          preload.update();
-          // Set the theme ASAP to avoid blinking
-          const preferDark = window.matchMedia('(prefers-color-scheme: dark)');
-          const themeColor =
-            (localStorage.getItem("mcloud-theme") || '')
-              .split('-')[0];
+          // Set the theme ASAP to avoid blinking in dark mode
+          const themeColor = (
+            localStorage.getItem("mcloud-theme") || "auto"
+          ).split("-")[0];
           const dark =
-            themeColor === 'dark' ||
-            (themeColor === 'auto'
-              && window.matchMedia('(prefers-color-scheme: dark)').matches)
+            themeColor === "dark" ||
+            (themeColor === "auto" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
           if (dark) {
             document.body.classList.add("dark");
             document.getElementById("meta-theme-color").content = "black";
           }
         });
+
         var onerror = function (e) {
-          preload.jsError = true;
-          document.getElementById("js-error-msg").textContent = "" + e.error;
-          preload.update();
+          const p = document.createElement("p");
+          p.className = "error";
+          p.textContent = "" + e.error;
+          document.getElementById("preload-infos").appendChild(p);
         };
+        window.addEventListener("error", onerror);
 
         var handleToken = function () {
           var splits = window.location.href.split("#token=");
@@ -134,14 +109,34 @@
           }
         };
 
-        window.addEventListener("error", onerror);
+        var preLogin = function () {
+          // Try to prefetch the user info even before we can run the main script.
+          // Make it about 1 RTT + 50 ms (script download + execution time) faster.
+          var strLogin = localStorage.getItem("mcloud-login");
+          if (!strLogin) return;
+          var login = JSON.parse(strLogin);
+          if (!login || !login.token || !login.lastBaseUrl) return;
+          preload.preLoginTask = fetch(login.lastBaseUrl + "users/me", {
+            credentials: "same-origin",
+            headers: {
+              Authorization: "Bearer " + login.token,
+              "Cache-Control": "no-store",
+            },
+          }).then(function (resp) {
+            if (!resp.ok) {
+              throw new Error("HTTP status " + resp.status);
+            }
+            return resp.json();
+          });
+        };
+
         handleToken();
-        preload.preLogin();
+        preLogin();
       })();
     </script>
     <!-- End of preload style and script -->
     <script
-      src="bundle.js?v=_BUILD_DATE_"
+      src="bundle.js?v={{BUILD_DATE}}"
       onload="window.preload && preload.onJsLoad()"
       defer
       async
@@ -151,12 +146,7 @@
   <body>
     <div id="preload-overlay" lang="en">
       <h1>MusicCloud</h1>
-      <div style="min-height: 6em">
-        <p>Loading...</p>
-        <p hidden style="color: gray" id="js-ok">JavaScript OK</p>
-        <p hidden style="color: red" id="js-error">JavaScript Error</p>
-        <p hidden id="js-error-msg"></p>
-      </div>
+      <div id="preload-infos" style="min-height: 100px"></div>
       <noscript>
         <p>JavaScript is required to run this application.</p>
       </noscript>

@@ -78,6 +78,24 @@ function init() {
   plugins.init();
   infoProvider.init(playerCore);
   console.timeEnd("[Main] app init()");
+
+  waitInitialLoading();
+}
+
+async function waitInitialLoading() {
+  try {
+    ui.preload.jsok();
+    const stateText = ui.preload.log("Logging in...", "info");
+    await Promise.race([
+      webfx.sleepAsync(1000),
+      user
+        .waitLogin(false)
+        .then(() => stateText.text = "Loading plugins...")
+        .then(() => plugins.waitPluginsLoading()),
+    ]);
+  } finally {
+    ui.preload.end();
+  }
 }
 
 function checkMode() {
@@ -117,7 +135,3 @@ export {
 };
 
 init();
-
-Promise.resolve().then(() => {
-  window["preload"]?.jsOk();
-});

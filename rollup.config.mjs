@@ -53,7 +53,7 @@ const rollupConfig = (args) => {
                   src: ["index.html", "resources/overlay.html"],
                   dest: "./dist/",
                   transform: (content, path) =>
-                    content.toString().replace("_BUILD_DATE_", _buildDate),
+                    content.toString().replace("{{BUILD_DATE}}", _buildDate),
                 },
                 {
                   src: ["resources/app_icon.svg", "resources/manifest.json"],

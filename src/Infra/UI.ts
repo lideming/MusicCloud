@@ -145,12 +145,6 @@ export const ui = new (class {
       Toast.show(I`Error:` + "\n" + e.reason, 5000);
     });
   }
-  endPreload() {
-    setTimeout(() => {
-      ui.mainContainer.dom.classList.remove("no-transition");
-      fadeout(document.getElementById("preload-overlay")!);
-    }, 1);
-  }
   isVisible() {
     return !document["hidden"];
   }
@@ -158,6 +152,23 @@ export const ui = new (class {
     mainContainer.updateAll();
     bottomBar.updateAll();
   }
+  preload = new (class {
+    domInfos = document.getElementById("preload-infos");
+    jsok() {
+      window["preload"]?.jsOk();
+    }
+    log(text: string, type: "info" | "error") {
+      const p = new TextView({ tag: `p.${type}`, text });
+      if (this.domInfos) mountView(this.domInfos, p);
+      return p;
+    }
+    end() {
+      setTimeout(() => {
+        ui.mainContainer.dom.classList.remove("no-transition");
+        fadeout(document.getElementById("preload-overlay")!);
+      }, 1);
+    }
+  });
   theme = new (class {
     colors = ['light', 'dark', 'auto'] as const;
     styles = ['', '-rounded'] as const;
@@ -168,7 +179,7 @@ export const ui = new (class {
     siTheme = new SettingItem<this["current"]>(
       "mcloud-theme",
       "str",
-      "light-rounded"
+      "auto-rounded" // the default value should be sync with the preload script
     );
 
     init() {

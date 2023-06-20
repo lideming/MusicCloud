@@ -24,11 +24,16 @@ export const plugins = new (class Plugins {
     revision: 0,
   });
   private loadedPlugin = new Map<string, PluginInfo>();
+  private promiseLoadingPlugins: Promise<void> | null = null;
 
   init() {
-    user.waitLogin().then(() => {
-      this.loadUserPlguins();
-    });
+    this.promiseLoadingPlugins = user
+      .waitLogin()
+      .then(() => this.loadUserPlguins());
+  }
+
+  async waitPluginsLoading() {
+    await this.promiseLoadingPlugins;
   }
 
   async getUserPlugins() {
@@ -40,25 +45,23 @@ export const plugins = new (class Plugins {
   }
 
   async loadUserPlguins() {
+    const promises: Promise<any>[] = [];
     for (const plugin of await this.getUserPlugins()) {
       if (plugin.enabled) {
         let loaded = false;
         const loadingTask = this.loadPlugin(plugin.url).finally(() => {
           loaded = true;
         });
-        Promise.race([
-          sleepAsync(5000),
-          loadingTask,
-        ]).then(() => {
+        promises.push(loadingTask);
+        Promise.race([sleepAsync(5000), loadingTask]).then(() => {
           if (!loaded) {
-            const toast = Toast.show(
-              I`Plugin "${plugin.name}" loading...`,
-            );
+            const toast = Toast.show(I`Plugin "${plugin.name}" loading...`);
             loadingTask.finally(() => toast.close());
           }
         });
       }
     }
+    await Promise.allSettled(promises);
   }
 
   async addUserPlugin(url: string) {
@@ -96,7 +99,9 @@ export const plugins = new (class Plugins {
     await this.userPluginList.concurrencyAwareUpdate((value) => {
       return {
         ...value,
-        plugins: value.plugins.map((x) => x.url == url ? { ...x, enabled } : x),
+        plugins: value.plugins.map((x) =>
+          x.url == url ? { ...x, enabled } : x,
+        ),
       };
     });
   }
