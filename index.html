@@ -107,11 +107,15 @@
           preload.domLoaded = true;
           preload.update();
           // Set the theme ASAP to avoid blinking
-          if (
-            ["dark", "dark-rounded"].indexOf(
-              localStorage.getItem("mcloud-theme")
-            ) >= 0
-          ) {
+          const preferDark = window.matchMedia('(prefers-color-scheme: dark)');
+          const themeColor =
+            (localStorage.getItem("mcloud-theme") || '')
+              .split('-')[0];
+          const dark =
+            themeColor === 'dark' ||
+            (themeColor === 'auto'
+              && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          if (dark) {
             document.body.classList.add("dark");
             document.getElementById("meta-theme-color").content = "black";
           }
