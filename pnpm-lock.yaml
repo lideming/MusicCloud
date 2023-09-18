@@ -24,7 +24,7 @@ devDependencies:
     version: 7.6.0
   electron:
     specifier: ^22.3.1
-    version: 22.3.21
+    version: 22.3.24
   rollup:
     specifier: ^3.17.2
     version: 3.17.2
@@ -471,8 +471,8 @@ packages:
       path-type: 4.0.0
     dev: true
 
-  /electron@22.3.21:
-    resolution: {integrity: sha512-9JzWgvehRrqA30M7RvWCwwbyq2EgPUSbCFaqyZGnG0B52m4ayB8H+uFNIKXyWuyFwAEPDpQW5cGwCzXir1HuLA==}
+  /electron@22.3.24:
+    resolution: {integrity: sha512-wnGsShoRVk1Jmgr7h/jZK9bI5UwMF88sdQ5c8z2j2N8B9elhF/jKDFjwDXUrY1Y0xzAskOP0tYIDE+UbUM4byQ==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
     requiresBuild: true
