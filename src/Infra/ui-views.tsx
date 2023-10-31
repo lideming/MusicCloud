@@ -26,7 +26,8 @@ import { I } from "../I18n/I18n";
 import svgSettings from "../../resources/settings-24px.svg";
 import { settingsUI } from "../Settings/SettingsUI";
 import { ui } from "./UI";
-import { fadeout, FadeoutResult } from "@yuuza/webfx";
+import { ContextMenu, fadeout, FadeoutResult } from "@yuuza/webfx";
+import { router } from "./Router";
 
 export class MainContainer extends View {
   sidebar = new Sidebar();
@@ -50,7 +51,7 @@ export class Sidebar extends View {
         {new View(<div style="flex: 1"></div>)}
         <SettingsBtn />
       </div>
-    )
+    ),
   );
   features = new ListView(<div id="sidebar-features"></div>);
   list = new View(<div id="sidebar-list"></div>);
@@ -85,6 +86,28 @@ export class SidebarItem extends ListViewItem {
       text: () => getFuncVal(this.text),
     };
   }
+  routerPath: string[] | null = null;
+  getRouterMenuItems() {
+    return this.routerPath
+      ? [
+          new MenuItem({
+            text: "Open popup",
+            onActive: () => {
+              router.nav([...this.routerPath!], { popup: true });
+            },
+          }),
+        ]
+      : [];
+  }
+  getMenuItems(): MenuItem[] {
+    return [...this.getRouterMenuItems()];
+  }
+  onContextMenu = (item, ev) => {
+    ev.preventDefault();
+    ui.showContextMenuForItem([this], new ContextMenu(this.getMenuItems()), {
+      ev: ev,
+    });
+  };
   bindContentView(viewFunc: Func<ContentView>) {
     // implement in UI.ts
     return this;
@@ -111,6 +134,10 @@ export class ContentView extends View {
   private _isVisible = false;
   public get isVisible() {
     return this._isVisible;
+  }
+
+  get contentViewTitle() {
+    return "";
   }
 
   _lastRenderedLanguage = "";
@@ -198,7 +225,7 @@ export class ContentHeader extends View {
     if (this.scrollbox) {
       this.scrollbox.removeEventListener(
         "scroll",
-        this.scrollboxScrollHandler!
+        this.scrollboxScrollHandler!,
       );
       this.scrollboxScrollHandler = null;
     }
@@ -210,7 +237,7 @@ export class ContentHeader extends View {
           this.onScrollboxScroll();
         }
       }),
-      { passive: true }
+      { passive: true },
     );
   }
   onScrollboxScroll() {
@@ -270,7 +297,7 @@ export function setScrollableShadow(dom: HTMLElement, position: number) {
   dom.style.boxShadow = `0 0 ${numLimit(
     Math.log(position) * 2,
     0,
-    10
+    10,
   )}px var(--color-light-shadow)`;
 }
 

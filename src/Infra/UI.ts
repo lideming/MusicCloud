@@ -54,6 +54,7 @@ import {
   Toast,
   clearChildren,
   isIOS,
+  Action,
 } from "./utils";
 import { I18n, i18n, I } from "../I18n/I18n";
 import { Track } from "../Track/Track";
@@ -70,6 +71,7 @@ export const ui = new (class {
     this.lang.init();
     this.theme.init();
     this.sidebar.init();
+    this.content.init();
     this.contentBg.init();
     bottomBar.bindPlayer(playerCore);
     this.sidebarLogin.init();
@@ -534,6 +536,18 @@ export const ui = new (class {
   })();
   content = new (class {
     container = mainContainer.contentOuter;
+    popups: Array<{
+      window: Window;
+      container: View;
+      content: views.ContentView;
+    }> = [];
+
+    init() {
+      window.addEventListener("unload", (e) => {
+        this.popups.forEach((x) => x.window.close());
+      });
+    }
+
     current: views.ContentView | null = null;
     removeCurrent() {
       const cur = this.current;
@@ -543,6 +557,7 @@ export const ui = new (class {
     }
     setCurrent(view: views.ContentView | null) {
       if (view === this.current) return;
+      if (view && this.tryFocusExistingPopup(view)) return 'popup';
       this.container.toggleClass("content-animation-reverse", router.wasBacked);
       this.removeCurrent();
       if (view) {
@@ -556,24 +571,60 @@ export const ui = new (class {
       this.current = view;
     }
 
+    tryFocusExistingPopup(view: views.ContentView) {
+      const existed = this.popups.find(
+        (x) => x.content === view && !x.window.closed,
+      );
+      if (existed) {
+        existed.window.focus();
+        return true;
+      }
+      return false;
+    }
+
     async popup(view: views.ContentView) {
+      if (this.tryFocusExistingPopup(view)) return;
       if (view === this.current) {
         this.removeCurrent();
       }
       const win = await this.createPopupWindow();
       view.onShow();
-      mountView(win.document.body, view);
+      win.container.appendView(view);
+      win.content = view;
+      win.window.document.title = `${view.contentViewTitle} - MusicCloud`;
       view.onDomInserted();
       view.fadeIn();
     }
 
+    private _nextPopupId = 1;
     private async createPopupWindow() {
       console.info("create popup");
-      const win = window.open("about:blank", undefined, "width=600,height=400");
-      return new Promise<Window>((r) => {
-        win?.addEventListener("load", () => {
-          injectStyle({ parent: win!.document.head });
-          r(win);
+      // prevents cross-origin to "about:blank"
+      const popupid = this._nextPopupId++;
+      const url = URL.createObjectURL(
+        new Blob([`<!DOCTYPE html>`], { type: "text/html" }),
+      );
+      const win = window.open(
+        url,
+        "popup-" + popupid,
+        "popup,toolbar=no,location=no,status=no,menubar=no",
+      );
+      return new Promise<(typeof this.popups)[0]>((r) => {
+        if (!win) return console.warn("window.open() return null");
+        win.addEventListener("DOMContentLoaded", () => {
+          injectStyle({ parent: win.document.head });
+          const container = new View({ tag: "div.popup-container" });
+          mountView(win.document.body, container);
+          (win as any).mcloudDialogParent = new DialogParent(container);
+          const popup = { window: win, container, content: null! };
+          this.popups.push(popup);
+
+          win.addEventListener("unload", () => {
+            const content = popup.content as views.ContentView;
+            content.fadeOut();
+          });
+
+          r(popup);
         });
       });
     }

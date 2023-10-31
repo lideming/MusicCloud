@@ -220,12 +220,12 @@ export class TrackList {
           I`Failed to sync playlist "${this.name}": the list was changed by other client. Please refresh and try again.` +
             "\n" +
             error,
-          3000
+          3000,
         );
       } else {
         Toast.show(
           I`Failed to sync playlist "${this.name}".` + "\n" + error,
-          3000
+          3000,
         );
         throw error;
       }
@@ -254,7 +254,7 @@ export class TrackList {
             return;
           this.fetch(true);
         },
-        true
+        true,
       );
     }
   }
@@ -276,7 +276,7 @@ export class TrackList {
   getNextTrack(
     track: Track,
     loopMode: PlayingLoopMode,
-    offset?: number
+    offset?: number,
   ): Track | null {
     offset = offset ?? 1;
     var bind = track._bind;
@@ -353,6 +353,9 @@ export class TrackList {
 
 export class TrackListView extends ListContentView {
   list: TrackList;
+  override get contentViewTitle() {
+    return I`Playlist` + " " + this.list?.info?.name;
+  }
   listView: LazyListView<TrackViewItem>;
   curPlaying = new ItemActiveHelper<TrackViewItem>({
     funcSetActive: function (item, val) {
@@ -617,7 +620,7 @@ export class TrackViewItem extends ListViewItem {
     trackContextMenu(
       selected.map((x) => x.track),
       ev,
-      selected
+      selected,
     );
   };
 }

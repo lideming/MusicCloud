@@ -103,7 +103,6 @@ export class ListIndex {
         item.contentView?.onSidebarItemReactived();
         return;
       }
-      ui.sidebarList.setActive(item);
       this.showTracklist(item.listInfo.id);
     };
   }
@@ -195,20 +194,27 @@ export class ListIndex {
     this.listView.scrollBox = ui.sidebar.dom;
     router.addRoute({
       path: ["list"],
-      onNav: async (arg) => {
+      onNav: async ({ remaining, popup }) => {
         await user.waitLogin(false);
-        var id = window.parseInt(arg.remaining[0]);
+        var id = window.parseInt(remaining[0]);
         var list = this.getList(id);
         var content = list.createView();
-        ui.content.setCurrent(content);
-        var item = this.getViewItem(id);
-        ui.sidebarList.setActive(item);
-        if (!item) {
-          await list.fetch();
-          item = this.addListInfo(list.info!);
-          if (user.state == "logged") this.putUser();
+        if (popup) {
+          ui.content.popup(content);
+        } else {
+          const setContentResult = ui.content.setCurrent(content);
+          var item = this.getViewItem(id);
+          console.info({ setContentResult });
+          if (setContentResult !== "popup") {
+            ui.sidebarList.setActive(item);
+          }
+          if (!item) {
+            await list.fetch();
+            item = this.addListInfo(list.info!);
+            if (user.state == "logged") this.putUser();
+          }
+          item.contentView = content;
         }
-        item.contentView = content;
       },
     });
 
@@ -394,11 +400,14 @@ export class ListIndexViewItem extends SidebarItem {
       this.viewState = null;
     }
   }
-  onContextMenu = (item: ListIndexViewItem, ev: MouseEvent) => {
-    var m = new ContextMenu();
+  getMenuItems() {
+    if (this.listInfo) {
+      this.routerPath = ["list", String(this.listInfo.id)];
+    }
+    const items = [...super.getMenuItems()];
     if (this.index && this.listInfo) {
       if (this.listInfo.visibility == 1) {
-        m.add(
+        items.push(
           new CopyMenuItem({
             text: I`Copy link`,
             textToCopy: api.appBaseUrl + "#list/" + this.listInfo.id,
@@ -407,11 +416,11 @@ export class ListIndexViewItem extends SidebarItem {
       }
       if (this.listInfo.owner == user.id) {
         const targetVisibility = this.listInfo.visibility ? 0 : 1;
-        m.add(
+        items.push(
           new MenuItem({
             text: i18n.get("make_it_visibility_" + targetVisibility),
             onActive: () => {
-              const list = this.index.getList(item.listInfo.id);
+              const list = this.index.getList(this.listInfo.id);
               list.info!.visibility = targetVisibility;
               list.onInfoChanged();
               list.put();
@@ -419,7 +428,7 @@ export class ListIndexViewItem extends SidebarItem {
           }),
         );
       }
-      m.add(
+      items.push(
         new MenuItem({
           text: I`Remove`,
           cls: "dangerous",
@@ -439,16 +448,13 @@ export class ListIndexViewItem extends SidebarItem {
       );
     }
     if (this.listInfo)
-      m.add(
+      items.push(
         new MenuInfoItem({
           text: I`List ID` + ": " + this.listInfo.id,
         }),
       );
-    if (m.length) {
-      ev.preventDefault();
-      ui.showContextMenuForItem([item], m, { ev: ev });
-    }
-  };
+    return items;
+  }
 }
 
 export const listIndex = new ListIndex();
