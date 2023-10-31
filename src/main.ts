@@ -49,10 +49,9 @@ import { serviceWorkerClient } from "./ServiceWorker/client";
 import { infoProvider } from "./Overlay/infoProvider";
 import { userStore, UserStoreFields } from "./API/UserStore";
 import { plugins } from "./Plugins/plugins";
+import { injectStyle } from "./Infra/style";
 
 import * as webfx from "@yuuza/webfx";
-
-import style from "../style.css";
 
 function init() {
   console.time("[Main] app init()");
@@ -84,11 +83,6 @@ function checkMode() {
   if (localStorage.getItem("mcloud-dev") == "1") {
     webfx.startBlockingDetect();
   }
-}
-
-function injectStyle() {
-  webfx.injectWebfxCss();
-  injectCss(style, { tag: "style#mcloud-injected-style" });
 }
 
 export {
