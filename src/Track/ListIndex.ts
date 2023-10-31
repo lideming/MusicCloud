@@ -17,7 +17,7 @@ import {
   objectApply,
   appendView,
 } from "../Infra/viewlib";
-import { BuildDomExpr, View } from "../Infra/utils";
+import { BuildDomExpr, MessageBox, View } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
 import { user } from "../API/User";
@@ -64,7 +64,7 @@ export class ListIndex {
               for (const item of arg.sourceItems as TrackViewItem[]) {
                 list.addTrack(
                   item.track.toApiTrack(),
-                  arg.event.altKey ? undefined : 0
+                  arg.event.altKey ? undefined : 0,
                 );
               }
               return list.put();
@@ -87,7 +87,7 @@ export class ListIndex {
                 await list.fetch();
                 list.addTrack(
                   track.toApiTrack(),
-                  arg.event.altKey ? undefined : 0
+                  arg.event.altKey ? undefined : 0,
                 );
                 await list.put();
               })
@@ -161,9 +161,9 @@ export class ListIndex {
               this.newTracklist();
             },
           },
-          [icon]
-        )
-      )
+          [icon],
+        ),
+      ),
     );
     ui.sidebarList.container.appendView(this.section);
     ui.sidebar.dom.addEventListener(
@@ -186,11 +186,11 @@ export class ListIndex {
             secondHeader,
             secondHeader.offsetTop +
               secondHeader.offsetHeight -
-              this.listView.dom.offsetTop
+              this.listView.dom.offsetTop,
           );
         }
       },
-      { passive: true }
+      { passive: true },
     );
     this.listView.scrollBox = ui.sidebar.dom;
     router.addRoute({
@@ -327,7 +327,7 @@ export class ListIndex {
       owner: user.id,
       name: createName(
         (x) => (x ? I`New Playlist (${x + 1})` : I`New Playlist`),
-        (x) => !!this.listView.find((l) => l.listInfo.name === x)
+        (x) => !!this.listView.find((l) => l.listInfo.name === x),
       ),
       visibility: 0,
       version: 0,
@@ -341,9 +341,9 @@ export class ListIndex {
       (err) => {
         Toast.show(
           I`Failed to create playlist "${list.name}".` + "\n" + err,
-          5000
+          5000,
         );
-      }
+      },
     );
   }
 }
@@ -402,7 +402,7 @@ export class ListIndexViewItem extends SidebarItem {
           new CopyMenuItem({
             text: I`Copy link`,
             textToCopy: api.appBaseUrl + "#list/" + this.listInfo.id,
-          })
+          }),
         );
       }
       if (this.listInfo.owner == user.id) {
@@ -416,24 +416,33 @@ export class ListIndexViewItem extends SidebarItem {
               list.onInfoChanged();
               list.put();
             },
-          })
+          }),
         );
       }
       m.add(
         new MenuItem({
           text: I`Remove`,
           cls: "dangerous",
-          onActive: () => {
-            this.index.removeList(this.listInfo.id);
+          onActive: async () => {
+            if (
+              (await new MessageBox()
+                .setTitle(I`Warning`)
+                .addText(I`Are you sure to delete the playlist permanently?`)
+                .addResultBtns(["cancel", "ok"])
+                .allowCloseWithResult("cancel")
+                .showAndWaitResult()) !== "ok"
+            ) {
+              this.index.removeList(this.listInfo.id);
+            }
           },
-        })
+        }),
       );
     }
     if (this.listInfo)
       m.add(
         new MenuInfoItem({
           text: I`List ID` + ": " + this.listInfo.id,
-        })
+        }),
       );
     if (m.length) {
       ev.preventDefault();

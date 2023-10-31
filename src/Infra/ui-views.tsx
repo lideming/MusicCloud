@@ -119,6 +119,8 @@ export class ContentView extends View {
     super.postCreateDom();
     this.toggleClass("contentview", true);
   }
+
+  // ContentView lifecycle methods:
   onShow() {
     this._isVisible = true;
     if (this.domCreated && this._lastRenderedLanguage != ui.lang.curLang) {

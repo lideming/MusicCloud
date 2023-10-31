@@ -61,6 +61,7 @@ import { user } from "../API/User";
 import { playerCore } from "../Player/PlayerCore";
 import { uploads } from "../Track/Uploads";
 import { api } from "../API/Api";
+import { injectStyle } from "./style";
 
 export const ui = new (class {
   usingKeyboardInput = false;
@@ -553,6 +554,28 @@ export const ui = new (class {
         view.fadeIn();
       }
       this.current = view;
+    }
+
+    async popup(view: views.ContentView) {
+      if (view === this.current) {
+        this.removeCurrent();
+      }
+      const win = await this.createPopupWindow();
+      view.onShow();
+      mountView(win.document.body, view);
+      view.onDomInserted();
+      view.fadeIn();
+    }
+
+    private async createPopupWindow() {
+      console.info("create popup");
+      const win = window.open("about:blank", undefined, "width=600,height=400");
+      return new Promise<Window>((r) => {
+        win?.addEventListener("load", () => {
+          injectStyle({ parent: win!.document.head });
+          r(win);
+        });
+      });
     }
   })();
   contentBg = new (class {

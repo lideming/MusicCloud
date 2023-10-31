@@ -8,7 +8,11 @@ export interface Route {
   path: string[];
   contentView?: () => ContentView;
   sidebarItem?: () => SidebarItem;
-  onNav?: (arg: { path: string[]; remaining: string[] }) => void;
+  onNav?: (arg: {
+    path: string[];
+    remaining: string[];
+    popup: boolean;
+  }) => void;
   onLeave?: () => void;
 }
 
@@ -64,35 +68,44 @@ export const router = new (class {
       pushState?: boolean | "replace";
       evenIsCurrent?: boolean;
       idx?: number;
+      popup?: boolean;
     },
   ) {
+    const popup = options?.popup ?? false;
     if (typeof path === "string") path = parsePath(path);
     var strPath = path.map((x) => encodeURIComponent(x)).join("/");
     if (this.currentStr === strPath && !options?.evenIsCurrent) return;
 
-    this.current = path;
-    this.currentStr = strPath;
-    const oldIdx = this.currentIdx;
-    this.currentIdx = options?.idx ?? this.currentIdx + 1;
-    if (options?.idx || options?.pushState !== false)
-      this.wasBacked = this.currentIdx < oldIdx;
+    if (!popup) {
+      this.current = path;
+      this.currentStr = strPath;
+      const oldIdx = this.currentIdx;
+      this.currentIdx = options?.idx ?? this.currentIdx + 1;
+      if (options?.idx || options?.pushState !== false)
+        this.wasBacked = this.currentIdx < oldIdx;
 
-    if (options?.pushState !== false) {
-      const state = { idx: this.currentIdx };
-      const url = strPath ? "#" + strPath : undefined;
-      const args = [state, "", url] as const;
-      if (options?.pushState == "replace") {
-        history.replaceState(...args);
-      } else {
-        history.pushState(...args);
+      if (options?.pushState !== false) {
+        const state = { idx: this.currentIdx };
+        const url = strPath ? "#" + strPath : undefined;
+        const args = [state, "", url] as const;
+        if (options?.pushState == "replace") {
+          history.replaceState(...args);
+        } else {
+          history.pushState(...args);
+        }
       }
     }
 
     for (const r of this.routes) {
       if (match(path, r)) {
-        if (r.contentView) ui.content.setCurrent(r.contentView());
-        if (r.sidebarItem) ui.sidebarList.setActive(r.sidebarItem());
-        if (r.onNav) r.onNav({ path, remaining: path.slice(r.path.length) });
+        if (!popup) {
+          if (r.contentView) ui.content.setCurrent(r.contentView());
+          if (r.sidebarItem) ui.sidebarList.setActive(r.sidebarItem());
+        } else {
+          if (r.contentView) ui.content.popup(r.contentView());
+        }
+        if (r.onNav)
+          r.onNav({ path, remaining: path.slice(r.path.length), popup });
         break;
       }
     }

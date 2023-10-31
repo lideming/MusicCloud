@@ -1,6 +1,12 @@
 import { router } from "../Infra/Router";
 import { ui } from "../Infra/UI";
-import { Lazy, BuildDomExpr, SettingItem } from "../Infra/utils";
+import {
+  Lazy,
+  BuildDomExpr,
+  SettingItem,
+  ContextMenu,
+  MenuItem,
+} from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { playerCore } from "../Player/PlayerCore";
 import { LyricsView } from "../Lyrics/LyricsView";
@@ -18,7 +24,20 @@ import { Track } from "./Track";
 
 export const nowPlaying = new (class {
   init() {
-    var sidebarItem = new SidebarItem({ text: () => I`Now Playing` });
+    var sidebarItem = new SidebarItem({
+      text: () => I`Now Playing`,
+      onContextMenu: (item, ev) => {
+        ev.preventDefault();
+        new ContextMenu([
+          new MenuItem({
+            text: "Open popup",
+            onActive: () => {
+              router.nav("nowplaying", { popup: true });
+            },
+          }),
+        ]).show(ev);
+      },
+    });
     router.addRoute({
       path: ["nowplaying"],
       contentView: () => this.view,
