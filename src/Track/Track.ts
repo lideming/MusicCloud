@@ -99,7 +99,11 @@ export class Track {
     this.infoObj = t;
   }
   startEdit(ev?: MouseEvent) {
-    var dialog = new TrackDialog();
+    const dialog = new TrackDialog();
+    const ownerWindow = (ev?.target as Node).ownerDocument!.defaultView;
+    if (ownerWindow !== window) {
+      dialog.parent = (ownerWindow as any).mcloudDialogParent;
+    }
     dialog.setTrack(this);
     dialog.show(ev);
     return dialog;
@@ -141,7 +145,7 @@ export class Track {
         this._lyricsFetchTask = (async () => {
           try {
             var resp: Api.TrackLyrics = await api.get(
-              "tracks/" + this.id + "/lyrics"
+              "tracks/" + this.id + "/lyrics",
             );
             this.infoObj!.lyrics = resp.lyrics;
             return this.lyrics!;

@@ -30,7 +30,7 @@ import { BottomBar } from "./BottomBar";
 View.debugging = true;
 
 views.SidebarItem.prototype.bindContentView = function (
-  viewFunc: Func<views.ContentView>
+  viewFunc: Func<views.ContentView>,
 ) {
   this.onActive.add(() => {
     if (!this.contentView) this.contentView = viewFunc();
@@ -59,6 +59,7 @@ import {
   InputStateTracker,
   Toast,
   ToolTip,
+  Action,
 } from "./utils";
 import { I18n, i18n, I } from "../I18n/I18n";
 import { Track } from "../Track/Track";
@@ -74,6 +75,7 @@ export const ui = new (class {
     this.addErrorListener();
     this.lang.init();
     this.sidebar.init();
+    this.content.init();
     this.contentBg.init();
     bottomBar.bindPlayer(playerCore);
     this.sidebarLogin.init();
@@ -102,7 +104,7 @@ export const ui = new (class {
           .addText(
             files.length === 1
               ? I`Did you mean to upload 1 file?`
-              : I`Did you mean to upload ${files.length} files?`
+              : I`Did you mean to upload ${files.length} files?`,
           )
           .addResultBtns(["no", "yes"])
           .allowCloseWithResult("no")
@@ -124,7 +126,7 @@ export const ui = new (class {
         this.usingKeyboardInput = true;
         document.body.classList.add("keyboard-input");
       },
-      true
+      true,
     );
     ["mousedown", "touchstart"].forEach((evt) =>
       document.addEventListener(
@@ -133,8 +135,8 @@ export const ui = new (class {
           this.usingKeyboardInput = false;
           document.body.classList.remove("keyboard-input");
         },
-        { passive: true, capture: true }
-      )
+        { passive: true, capture: true },
+      ),
     );
   }
   addErrorListener() {
@@ -159,13 +161,13 @@ export const ui = new (class {
     all = ["light", "dark", "dark-rounded", "light-rounded"] as const;
     current: this["all"][number] = "light";
     timer = new Timer(() =>
-      toggleClass(document.body, "changing-theme", false)
+      toggleClass(document.body, "changing-theme", false),
     );
     private rendered = false;
     siTheme = new SettingItem<this["current"]>(
       "mcloud-theme",
       "str",
-      "light-rounded"
+      "light-rounded",
     ).render((theme) => {
       if (this.current !== theme) {
         this.current = theme;
@@ -174,7 +176,7 @@ export const ui = new (class {
         toggleClass(document.body, "dark", color === "dark");
         toggleClass(document.body, "rounded", rounded === "rounded");
         var meta = document.getElementById(
-          "meta-theme-color"
+          "meta-theme-color",
         ) as HTMLMetaElement;
         if (meta) {
           meta.content = color === "dark" ? "black" : "";
@@ -200,7 +202,7 @@ export const ui = new (class {
         i18n.curLang = lang;
         document.body.lang = lang;
         console.info(
-          `[UI] Current language: '${i18n.curLang}' - '${I`English`}'`
+          `[UI] Current language: '${i18n.curLang}' - '${I`English`}'`,
         );
         ui.updateAllViews();
       });
@@ -327,7 +329,7 @@ export const ui = new (class {
         this.toggleHide(
           mobile
             ? this._hideMobile || this._hideLarge
-            : this._hideLarge && this._hideMobile
+            : this._hideLarge && this._hideMobile,
         );
       }
     }
@@ -422,6 +424,18 @@ export const ui = new (class {
   })();
   content = new (class {
     container = mainContainer.contentOuter;
+    popups: Array<{
+      window: Window;
+      container: View;
+      content: views.ContentView;
+    }> = [];
+
+    init() {
+      window.addEventListener("unload", (e) => {
+        this.popups.forEach((x) => x.window.close());
+      });
+    }
+
     current: views.ContentView | null = null;
     removeCurrent() {
       const cur = this.current;
@@ -431,6 +445,7 @@ export const ui = new (class {
     }
     setCurrent(view: views.ContentView | null) {
       if (view === this.current) return;
+      if (view && this.tryFocusExistingPopup(view)) return 'popup';
       this.container.toggleClass("content-animation-reverse", router.wasBacked);
       this.removeCurrent();
       if (view) {
@@ -444,24 +459,60 @@ export const ui = new (class {
       this.current = view;
     }
 
+    tryFocusExistingPopup(view: views.ContentView) {
+      const existed = this.popups.find(
+        (x) => x.content === view && !x.window.closed,
+      );
+      if (existed) {
+        existed.window.focus();
+        return true;
+      }
+      return false;
+    }
+
     async popup(view: views.ContentView) {
+      if (this.tryFocusExistingPopup(view)) return;
       if (view === this.current) {
         this.removeCurrent();
       }
       const win = await this.createPopupWindow();
       view.onShow();
-      mountView(win.document.body, view);
+      win.container.appendView(view);
+      win.content = view;
+      win.window.document.title = `${view.contentViewTitle} - MusicCloud`;
       view.onDomInserted();
       view.fadeIn();
     }
 
+    private _nextPopupId = 1;
     private async createPopupWindow() {
       console.info("create popup");
-      const win = window.open("about:blank", undefined, "width=600,height=400");
-      return new Promise<Window>((r) => {
-        win?.addEventListener("load", () => {
-          injectStyle({ parent: win!.document.head });
-          r(win);
+      // prevents cross-origin to "about:blank"
+      const popupid = this._nextPopupId++;
+      const url = URL.createObjectURL(
+        new Blob([`<!DOCTYPE html>`], { type: "text/html" }),
+      );
+      const win = window.open(
+        url,
+        "popup-" + popupid,
+        "popup,toolbar=no,location=no,status=no,menubar=no",
+      );
+      return new Promise<(typeof this.popups)[0]>((r) => {
+        if (!win) return console.warn("window.open() return null");
+        win.addEventListener("DOMContentLoaded", () => {
+          injectStyle({ parent: win.document.head });
+          const container = new View({ tag: "div.popup-container" });
+          mountView(win.document.body, container);
+          (win as any).mcloudDialogParent = new DialogParent(container);
+          const popup = { window: win, container, content: null! };
+          this.popups.push(popup);
+
+          win.addEventListener("unload", () => {
+            const content = popup.content as views.ContentView;
+            content.fadeOut();
+          });
+
+          r(popup);
         });
       });
     }
@@ -484,11 +535,11 @@ export const ui = new (class {
       playerCore.onStateChanged.add(() => {
         this.bgView!.toggleClass(
           "has-video",
-          playerCore.track?.infoObj?.type === "video"
+          playerCore.track?.infoObj?.type === "video",
         );
       });
       api.onTrackInfoChanged.add(
-        (t) => t.id === playerCore.track?.id && this.update()
+        (t) => t.id === playerCore.track?.id && this.update(),
       );
     }
 
@@ -636,7 +687,7 @@ class TouchPanListener {
   filter: (e: TouchEvent) => boolean;
   constructor(
     readonly element: HTMLElement,
-    public mode: "x" | "y" | "both" = "both"
+    public mode: "x" | "y" | "both" = "both",
   ) {}
 
   private _enabled = false;

@@ -1,7 +1,7 @@
 // file: Router.ts
 
 import { ui } from "./UI";
-import { Callbacks } from "./utils";
+import { Callbacks, MenuItem } from "./utils";
 import { ContentView, SidebarItem } from "./ui-views";
 
 export interface Route {
@@ -38,7 +38,7 @@ export const router = new (class {
   }
   addRoute(arg: Route) {
     this.routes.push(arg);
-    if (arg.sidebarItem)
+    if (arg.sidebarItem) {
       arg.sidebarItem().onActive.add(() => {
         if (arg.contentView && arg.contentView().isVisible) {
           arg.contentView().onSidebarItemReactived();
@@ -46,6 +46,8 @@ export const router = new (class {
         }
         this.nav([...arg.path]);
       });
+      arg.sidebarItem().routerPath = arg.path;
+    }
   }
   nav(
     path: string | string[],
@@ -54,7 +56,7 @@ export const router = new (class {
       evenIsCurrent?: boolean;
       idx?: number;
       popup?: boolean;
-    }
+    },
   ) {
     const popup = options?.popup ?? false;
     if (typeof path === "string") path = parsePath(path);
@@ -84,8 +86,16 @@ export const router = new (class {
     for (const r of this.routes) {
       if (match(path, r)) {
         if (!popup) {
-          if (r.contentView) ui.content.setCurrent(r.contentView());
-          if (r.sidebarItem) ui.sidebarList.setActive(r.sidebarItem());
+          let activeSidebarItem = true;
+          if (r.contentView) {
+            const setContentResult = ui.content.setCurrent(r.contentView());
+            if (setContentResult === "popup") {
+              activeSidebarItem = false;
+            }
+          }
+          if (activeSidebarItem && r.sidebarItem) {
+            ui.sidebarList.setActive(r.sidebarItem());
+          }
         } else {
           if (r.contentView) ui.content.popup(r.contentView());
         }

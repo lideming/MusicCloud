@@ -73,12 +73,15 @@ export const nowPlaying = new (class {
 })();
 
 class PlayingView extends ContentView {
+  override get contentViewTitle() {
+    return I`Now Playing`;
+  }
   header = new (class extends ContentHeader {
     lines: View;
     onScrollboxScroll() {
       setScrollableShadow(
         this.dom,
-        this.scrollbox!.scrollTop - this.lines.dom.offsetTop
+        this.scrollbox!.scrollTop - this.lines.dom.offsetTop,
       );
     }
   })({
@@ -139,7 +142,7 @@ class PlayingView extends ContentView {
         onActive: (ev) => {
           playerCore.track?.startEdit(ev);
         },
-      }))
+      })),
     );
     this.header.appendView(this.infoView);
     this.header.bindScrollBox(this.lyricsView.dom);
@@ -163,7 +166,7 @@ class PlayingView extends ContentView {
       this.checkTrack();
     })();
     this.shownEvents.add(playerCore.onProgressChanged, () =>
-      this.lyricsView.onProgressChanged()
+      this.lyricsView.onProgressChanged(),
     );
     this.shownEvents.add(api.onTrackInfoChanged, (track) => {
       if (track.id === playerCore.track?.id) {
