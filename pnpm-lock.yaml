@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@yuuza/webfx':
-    specifier: ^1.10.2
-    version: 1.10.2
+    specifier: ^1.10.3
+    version: 1.10.3
 
 devDependencies:
   '@rollup/plugin-node-resolve':
@@ -267,8 +267,8 @@ packages:
     resolution: {integrity: sha512-KJq/+nYVcxdqT4pnwmnATmJEQUqduJEwP0rUoNVjIT63CxnG4QwDAzs4/9K2N2l/E+w+FolRSclMCV9VUXQAmw==}
     dev: false
 
-  /@yuuza/webfx@1.10.2:
-    resolution: {integrity: sha512-h382r8XsPpnx9DTPb6qmvVGAtDW8h/gR+e+Fy4sYELvU9JU0LeokkD6p94cm4fJpchHgzzkyqghzEOAjMm+Ajg==}
+  /@yuuza/webfx@1.10.3:
+    resolution: {integrity: sha512-+uhvsVgZU2KCdodDVFhL5NGnbYHOd+R9Te3wYpGgrCix+SH55I4bcs6KmSMRd5HGmWcaoHyNeEB9vA7l8M5ReA==}
     dependencies:
       '@yuuza/i18n': 1.2.3
       '@yuuza/utils': 1.0.3
