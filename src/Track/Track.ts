@@ -101,8 +101,8 @@ export class Track {
   }
   startEdit(ev?: MouseEvent) {
     const dialog = new TrackDialog();
-    const ownerWindow = (ev?.target as Node).ownerDocument!.defaultView;
-    if (ownerWindow !== window) {
+    const ownerWindow = (ev?.target as Node)?.ownerDocument?.defaultView;
+    if (ownerWindow && ownerWindow !== window) {
       dialog.parent = (ownerWindow as any).mcloudDialogParent;
     }
     dialog.setTrack(this);
