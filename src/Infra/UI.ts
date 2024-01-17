@@ -1,7 +1,6 @@
 // file: UI.ts
 
 import {
-  ListView,
   ListViewItem,
   Dialog,
   ToastsContainer,
@@ -13,15 +12,10 @@ import {
   ItemActiveHelper,
   dragManager,
   ContextMenu,
-  buildDOM,
   fadeout,
-  formatDuration,
-  listenPointerEvents,
   numLimit,
-  replaceChild,
   toggleClass,
   mountView,
-  unmountView,
 } from "./viewlib";
 import * as views from "./ui-views";
 import { MainContainer } from "./ui-views";
@@ -52,18 +46,16 @@ mountView(document.body, bottomBar);
 import { router } from "./Router";
 import {
   SettingItem,
-  BuildDomExpr,
   Func,
   Callbacks,
   Timer,
-  InputStateTracker,
   Toast,
-  ToolTip,
+  clearChildren,
 } from "./utils";
 import { I18n, i18n, I } from "../I18n/I18n";
 import { Track } from "../Track/Track";
 import { user } from "../API/User";
-import { playerCore, playingLoopModes } from "../Player/PlayerCore";
+import { playerCore } from "../Player/PlayerCore";
 import { uploads } from "../Track/Uploads";
 import { api } from "../API/Api";
 
@@ -154,13 +146,22 @@ export const ui = new (class {
   }
   preload = new (class {
     domInfos = document.getElementById("preload-infos");
+    domProgress = document.getElementById('preload-progress-bar-fill');
     jsok() {
       window["preload"]?.jsOk();
+      if (this.domInfos) {
+        clearChildren(this.domInfos);
+      }
     }
     log(text: string, type: "info" | "error") {
       const p = new TextView({ tag: `p.${type}`, text });
       if (this.domInfos) mountView(this.domInfos, p);
       return p;
+    }
+    progress(value: number) {
+      if (this.domProgress) {
+        this.domProgress.style.width = `${value * 100}%`;
+      }
     }
     end() {
       setTimeout(() => {

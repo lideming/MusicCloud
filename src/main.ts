@@ -85,13 +85,21 @@ function init() {
 async function waitInitialLoading() {
   try {
     ui.preload.jsok();
+    ui.preload.progress(0.33);
     const stateText = ui.preload.log("Logging in...", "info");
     await Promise.race([
       webfx.sleepAsync(1000),
       user
         .waitLogin(false)
-        .then(() => stateText.text = "Loading plugins...")
-        .then(() => plugins.waitPluginsLoading()),
+        .then(() => {
+          stateText.text = "Loading plugins...";
+          ui.preload.progress(0.66);
+        })
+        .then(() => plugins.waitPluginsLoading())
+        .then(() => {
+          stateText.text = "";
+          ui.preload.progress(1);
+        }),
     ]);
   } finally {
     ui.preload.end();

@@ -51,6 +51,21 @@
       #preload-infos p.error {
         color: red;
       }
+
+      #preload-progress-bar {
+        width: 180px;
+        height: 4px;
+        background: #ccc;
+        position: relative;
+        margin: 0 auto 10px;
+      }
+
+      #preload-progress-bar-fill {
+        width: 5%;
+        height: 100%;
+        background: gray;
+        transition: width .3s;
+      }
     </style>
     <!-- Preload script which waits for main script loading and displays status -->
     <script>
@@ -146,7 +161,12 @@
   <body>
     <div id="preload-overlay" lang="en">
       <h1>MusicCloud</h1>
-      <div id="preload-infos" style="min-height: 100px"></div>
+      <div id="preload-progress-bar">
+        <div id="preload-progress-bar-fill" />
+      </div>
+      <div id="preload-infos" style="min-height: 100px">
+        <p class="info">Loading app...</p>
+      </div>
       <noscript>
         <p>JavaScript is required to run this application.</p>
       </noscript>
