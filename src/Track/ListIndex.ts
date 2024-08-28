@@ -232,7 +232,10 @@ export class ListIndex {
             id = this.listView.get(0).listInfo.id;
           }
           if (id !== null) {
-            router.nav(["list", id.toString()], { pushState: false });
+            router.nav(
+              id === 0 ? ["uploads"] : ["list", id.toString()],
+              { pushState: false },
+            );
           }
         }
       },
