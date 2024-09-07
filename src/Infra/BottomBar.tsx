@@ -126,8 +126,10 @@ export class BottomBar extends View {
       this.btnNext.disabled = !player.getNextTrack(1);
     };
     player.onTrackChanged.add(() => {
-      if (player.track?.thumburl)
+      if (player.track?.thumburl) {
+        this.trackImg.dom.src = 'data:,';
         this.trackImg.dom.src = api.processUrl(player.track?.thumburl)!;
+      }
       this.trackImgOuter.toggleClass("noimg", !player.track?.thumburl);
       this.track = player.track!;
       updatePrevNext();
