@@ -13,7 +13,7 @@ function getAppBaseUrl() {
   return href;
 }
 
-export const api = new (class {
+class API {
   get baseUrl() {
     return settings.apiBaseUrl;
   }
@@ -40,7 +40,7 @@ export const api = new (class {
     if (arg?.cache != true) headers["Cache-Control"] = "no-store";
     return headers;
   }
-  async get(path: string, options?: FetchOptions): Promise<any> {
+  async get<T = any>(path: string, options?: FetchOptions): Promise<T> {
     options = options || {};
     var resp = await this._fetch(this.baseUrl + path, {
       headers: { ...this.getHeaders(options) },
@@ -48,11 +48,11 @@ export const api = new (class {
     await this.checkResp(options, resp);
     if (resp.headers.get("Content-Type")?.startsWith("application/json"))
       return await resp.json();
-    return resp;
+    return resp as T;
   }
-  async post(
+  async post<T = any>(
     arg: { method?: "POST" | "PUT" | "DELETE" } & PostOptions & PostBodyOptions
-  ) {
+  ): Promise<T> {
     var body = arg.obj;
     if (arg.mode === undefined)
       arg.mode = body !== undefined ? "json" : "empty";
@@ -76,7 +76,7 @@ export const api = new (class {
     var contentType = resp.headers.get("Content-Type");
     if (contentType && /^application\/json;?/.test(contentType))
       return await resp.json();
-    return null;
+    return null as T;
   }
   put(arg: PostOptions & PostBodyOptions) {
     return this.post({ ...arg, method: "PUT" });
@@ -178,7 +178,9 @@ export const api = new (class {
       return (this.storageUrlBase + url.substring(8)) as T;
     return (this.baseUrl + url) as T;
   }
-})();
+}
+
+export const api = new API();
 
 export interface PostOptions extends FetchOptions {
   path: string;

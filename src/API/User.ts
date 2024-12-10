@@ -60,6 +60,8 @@ export const user = new (class User {
 
   state: "none" | "logging" | "error" | "logged" = "none";
   onSwitchedUser = new Callbacks<Action<Api.UserInfo | null>>();
+  onApiReady = new Callbacks();
+  isApiReady = false;
   loggingin: Promise<void> | null = null;
   pendingInfo: User["info"] | null = null;
   setState(state: User["state"]) {
@@ -67,6 +69,10 @@ export const user = new (class User {
     ui.sidebarLogin.update();
   }
   init() {
+    this.onApiReady.add(() => {
+      this.isApiReady = true;
+      console.info('[User] api ready.');
+    });
     playerCore.onTrackChanged.add(() => this.playingTrackChanged());
     const preLogin = window["preload"]?.preLoginTask;
     if (window["preload"]?.["inputToken"]) {
@@ -122,24 +128,27 @@ export const user = new (class User {
   getBearerAuth(token: string) {
     return "Bearer " + token;
   }
-  async login(arg: { info?: Api.UserInfo; preLogin?: Promise<Api.UserInfo> }) {
+  async login(arg: { info?: Api.UserInfo; preLogin?: Promise<Api.UserInfo>; isAutoLogin?: boolean }) {
     if (this.state !== "logged") this.setState("logging");
+    this.isApiReady = false;
     // try GET `api/users/me` using the new info
     var promise = (async () => {
       let resp: Api.UserInfo;
       try {
+        if (arg.isAutoLogin && this.info.token) {
+          api.defaultAuth = this.getBearerAuth(this.info.token);
+          this.onApiReady.invoke();
+        }
         if (arg.info) {
           const info = arg.info;
           const token = info.token;
           console.info({ info, token });
           resp = token
-            ? ((await api.get("users/me", {
-                auth: this.getBearerAuth(token),
-              })) as Api.UserInfo)
-            : ((await api.post({
+            ? await api.get<Api.UserInfo>("users/me")
+            : await api.post<Api.UserInfo>({
                 path: "users/me/login",
                 auth: this.getBasicAuth(info),
-              })) as Api.UserInfo);
+              });
         } else if (arg.preLogin) {
           resp = await arg.preLogin;
         } else {
@@ -199,6 +208,7 @@ export const user = new (class User {
     this.setState("logged");
     this.loggingin = null;
     this.onSwitchedUser.invoke(info);
+    if (!this.isApiReady) this.onApiReady.invoke();
 
     if (info.playing && !playerCore.track) this.tryRestorePlaying(info.playing);
   }
@@ -243,10 +253,22 @@ export const user = new (class User {
   /**
    * Wait until finished logging in. Returns true if sucessfully logged in.
    */
-  async waitLogin(throwOnFail?: boolean): Promise<boolean> {
+  async waitLogin(throwOnFail: boolean = false, fastLogin: boolean = true): Promise<boolean> {
     do {
       if (this.state === "logged") return true;
       if (this.state === "logging") {
+        if (fastLogin) {
+          if (this.isApiReady) {
+            return true;
+          } else {
+            await this.onApiReady.waitOnce();
+            if ((this.state as any) !== 'error') {
+              return true;
+            } else {
+              break;
+            }
+          }
+        }
         try {
           await this.loggingin;
           if ((this.state as any) != "logged") break;
