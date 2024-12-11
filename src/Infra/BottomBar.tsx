@@ -127,7 +127,7 @@ export class BottomBar extends View {
     };
     player.onTrackChanged.add(() => {
       if (player.track?.thumburl) {
-        this.trackImg.dom.src = 'data:,';
+        this.trackImg.dom.src = "data:,";
         this.trackImg.dom.src = api.processUrl(player.track?.thumburl)!;
       }
       this.trackImgOuter.toggleClass("noimg", !player.track?.thumburl);
@@ -514,10 +514,13 @@ class VolumeButton extends ProgressButton {
 }
 
 class SimpleLyricsView extends View {
-  lyrics: Lyrics | null = null;
+  lyricsRef = new Ref<Lyrics | null>();
+  get lyrics() {
+    return this.lyricsRef.value;
+  }
   currentLine: Line | null = null;
   lineView: LineView | null = null;
-  onLyricsChanged = new Callbacks<() => void>();
+  onLyricsChanged = this.lyricsRef.onChanged;
   createDom() {
     return <div class="lyrics clickable"></div>;
   }
@@ -530,21 +533,21 @@ class SimpleLyricsView extends View {
       }
       router.nav("nowplaying");
     });
+    this.onLyricsChanged.add((_) => {
+      this.dom.lang = this.lyrics?.lang ?? "";
+    })(this.lyricsRef);
   }
   bindPlayer(player: typeof playerCore) {
     const updateLyrics = async () => {
       const track = player.track;
+      this.fadeoutCurrentLineView();
       if (!track) {
-        this.lyrics = null;
-        this.fadeoutCurrentLineView();
-        this.onLyricsChanged.invoke();
+        this.lyricsRef.value = null;
         return;
       }
-      this.fadeoutCurrentLineView();
       const raw = await track.getLyrics();
       if (track !== player.track) return;
-      this.lyrics = parse(raw);
-      this.onLyricsChanged.invoke();
+      this.lyricsRef.value = parse(raw);
     };
 
     player.onTrackChanged.add(updateLyrics);
