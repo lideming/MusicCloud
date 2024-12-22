@@ -172,6 +172,20 @@ export class Track {
   getGroup(): Promise<{ tracks: Api.Track[] }> {
     return api.get(`tracks/group/${this.groupId ?? this.id}`);
   }
+
+  async getLoudnessMap() {
+    if (!this._loudmap) {
+      this._loudmap = (async () => {
+        var resp = (await api.get(
+          `tracks/${this.id}/loudnessmap`
+        )) as Response;
+        if (!resp.ok) return null;
+        var ab = await resp.arrayBuffer();
+        return (this._loudmap = new Uint8Array(ab));
+      })();
+    }
+    return this._loudmap;
+  }
 }
 
 export class TrackDialog extends Dialog {

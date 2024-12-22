@@ -21,6 +21,7 @@ export const playerCore = new (class PlayerCore {
     loopMode: "list-loop" as PlayingLoopMode,
     volume: 1,
     preferBitrate: 256,
+    loudnessNormalization: true,
   });
   get loopMode() {
     return this.siPlayer.data.loopMode;
@@ -76,17 +77,28 @@ export const playerCore = new (class PlayerCore {
     return this.track?.type == "video";
   }
 
+  private _volume = 1;
   get volume() {
-    return this.audio?.volume ?? 1;
+    return this._volume;
   }
   set volume(val) {
-    this.audio.volume = val;
+    this._volume = val;
+    this.audio.volume = Math.pow(val, 2) * this.normalizingGain;
     if (val !== this.siPlayer.data.volume) {
       this.siPlayer.data.volume = val;
       this.siPlayer.save();
     }
   }
   onVolumeChanged = new Callbacks<Action>();
+
+  private _normalizingGain = 1;
+  public get normalizingGain() {
+    return this._normalizingGain;
+  }
+  public set normalizingGain(value) {
+    this._normalizingGain = value;
+    this.audio.volume = this.volume * this.normalizingGain;
+  }
 
   get playbackRate() {
     return this.audio.playbackRate;
@@ -170,7 +182,7 @@ export const playerCore = new (class PlayerCore {
     this.audio.addEventListener("volumechange", () =>
       this.onVolumeChanged.invoke()
     );
-    this.audio.volume = this.siPlayer.data.volume;
+    this.volume = this.siPlayer.data.volume;
     this.onAudioCreated.invoke();
   }
   prev() {
@@ -287,8 +299,35 @@ export const playerCore = new (class PlayerCore {
     }
   }
   async ensureLoaded() {
-    var track = this.track;
-    if (track && !this.audioLoaded) await this.loadTrack(track!);
+    if (this.track) {
+      await Promise.all([
+        this.computeNormalizingGain(),
+        !this.audioLoaded && this.loadTrack(this.track!),
+      ]);
+    }
+  }
+  async computeNormalizingGain() {
+    if (this.siPlayer.data.loudnessNormalization === false) {
+      this.normalizingGain = 1;
+      return;
+    }
+    const data = await this.track?.getLoudnessMap();
+    if (!data) {
+      this.normalizingGain = 1;
+      return;
+    }
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      sum += data[i];
+    }
+    const avg = sum / data.length;
+    const sorted = data.slice().sort();
+    const trackGain = sorted[Math.floor(sorted.length * (90 / 100))];
+    const trackDb = Math.log10(trackGain / 128) * 10
+    const targetDb = -7;
+    const gain = Math.pow(10, (targetDb - trackDb) / 10)
+    console.info(this.track?.name, { avg, trackGain, trackDb, gain });
+    this.normalizingGain = Math.min(1, gain);
   }
   pause() {
     this.audio.pause();

@@ -294,23 +294,12 @@ class LoudnessMap extends View<HTMLCanvasElement> {
 
   async updateLoudnessMap(player: typeof playerCore) {
     const track = player.track;
-    var louds = await track?._loudmap;
-    if (track && !louds) {
-      if (this.dom) {
-        const ctx = this.dom.getContext("2d")!;
-        const { width, height } = this.dom;
-        ctx.clearRect(0, 0, width, height);
-      }
-      track._loudmap = (async () => {
-        var resp = (await api.get(
-          `tracks/${track.id}/loudnessmap`
-        )) as Response;
-        if (!resp.ok) return null;
-        var ab = await resp.arrayBuffer();
-        return (track._loudmap = new Uint8Array(ab));
-      })();
-      louds = await track._loudmap;
+    if (track && !track._loudmap && this.dom) {
+      const ctx = this.dom.getContext("2d")!;
+      const { width, height } = this.dom;
+      ctx.clearRect(0, 0, width, height);
     }
+    const louds = await track?.getLoudnessMap();
     if (player.track !== track) return;
     if (louds && louds.length > 20) {
       const [width, height] = [Math.min(1024, louds.length / 4), 32];

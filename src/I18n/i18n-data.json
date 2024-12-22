@@ -122,6 +122,7 @@
         ["UI color:", "界面色彩：", "UIの色："],
         ["UI style:", "界面样式：", "UIのスタイル："],
         ["Preferred bitrate:", "首选码率：", "ビットレート："],
+        ["Loudness Normalization:", "音量标准化：", "音量正規化："],
         ["Custom server URL", "自定义服务器 URL", "カスタムサーバーURL"],
         ["Notification:", "通知：", "通知："],
         ["enabled", "启用", "有効"],

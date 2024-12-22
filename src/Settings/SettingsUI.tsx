@@ -188,6 +188,25 @@ class SettingsDialog extends Dialog {
     );
 
     this.addContent(
+      <SettingItem label={() => I`Loudness Normalization:`}>
+        <RadioContainer
+          currentValue={playerCore.siPlayer.data.loudnessNormalization ?? true}
+          onCurrentChange={(option) => {
+            playerCore.siPlayer.data.loudnessNormalization = option.value;
+            playerCore.siPlayer.save();
+            playerCore.computeNormalizingGain();
+          }}
+        >
+          {[false, true].map((option) => (
+            <RadioOption value={option}>
+              {() => (option ? I`enabled` : I`disabled`)}
+            </RadioOption>
+          ))}
+        </RadioContainer>
+      </SettingItem>,
+    );
+
+    this.addContent(
       <SettingItem label={() => I`Notification:`}>
         <RadioContainer
           currentValue={ui.notification.config.enabled}
