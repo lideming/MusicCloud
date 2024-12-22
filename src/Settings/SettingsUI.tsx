@@ -188,7 +188,7 @@ class SettingsDialog extends Dialog {
     );
 
     this.addContent(
-      <SettingItem label={() => I`Loudness Normalization:`}>
+      <SettingItem label={() => I`Audio normalization:`}>
         <RadioContainer
           currentValue={playerCore.siPlayer.data.loudnessNormalization ?? true}
           onCurrentChange={(option) => {
