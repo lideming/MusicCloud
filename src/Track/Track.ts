@@ -169,16 +169,15 @@ export class Track {
     api.onTrackInfoChanged.invoke(resp);
   }
 
+  _group: Promise<{ tracks: Api.Track[] }> | null = null;
   getGroup(): Promise<{ tracks: Api.Track[] }> {
-    return api.get(`tracks/group/${this.groupId ?? this.id}`);
+    return getGroup(this.groupId ?? this.id);
   }
 
   async getLoudnessMap() {
     if (!this._loudmap) {
       this._loudmap = (async () => {
-        var resp = (await api.get(
-          `tracks/${this.id}/loudnessmap`
-        )) as Response;
+        var resp = (await api.get(`tracks/${this.id}/loudnessmap`)) as Response;
         if (!resp.ok) return null;
         var ab = await resp.arrayBuffer();
         return (this._loudmap = new Uint8Array(ab));
@@ -186,6 +185,15 @@ export class Track {
     }
     return this._loudmap;
   }
+}
+
+const groupCache = new Map<number, Promise<{ tracks: Api.Track[] }>>();
+
+function getGroup(id: number) {
+  if (!groupCache.has(id)) {
+    groupCache.set(id, api.get(`tracks/group/${id}`));
+  }
+  return groupCache.get(id)!;
 }
 
 export class TrackDialog extends Dialog {
