@@ -1,4 +1,4 @@
-import { buildDOM, I, Semaphore, sleepAsync, Toast } from "@yuuza/webfx";
+import { Action, buildDOM, I, Semaphore, sleepAsync, Toast } from "@yuuza/webfx";
 import { UserStoreItem } from "../API/UserStore";
 import { user, userStore } from "../main";
 import { nanoid } from "../Infra/nanoid";
@@ -8,6 +8,7 @@ export interface PluginInfo {
   description: string;
   website: string;
   version: string;
+  settings?: Action;
 }
 
 export interface PluginListItem {
@@ -104,6 +105,9 @@ export const plugins = new (class Plugins {
         ),
       };
     });
+    if (this.loadedPlugin.has(url)) {
+      this.loadPlugin(url);
+    }
   }
 
   parsePluginURL(url: string) {
@@ -146,28 +150,21 @@ export const plugins = new (class Plugins {
     };
 
     try {
-      let afterLoadResolve;
-      let afterLoadReject;
-      const afterLoadPromise = new Promise((res, rej) => {
-        afterLoadResolve = res;
-        afterLoadReject = rej;
+      await new Promise<void>((res, rej) => {
+        document.body.appendChild(
+          buildDOM({
+            tag: "script",
+            src: url,
+            onerror: (error) => {
+              console.error("loading plugin script", error);
+              rej(error);
+            },
+            onload: () => {
+              res();
+            },
+          }),
+        );
       });
-
-      document.body.appendChild(
-        buildDOM({
-          tag: "script",
-          src: url,
-          onerror: (error) => {
-            console.error("loading plugin script", error);
-            afterLoadReject(error);
-          },
-          onload: () => {
-            afterLoadResolve();
-          },
-        }),
-      );
-
-      await afterLoadPromise;
     } finally {
       this._currentRegisterCallback = null;
       this._loadingLock.exit();

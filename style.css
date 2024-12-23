@@ -1500,6 +1500,15 @@ body {
   margin: 0 5px;
 }
 
+.plugin-item > .plugin-name {
+  font-size: 110%;
+  font-weight: 600;
+}
+
+.plugin-item > .plugin-url {
+  color: var(--color-text-gray);
+}
+
 .mc-overlay {
   height: 100%;
   display: flex;
