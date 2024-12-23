@@ -213,11 +213,11 @@ export const playerCore = new (class PlayerCore {
         src = this.objectUrl = URL.createObjectURL(src);
       }
       this.audio.src = src;
+      this.audio.load();
     } else {
       this.audio.pause();
-      this.audio.removeAttribute("src");
+      // this.audio.removeAttribute("src");
     }
-    this.audio.load();
   }
   async setTrack(track: Track | null, playNow: boolean | number = false) {
     console.info(
