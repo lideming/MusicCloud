@@ -312,7 +312,7 @@ export const playerCore = new (class PlayerCore {
       return;
     }
     const data = await this.track?.getLoudnessMap();
-    if (!data) {
+    if (!data || data.length < 10) {
       this.normalizingGain = 1;
       return;
     }
