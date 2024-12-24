@@ -1,7 +1,7 @@
 // file: PlayerCore.ts
 
 import { Track } from "../Track/Track";
-import { Callbacks, Action, SettingItem, CancelToken } from "../Infra/utils";
+import { Callbacks, Action, SettingItem, CancelToken, Ref } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { api } from "../API/Api";
 import { Toast } from "../Infra/viewlib";
@@ -77,32 +77,17 @@ export const playerCore = new (class PlayerCore {
     return this.track?.type == "video";
   }
 
-  private _volume = 1;
+  private _volume = new Ref(1);
   get volume() {
-    return this._volume;
+    return this._volume.value!;
   }
   set volume(val) {
-    this._volume = val;
-    this._updateAudioVolume();
-    if (val !== this.siPlayer.data.volume) {
-      this.siPlayer.data.volume = val;
-      this.siPlayer.save();
-    }
+    this._volume.value = val;
   }
   onVolumeChanged = new Callbacks<Action>();
 
-  private _normalizingGain = 1;
-  public get normalizingGain() {
-    return this._normalizingGain;
-  }
-  public set normalizingGain(value) {
-    this._normalizingGain = value;
-    this._updateAudioVolume();
-  }
-
-  private _updateAudioVolume() {
-    this.audio.volume = Math.pow(this.volume, 1.5) * this.normalizingGain;
-  }
+  normalizingGain = new Ref(1);
+  effectiveGain = Ref.computed(() => Math.pow(this.volume, 1.5) * this.normalizingGain.value!)
 
   get playbackRate() {
     return this.audio.playbackRate;
@@ -124,6 +109,14 @@ export const playerCore = new (class PlayerCore {
       this.loopMode = siLoop.data;
       siLoop.remove();
     }
+    this._volume.onChanged.add((ref) => {
+      this.siPlayer.data.volume = ref.value!;
+      this.siPlayer.save();
+      this.onVolumeChanged.invoke();
+    });
+    this.effectiveGain.onChanged.add((ref) => {
+      this.audio.volume = ref.value!;
+    });
 
     this.audio = document.createElement("video");
     this.initAudio();
@@ -312,12 +305,12 @@ export const playerCore = new (class PlayerCore {
   }
   async computeNormalizingGain() {
     if (this.siPlayer.data.loudnessNormalization === false) {
-      this.normalizingGain = 1;
+      this.normalizingGain.value = 1;
       return;
     }
     const data = await this.track?.getLoudnessMap();
     if (!data || data.length < 10) {
-      this.normalizingGain = 1;
+      this.normalizingGain.value = 1;
       return;
     }
     let sum = 0;
@@ -331,7 +324,7 @@ export const playerCore = new (class PlayerCore {
     const targetDb = -7;
     const gain = Math.pow(10, (targetDb - trackDb) / 10)
     console.info(this.track?.name, { avg, trackGain, trackDb, gain });
-    this.normalizingGain = Math.min(1, gain);
+    this.normalizingGain.value = Math.min(1, gain);
   }
   pause() {
     this.audio.pause();

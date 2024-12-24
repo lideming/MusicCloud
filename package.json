@@ -36,7 +36,7 @@
     "src/"
   ],
   "dependencies": {
-    "@yuuza/webfx": "^1.10.2"
+    "@yuuza/webfx": "^1.10.4"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.1",

@@ -1,13 +1,9 @@
 lockfileVersion: '6.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 dependencies:
   '@yuuza/webfx':
-    specifier: ^1.10.2
-    version: 1.10.2
+    specifier: ^1.10.4
+    version: 1.10.4
 
 devDependencies:
   '@rollup/plugin-node-resolve':
@@ -263,15 +259,15 @@ packages:
     resolution: {integrity: sha512-OCncYfVJuYEBGo31/HMMALJOHbshL5NZP/lCJ0Z1ZwtHqnSrXeaW4jxR7u7itE7tQABYulmFsKviJnSPvbnLwA==}
     dev: false
 
-  /@yuuza/utils@1.0.3:
-    resolution: {integrity: sha512-KJq/+nYVcxdqT4pnwmnATmJEQUqduJEwP0rUoNVjIT63CxnG4QwDAzs4/9K2N2l/E+w+FolRSclMCV9VUXQAmw==}
+  /@yuuza/utils@1.0.4:
+    resolution: {integrity: sha512-ewy563Gco3WB4nMR1t5IDKxwloUu7Ijy4AioyGh7+2/Hr9JYe4ElL0z3UrtJl7dTqgwQi/24V9PASrP/Hv6Z2g==}
     dev: false
 
-  /@yuuza/webfx@1.10.2:
-    resolution: {integrity: sha512-h382r8XsPpnx9DTPb6qmvVGAtDW8h/gR+e+Fy4sYELvU9JU0LeokkD6p94cm4fJpchHgzzkyqghzEOAjMm+Ajg==}
+  /@yuuza/webfx@1.10.4:
+    resolution: {integrity: sha512-frru2luNmw1XI/5lPxjcW9p1q6EmIqv2LTQF73mn/7BcEZBtDodjQPhIX0mOzj40msZqoB/NcCP4sV+Skh2GZw==}
     dependencies:
       '@yuuza/i18n': 1.2.3
-      '@yuuza/utils': 1.0.3
+      '@yuuza/utils': 1.0.4
     dev: false
 
   /acorn@8.8.2:
@@ -1209,3 +1205,7 @@ packages:
       buffer-crc32: 0.2.13
       fd-slicer: 1.1.0
     dev: true
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
