@@ -83,7 +83,7 @@ export const playerCore = new (class PlayerCore {
   }
   set volume(val) {
     this._volume = val;
-    this.audio.volume = Math.pow(val, 2) * this.normalizingGain;
+    this._updateAudioVolume();
     if (val !== this.siPlayer.data.volume) {
       this.siPlayer.data.volume = val;
       this.siPlayer.save();
@@ -97,7 +97,11 @@ export const playerCore = new (class PlayerCore {
   }
   public set normalizingGain(value) {
     this._normalizingGain = value;
-    this.audio.volume = this.volume * this.normalizingGain;
+    this._updateAudioVolume();
+  }
+
+  private _updateAudioVolume() {
+    this.audio.volume = Math.pow(this.volume, 1.5) * this.normalizingGain;
   }
 
   get playbackRate() {
