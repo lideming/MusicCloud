@@ -52,7 +52,7 @@ import { plugins } from "./Plugins/plugins";
 
 import * as webfx from "@yuuza/webfx";
 
-import style from "../style.css";
+import style from "../style.less";
 
 function init() {
   console.time("[Main] app init()");

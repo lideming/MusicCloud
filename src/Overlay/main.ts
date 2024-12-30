@@ -1,5 +1,5 @@
 import { injectCss, injectWebfxCss, mountView, View } from "@yuuza/webfx";
-import css from "../../style.css";
+import css from "../../style.less";
 import { Api } from "../API/apidef";
 import { OverlayLyricsView } from "./overlayLyricsView";
 

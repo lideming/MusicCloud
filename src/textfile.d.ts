@@ -1,4 +1,4 @@
-declare module "*.css" {
+declare module "*.less" {
   const text: string;
   export default text;
 }

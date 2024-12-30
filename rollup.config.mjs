@@ -2,6 +2,7 @@ import typescript from "@rollup/plugin-typescript";
 import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import copy from "rollup-plugin-copy";
+import postcss from "rollup-plugin-postcss";
 
 import { promisify } from "util";
 import { exec } from "child_process";
@@ -15,6 +16,13 @@ const basicPlugins = () => [
   resolve(),
   typescript({ sourceMap: true, inlineSources: true }),
 ];
+
+const styleLoader = () => postcss({
+  inject: false,
+  use: {
+    less: { javascriptEnabled: true },
+  },
+});
 
 const umdOutput = (path, umdName = undefined) => ({
   file: `./dist/${path}.js`,
@@ -47,6 +55,7 @@ const rollupConfig = (args) => {
             ...basicPlugins(),
             textLoader(),
             jsonLoader(),
+            styleLoader(),
             copy({
               targets: [
                 {
@@ -94,7 +103,7 @@ const rollupConfig = (args) => {
     buildFor("overlay") && {
       input: "./src/Overlay/main.ts",
       output: umdOutput("overlay.bundle"),
-      plugins: [...basicPlugins(), textLoader(), jsonLoader()],
+      plugins: [...basicPlugins(), textLoader(), jsonLoader(), styleLoader()],
     },
   ].filter((x) => !!x);
 };
