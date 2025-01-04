@@ -569,6 +569,10 @@ class SimpleLyricsView extends View {
           this.lineView = new LineView(line);
           this.addView(this.lineView);
         }
+        if (navigator.mediaSession?.metadata) {
+          navigator.mediaSession.metadata.artist =
+            line?.spans?.map((x) => x.text).join("") || "";
+        }
       }
       if (this.lineView) {
         this.lineView.setCurrentTime(timeForSpan);
