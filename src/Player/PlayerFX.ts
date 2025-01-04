@@ -5,13 +5,15 @@ export const playerFX = new (class PlayerFX {
   ctx: AudioContext;
   source: MediaElementAudioSourceNode;
   analyser: AnalyserNode;
+  gainNode: GainNode;
   get webAudioInited() {
     return !!this.ctx;
   }
   init() {}
   initWebAudio() {
     if (this.webAudioInited) return;
-    this.ctx = new AudioContext();
+    console.info("[PlayerFX] switching to WebAudio");
+    this.ctx = new AudioContext({ latencyHint: "playback" });
     this.source = this.ctx.createMediaElementSource(playerCore.audio);
     chainNodes(this.source, [
       () => {
@@ -19,8 +21,17 @@ export const playerFX = new (class PlayerFX {
         this.analyser.fftSize = 8192;
         return this.analyser;
       },
+      (this.gainNode = this.ctx.createGain()),
       this.ctx.destination,
     ]);
+
+    // iOS background playing fix
+    this.ctx.addEventListener("statechange", (e) => {
+      console.info("[PlayerFX] audio ctx state", this.ctx.state);
+      if (this.ctx.state === "interrupted" as any) {
+        this.ctx.resume();
+      }
+    });
   }
   showUI(ev?: MouseEvent) {
     this.initWebAudio();

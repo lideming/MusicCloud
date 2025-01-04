@@ -1,13 +1,20 @@
 // file: PlayerCore.ts
 
 import { Track } from "../Track/Track";
-import { Callbacks, Action, SettingItem, CancelToken, Ref } from "../Infra/utils";
+import {
+  Callbacks,
+  Action,
+  SettingItem,
+  CancelToken,
+  Ref,
+} from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { api } from "../API/Api";
 import { Toast } from "../Infra/viewlib";
 import { Api } from "../API/apidef";
 import { Timer } from "../Infra/utils";
 import { ui } from "../Infra/UI";
+import { playerFX } from "./PlayerFX";
 
 export const playerCore = new (class PlayerCore {
   audio: HTMLAudioElement | HTMLVideoElement;
@@ -87,7 +94,11 @@ export const playerCore = new (class PlayerCore {
   onVolumeChanged = new Callbacks<Action>();
 
   normalizingGain = new Ref(1);
-  effectiveGain = Ref.computed(() => Math.pow(this.volume, 1.5) * this.normalizingGain.value!)
+  effectiveGain = Ref.computed(
+    () => Math.pow(this.volume, 1.5) * this.normalizingGain.value!
+  );
+
+  volumeByGainNode = false;
 
   get playbackRate() {
     return this.audio.playbackRate;
@@ -109,14 +120,6 @@ export const playerCore = new (class PlayerCore {
       this.loopMode = siLoop.data;
       siLoop.remove();
     }
-    this._volume.onChanged.add((ref) => {
-      this.siPlayer.data.volume = ref.value!;
-      this.siPlayer.save();
-      this.onVolumeChanged.invoke();
-    });
-    this.effectiveGain.onChanged.add((ref) => {
-      this.audio.volume = ref.value!;
-    });
 
     this.audio = document.createElement("video");
     this.initAudio();
@@ -179,6 +182,25 @@ export const playerCore = new (class PlayerCore {
     this.audio.addEventListener("volumechange", () =>
       this.onVolumeChanged.invoke()
     );
+
+    // audio.volume doesn't work in iOS
+    this.volumeByGainNode = /\s(iPhone|iPad|iPod)\s/.test(navigator.userAgent);
+
+    this._volume.onChanged.add((ref) => {
+      this.siPlayer.data.volume = ref.value!;
+      this.siPlayer.save();
+      this.onVolumeChanged.invoke();
+    });
+    this.effectiveGain.onChanged.add((ref) => {
+      if (this.volumeByGainNode) {
+        if (playerFX.webAudioInited) {
+          playerFX.gainNode.gain.value = ref.value!;
+        }
+      } else {
+        this.audio.volume = ref.value!;
+      }
+    });
+
     this.volume = this.siPlayer.data.volume;
     this.onAudioCreated.invoke();
   }
@@ -288,6 +310,10 @@ export const playerCore = new (class PlayerCore {
   }
   async play() {
     await this.ensureLoaded();
+    if (this.volumeByGainNode && !playerFX.webAudioInited) {
+      playerFX.initWebAudio();
+      playerFX.gainNode.gain.value = this.effectiveGain.value!;
+    }
     try {
       this.audio.play();
     } catch (error) {
@@ -320,10 +346,15 @@ export const playerCore = new (class PlayerCore {
     const avg = sum / data.length;
     const sorted = data.slice().sort();
     const trackGain = sorted[Math.floor(sorted.length * (90 / 100))];
-    const trackDb = Math.log10(trackGain / 128) * 10
+    const trackDb = Math.log10(trackGain / 128) * 10;
     const targetDb = -7;
-    const gain = Math.pow(10, (targetDb - trackDb) / 10)
-    console.info(this.track?.name, { avg, trackGain, trackDb, gain });
+    const gain = Math.pow(10, (targetDb - trackDb) / 10);
+    console.info("[PlayerCore] computed normalizing gain", this.track?.name, {
+      avg,
+      trackGain,
+      trackDb,
+      gain,
+    });
     this.normalizingGain.value = Math.min(1, gain);
   }
   pause() {
