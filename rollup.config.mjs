@@ -3,6 +3,7 @@ import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import copy from "rollup-plugin-copy";
 import postcss from "rollup-plugin-postcss";
+import serve from "rollup-plugin-serve";
 
 import { promisify } from "util";
 import { exec } from "child_process";
@@ -70,6 +71,7 @@ const rollupConfig = (args) => {
                 },
               ],
             }),
+            ...(id === "bundle" ? [serve('dist')] : []),
           ],
           context: "window",
         },
