@@ -58,6 +58,8 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   --bottombar-height: 70px;
+  --page-padding-bottom: 0;
+  --page-padding-bottom: env(safe-area-inset-bottom);
   height: 100%;
   overflow: hidden;
 }
@@ -208,7 +210,7 @@ a {
   }
 }
 #main-container {
-  height: calc(100% - var(--bottombar-height));
+  height: calc(100% - var(--bottombar-height) - var(--page-padding-bottom));
   position: relative;
   contain: strict;
   &::after {
@@ -725,7 +727,7 @@ a {
 }
 .bottombar {
   position: fixed;
-  bottom: 0;
+  bottom: var(--page-padding-bottom);
   width: 100%;
   display: flex;
   height: var(--bottombar-height);

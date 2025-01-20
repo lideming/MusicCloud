@@ -2,7 +2,7 @@
   "name": "MusicCloud",
   "short_name": "MusicCloud",
   "start_url": "..",
-  "display": "minimal-ui",
+  "display": "standalone",
   "background_color": "#fff",
   "description": "MusicCloud for Web",
   "icons": [
