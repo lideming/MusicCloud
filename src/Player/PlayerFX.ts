@@ -35,11 +35,10 @@ export const playerFX = new (class PlayerFX {
       ) {
         console.info("[PlayerFX] try resuming");
         this.ctx.resume();
-        this.ctx.sampleRate
       }
     });
     playerCore.onStateChanged.add(() => {
-      if (playerCore.state === "playing") {
+      if (playerCore.state === "playing" || playerCore.state === "stalled") {
         this.suspendTimer.tryCancel();
         if (this.ctx.state !== "running") {
           this.ctx.resume();
@@ -69,8 +68,8 @@ export const playerFX = new (class PlayerFX {
       URL.createObjectURL(
         new Blob([`(${audioModule.toString()})()`], {
           type: "application/javascript",
-        })
-      )
+        }),
+      ),
     );
 
     const workletNode = new AudioWorkletNode(this.ctx, "audio-collector");

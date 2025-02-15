@@ -15,6 +15,7 @@ import type { TrackList } from "./TrackList";
 import { lyricsEdit, LyricsSourceEditView } from "../Lyrics/LyricsEdit";
 import { user } from "../API/User";
 import { FileSelector } from "../Infra/viewlib";
+import { playerCore } from "../main";
 
 /** A track binding with list */
 export class Track {
@@ -141,7 +142,7 @@ export class Track {
         this._lyricsFetchTask = (async () => {
           try {
             var resp: Api.TrackLyrics = await api.get(
-              "tracks/" + this.id + "/lyrics"
+              "tracks/" + this.id + "/lyrics",
             );
             this.infoObj!.lyrics = resp.lyrics;
             return this.lyrics!;
@@ -184,6 +185,33 @@ export class Track {
       })();
     }
     return this._loudmap;
+  }
+
+  async preload() {
+    const preloadTrackFile = async () => {
+      const apiFile = playerCore.decideFileFromTrack(this);
+      const fileUrl = await this.requestFileUrl(apiFile);
+      const res = await api._fetch(api.processUrl(fileUrl), {
+        headers: {
+          range: "bytes=0-1000000",
+        },
+      });
+      await res.blob();
+    };
+    const preloadThumb = async () => {
+      if (this.thumburl) {
+        const res = await api._fetch(api.processUrl(this.thumburl), {
+          mode: "no-cors",
+        });
+        await res.blob();
+      }
+    };
+    await Promise.all([
+      this.getLoudnessMap(),
+      this.getLyrics(),
+      preloadTrackFile(),
+      preloadThumb(),
+    ]);
   }
 }
 

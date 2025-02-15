@@ -95,7 +95,7 @@ export const playerCore = new (class PlayerCore {
 
   normalizingGain = new Ref(1);
   effectiveGain = Ref.computed(
-    () => Math.pow(this.volume, 1.5) * this.normalizingGain.value!
+    () => Math.pow(this.volume, 1.5) * this.normalizingGain.value!,
   );
 
   volumeByGainNode = false;
@@ -132,9 +132,10 @@ export const playerCore = new (class PlayerCore {
   }
   initAudio() {
     this.audio.crossOrigin = "anonymous";
-    this.audio.addEventListener("timeupdate", () =>
-      this.onProgressChanged.invoke()
-    );
+    this.audio.addEventListener("timeupdate", () => {
+      this.onProgressChanged.invoke();
+      this.checkPreload();
+    });
     this.audio.addEventListener("canplay", () => {
       this._loadRetryCount = 0;
       this.onProgressChanged.invoke();
@@ -180,7 +181,7 @@ export const playerCore = new (class PlayerCore {
       this.next();
     });
     this.audio.addEventListener("volumechange", () =>
-      this.onVolumeChanged.invoke()
+      this.onVolumeChanged.invoke(),
     );
 
     // audio.volume doesn't work in iOS
@@ -216,7 +217,7 @@ export const playerCore = new (class PlayerCore {
     return this.track?._bind?.list?.getNextTrack(
       this.track,
       this.loopMode,
-      offset
+      offset,
     );
   }
 
@@ -241,7 +242,7 @@ export const playerCore = new (class PlayerCore {
   async setTrack(track: Track | null, playNow: boolean | number = false) {
     console.info(
       "[PlayerCore] set track: " +
-        (track ? `id ${track.id}: ${track.name} - ${track.artist}` : "(null)")
+        (track ? `id ${track.id}: ${track.name} - ${track.artist}` : "(null)"),
     );
     var oldTrack = this.track;
     this.track = track;
@@ -280,33 +281,37 @@ export const playerCore = new (class PlayerCore {
       this.trackProfile = null;
       this.loadUrl(track.blob);
     } else {
-      let cur = { profile: "", bitrate: 0, size: track.size } as Api.TrackFile;
-      if (track.type == "video") {
-        cur = track.files![0];
-      } else {
-        var prefer = this.preferBitrate;
-        if (prefer && track.files) {
-          track.files.forEach((f) => {
-            if (
-              !cur.bitrate ||
-              Math.abs(cur.bitrate - prefer) > Math.abs(f.bitrate - prefer)
-            ) {
-              cur = f;
-            }
-          });
-        }
-      }
+      const file = this.decideFileFromTrack(track);
       let url: string;
-      if (cur.size == -1) {
+      if (file.size == -1) {
         this.loadUrl(null); // unload current track before await
-        url = await track.requestFileUrl(cur);
+        url = await track.requestFileUrl(file);
         ct.throwIfCancelled();
       } else {
-        url = await track.requestFileUrl(cur);
+        url = await track.requestFileUrl(file);
       }
-      this.trackProfile = cur;
+      this.trackProfile = file;
       this.loadUrl(api.processUrl(url));
     }
+  }
+  decideFileFromTrack(track: Track) {
+    let cur = { profile: "", bitrate: 0, size: track.size } as Api.TrackFile;
+    if (track.type == "video") {
+      cur = track.files![0];
+    } else {
+      var prefer = this.preferBitrate;
+      if (prefer && track.files) {
+        track.files.forEach((f) => {
+          if (
+            !cur.bitrate ||
+            Math.abs(cur.bitrate - prefer) > Math.abs(f.bitrate - prefer)
+          ) {
+            cur = f;
+          }
+        });
+      }
+    }
+    return cur;
   }
   async play() {
     await this.ensureLoaded();
@@ -359,6 +364,30 @@ export const playerCore = new (class PlayerCore {
   }
   pause() {
     this.audio.pause();
+  }
+
+  preloadedTrack: Track | null = null;
+  checkPreload() {
+    if (
+      this.currentTime &&
+      this.duration &&
+      this.currentTime >= this.duration - 20
+    ) {
+      const nextTrack = this.getNextTrack(1);
+      if (
+        nextTrack &&
+        nextTrack !== this.track &&
+        nextTrack !== this.preloadedTrack
+      ) {
+        this.preloadedTrack = nextTrack;
+        console.info(`[PlayerCore] preload starting for ${nextTrack.name}`);
+        const timeBegin = performance.now();
+        nextTrack.preload().then(() => {
+          const dur = performance.now() - timeBegin;
+          console.info(`[PlayerCore] preload finished in ${dur}ms`);
+        });
+      }
+    }
   }
 })();
 
