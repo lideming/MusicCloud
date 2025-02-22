@@ -53,8 +53,8 @@ body {
   --color-bg-dd: #dddddd;
   --color-bg-ee: #eeeeee;
   --color-bg-f8: #f8f8f8;
-  --color-shadow: rgba(0, 0, 0, 0.5);
-  --color-light-shadow: rgba(0, 0, 0, 0.3);
+  --color-shadow: rgba(0, 0, 0, 0.35);
+  --color-light-shadow: rgba(0, 0, 0, 0.2);
   background: var(--color-bg);
   color: var(--color-text);
   --bottombar-height: 70px;
@@ -78,8 +78,8 @@ body.dark {
   --color-bg-ee: #222222;
   --color-bg-dd: #333333;
   --color-bg-cc: #444444;
-  --color-shadow: rgba(180, 180, 180, 0.5);
-  --color-light-shadow: rgba(180, 180, 180, 0.3);
+  --color-shadow: rgba(0, 0, 0, 0.5);
+  --color-light-shadow: rgba(0, 0, 0, 0.3);
 }
 ul {
   padding: 0;
@@ -698,6 +698,9 @@ a {
   }
   .overlay {
     background: rgba(0, 0, 0, 0.4);
+  }
+  .overlay.nobg {
+    background: none;
   }
   .input-text {
     border: solid 1px #ccc;

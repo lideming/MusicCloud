@@ -1,7 +1,7 @@
 // file: Router.ts
 
 import { ui } from "./UI";
-import { Callbacks } from "./utils";
+import { Callbacks, isIOS } from "./utils";
 import { ContentView, SidebarItem } from "./ui-views";
 
 export interface Route {
@@ -11,6 +11,21 @@ export interface Route {
   onNav?: (arg: { path: string[]; remaining: string[] }) => void;
   onLeave?: () => void;
 }
+
+class FakeHistory {
+  pushState(data: any, unused: string, url?: string | URL | null): void {
+    this.state = data;
+  }
+  replaceState(data: any, unused: string, url?: string | URL | null): void {
+    this.state = data;
+  }
+  state = {};
+}
+
+const history =
+  isIOS && window.matchMedia?.("(display-mode: standalone)").matches
+    ? new FakeHistory()
+    : window.history;
 
 export const router = new (class {
   routes: Route[] = [];
@@ -29,7 +44,7 @@ export const router = new (class {
     var hash = window.location.hash;
     this.nav(hash ? hash.substring(1) : "", {
       pushState: replaceState ? "replace" : false,
-      idx: window.history.state?.idx,
+      idx: history.state?.idx,
     });
   }
   addRoute(arg: Route) {
@@ -49,7 +64,7 @@ export const router = new (class {
       pushState?: boolean | "replace";
       evenIsCurrent?: boolean;
       idx?: number;
-    }
+    },
   ) {
     if (typeof path === "string") path = parsePath(path);
     var strPath = path.map((x) => encodeURIComponent(x)).join("/");
@@ -67,9 +82,9 @@ export const router = new (class {
       const url = strPath ? "#" + strPath : undefined;
       const args = [state, "", url] as const;
       if (options?.pushState == "replace") {
-        window.history.replaceState(...args);
+        history.replaceState(...args);
       } else {
-        window.history.pushState(...args);
+        history.pushState(...args);
       }
     }
 

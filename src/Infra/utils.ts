@@ -1,6 +1,8 @@
 import { Callbacks, Action, numLimit, View } from "@yuuza/webfx";
 export * from "@yuuza/webfx";
 
+export const isIOS = /\s(iPhone|iPad|iPod)\s/.test(navigator.userAgent);
+
 export class ScrollAnimator {
   constructor(readonly view: View) {
     this.view.dom.addEventListener("scroll", (e) => {

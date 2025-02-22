@@ -51,6 +51,7 @@ import {
   Timer,
   Toast,
   clearChildren,
+  isIOS,
 } from "./utils";
 import { I18n, i18n, I } from "../I18n/I18n";
 import { Track } from "../Track/Track";
@@ -297,6 +298,14 @@ export const ui = new (class {
         toggleClass(this.dom, "peek", false);
       });
       this.dom.addEventListener("dragover", () => this.toggleHide(false));
+
+      if (isIOS) {
+        // prevent navigation
+        ui.mainContainer.dom.addEventListener("touchstart", (e) => {
+          if (e.touches[0].pageX > 20 && e.touches[0].pageX < window.innerWidth - 20) return;
+          e.preventDefault();
+        });
+      }
     }
 
     private _panxHandler: TouchPanListener = null!;

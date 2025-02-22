@@ -7,6 +7,7 @@ import {
   SettingItem,
   CancelToken,
   Ref,
+  isIOS,
 } from "../Infra/utils";
 import { I } from "../I18n/I18n";
 import { api } from "../API/Api";
@@ -185,7 +186,7 @@ export const playerCore = new (class PlayerCore {
     );
 
     // audio.volume doesn't work in iOS
-    this.volumeByGainNode = /\s(iPhone|iPad|iPod)\s/.test(navigator.userAgent);
+    this.volumeByGainNode = isIOS;
 
     this._volume.onChanged.add((ref) => {
       this.siPlayer.data.volume = ref.value!;
