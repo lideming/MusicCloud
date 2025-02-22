@@ -183,6 +183,9 @@ export class Track {
         var ab = await resp.arrayBuffer();
         return (this._loudmap = new Uint8Array(ab));
       })();
+      this._loudmap.catch(() => {
+        this._loudmap = null;
+      });
     }
     return this._loudmap;
   }
