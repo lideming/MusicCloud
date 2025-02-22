@@ -10,6 +10,8 @@ import { exec } from "child_process";
 
 import packageJson from "./package.json" assert { type: "json" };
 
+const production = !process.env.ROLLUP_WATCH;
+
 const execAsync = promisify(exec);
 
 const basicPlugins = () => [
@@ -71,7 +73,7 @@ const rollupConfig = (args) => {
                 },
               ],
             }),
-            ...(id === "bundle" ? [serve('dist')] : []),
+            ...(id === "bundle" && !production ? [serve('dist')] : []),
           ],
           context: "window",
         },
