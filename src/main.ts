@@ -33,6 +33,7 @@ import { api } from "./API/Api";
 import { user } from "./API/User";
 import { listIndex } from "./Track/ListIndex";
 import { uploads } from "./Track/Uploads";
+import { history } from "./Track/History";
 import { comments, discussion, notes } from "./Comments/Discussion";
 import { router } from "./Infra/Router";
 import { settingsUI } from "./Settings/SettingsUI";
@@ -65,6 +66,7 @@ function init() {
   user.init();
   uploads.init();
   search.init();
+  history.init();
   discussion.init();
   notes.init();
   nowPlaying.init();

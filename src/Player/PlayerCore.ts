@@ -21,6 +21,7 @@ export const playerCore = new (class PlayerCore {
   audio: HTMLAudioElement | HTMLVideoElement;
   track: Track | null = null;
   trackProfile: Api.TrackFile | null = null;
+  trackChangedReason: "" | "restore" = "";
   audioLoaded = false;
   objectUrl: string | null = null;
   onTrackChanged = new Callbacks<Action>();
@@ -240,7 +241,11 @@ export const playerCore = new (class PlayerCore {
       // this.audio.removeAttribute("src");
     }
   }
-  async setTrack(track: Track | null, playNow: boolean | number = false) {
+  async setTrack(
+    track: Track | null,
+    playNow: boolean | number = false,
+    reason: "restore" | "" = "",
+  ) {
     console.info(
       "[PlayerCore] set track: " +
         (track ? `id ${track.id}: ${track.name} - ${track.artist}` : "(null)"),
@@ -261,6 +266,7 @@ export const playerCore = new (class PlayerCore {
       this.currentTime = typeof playNow === "number" ? playNow : 0;
       this.state = !track ? "none" : playNow !== false ? "stalled" : "paused";
     }
+    this.trackChangedReason = reason;
     this.onTrackChanged.invoke();
     if (playNow !== false && track) await this.playTrack(track);
   }

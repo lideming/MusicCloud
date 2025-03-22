@@ -306,7 +306,7 @@ export const user = new (class User {
       if (playing.track) {
         tmpTrack = new Track({ infoObj: playing.track });
         this._ignore_track_once = tmpTrack;
-        playerCore.setTrack(tmpTrack);
+        playerCore.setTrack(tmpTrack, false, "restore");
       }
       var list: TrackList = playing.listid
         ? listIndex.getList(playing.listid)
@@ -320,7 +320,7 @@ export const user = new (class User {
         (tmpTrack && playerCore.track == tmpTrack)
       ) {
         this._ignore_track_once = track;
-        playerCore.setTrack(track);
+        playerCore.setTrack(track, false, "restore");
       }
     }
   }
