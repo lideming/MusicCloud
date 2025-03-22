@@ -1,5 +1,6 @@
 import { ObjectInit, objectInit, Ref, sleepAsync } from "@yuuza/webfx";
 import { api } from "./Api";
+// import { msgcli } from "./MessageClient";
 
 const TypedArray = Object.getPrototypeOf(Uint8Array);
 
@@ -85,9 +86,7 @@ class UserStore {
     api.checkResp({}, resp);
   }
 
-  async delete(
-    key: string,
-  ): Promise<void> {
+  async delete(key: string): Promise<void> {
     var resp = await api._fetch(`${api.baseUrl}my/store/${key}`, {
       method: "DELETE",
       headers: api.getHeaders(),
@@ -103,11 +102,19 @@ export interface UserStoreFields {
   visibility?: number;
 }
 
+enum ChangeReason {
+  Init,
+  LocalSet,
+  RemoteSet,
+}
+
 export class UserStoreItem<T = any> extends Ref<T> implements UserStoreFields {
   key: string = undefined!;
   type: UserStoreValueType = "json";
   revision: number = 0;
   visibility: number = undefined!;
+  remoteChangeReason: ChangeReason = ChangeReason.Init;
+  remote = new Ref<T>();
   fetched = false;
 
   private _putInProgress: Promise<void> | null = null;
@@ -120,7 +127,10 @@ export class UserStoreItem<T = any> extends Ref<T> implements UserStoreFields {
 
   async fetch() {
     const result = await userStore.get(this.key, this.type);
-    if (result) Object.assign(this, result);
+    if (result) {
+      Object.assign(this, result);
+      this.remote.value = result.value;
+    }
     this.fetched = true;
   }
 
@@ -141,8 +151,11 @@ export class UserStoreItem<T = any> extends Ref<T> implements UserStoreFields {
         this._putPending = null;
       }
       const putTask = (this._putInProgress = (async () => {
+        const value = this.value; // can be changed during await
         await userStore.set(this.key, this, this.type);
         this.revision++;
+        this.remoteChangeReason = ChangeReason.LocalSet;
+        this.remote.value = value;
         this._putInProgress = null;
       })());
       await putTask;
@@ -175,5 +188,19 @@ export class UserStoreItem<T = any> extends Ref<T> implements UserStoreFields {
       }
       break;
     }
+  }
+
+  watchRemote() {
+    // msgcli.listenEvent(
+    //   `store-changed-${this.key}`,
+    //   ({ key, value, revision }) => {
+    //     if (revision !== this.revision) {
+    //       this.value = value;
+    //       this.revision = revision;
+    //       this.remoteChangeReason = ChangeReason.RemoteSet;
+    //       this.remote.value = value;
+    //     }
+    //   },
+    // );
   }
 }
