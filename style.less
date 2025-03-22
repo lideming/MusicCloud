@@ -18,6 +18,25 @@
     opacity: 1;
   }
 }
+:root {
+  --page-theme-changing-origin: 50% 50%;
+}
+::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  animation: page-theme-changing .7s ease-in;
+  mix-blend-mode: normal;
+}
+@keyframes page-theme-changing {
+  0% {
+    clip-path: circle(0% at var(--page-theme-changing-origin));
+  }
+  100% {
+    clip-path: circle(141% at var(--page-theme-changing-origin));
+  }
+}
 * {
   box-sizing: border-box;
   scrollbar-color: var(--color-bg-dd) transparent;
@@ -1422,24 +1441,24 @@ a {
       display: none;
     }
   }
-  .dialog {
-    height: 100%;
-    width: 100% !important;
-    left: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    border-radius: 0 !important;
-  }
-  .dialog-title {
-    padding: 0 0.5em;
-    .textbtn {
-      padding: 1em;
-    }
-  }
-  .dialog-content {
-    resize: none;
-    padding: 1em;
-  }
+  // .dialog {
+  //   height: 100%;
+  //   width: 100% !important;
+  //   left: 0 !important;
+  //   top: 0 !important;
+  //   bottom: 0 !important;
+  //   border-radius: 0 !important;
+  // }
+  // .dialog-title {
+  //   padding: 0 0.5em;
+  //   .textbtn {
+  //     padding: 1em;
+  //   }
+  // }
+  // .dialog-content {
+  //   resize: none;
+  //   padding: 1em;
+  // }
   .btn-big {
     padding: 0.5em;
   }

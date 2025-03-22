@@ -36,11 +36,14 @@ function getThemeAndStyle() {
   return { theme, style };
 }
 
-function setThemeAndStyle(options: { theme?: string; style?: string }) {
+function setThemeAndStyle(
+  options: { theme?: string; style?: string },
+  ev: Event,
+) {
   const current = getThemeAndStyle();
   const theme = options.theme ?? current.theme;
   const style = options.style ?? current.style;
-  ui.theme.set(`${theme}${style}` as any);
+  ui.theme.set(`${theme}${style}` as any, ev);
 }
 
 class RadioContainer extends ContainerView<RadioOption> {
@@ -51,10 +54,12 @@ class RadioContainer extends ContainerView<RadioOption> {
       else item.unselect();
     },
   });
-  onCurrentChange = new Callbacks<Action<RadioOption>>();
-  setCurrent(current: RadioOption) {
+  onCurrentChange = new Callbacks<
+    (option: RadioOption, originEvent?: Event) => void
+  >();
+  setCurrent(current: RadioOption, ev?: Event) {
     this.currentActive.set(current);
-    this.onCurrentChange.invoke(current);
+    this.onCurrentChange.invoke(current, ev);
   }
   protected createDom(): BuildDomExpr {
     return <div class="radio-container" tabIndex="0"></div>;
@@ -69,7 +74,7 @@ class RadioContainer extends ContainerView<RadioOption> {
             (ev.code === "ArrowRight" ? 1 : -1)) %
             this.childViews.length
         ] as RadioOption;
-        this.setCurrent(next);
+        this.setCurrent(next, ev);
       }
     });
   }
@@ -83,13 +88,16 @@ class RadioContainer extends ContainerView<RadioOption> {
 
 class RadioOption extends TextView {
   protected createDom(): BuildDomExpr {
-    return <div class="radio-option btn" onclick={() => this.select()}></div>;
+    return (
+      <div class="radio-option btn" onclick={(ev) => this.select(ev)}></div>
+    );
   }
   value: any = null;
-  select() {
+  select(ev?: Event) {
     const parent = this.parentView as RadioContainer;
     if (parent.currentActive.current !== this) {
-      parent.setCurrent(this);
+      console.info({ ev });
+      parent.setCurrent(this, ev);
     }
     this.toggleClass("selected", true);
   }
@@ -120,8 +128,9 @@ class SettingsDialog extends Dialog {
       <SettingItem label={() => I`UI color:`}>
         <RadioContainer
           currentValue={theme}
-          onCurrentChange={(option) => {
-            setThemeAndStyle({ theme: option.value });
+          onCurrentChange={(option, ev) => {
+            console.info({ev});
+            setThemeAndStyle({ theme: option.value }, ev);
           }}
         >
           {ui.theme.colors.map((option) => (
@@ -137,8 +146,8 @@ class SettingsDialog extends Dialog {
       <SettingItem label={() => I`UI style:`}>
         <RadioContainer
           currentValue={style}
-          onCurrentChange={(option) => {
-            setThemeAndStyle({ style: option.value });
+          onCurrentChange={(option, ev) => {
+            setThemeAndStyle({ style: option.value }, ev);
           }}
         >
           {ui.theme.styles.map((option) => (

@@ -24,7 +24,7 @@ import { BottomBar } from "./BottomBar";
 View.debugging = true;
 
 views.SidebarItem.prototype.bindContentView = function (
-  viewFunc: Func<views.ContentView>
+  viewFunc: Func<views.ContentView>,
 ) {
   this.onActive.add(() => {
     if (!this.contentView) this.contentView = viewFunc();
@@ -95,7 +95,7 @@ export const ui = new (class {
           .addText(
             files.length === 1
               ? I`Did you mean to upload 1 file?`
-              : I`Did you mean to upload ${files.length} files?`
+              : I`Did you mean to upload ${files.length} files?`,
           )
           .addResultBtns(["no", "yes"])
           .allowCloseWithResult("no")
@@ -117,7 +117,7 @@ export const ui = new (class {
         this.usingKeyboardInput = true;
         document.body.classList.add("keyboard-input");
       },
-      true
+      true,
     );
     ["mousedown", "touchstart"].forEach((evt) =>
       document.addEventListener(
@@ -126,8 +126,8 @@ export const ui = new (class {
           this.usingKeyboardInput = false;
           document.body.classList.remove("keyboard-input");
         },
-        { passive: true, capture: true }
-      )
+        { passive: true, capture: true },
+      ),
     );
   }
   addErrorListener() {
@@ -147,7 +147,7 @@ export const ui = new (class {
   }
   preload = new (class {
     domInfos = document.getElementById("preload-infos");
-    domProgress = document.getElementById('preload-progress-bar-fill');
+    domProgress = document.getElementById("preload-progress-bar-fill");
     jsok() {
       window["preload"]?.jsOk();
       if (this.domInfos) {
@@ -170,18 +170,20 @@ export const ui = new (class {
         fadeout(document.getElementById("preload-overlay")!);
       }, 1);
     }
-  });
+  })();
   theme = new (class {
-    colors = ['light', 'dark', 'auto'] as const;
-    styles = ['', '-rounded'] as const;
-    current: `${typeof this.colors[number]}${typeof this.styles[number]}` = "light";
+    colors = ["light", "dark", "auto"] as const;
+    styles = ["", "-rounded"] as const;
+    current: `${(typeof this.colors)[number]}${(typeof this.styles)[number]}` =
+      "light";
+    currentParsed = ["light", "rounded"];
     timer = new Timer(() =>
-      toggleClass(document.body, "changing-theme", false)
+      toggleClass(document.body, "changing-theme", false),
     );
     siTheme = new SettingItem<this["current"]>(
       "mcloud-theme",
       "str",
-      "auto-rounded" // the default value should be sync with the preload script
+      "auto-rounded", // the default value should be sync with the preload script
     );
 
     init() {
@@ -191,45 +193,98 @@ export const ui = new (class {
     private rendered = false;
     render = () => {
       const theme = this.siTheme.data;
-      this.current = theme;
-      if (this.rendered) toggleClass(document.body, "changing-theme", true);
       const [color, rounded] = theme.split("-");
       let computedColor = color;
-      if (computedColor === 'auto') {
-        if ('matchMedia' in window) {
+      if (computedColor === "auto") {
+        if ("matchMedia" in window) {
           this._toggleColorSchemeWatcher(true);
-          computedColor = this._watchingColorSchema?.matches ? 'dark' : 'light';
+          computedColor = this._watchingColorSchema?.matches ? "dark" : "light";
         }
       } else {
         this._toggleColorSchemeWatcher(false);
       }
-      toggleClass(document.body, "dark", computedColor === "dark");
-      toggleClass(document.body, "rounded", rounded === "rounded");
-      var meta = document.getElementById(
-        "meta-theme-color"
-      ) as HTMLMetaElement;
-      if (meta) {
-        meta.content = computedColor === "dark" ? "black" : "";
+      if (
+        this.rendered &&
+        this.current === theme &&
+        this.currentParsed[0] === computedColor
+      )
+        return;
+      this.current = theme;
+      this.currentParsed = [computedColor, rounded];
+      const action = () => {
+        toggleClass(document.body, "dark", computedColor === "dark");
+        toggleClass(document.body, "rounded", rounded === "rounded");
+        var meta = document.getElementById(
+          "meta-theme-color",
+        ) as HTMLMetaElement;
+        if (meta) {
+          meta.content = computedColor === "dark" ? "black" : "";
+        } else {
+          console.warn('[UI] Failed to get the "meta-theme-color" element');
+        }
+      };
+      if (this.rendered) {
+        if (
+          "startViewTransition" in document &&
+          typeof document.startViewTransition === "function"
+        ) {
+          document.startViewTransition(() => {
+            action();
+          });
+        } else {
+          toggleClass((document as Document).body, "changing-theme", true);
+          action();
+          this.timer.timeout(500);
+        }
       } else {
-        console.warn('[UI] Failed to get the "meta-theme-color" element');
+        action();
       }
-      if (this.rendered) this.timer.timeout(500);
       this.rendered = true;
     };
-    
-    set(theme: this["current"]) {
+    setTransitionOrigin(origin: { x: number; y: number } | null) {
+      debugger;
+      document.documentElement.style.setProperty(
+        "--page-theme-changing-origin",
+        origin ? `${origin.x}px ${origin.y}px` : "",
+      );
+    }
+
+    set(theme: this["current"], ev?: Event) {
+      if (typeof (ev as MouseEvent)?.clientX === "number") {
+        this.setTransitionOrigin({
+          x: (ev as MouseEvent).clientX,
+          y: (ev as MouseEvent).clientY,
+        });
+      } else {
+        this.setTransitionOrigin(null);
+      }
       this.siTheme.set(theme);
     }
 
     private _watchingColorSchema: MediaQueryList | null = null;
+    private _watchingColorSchemaCallback: (() => void) | null = null;
     private _toggleColorSchemeWatcher(enable: boolean) {
-      if (!!this._watchingColorSchema === enable || !('matchMedia' in window)) return;
+      if (!!this._watchingColorSchema === enable || !("matchMedia" in window))
+        return;
       if (enable) {
-        this._watchingColorSchema = window.matchMedia('(prefers-color-scheme: dark)');
-        this._watchingColorSchema.addEventListener('change', this.render);
+        this._watchingColorSchema = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        );
+        this._watchingColorSchemaCallback = () => {
+          this.setTransitionOrigin(null);
+          this.render();
+        };
+        this._watchingColorSchema.addEventListener(
+          "change",
+          this._watchingColorSchemaCallback,
+        );
       } else {
-        this._watchingColorSchema!.removeEventListener('change', this.render);
+        this._watchingColorSchema!.removeEventListener(
+          "change",
+          this._watchingColorSchemaCallback!,
+        );
         this._watchingColorSchema = null;
+        this._watchingColorSchemaCallback = null;
       }
     }
   })();
@@ -244,7 +299,7 @@ export const ui = new (class {
         i18n.curLang = lang;
         document.body.lang = lang;
         console.info(
-          `[UI] Current language: '${i18n.curLang}' - '${I`English`}'`
+          `[UI] Current language: '${i18n.curLang}' - '${I`English`}'`,
         );
         ui.updateAllViews();
       });
@@ -302,7 +357,11 @@ export const ui = new (class {
       if (isIOS) {
         // prevent navigation
         ui.mainContainer.dom.addEventListener("touchstart", (e) => {
-          if (e.touches[0].pageX > 20 && e.touches[0].pageX < window.innerWidth - 20) return;
+          if (
+            e.touches[0].pageX > 20 &&
+            e.touches[0].pageX < window.innerWidth - 20
+          )
+            return;
           e.preventDefault();
         });
       }
@@ -330,9 +389,7 @@ export const ui = new (class {
       ui.content.container.dom.style.transform =
         pos == null ? "" : `translate(${30 * ratio}%, 0)`;
       this.dom.style.boxShadow =
-        pos == null
-          ? ""
-          : `0 0 ${numLimit((width + pos) / 5, 0, 20)}px var(--color-shadow)`;
+        pos == null ? "" : `0 0 20px var(--color-shadow)`;
       if (pos != null && pos > 0) {
         this.sidebarToggle.dom.style.transform = `translate(${pos}px, 0)`;
         this.sidebarToggle.dom.style.transition = "none";
@@ -379,7 +436,7 @@ export const ui = new (class {
         this.toggleHide(
           mobile
             ? this._hideMobile || this._hideLarge
-            : this._hideLarge && this._hideMobile
+            : this._hideLarge && this._hideMobile,
         );
       }
     }
@@ -514,11 +571,11 @@ export const ui = new (class {
       playerCore.onStateChanged.add(() => {
         this.bgView!.toggleClass(
           "has-video",
-          playerCore.track?.infoObj?.type === "video"
+          playerCore.track?.infoObj?.type === "video",
         );
       });
       api.onTrackInfoChanged.add(
-        (t) => t.id === playerCore.track?.id && this.update()
+        (t) => t.id === playerCore.track?.id && this.update(),
       );
     }
 
@@ -666,7 +723,7 @@ class TouchPanListener {
   filter: (e: TouchEvent) => boolean;
   constructor(
     readonly element: HTMLElement,
-    public mode: "x" | "y" | "both" = "both"
+    public mode: "x" | "y" | "both" = "both",
   ) {}
 
   private _enabled = false;
