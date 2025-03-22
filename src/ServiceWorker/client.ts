@@ -12,8 +12,29 @@ export const serviceWorkerClient = new (class ServiceWorkerClient {
       }
     } else {
       console.info(
-        "[sw client] non-https protocol, skipping service worker registration"
+        "[sw client] non-https protocol, skipping service worker registration",
       );
+    }
+    navigator.serviceWorker?.ready.then(() => {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data.type === "update-done") {
+          location.reload();
+        }
+      });
+    });
+  }
+  update() {
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.ready.then(async (reg) => {
+        await reg.update();
+        if (reg.active) {
+          reg.active.postMessage({ type: "update" });
+        } else {
+          location.reload();
+        }
+      });
+    } else {
+      location.reload();
     }
   }
 })();

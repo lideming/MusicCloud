@@ -50,7 +50,7 @@ sw.addEventListener("fetch", function (event) {
           console.info("uncached", event.request.url);
           return fetchAndSave(event.request);
         }
-      })
+      }),
     );
   }
 });
@@ -66,3 +66,13 @@ function fetchAndSave(request: Request) {
     return response;
   });
 }
+
+sw.addEventListener("message", (event) => {
+  if (event.data.type === "update") {
+    fetchAndSave(new Request("/")).then(() => {
+      event.source?.postMessage({
+        type: "update-done",
+      });
+    });
+  }
+});

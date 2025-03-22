@@ -18,6 +18,7 @@ import {
 import { settings } from "./Settings";
 import { api } from "../API/Api";
 import { PluginsUI } from "../Plugins/pluginsUI";
+import { serviceWorkerClient } from "../ServiceWorker/client";
 
 export const settingsUI = new (class {
   dialog: SettingsDialog;
@@ -96,7 +97,6 @@ class RadioOption extends TextView {
   select(ev?: Event) {
     const parent = this.parentView as RadioContainer;
     if (parent.currentActive.current !== this) {
-      console.info({ ev });
       parent.setCurrent(this, ev);
     }
     this.toggleClass("selected", true);
@@ -129,7 +129,6 @@ class SettingsDialog extends Dialog {
         <RadioContainer
           currentValue={theme}
           onCurrentChange={(option, ev) => {
-            console.info({ev});
             setThemeAndStyle({ theme: option.value }, ev);
           }}
         >
@@ -325,6 +324,15 @@ class AboutDialog extends Dialog {
                     ui.lang.curLang,
                   )
                 : ""}
+              <span class="update-btn" style={{ marginLeft: "4px" }}>
+                {
+                  new ButtonView({
+                    type: "inline",
+                    onActive: () => serviceWorkerClient.update(),
+                    text: "Update & Reload",
+                  })
+                }
+              </span>
             </p>
             <p>
               {IA`This project is ${(
