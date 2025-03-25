@@ -4,6 +4,7 @@ import {
   playerCore,
   PlayingLoopMode,
   playingLoopModes,
+  syncMediaSession,
 } from "../Player/PlayerCore";
 import { ui } from "./UI";
 import {
@@ -570,6 +571,7 @@ class SimpleLyricsView extends View {
           this.addView(this.lineView);
         }
         if (navigator.mediaSession?.metadata) {
+          syncMediaSession();
           navigator.mediaSession.metadata.artist =
             line?.spans?.map((x) => x.text).join("") || "";
         }

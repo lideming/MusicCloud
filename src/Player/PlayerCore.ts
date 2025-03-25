@@ -407,12 +407,22 @@ export const playingLoopModes = [
 
 export type PlayingLoopMode = (typeof playingLoopModes)[number];
 
-if (navigator["mediaSession"]) {
-  let mediaSession = navigator["mediaSession"];
+export let syncMediaSession = () => {};
+
+if (navigator.mediaSession) {
+  const { mediaSession } = navigator;
+  syncMediaSession = () => {
+    mediaSession.setPositionState?.({
+      position: playerCore.currentTime,
+      duration: playerCore.duration,
+      playbackRate: playerCore.playbackRate,
+    });
+  };
   playerCore.onTrackChanged.add(() => {
     try {
       var track = playerCore.track;
       if (!track) return;
+      syncMediaSession();
       mediaSession.metadata = new MediaMetadata({
         title: track?.name,
         artist: track?.artist,
