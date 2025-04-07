@@ -43,10 +43,15 @@
 }
 html {
   touch-action: auto;
-  height: 100%;
+  height: 100vh;
   overflow: hidden;
+  --page-padding-bottom: 0;
+  --page-padding-bottom: env(safe-area-inset-bottom);
+  --page-padding-top: 0;
+  --page-padding-top: env(safe-area-inset-top);
 }
 body {
+  position: relative;
   margin: 0;
   font-family: sans-serif;
   --color-bg: white;
@@ -77,9 +82,7 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   --bottombar-height: 70px;
-  --page-padding-bottom: 0;
-  --page-padding-bottom: env(safe-area-inset-bottom);
-  height: 100%;
+  height: 100vh;
   overflow: hidden;
 }
 body.dark {
@@ -229,9 +232,11 @@ a {
   }
 }
 #main-container {
-  height: calc(100% - var(--bottombar-height) - var(--page-padding-bottom));
+  margin-top: var(--page-padding-top);
+  height: calc(100% - var(--bottombar-height) - var(--page-padding-bottom) - var(--page-padding-top));
   position: relative;
   contain: strict;
+  overflow: hidden;
   &::after {
     content: "";
     clear: both;
@@ -270,7 +275,6 @@ a {
   top: 0;
   left: 200px;
   width: calc(100% - 200px);
-  background: var(--color-bg);
   --color-fg-11: #000000ee;
   --color-fg-22: #000000dd;
   --color-fg-33: #000000cc;
@@ -749,12 +753,12 @@ a {
 }
 .bottombar {
   position: fixed;
-  bottom: var(--page-padding-bottom);
+  bottom: 0;
   width: 100%;
   display: flex;
-  height: var(--bottombar-height);
+  height: calc(var(--bottombar-height) + var(--page-padding-bottom));
   align-items: center;
-  padding: 0 8px;
+  padding: 0 8px var(--page-padding-bottom);
   box-shadow: 0 0px 3px var(--color-shadow);
   .trackpic {
     position: relative;

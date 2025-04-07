@@ -37,6 +37,7 @@ import { LineView } from "../Lyrics/LineView";
 import { I, i18n } from "../I18n/I18n";
 import { trackContextMenu } from "../Track/TrackContextMenu";
 import { desktopApi } from "./desktopApi";
+import { isIOS } from "./utils";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -176,6 +177,10 @@ export class BottomBar extends View {
     });
     this.btnFullscreen.onActive.add((e) => {
       e.preventDefault();
+      if (isIOS) {
+        (playerCore.audio as any).webkitEnterFullscreen();
+        return;
+      }
       router.nav("nowplaying");
       ui.sidebar.toggleHide(true);
       document.documentElement.requestFullscreen();

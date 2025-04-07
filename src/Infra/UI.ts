@@ -38,8 +38,10 @@ views.SidebarItem.prototype.bindContentView = function (
   return this;
 };
 
+const backgroundView = new View({ tag: "div.content-bg" });
 const mainContainer = new MainContainer();
 const bottomBar = new BottomBar();
+mountView(document.body, backgroundView);
 mountView(document.body, mainContainer);
 mountView(document.body, bottomBar);
 
@@ -554,14 +556,11 @@ export const ui = new (class {
     }
   })();
   contentBg = new (class {
-    bgView: View | null = null;
+    bgView: View = backgroundView;
     imgView: View | null = null;
     videoView: View | null = null;
     curImg = "";
     init() {
-      this.bgView = new View({ tag: "div.content-bg" });
-      ui.content.container.addView(this.bgView, 0);
-
       playerCore.onTrackChanged.add(() => this.update());
       playerCore.onAudioCreated.add(() => {
         if (!playerCore.audio) return;
