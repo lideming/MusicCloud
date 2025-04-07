@@ -134,6 +134,8 @@ export const playerCore = new (class PlayerCore {
   }
   initAudio() {
     this.audio.crossOrigin = "anonymous";
+    this.audio.setAttribute("webkit-playsinline", "");
+    this.audio.setAttribute("playsinline", "");
     this.audio.addEventListener("timeupdate", () => {
       this.onProgressChanged.invoke();
       this.checkPreload();
