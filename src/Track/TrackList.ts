@@ -4,6 +4,7 @@ import {
   BuildDomExpr,
   DataUpdatingHelper,
   formatDuration,
+  Ref,
   ScrollAnimator,
   TextView,
   View,
@@ -389,7 +390,10 @@ export class TrackListView extends ListContentView {
     this.shownEvents.add(user.onSwitchedUser, () => {
       this.list.updateCanEdit();
     })(null);
-    this.list.fetch();
+    this.list.fetch().then(async () => {
+      await sleepAsync(100);
+      this.checkLoadingItems();
+    });
     this.trackChanged();
   }
   onRemove() {
@@ -402,9 +406,9 @@ export class TrackListView extends ListContentView {
     this.currentTracking = true;
     const current = this.curPlaying.current;
     if (current) {
-      this.scrollAnimator?.scrollTo(
-        current.dom.offsetTop + current.dom.offsetHeight / 2
-      );
+      const targetLocation = current.dom.offsetTop + current.dom.offsetHeight / 2;
+      this.scrollAnimator?.scrollTo(targetLocation);
+      this.checkLoadingItems(targetLocation);
     }
   }
   protected appendListView() {
@@ -441,12 +445,19 @@ export class TrackListView extends ListContentView {
 
     this.scrollAnimator = new ScrollAnimator(this.scrollBox);
     this.scrollAnimator.posType = "center";
+    this.scrollAnimator.onUserScroll.add(() => {
+      this.currentTracking = false;
+      this.checkLoadingItems();
+    });
   }
   addItem(t: Track, pos?: number, updateView?: boolean) {
     var item = this.createViewItem(t);
     this.listView.add(item, pos);
     this.updateCurPlaying(item);
     if (updateView == null || updateView) this.updateView();
+  }
+  override updateView(): void {
+    super.updateView();
   }
   protected createViewItem(t: Track) {
     var view = new TrackViewItem(t);
@@ -477,6 +488,41 @@ export class TrackListView extends ListContentView {
       }
     }
   }
+  private _lastItemIndex: number | null = null;
+  private _lastPosition: number | null = null;
+  protected checkLoadingItems(position: number | null = null) {
+    const scrollDom = this.scrollBox.dom;
+    if (position === null) {
+      position = scrollDom.scrollTop + scrollDom.offsetHeight / 2;
+    }
+    const minTop = position - scrollDom.offsetHeight / 2 - 500;
+    const maxTop = position + scrollDom.offsetHeight / 2 + 500;
+    if (this._lastPosition === null || position > this._lastPosition) {
+      for (let i = this._lastItemIndex ?? 0; i < this.listView.length; i++) {
+        const view = this.listView.get(i);
+        if (!view) break;
+        if (view.refShouldLoad.value) continue;
+        const top = view.dom.offsetTop;
+        if (top > maxTop) break;
+        if (top >= minTop) {
+          view.refShouldLoad.value = true;
+          this._lastItemIndex = i;
+        }
+      }
+    } else {
+      for (let i = this._lastItemIndex!; i >= 0; i--) {
+        const view = this.listView.get(i);
+        if (!view || view.refShouldLoad.value) continue;
+        const top = view.dom.offsetTop;
+        if (top < minTop) break;
+        if (top <= maxTop) {
+          view.refShouldLoad.value = true;
+          this._lastItemIndex = i;
+        }
+      }
+    }
+    this._lastPosition = position;
+  }
   private trackChanged = () => {
     this.updateCurPlaying();
     if (this.currentTracking) {
@@ -493,9 +539,16 @@ export class TrackViewItem extends ListViewItem {
   actionHandler: TrackActionHandler<this> | null = null;
   noPos: boolean = false;
   playing: boolean = false;
+  refShouldLoad = new Ref(false);
+  refPicDom = new Ref<HTMLImageElement>();
   constructor(item: Track) {
     super();
     this.track = item;
+    this.refShouldLoad.onChanged.add((ref) => {
+      if (ref.value) {
+        this.updateDom();
+      }
+    });
   }
   get dragData() {
     return `${this.track.name} - ${this.track.artist}`;
@@ -510,16 +563,20 @@ export class TrackViewItem extends ListViewItem {
           child: [
             {
               tag: "img.pic",
-              loading: "lazy",
               height: 128,
               width: 128,
+              ref: this.refPicDom,
               update: (dompic: HTMLImageElement) => {
+                if (!this.refShouldLoad.value) {
+                  toggleClass(dompic, "no-pic", true);
+                  return;
+                }
                 let bg = "";
                 if (this.track.thumburl) {
                   bg = api.processUrl(this.track.thumburl) ?? "";
                 }
                 if (bg != dompic.src) dompic.src = bg;
-                toggleClass(dompic, "nopic", !bg);
+                toggleClass(dompic, "no-pic", !bg);
               },
             },
             (this.viewPos = new TextView({

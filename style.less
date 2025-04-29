@@ -612,7 +612,6 @@ a {
 .trackitem {
   display: flex;
   align-items: center;
-  contain: content;
   height: 4.5em;
   contain: strict;
   .picbox {
@@ -635,9 +634,9 @@ a {
       height: 100%;
       opacity: 0.7;
       object-fit: contain;
-    }
-    .pic.nopic {
-      display: none;
+      &.no-pic {
+        display: none;
+      }
     }
   }
   .pos {

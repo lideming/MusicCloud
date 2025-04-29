@@ -25,6 +25,7 @@ export class ScrollAnimator {
   posType: "top" | "center" = "top";
   scrollEventPending = false; // position was changed by this animator
   onUserScroll = new Callbacks<Action<Event>>();
+  get isRunning() { return this._rafHandle !== -1; }
   get currentPos() {
     if (this.posType == "center")
       return this.view.dom.scrollTop + this.view.dom.offsetHeight / 2;
