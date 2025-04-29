@@ -107,7 +107,7 @@ export const playerCore = new (class PlayerCore {
   }
 
   get isPlaying() {
-    return this.audio && !!this.audio.duration && !this.audio.paused;
+    return ["stalled", "playing"].includes(this.state);
   }
   get isPaused() {
     return this.audio.paused;
@@ -144,10 +144,7 @@ export const playerCore = new (class PlayerCore {
       this._loadRetryCount = 0;
       this.onProgressChanged.invoke();
     });
-    this.audio.addEventListener("seeking", () => {
-      if (!this.audio.paused) this.state = "stalled";
-    });
-    this.audio.addEventListener("stalled", () => {
+    this.audio.addEventListener("waiting", () => {
       if (!this.audio.paused) this.state = "stalled";
     });
     this.audio.addEventListener("play", () => {
@@ -323,6 +320,7 @@ export const playerCore = new (class PlayerCore {
     return cur;
   }
   async play() {
+    this.state = "stalled";
     await this.ensureLoaded();
     if (this.volumeByGainNode && !playerFX.webAudioInited) {
       playerFX.initWebAudio();
