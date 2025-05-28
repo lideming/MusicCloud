@@ -71,7 +71,7 @@ export const user = new (class User {
   init() {
     this.onApiReady.add(() => {
       this.isApiReady = true;
-      console.info('[User] api ready.');
+      console.info("[User] api ready.");
     });
     playerCore.onTrackChanged.add(() => this.playingTrackChanged());
     const preLogin = window["preload"]?.preLoginTask;
@@ -83,7 +83,7 @@ export const user = new (class User {
         null,
         (err) => {
           Toast.show(I`Failed to login.` + "\n" + err, 5000);
-        }
+        },
       );
     } else {
       this.setState("none");
@@ -94,7 +94,7 @@ export const user = new (class User {
       window.history.replaceState(
         null,
         "",
-        window.location.href.split("#social-link-success")[0]
+        window.location.href.split("#social-link-success")[0],
       );
       Toast.show(I`Account has been linked successfully.`, 5000);
       new LoginSettingsDialog().show();
@@ -105,7 +105,7 @@ export const user = new (class User {
       var error = splits[1];
       Toast.show(
         I`Account linking error: ${i18n.get("social-link-error_" + error)}`,
-        5000
+        5000,
       );
       new LoginSettingsDialog().show();
     }
@@ -128,10 +128,14 @@ export const user = new (class User {
   getBearerAuth(token: string) {
     return "Bearer " + token;
   }
-  async login(arg: { info?: Api.UserInfo; preLogin?: Promise<Api.UserInfo>; isAutoLogin?: boolean }) {
+  async login(arg: {
+    info?: Api.UserInfo;
+    preLogin?: Promise<Api.UserInfo>;
+    isAutoLogin?: boolean;
+  }) {
     if (this.state !== "logged") this.setState("logging");
     this.isApiReady = false;
-    // try GET `api/users/me` using the new info
+
     var promise = (async () => {
       let resp: Api.UserInfo;
       try {
@@ -141,14 +145,28 @@ export const user = new (class User {
         }
         if (arg.info) {
           const info = arg.info;
-          const token = info.token;
-          console.info({ info, token });
-          resp = token
-            ? await api.get<Api.UserInfo>("users/me")
-            : await api.post<Api.UserInfo>({
-                path: "users/me/login",
-                auth: this.getBasicAuth(info),
-              });
+          if (!info.token) {
+            const { challenge, difficulty } = await this.getLoginChallenge(
+              info.username,
+              false,
+            );
+            const proof = await this.findProof(
+              challenge,
+              info.passwd!,
+              difficulty,
+            );
+
+            resp = await api.post<Api.UserInfo>({
+              path: "users/me/login",
+              obj: {
+                username: info.username,
+                password: info.passwd,
+                proof,
+              },
+            });
+          } else {
+            resp = await api.get<Api.UserInfo>("users/me");
+          }
         } else if (arg.preLogin) {
           resp = await arg.preLogin;
         } else {
@@ -156,7 +174,11 @@ export const user = new (class User {
         }
       } catch (err) {
         if (this.state !== "logged") this.setState("error");
-        if (err.message === "user_not_found")
+        if (err.message === "invalid_proof")
+          throw new Error(
+            I`Failed to compute proof of work. Please try again.`,
+          );
+        if (err.message === "login_failed")
           throw new Error(I`Username or password is not correct.`);
         throw err;
       } finally {
@@ -170,17 +192,39 @@ export const user = new (class User {
   async register(info: Api.UserInfo) {
     this.setState("logging");
     var promise = (async () => {
-      var resp = await api.post({
-        path: "users/new",
-        obj: info,
-      });
-      if (resp.error) {
-        this.setState("error");
-        if (resp.error === "dup_user")
-          throw new Error(I`A user with the same username exists`);
-        throw new Error(resp.error);
+      try {
+        const { challenge, difficulty } = await this.getLoginChallenge(
+          info.username,
+          true,
+        );
+        const proof = await this.findProof(challenge, info.passwd!, difficulty);
+
+        const resp = await api.post<Api.UserInfo & { error?: string }>({
+          path: "users/new",
+          obj: {
+            username: info.username,
+            passwd: info.passwd,
+            proof,
+          },
+        });
+
+        if ("error" in resp) {
+          this.setState("error");
+          if (resp.error === "dup_user")
+            throw new Error(I`A user with the same username exists`);
+          if (resp.error === "invalid_proof")
+            throw new Error(
+              I`Failed to compute proof of work. Please try again.`,
+            );
+          if (resp.error === "bad_arg")
+            throw new Error(I`Invalid arguments provided`);
+          throw new Error(resp.error);
+        }
+        await this.handleLoginResult(resp);
+      } catch (error) {
+        if (this.state !== "logged") this.setState("error");
+        throw error;
       }
-      await this.handleLoginResult(resp);
     })();
     this.loggingin = promise;
     await promise;
@@ -253,7 +297,10 @@ export const user = new (class User {
   /**
    * Wait until finished logging in. Returns true if sucessfully logged in.
    */
-  async waitLogin(throwOnFail: boolean = false, fastLogin: boolean = true): Promise<boolean> {
+  async waitLogin(
+    throwOnFail: boolean = false,
+    fastLogin: boolean = true,
+  ): Promise<boolean> {
     do {
       if (this.state === "logged") return true;
       if (this.state === "logging") {
@@ -262,7 +309,7 @@ export const user = new (class User {
             return true;
           } else {
             await this.onApiReady.waitOnce();
-            if ((this.state as any) !== 'error') {
+            if ((this.state as any) !== "error") {
               return true;
             } else {
               break;
@@ -297,7 +344,7 @@ export const user = new (class User {
     };
     this.postPlaying(tl).then(
       () => console.info("[User] post playing OK"),
-      (err) => console.warn("[User] post playing error", err)
+      (err) => console.warn("[User] post playing error", err),
     );
   }
   async tryRestorePlaying(playing: Api.TrackLocation) {
@@ -360,6 +407,61 @@ export const user = new (class User {
     toast.updateWith({ text: I`Password changed successfully.` });
     toast.show(3000);
   }
+
+  private async sha256(text: string): Promise<Uint8Array> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+    const hash = await crypto.subtle.digest("SHA-256", data);
+    return new Uint8Array(hash);
+  }
+
+  private async findProof(
+    challenge: string,
+    password: string,
+    difficulty: number,
+  ): Promise<string> {
+    const expectedAttemptCount = Math.pow(16, difficulty);
+    let nonce = 0;
+    let lastStatusTime = Date.now();
+    while (true) {
+      const proof = nonce.toString(16);
+      const hash = await this.sha256(`${proof}:${password}:${challenge}`);
+      let fail = false;
+      for (let i = 0; i < ~~(difficulty / 2); i++) {
+        if (hash[i] !== 0) {
+          fail = true;
+          break;
+        }
+      }
+      if (!fail && difficulty % 2 === 1 && hash[~~(difficulty / 2)] > 0xf) {
+        fail = true;
+      }
+      if (!fail) {
+        console.info({ proof, hash });
+        return proof;
+      }
+      nonce++;
+      if (this.viewStatus && Date.now() - lastStatusTime > 1000) {
+        lastStatusTime = Date.now();
+        this.viewStatus.text = I`Computing PoW... (${nonce.toLocaleString()} of ~${expectedAttemptCount.toLocaleString()} attempts)`;
+      }
+    }
+  }
+
+  private viewStatus?: TextView;
+  setStatusView(view: TextView) {
+    this.viewStatus = view;
+  }
+
+  private async getLoginChallenge(
+    username: string,
+    register: boolean,
+  ): Promise<{ challenge: string; difficulty: number }> {
+    return await api.post<{ challenge: string; difficulty: number }>({
+      path: "users/challenge",
+      obj: { username, register },
+    });
+  }
 })();
 
 class LoginDialog extends Dialog {
@@ -389,13 +491,13 @@ class LoginDialog extends Dialog {
     });
 
     [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach((x) =>
-      dig.addContent(x)
+      dig.addContent(x),
     );
     dig.addContent(
       buildDOM({
         tag: "div",
         child: [this.viewStatus, this.btn],
-      }) as any
+      }) as any,
     );
     this.compositionWatcher = new TextCompositionWatcher(this.dom);
     dig.dom.addEventListener("keydown", (ev) => {
@@ -427,7 +529,7 @@ class LoginDialog extends Dialog {
           settingsUI.openUI(ev);
           this.close();
         },
-      })
+      }),
     );
 
     this.tabCreate.hidden = true;
@@ -447,7 +549,7 @@ class LoginDialog extends Dialog {
             window.location.href = api.processUrl(
               `users/me/socialLogin?provider=${
                 l.id
-              }&returnUrl=${encodeURIComponent(window.location.href)}`
+              }&returnUrl=${encodeURIComponent(window.location.href)}`,
             );
           },
         });
@@ -502,6 +604,7 @@ class LoginDialog extends Dialog {
       };
       try {
         user.pendingInfo = info as any;
+        user.setStatusView(this.viewStatus);
         if (this.isRegistering) {
           await user.register(info);
         } else {
@@ -509,7 +612,7 @@ class LoginDialog extends Dialog {
         }
         this.viewStatus.text = "";
         [this.inputUser, this.inputPasswd, this.inputPasswd2].forEach(
-          (x) => (x.value = "")
+          (x) => (x.value = ""),
         );
         user.closeUI();
       } catch (e) {
@@ -521,6 +624,7 @@ class LoginDialog extends Dialog {
         }
       } finally {
         user.pendingInfo = null;
+        user.setStatusView(null as any);
         this.btn.updateWith({ disabled: false });
       }
     })();
@@ -557,7 +661,7 @@ class MeDialog extends Dialog {
           },
           this.fileSelector,
         ],
-      })
+      }),
     );
     this.btnChangeAvatar.toggleClass("user-change-avatar", true);
     this.btnChangeAvatar.onActive.add(() => {
@@ -598,7 +702,7 @@ class MeDialog extends Dialog {
           settingsUI.openUI(ev);
           this.close();
         },
-      })
+      }),
     );
   }
 }
