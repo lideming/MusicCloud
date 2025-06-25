@@ -156,7 +156,7 @@ export const playerCore = new (class PlayerCore {
     this.audio.addEventListener("pause", () => {
       this.state = "paused";
     });
-    this.audio.addEventListener("error", (e) => {
+    this.audio.addEventListener("error", (e: ErrorEvent) => {
       console.error("[PlayerCore] audio error", e);
       var wasPlaying = this.state !== "paused" && this.state !== "stalled";
       if (this.track && this.track.url) {
@@ -170,7 +170,7 @@ export const playerCore = new (class PlayerCore {
           this._loadRetryTimer.timeout(3000);
         }
         Toast.show(msg, 3000);
-        if (!ui.isVisible() && ui.notification.isEnabledFor("nowPlaying")) {
+        if (!ui.isVisible.value && ui.notification.isEnabledFor("nowPlaying")) {
           ui.notification.show(I`Music Cloud`, {
             body: msg,
             requireInteraction: false,

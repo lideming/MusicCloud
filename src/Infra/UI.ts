@@ -54,6 +54,7 @@ import {
   Toast,
   clearChildren,
   isIOS,
+  Ref,
 } from "./utils";
 import { I18n, i18n, I } from "../I18n/I18n";
 import { Track } from "../Track/Track";
@@ -64,6 +65,7 @@ import { api } from "../API/Api";
 
 export const ui = new (class {
   usingKeyboardInput = false;
+  isVisible = new Ref(document.visibilityState === "visible");
   init() {
     this.addErrorListener();
     this.lang.init();
@@ -83,6 +85,9 @@ export const ui = new (class {
         ui.content.setCurrent(null);
         ui.sidebarList.currentActive.set(null);
       },
+    });
+    document.addEventListener("visibilitychange", () => {
+      this.isVisible.value = document.visibilityState === "visible";
     });
     document.addEventListener("dragover", (ev) => {
       ev.preventDefault();
@@ -139,9 +144,6 @@ export const ui = new (class {
     window.addEventListener("unhandledrejection", (e) => {
       Toast.show(I`Error:` + "\n" + e.reason, 5000);
     });
-  }
-  isVisible() {
-    return !document["hidden"];
   }
   updateAllViews() {
     mainContainer.updateAll();
@@ -677,7 +679,7 @@ export const ui = new (class {
       playerCore.onTrackChanged.add(() => {
         if (
           this.isEnabledFor("nowPlaying") &&
-          !ui.isVisible() &&
+          !ui.isVisible.value &&
           this.config.nowPlaying &&
           (playerCore.state == "playing" || playerCore.state == "stalled")
         ) {
