@@ -415,7 +415,7 @@ if (navigator.mediaSession) {
     mediaSession.setPositionState?.({
       position: playerCore.currentTime,
       duration: playerCore.duration,
-      playbackRate: playerCore.playbackRate,
+      playbackRate: playerCore.state === 'playing' ? playerCore.playbackRate : 0,
     });
   };
   playerCore.onTrackChanged.add(() => {
@@ -438,6 +438,7 @@ if (navigator.mediaSession) {
           : playerCore.state === "none"
           ? "none"
           : "paused";
+      syncMediaSession();
     } catch {}
   });
   mediaSession.setActionHandler("play", () => playerCore.play());

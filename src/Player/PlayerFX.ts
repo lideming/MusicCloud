@@ -1,4 +1,5 @@
-import { Dialog, Func, Timer, View } from "../Infra/viewlib";
+import { Dialog, Func, Ref, Timer, View } from "../Infra/viewlib";
+import { ui } from "../Infra/UI";
 import { playerCore } from "./PlayerCore";
 
 export const playerFX = new (class PlayerFX {
@@ -27,18 +28,26 @@ export const playerFX = new (class PlayerFX {
     ]);
 
     // iOS background playing fix
+    let lastHiddenTime = -Infinity;
+    Ref.effect(() => {
+      if (!ui.isVisible.value) {
+        lastHiddenTime = performance.now();
+      }
+    })
     this.ctx.addEventListener("statechange", (e) => {
       console.info("[PlayerFX] audio ctx state", this.ctx.state);
       if (
         this.ctx.state === ("interrupted" as any) &&
-        playerCore.state === "playing"
+        playerCore.state === "playing" &&
+        !ui.isVisible.value &&
+        performance.now() - lastHiddenTime < 300
       ) {
         console.info("[PlayerFX] try resuming");
         this.ctx.resume();
       }
     });
     playerCore.onStateChanged.add(() => {
-      if (playerCore.state === "playing" || playerCore.state === "stalled") {
+      if (playerCore.state === "playing") {
         this.suspendTimer.tryCancel();
         if (this.ctx.state !== "running") {
           this.ctx.resume();
