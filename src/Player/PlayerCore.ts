@@ -46,14 +46,14 @@ export const playerCore = new (class PlayerCore {
     return this.siPlayer.data.preferBitrate;
   }
 
-  private _state: "none" | "playing" | "paused" | "stalled" = "none";
+  stateRef: Ref<"none" | "playing" | "paused" | "stalled"> = new Ref("none");
   get state() {
-    return this._state;
+    return this.stateRef.value!;
   }
   set state(val) {
-    if (val === this._state) return;
-    console.info(`[PlayerCore] state '${this._state}' -> '${val}'`);
-    this._state = val;
+    if (val === this.stateRef.value) return;
+    console.info(`[PlayerCore] state '${this.stateRef.value}' -> '${val}'`);
+    this.stateRef.value = val;
     this.onStateChanged.invoke();
   }
   onStateChanged = new Callbacks<Action>();
