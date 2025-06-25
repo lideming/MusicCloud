@@ -1,7 +1,5 @@
 {
-  // "files": ["src/main.ts"],
-  // "include": ["./src"],
-  "exclude": ["dist/"],
+  "include": ["./src"],
   "compilerOptions": {
     "module": "ES2015",
     "target": "ES2017",
@@ -14,6 +12,7 @@
     "downlevelIteration": true,
     "noImplicitThis": true,
     "strictNullChecks": true,
-    "noEmitHelpers": true
+    "noEmitHelpers": true,
+    "skipLibCheck": true
   }
 }
