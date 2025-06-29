@@ -167,6 +167,7 @@ export class PluginListViewItem extends ListViewItem {
               : "var(--color-text-gray)";
           },
           text: () => 
+            !this.data.enabled && this.data.loaded ? I`reload to disable` :
             !this.data.enabled ? I`disabled` :
             this.data.loaded ? I`loaded` :
             I`enabled`,

@@ -9,6 +9,7 @@ export interface PluginInfo {
   website: string;
   version: string;
   settings?: Action;
+  unload?: Action;
 }
 
 export interface PluginListItem {
@@ -94,9 +95,13 @@ export const plugins = new (class Plugins {
     if (type === "user-store") {
       await this.deletePluginCode(key);
     }
+    this._tryUnloadPlugin(url);
   }
 
   async toggleUserPlugin(url: string, enabled: boolean) {
+    if (!enabled) {
+      this._tryUnloadPlugin(url);
+    }
     await this.userPluginList.concurrencyAwareUpdate((value) => {
       return {
         ...value,
@@ -105,8 +110,22 @@ export const plugins = new (class Plugins {
         ),
       };
     });
-    if (this.loadedPlugin.has(url)) {
+    if (enabled && !this.loadedPlugin.has(url)) {
       this.loadPlugin(url);
+    }
+  }
+
+  private _tryUnloadPlugin(url: string) {
+    const loadedInstance = this.loadedPlugin.get(url);
+    if (loadedInstance) {
+      if (loadedInstance.unload) {
+        try {
+          loadedInstance.unload();
+        } catch (error) {
+          console.error("Error during plugin unload:", error);
+        }
+        this.loadedPlugin.delete(url);
+      }
     }
   }
 
@@ -149,25 +168,29 @@ export const plugins = new (class Plugins {
       info = _info;
     };
 
+    let scriptElement: HTMLElement = null!;
     try {
       await new Promise<void>((res, rej) => {
-        document.body.appendChild(
-          buildDOM({
-            tag: "script",
-            src: url,
-            onerror: (error) => {
-              console.error("loading plugin script", error);
-              rej(error);
-            },
-            onload: () => {
-              res();
-            },
-          }),
-        );
+        scriptElement = buildDOM({
+          tag: "script",
+          src: url,
+          onerror: (error) => {
+            console.error("loading plugin script", error);
+            rej(error);
+          },
+          onload: () => {
+            res();
+          },
+        }) as HTMLElement;
+        document.body.appendChild(scriptElement);
       });
     } finally {
       this._currentRegisterCallback = null;
       this._loadingLock.exit();
+      if (scriptElement) {
+        scriptElement.onerror = null;
+        scriptElement.onload = null;
+      }
     }
 
     this._afterPluginLoad(url, info);
