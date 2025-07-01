@@ -1,4 +1,4 @@
-import { ContainerView, buildDOM, View } from "../Infra/viewlib";
+import { ContainerView, buildDOM, View } from "../ui/utils/view";
 import { Line } from "./Lyrics";
 import { LyricsViewContext } from "./LyricsView";
 import { SpanView } from "./SpanView";

@@ -3,14 +3,14 @@ import {
   ContainerView,
   ItemActiveHelper,
   numLimit,
-} from "../Infra/viewlib";
+} from "../ui/utils/view";
 import {
   BuildDomExpr,
   Callbacks,
   Action,
   Timer,
   ScrollAnimator,
-} from "../Infra/utils";
+} from "../ui/utils/view";
 import { I } from "../I18n/I18n";
 import { parse, Lyrics } from "./Lyrics";
 import { playerCore } from "../Player/PlayerCore";

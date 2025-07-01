@@ -1,7 +1,7 @@
 import { Action, buildDOM, I, Semaphore, sleepAsync, Toast } from "@yuuza/webfx";
 import { UserStoreItem } from "../API/UserStore";
 import { user, userStore } from "../main";
-import { nanoid } from "../Infra/nanoid";
+import { nanoid } from "../ui/utils/nanoid";
 
 export interface PluginInfo {
   name: string;

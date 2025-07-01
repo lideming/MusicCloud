@@ -7,7 +7,7 @@ import {
   TextCompositionWatcher,
   LoadingIndicator,
   i18n,
-} from "../Infra/utils";
+} from "../ui/utils/view";
 import { I } from "../I18n/I18n";
 import { listIndex } from "../Track/ListIndex";
 import {
@@ -23,9 +23,9 @@ import {
   objectApply,
   Ref,
   FileSelector,
-} from "../Infra/viewlib";
+} from "../ui/utils/view";
 import { Api } from "./apidef";
-import { ui } from "../Infra/UI";
+import { ui } from "../ui/core/UI";
 import { api } from "./Api";
 import { playerCore } from "../Player/PlayerCore";
 import { uploads } from "../Track/Uploads";

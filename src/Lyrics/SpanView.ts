@@ -1,4 +1,4 @@
-import { View, buildDOM } from "../Infra/viewlib";
+import { View, buildDOM } from "../ui/utils/view";
 import { Span } from "./Lyrics";
 import { LineView } from "./LineView";
 

@@ -1,4 +1,4 @@
-import { MessageBox, TextCompositionWatcher } from "../Infra/utils";
+import { MessageBox, TextCompositionWatcher } from "../ui/utils/view";
 import { I } from "../I18n/I18n";
 import {
   Toast,
@@ -8,13 +8,13 @@ import {
   LoadingIndicator,
   objectApply,
   sleepAsync,
-} from "../Infra/viewlib";
+} from "../ui/utils/view";
 import { Api } from "../API/apidef";
 import { api } from "../API/Api";
 import type { TrackList } from "./TrackList";
 import { lyricsEdit, LyricsSourceEditView } from "../Lyrics/LyricsEdit";
 import { user } from "../API/User";
-import { FileSelector } from "../Infra/viewlib";
+import { FileSelector } from "../ui/utils/view";
 import { playerCore } from "../main";
 
 /** A track binding with list */

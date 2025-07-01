@@ -8,13 +8,13 @@ import {
   CancelToken,
   Ref,
   isIOS,
-} from "../Infra/utils";
+} from "../ui/utils/view";
 import { I } from "../I18n/I18n";
 import { api } from "../API/Api";
-import { Toast } from "../Infra/viewlib";
+import { Toast } from "../ui/utils/view";
 import { Api } from "../API/apidef";
-import { Timer } from "../Infra/utils";
-import { ui } from "../Infra/UI";
+import { Timer } from "../ui/utils/view";
+import { ui } from "../ui/core/UI";
 import { playerFX } from "./PlayerFX";
 
 export const playerCore = new (class PlayerCore {

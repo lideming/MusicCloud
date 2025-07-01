@@ -1,8 +1,8 @@
-import { SettingItem } from "../Infra/utils";
+import { SettingItem } from "../ui/utils/view";
 import { I } from "../I18n/I18n";
-import { Toast } from "../Infra/viewlib";
+import { Toast } from "../ui/utils/view";
 import buildInfo from "./buildInfo";
-import { ui } from "../Infra/UI";
+import { ui } from "../ui/core/UI";
 
 export const appVersion = new (class {
   siVersion = new SettingItem("mcloud-ver", "str", "");

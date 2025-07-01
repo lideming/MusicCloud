@@ -26,8 +26,8 @@
 // Why do we need React and Vue.js? ;)
 // Update: We have webfx now.
 
-import { injectCss, Toast, ToastsContainer } from "./Infra/viewlib";
-import { ui } from "./Infra/UI";
+import { injectCss, Toast, ToastsContainer } from "./ui/utils/view";
+import { ui } from "./ui/core/UI";
 import { playerCore } from "./Player/PlayerCore";
 import { api } from "./API/Api";
 import { user } from "./API/User";
@@ -35,7 +35,7 @@ import { listIndex } from "./Track/ListIndex";
 import { uploads } from "./Track/Uploads";
 import { history } from "./Track/History";
 import { comments, discussion, notes } from "./Comments/Discussion";
-import { router } from "./Infra/Router";
+import { router } from "./ui/core/Router";
 import { settingsUI } from "./Settings/SettingsUI";
 import { msgcli } from "./API/MessageClient";
 import { nowPlaying } from "./Track/NowPlaying";

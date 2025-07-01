@@ -8,7 +8,7 @@ import {
   ScrollAnimator,
   TextView,
   View,
-} from "../Infra/utils";
+} from "../ui/utils/view";
 import { I, i18n } from "../I18n/I18n";
 import {
   LoadingIndicator,
@@ -28,22 +28,22 @@ import {
   objectApply,
   sleepAsync,
   toggleClass,
-} from "../Infra/viewlib";
-import { ListContentView } from "../Infra/ListContentView";
+} from "../ui/utils/view";
+import { ListContentView } from "../ui/components/ListContentView";
 import { user } from "../API/User";
 import { Api } from "../API/apidef";
 import { api } from "../API/Api";
 import { listIndex } from "./ListIndex";
 import { playerCore, PlayingLoopMode } from "../Player/PlayerCore";
-import { router } from "../Infra/Router";
+import { router } from "../ui/core/Router";
 import { Track } from "./Track";
 import {
   ContentView,
   ContentHeader,
   CopyMenuItem,
   Icon,
-} from "../Infra/ui-views";
-import { ui } from "../Infra/UI";
+} from "../ui/components/ui-views";
+import { ui } from "../ui/core/UI";
 import { msgcli } from "../API/MessageClient";
 import svgPlayArrow from "../../resources/play_arrow-24px.svg";
 import { settings } from "../Settings/Settings";

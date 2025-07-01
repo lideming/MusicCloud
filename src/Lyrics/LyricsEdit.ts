@@ -1,19 +1,19 @@
 import { Track } from "../Track/Track";
-import { ui } from "../Infra/UI";
+import { ui } from "../ui/core/UI";
 import { I } from "../I18n/I18n";
-import { BuildDomExpr } from "../Infra/utils";
+import { BuildDomExpr } from "../ui/utils/view";
 import { LyricsView } from "./LyricsView";
 import { SpanView } from "./SpanView";
-import { router } from "../Infra/Router";
+import { router } from "../ui/core/Router";
 import { serialize, parse } from "./Lyrics";
 import { playerCore } from "../Player/PlayerCore";
-import { Toast, InputView, numLimit } from "../Infra/viewlib";
+import { Toast, InputView, numLimit } from "../ui/utils/view";
 import {
   SidebarItem,
   ContentView,
   ContentHeader,
   ActionBtn,
-} from "../Infra/ui-views";
+} from "../ui/components/ui-views";
 
 export const lyricsEdit = new (class {
   sidebarItem: SidebarItem;

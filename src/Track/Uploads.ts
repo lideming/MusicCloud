@@ -33,7 +33,7 @@ class UploadTrack extends Track {
 }
 
 import { TrackList, TrackListView, TrackViewItem } from "./TrackList";
-import { Semaphore, DataUpdatingHelper, CancelToken } from "../Infra/utils";
+import { Semaphore, DataUpdatingHelper, CancelToken } from "../ui/utils/view";
 import { ListIndexViewItem } from "./ListIndex";
 import { user } from "../API/User";
 import { Api } from "../API/apidef";
@@ -48,13 +48,13 @@ import {
   buildDOM,
   formatFileSize,
   objectApply,
-} from "../Infra/viewlib";
-import { router } from "../Infra/Router";
+} from "../ui/utils/view";
+import { router } from "../ui/core/Router";
 import { I, i18n } from "../I18n/I18n";
 import { playerCore } from "../Player/PlayerCore";
-import { ui } from "../Infra/UI";
+import { ui } from "../ui/core/UI";
 import { api } from "../API/Api";
-import { ContentHeader } from "../Infra/ui-views";
+import { ContentHeader } from "../ui/components/ui-views";
 
 export const uploads = new (class extends TrackList {
   tracks: UploadTrack[] = [];

@@ -1,6 +1,6 @@
-import { router } from "../Infra/Router";
-import { ui } from "../Infra/UI";
-import { Lazy, BuildDomExpr, SettingItem } from "../Infra/utils";
+import { router } from "../ui/core/Router";
+import { ui } from "../ui/core/UI";
+import { Lazy, BuildDomExpr, SettingItem } from "../ui/utils/view";
 import { I } from "../I18n/I18n";
 import { playerCore } from "../Player/PlayerCore";
 import { LyricsView } from "../Lyrics/LyricsView";
@@ -11,8 +11,8 @@ import {
   ContentHeader,
   ActionBtn,
   setScrollableShadow,
-} from "../Infra/ui-views";
-import { LoadingIndicator, View, ViewToggle } from "../Infra/viewlib";
+} from "../ui/components/ui-views";
+import { LoadingIndicator, View, ViewToggle } from "../ui/utils/view";
 import { Api } from "../API/apidef";
 import { Track } from "./Track";
 

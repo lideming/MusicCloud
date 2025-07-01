@@ -1,8 +1,8 @@
-import { ButtonView, Dialog, LabeledInput, View } from "../Infra/viewlib";
+import { ButtonView, Dialog, LabeledInput, View } from "../ui/utils/view";
 import { I, i18n, IA } from "../I18n/I18n";
-import { ui } from "../Infra/UI";
+import { ui } from "../ui/core/UI";
 import { playerCore } from "../Player/PlayerCore";
-import { jsx } from "../Infra/utils";
+import { jsx } from "../ui/utils/view";
 import { appVersion } from "./AppVersion";
 import buildInfo from "./buildInfo";
 import { playerFX } from "../Player/PlayerFX";

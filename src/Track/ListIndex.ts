@@ -16,20 +16,20 @@ import {
   createName,
   objectApply,
   appendView,
-} from "../Infra/viewlib";
-import { BuildDomExpr, View } from "../Infra/utils";
+} from "../ui/utils/view";
+import { BuildDomExpr, View } from "../ui/utils/view";
 import { I } from "../I18n/I18n";
 import { TrackList, TrackViewItem, TrackListView } from "./TrackList";
 import { user } from "../API/User";
 import { Api } from "../API/apidef";
-import { router } from "../Infra/Router";
-import { ui } from "../Infra/UI";
+import { router } from "../ui/core/Router";
+import { ui } from "../ui/core/UI";
 import {
   SidebarItem,
   setScrollableShadow,
   CopyMenuItem,
   Icon,
-} from "../Infra/ui-views";
+} from "../ui/components/ui-views";
 import { playerCore } from "../Player/PlayerCore";
 import { api } from "../API/Api";
 import { uploads } from "./Uploads";

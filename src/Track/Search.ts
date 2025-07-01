@@ -1,8 +1,8 @@
-import { router } from "../Infra/Router";
-import { ui } from "../Infra/UI";
-import { Lazy, Callbacks, BuildDomExpr } from "../Infra/utils";
+import { router } from "../ui/core/Router";
+import { ui } from "../ui/core/UI";
+import { Lazy, Callbacks, BuildDomExpr } from "../ui/utils/view";
 import { I } from "../I18n/I18n";
-import { ListContentView } from "../Infra/ListContentView";
+import { ListContentView } from "../ui/components/ListContentView";
 import {
   InputView,
   View,
@@ -10,7 +10,7 @@ import {
   LoadingIndicator,
   ListView,
   LazyListView,
-} from "../Infra/viewlib";
+} from "../ui/utils/view";
 import { api } from "../API/Api";
 import { Api } from "../API/apidef";
 import { TrackViewItem, TrackList } from "./TrackList";

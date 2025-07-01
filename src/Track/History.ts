@@ -2,7 +2,7 @@ import { DataUpdatingHelper, I, Lazy, LoadingIndicator } from "@yuuza/webfx";
 import { api, playerCore, router, ui, user } from "../main";
 import { TrackList, TrackListView } from "./TrackList";
 import { ListIndexViewItem } from "./ListIndex";
-import { ContentHeader } from "../Infra/ui-views";
+import { ContentHeader } from "../ui/components/ui-views";
 import { Track } from "./Track";
 import { Api } from "../API/apidef";
 

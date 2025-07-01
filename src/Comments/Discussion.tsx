@@ -1,10 +1,10 @@
 // file: discussion.ts
 
-import { ui } from "../Infra/UI";
+import { ui } from "../ui/core/UI";
 import { I } from "../I18n/I18n";
 import { user } from "../API/User";
-import { router } from "../Infra/Router";
-import { SidebarItem } from "../Infra/ui-views";
+import { router } from "../ui/core/Router";
+import { SidebarItem } from "../ui/components/ui-views";
 import { settings } from "../Settings/Settings";
 import { CommentsView } from "./CommentsView";
 

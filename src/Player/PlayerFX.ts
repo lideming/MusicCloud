@@ -1,5 +1,5 @@
-import { Dialog, Func, Ref, Timer, View } from "../Infra/viewlib";
-import { ui } from "../Infra/UI";
+import { Dialog, Func, Ref, Timer, View } from "../ui/utils/view";
+import { ui } from "../ui/core/UI";
 import { playerCore } from "./PlayerCore";
 
 export const playerFX = new (class PlayerFX {

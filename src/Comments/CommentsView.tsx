@@ -12,14 +12,14 @@ import {
   MenuInfoItem,
   MenuItem,
   View,
-} from "../Infra/viewlib";
-import { Lazy, DataUpdatingHelper } from "../Infra/utils";
+} from "../ui/utils/view";
+import { Lazy, DataUpdatingHelper } from "../ui/utils/view";
 import { I } from "../I18n/I18n";
 import { user } from "../API/User";
 import { Api } from "../API/apidef";
 import { msgcli } from "../API/MessageClient";
-import { ui } from "../Infra/UI";
-import { ListContentView } from "../Infra/ListContentView";
+import { ui } from "../ui/core/UI";
+import { ListContentView } from "../ui/components/ListContentView";
 
 export class CommentsContentView extends ListContentView {
   comments: CommentsView;
