@@ -415,7 +415,7 @@ if (navigator.mediaSession) {
     mediaSession.setPositionState?.({
       position: playerCore.currentTime,
       duration: playerCore.duration,
-      playbackRate: playerCore.state === 'playing' ? playerCore.playbackRate : 0,
+      playbackRate: playerCore.playbackRate,
     });
   };
   playerCore.onTrackChanged.add(() => {
@@ -439,7 +439,9 @@ if (navigator.mediaSession) {
           ? "none"
           : "paused";
       syncMediaSession();
-    } catch {}
+    } catch (e) {
+      console.warn("[PlayerCore] mediaSession error, maybe not supported", e);
+    }
   });
   mediaSession.setActionHandler("play", () => playerCore.play());
   mediaSession.setActionHandler("pause", () => playerCore.pause());
