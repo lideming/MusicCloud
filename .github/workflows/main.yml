@@ -27,7 +27,7 @@ jobs:
           node-version: 18.x
 
       - name: Install pnpm@latest
-        run: npm i -g pnpm
+        run: npm i -g pnpm@8
 
       - name: Install dependencies
         if: steps.cache_node_modules.outputs.cache-hit != 'true'
