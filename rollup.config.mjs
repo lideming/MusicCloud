@@ -8,7 +8,7 @@ import serve from "rollup-plugin-serve";
 import { promisify } from "util";
 import { exec } from "child_process";
 
-import packageJson from "./package.json" assert { type: "json" };
+import packageJson from "./package.json" with { type: "json" };
 
 const production = !process.env.ROLLUP_WATCH;
 
