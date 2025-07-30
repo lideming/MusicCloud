@@ -18,6 +18,12 @@ import { CopyMenuItem } from "../Infra/ui-views";
 import { settings } from "../Settings/Settings";
 import { Track } from "./Track";
 import { TrackViewItem } from "./TrackList";
+import { playerCore } from "../Player/PlayerCore";
+
+export function onTrackContextMenuCreated(menu: ContextMenu) {
+  // allow plugins to modify the context menu
+  return menu;
+}
 
 export const trackContextMenu = (
   selected: Track[],
@@ -166,13 +172,23 @@ export const trackContextMenu = (
       );
     });
   if (selected.length == 1) {
-    if (item.visibility == 1)
+    if (item.visibility == 1) {
       m.add(
         new CopyMenuItem({
           text: I`Copy link`,
           textToCopy: api.appBaseUrl + "#track/" + item.id,
         })
       );
+      if (item.id === playerCore.track?.id) {
+        const time = playerCore.currentTime;
+        m.add(
+          new CopyMenuItem({
+            text: I`Copy link` + ` (${formatDuration(time)})`,
+            textToCopy: api.appBaseUrl + "#track/" + item.id + "/" + time.toFixed(3),
+          })
+        );
+      }
+    }
     m.add(
       new MenuItem({
         text: item.canEdit ? I`Edit` : I`Details`,
@@ -228,6 +244,7 @@ export const trackContextMenu = (
     infoText += "\n" + i18n.get(my + "visibility_" + selected[0].visibility);
   }
   m.add(new MenuInfoItem({ text: infoText }));
+  m = onTrackContextMenuCreated(m);
   if (trackViewItems) {
     ui.showContextMenuForItem(trackViewItems, m, { ev: ev });
   } else {

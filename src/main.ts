@@ -145,5 +145,6 @@ export {
   webfx,
 };
 export * from './Track/Track';
+export * from './Track/TrackContextMenu';
 
 init();

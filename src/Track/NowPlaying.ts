@@ -33,12 +33,21 @@ export const nowPlaying = new (class {
     router.addRoute({
       path: ["track"],
       onNav: (arg) => {
-        router.nav(["nowplaying"], { pushState: false });
+        router.nav(["nowplaying"], { pushState: "replace" });
+        let taskLoadingTrack = Promise.resolve();
         if (arg.remaining[0] != (playerCore.track?.id as any)) {
           // compare string to number
-          api.get("tracks/" + arg.remaining[0]).then((t: Api.Track) => {
-            playerCore.setTrack(new Track({ infoObj: t }));
+          taskLoadingTrack = api.get("tracks/" + arg.remaining[0]).then((t: Api.Track) => {
+            return playerCore.setTrack(new Track({ infoObj: t }));
           });
+        }
+        if (arg.remaining[1]) {
+          const time = parseFloat(arg.remaining[1]);
+          if (!isNaN(time)) {
+            taskLoadingTrack.then(() => {
+              playerCore.currentTime = time;
+            });
+          }
         }
       },
     });
