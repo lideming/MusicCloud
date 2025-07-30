@@ -201,6 +201,7 @@ export class ListIndex {
         var list = this.getList(id);
         var content = list.createView();
         ui.content.setCurrent(content);
+        await user.waitLogin(false, false); // ensure loaded
         var item = this.getViewItem(id);
         ui.sidebarList.setActive(item);
         if (!item) {
@@ -224,7 +225,7 @@ export class ListIndex {
     router.addRoute({
       path: [""],
       onNav: async (arg) => {
-        if (await user.waitLogin(false)) {
+        if (await user.waitLogin(false, false)) {
           let id: number | null = null;
           if (initialPlayingList !== null) {
             id = initialPlayingList;

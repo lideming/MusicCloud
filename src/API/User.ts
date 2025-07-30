@@ -79,7 +79,7 @@ export const user = new (class User {
       this.info.token = window["preload"]["inputToken"];
     }
     if (this.info.username || this.info.token || preLogin) {
-      this.login(preLogin ? { preLogin: preLogin } : { info: this.info }).then(
+      this.login(preLogin ? { preLogin: preLogin, isAutoLogin: true } : { info: this.info, isAutoLogin: true }).then(
         null,
         (err) => {
           Toast.show(I`Failed to login.` + "\n" + err, 5000);
