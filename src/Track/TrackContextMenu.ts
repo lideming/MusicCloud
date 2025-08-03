@@ -20,15 +20,17 @@ import { Track } from "./Track";
 import { TrackViewItem } from "./TrackList";
 import { playerCore } from "../Player/PlayerCore";
 
-export function onTrackContextMenuCreated(menu: ContextMenu) {
-  // allow plugins to modify the context menu
-  return menu;
-}
+export function onTrackContextMenuCreated(context: {
+  selected: Track[];
+  ev: MouseEvent;
+  trackViewItems?: TrackViewItem[];
+  menu: ContextMenu;
+}) {}
 
 export const trackContextMenu = (
   selected: Track[],
   ev: MouseEvent,
-  trackViewItems?: TrackViewItem[]
+  trackViewItems?: TrackViewItem[],
 ) => {
   ev.preventDefault();
   var m = new ContextMenu();
@@ -45,7 +47,7 @@ export const trackContextMenu = (
           onActive: () => {
             router.nav(["track-comments", item.id.toString()]);
           },
-        })
+        }),
       );
     if (settings.showDownloadOptions && item.url) {
       var ext = item.getExtensionName();
@@ -59,7 +61,7 @@ export const trackContextMenu = (
             text: I`Download` + " (" + ext + fileSize + ")",
             link: api.processUrl(item.url)!,
             download: item.artist + " - " + item.name + "." + ext,
-          })
+          }),
         );
       files.forEach((f) => {
         var format = f.format?.toUpperCase();
@@ -70,7 +72,7 @@ export const trackContextMenu = (
               text: I`Download` + " (" + format + ", " + f.bitrate + " Kbps)",
               link: api.processUrl(url)!,
               download: item.artist + " - " + item.name + "." + format,
-            })
+            }),
           );
         else if (item.canEdit)
           m.add(
@@ -79,7 +81,7 @@ export const trackContextMenu = (
               onActive: () => {
                 item.requestFileUrl(f);
               },
-            })
+            }),
           );
       });
     }
@@ -88,13 +90,13 @@ export const trackContextMenu = (
         new MenuLinkItem({
           text: I`Show picture`,
           link: api.processUrl(item.picurl)!,
-        })
+        }),
       );
     }
   }
   const targetGroup = (item.groupId || null) ?? item.id;
   const nonSameGroupItems = selected.filter(
-    (x) => x != item && x.groupId !== targetGroup
+    (x) => x != item && x.groupId !== targetGroup,
   );
   if (nonSameGroupItems.length > 0) {
     m.add(
@@ -113,10 +115,10 @@ export const trackContextMenu = (
                 ...other.infoObj,
                 groupId: item.groupId,
               });
-            })
+            }),
           );
         },
-      })
+      }),
     );
   }
   const groupedItems = selected.filter((x) => x.groupId && x.groupId !== x.id);
@@ -131,10 +133,10 @@ export const trackContextMenu = (
                 ...x.infoObj,
                 groupId: x.id,
               });
-            })
+            }),
           );
         },
-      })
+      }),
     );
   }
   if (item.canEdit)
@@ -150,7 +152,7 @@ export const trackContextMenu = (
             count == 1
               ? "make_it_visibility_" + visi
               : "make_{0}_visibility_" + visi,
-            [count]
+            [count],
           ),
           onActive: () => {
             api
@@ -168,7 +170,7 @@ export const trackContextMenu = (
                 });
               });
           },
-        })
+        }),
       );
     });
   if (selected.length == 1) {
@@ -177,15 +179,16 @@ export const trackContextMenu = (
         new CopyMenuItem({
           text: I`Copy link`,
           textToCopy: api.appBaseUrl + "#track/" + item.id,
-        })
+        }),
       );
       if (item.id === playerCore.track?.id) {
         const time = playerCore.currentTime;
         m.add(
           new CopyMenuItem({
             text: I`Copy link` + ` (${formatDuration(time)})`,
-            textToCopy: api.appBaseUrl + "#track/" + item.id + "/" + time.toFixed(3),
-          })
+            textToCopy:
+              api.appBaseUrl + "#track/" + item.id + "/" + time.toFixed(3),
+          }),
         );
       }
     }
@@ -193,7 +196,7 @@ export const trackContextMenu = (
       new MenuItem({
         text: item.canEdit ? I`Edit` : I`Details`,
         onActive: (ev) => item.startEdit(ev),
-      })
+      }),
     );
   }
   if (trackViewItems) {
@@ -209,7 +212,7 @@ export const trackContextMenu = (
           cls: "dangerous",
           onActive: () =>
             trackViewItem.actionHandler!.onTrackRemove?.([trackViewItem]),
-        })
+        }),
       );
     }
     if (
@@ -224,7 +227,7 @@ export const trackContextMenu = (
           onActive: () => {
             trackViewItem.actionHandler!.onTrackRemove?.([...trackViewItems]);
           },
-        })
+        }),
       );
   }
   let infoText =
@@ -244,7 +247,14 @@ export const trackContextMenu = (
     infoText += "\n" + i18n.get(my + "visibility_" + selected[0].visibility);
   }
   m.add(new MenuInfoItem({ text: infoText }));
-  m = onTrackContextMenuCreated(m);
+  const context = {
+    selected,
+    ev,
+    trackViewItems,
+    menu: m,
+  };
+  onTrackContextMenuCreated(context);
+  m = context.menu;
   if (trackViewItems) {
     ui.showContextMenuForItem(trackViewItems, m, { ev: ev });
   } else {
