@@ -20,12 +20,14 @@ import { Track } from "./Track";
 import { TrackViewItem } from "./TrackList";
 import { playerCore } from "../Player/PlayerCore";
 
-export function onTrackContextMenuCreated(context: {
-  selected: Track[];
-  ev: MouseEvent;
-  trackViewItems?: TrackViewItem[];
-  menu: ContextMenu;
-}) {}
+export const trackContextMenuHooks = {
+  onCreated(context: {
+    selected: Track[];
+    ev: MouseEvent;
+    trackViewItems?: TrackViewItem[];
+    menu: ContextMenu;
+  }) {},
+};
 
 export const trackContextMenu = (
   selected: Track[],
@@ -253,7 +255,7 @@ export const trackContextMenu = (
     trackViewItems,
     menu: m,
   };
-  onTrackContextMenuCreated(context);
+  trackContextMenuHooks.onCreated(context);
   m = context.menu;
   if (trackViewItems) {
     ui.showContextMenuForItem(trackViewItems, m, { ev: ev });
