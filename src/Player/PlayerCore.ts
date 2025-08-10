@@ -257,13 +257,13 @@ export const playerCore = new (class PlayerCore {
       (track?.url && oldTrack?.url === track?.url) ||
       (track?.blob && track.blob === oldTrack?.blob);
     if (!sameTrack) {
+      this.state = !track ? "none" : playNow !== false ? "stalled" : "paused";
       if (playNow !== false && track) {
         await this.loadTrack(track);
       } else {
         this.loadUrl(null);
       }
       this.currentTime = typeof playNow === "number" ? playNow : 0;
-      this.state = !track ? "none" : playNow !== false ? "stalled" : "paused";
     }
     this.trackChangedReason = reason;
     this.onTrackChanged.invoke();
@@ -320,7 +320,6 @@ export const playerCore = new (class PlayerCore {
     return cur;
   }
   async play() {
-    this.state = "stalled";
     await this.ensureLoaded();
     if (this.volumeByGainNode && !playerFX.webAudioInited) {
       playerFX.initWebAudio();
