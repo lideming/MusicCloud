@@ -33,14 +33,14 @@ export const playerFX = new (class PlayerFX {
       if (!ui.isVisible.value) {
         lastHiddenTime = performance.now();
       }
-    })
+    });
     this.ctx.addEventListener("statechange", (e) => {
       console.info("[PlayerFX] audio ctx state", this.ctx.state);
       if (
         this.ctx.state === ("interrupted" as any) &&
-        playerCore.state === "playing" &&
+        (playerCore.state === "playing" || playerCore.state === "stalled") &&
         !ui.isVisible.value &&
-        performance.now() - lastHiddenTime < 300
+        performance.now() - lastHiddenTime < 1000
       ) {
         console.info("[PlayerFX] try resuming");
         this.ctx.resume();
