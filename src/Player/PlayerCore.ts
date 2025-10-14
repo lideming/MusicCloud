@@ -17,6 +17,12 @@ import { Timer } from "../Infra/utils";
 import { ui } from "../Infra/UI";
 import { playerFX } from "./PlayerFX";
 
+declare global {
+  interface Window {
+    mcloudNative: any;
+  }
+}
+
 export const playerCore = new (class PlayerCore {
   audio: HTMLAudioElement | HTMLVideoElement;
   track: Track | null = null;
@@ -186,7 +192,7 @@ export const playerCore = new (class PlayerCore {
     );
 
     // audio.volume doesn't work in iOS
-    this.volumeByGainNode = isIOS;
+    this.volumeByGainNode = isIOS && !window.mcloudNative;
 
     this._volume.onChanged.add((ref) => {
       this.siPlayer.data.volume = ref.value!;
