@@ -305,7 +305,7 @@ a {
     left: 0;
     width: 100%;
     transition: transform 0.3s;
-    will-change: transform;
+    // will-change: transform;
   }
   #sidebar.hide {
     transform: translate(calc(-100% + var(--leftpadding)), 0);
@@ -439,10 +439,9 @@ a {
   overflow: hidden;
   width: 100%;
   height: 100%;
-  animation: fadein;
   animation: contentview-fading-in 0.3s;
-  transform: translate(0, 0);
-  will-change: transform;
+  // transform: translate(0, 0);
+  // will-change: transform;
 }
 .contentview.fading-out {
   animation: contentview-fading-out 0.3s;
@@ -565,7 +564,7 @@ a {
   > .scrollbox {
     flex: 1;
     overflow-y: auto;
-    will-change: transform;
+    // will-change: transform;
   }
 }
 .tracklistview {
@@ -1028,7 +1027,7 @@ a {
     flex: 1;
     width: 100%;
     overflow: auto;
-    will-change: transform;
+    // will-change: transform;
     scrollbar-width: thin;
     &::-webkit-scrollbar {
       width: 8px;
@@ -1045,7 +1044,7 @@ a {
     flex: 1;
     width: 100%;
     overflow: auto;
-    will-change: transform;
+    // will-change: transform;
     scrollbar-width: thin;
     &::-webkit-scrollbar {
       width: 8px;
