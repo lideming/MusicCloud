@@ -42,6 +42,8 @@ import { nowPlaying } from "./Track/NowPlaying";
 import { listenTogether } from "./Player/ListenTogether";
 import { search } from "./Track/Search";
 import * as Lyrics from "./Lyrics/Lyrics";
+import { LyricsView } from "./Lyrics/LyricsView";
+import { LineView } from "./Lyrics/LineView";
 import { lyricsEdit } from "./Lyrics/LyricsEdit";
 import { appVersion } from "./Settings/AppVersion";
 import { settings } from "./Settings/Settings";
@@ -124,6 +126,8 @@ export {
   discussion,
   listIndex,
   Lyrics,
+  LyricsView,
+  LineView,
   lyricsEdit,
   msgcli,
   notes,
