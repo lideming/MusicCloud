@@ -326,11 +326,11 @@ export const playerCore = new (class PlayerCore {
     return cur;
   }
   async play() {
-    await this.ensureLoaded();
     if (this.volumeByGainNode && !playerFX.webAudioInited) {
       playerFX.initWebAudio();
-      playerFX.gainNode.gain.value = this.effectiveGain.value!;
     }
+    if (this.volumeByGainNode) playerFX.resumeWebAudio();
+    await this.ensureLoaded();
     try {
       this.audio.play();
     } catch (error) {
