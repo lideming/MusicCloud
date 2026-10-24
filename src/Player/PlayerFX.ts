@@ -18,7 +18,7 @@ export const playerFX = new (class PlayerFX {
     this.source = this.ctx.createMediaElementSource(playerCore.audio);
     this.gainNode = this.ctx.createGain();
     this.gainNode.gain.value = playerCore.volumeByGainNode
-      ? Math.pow(playerCore.volume, 1.5) * playerCore.normalizingGain.value!
+      ? playerCore.getEffectiveGain()
       : 1;
     this.source.connect(this.gainNode);
     this.gainNode.connect(this.ctx.destination);

@@ -19,7 +19,7 @@ import { playerFX } from "./PlayerFX";
 
 declare global {
   interface Window {
-    mcloudNative: any;
+    mcloudNative?: { audio: HTMLVideoElement };
   }
 }
 
@@ -102,9 +102,10 @@ export const playerCore = new (class PlayerCore {
   onVolumeChanged = new Callbacks<Action>();
 
   normalizingGain = new Ref(1);
-  effectiveGain = Ref.computed(
-    () => Math.pow(this.volume, 1.5) * this.normalizingGain.value!,
-  );
+  getEffectiveGain() {
+    return Math.pow(this.volume, 1.5) * this.normalizingGain.value!;
+  }
+  effectiveGain = Ref.computed(() => this.getEffectiveGain());
 
   volumeByGainNode = false;
 
@@ -129,7 +130,7 @@ export const playerCore = new (class PlayerCore {
       siLoop.remove();
     }
 
-    this.audio = document.createElement("video");
+    this.audio = window.mcloudNative?.audio ?? document.createElement("video");
     this.initAudio();
 
     api.onTrackInfoChanged.add((newTrack) => {
@@ -160,7 +161,7 @@ export const playerCore = new (class PlayerCore {
       this.state = "playing";
     });
     this.audio.addEventListener("pause", () => {
-      this.state = "paused";
+      this.state = this.track ? "paused" : "none";
     });
     this.audio.addEventListener("error", (e: ErrorEvent) => {
       console.error("[PlayerCore] audio error", e);
@@ -192,7 +193,7 @@ export const playerCore = new (class PlayerCore {
     );
 
     // audio.volume doesn't work in iOS
-    this.volumeByGainNode = isIOS && !window.mcloudNative;
+    this.volumeByGainNode = isIOS && this.audio !== window.mcloudNative?.audio;
 
     this._volume.onChanged.add((ref) => {
       this.siPlayer.data.volume = ref.value!;
@@ -256,24 +257,38 @@ export const playerCore = new (class PlayerCore {
         (track ? `id ${track.id}: ${track.name} - ${track.artist}` : "(null)"),
     );
     var oldTrack = this.track;
+    this._loadct.cancel();
+    const ct = (this._loadct = new CancelToken());
+    this._loadTask = null;
+    const playRequest = ++this._playRequest;
     this.track = track;
     this._loadRetryTimer.tryCancel();
     var sameTrack =
       oldTrack === track ||
       (track?.url && oldTrack?.url === track?.url) ||
       (track?.blob && track.blob === oldTrack?.blob);
-    if (!sameTrack) {
-      this.state = !track ? "none" : playNow !== false ? "stalled" : "paused";
-      if (playNow !== false && track) {
-        await this.loadTrack(track);
-      } else {
+    try {
+      if (!sameTrack) {
         this.loadUrl(null);
+        this.trackProfile = null;
+        this.normalizingGain.value = 1;
+        this.state = !track ? "none" : playNow !== false ? "stalled" : "paused";
+        if (playNow !== false && track) {
+          await this.loadTrack(track);
+          if (ct.cancelled) return;
+        }
+        this.currentTime = typeof playNow === "number" ? playNow : 0;
       }
-      this.currentTime = typeof playNow === "number" ? playNow : 0;
+      this.trackChangedReason = reason;
+      this.onTrackChanged.invoke();
+      if (playNow !== false && track && playRequest === this._playRequest) {
+        await this.play();
+      }
+    } catch (error) {
+      if (ct.cancelled || playRequest !== this._playRequest) return;
+      console.error("setTrack() error", error);
+      this.state = "none";
     }
-    this.trackChangedReason = reason;
-    this.onTrackChanged.invoke();
-    if (playNow !== false && track) await this.playTrack(track);
   }
   async playTrack(track: Track, forceStart?: boolean) {
     if (track !== this.track) {
@@ -283,28 +298,29 @@ export const playerCore = new (class PlayerCore {
     if (forceStart) this.audio.currentTime = 0;
     await this.play();
   }
-  private _loadct: CancelToken;
-  private async loadTrack(track: Track) {
-    this._loadct?.cancel();
-    var ct = (this._loadct = new CancelToken());
-    if (track.blob) {
-      this.loadUrl(null); // unload current track before await
-      ct.throwIfCancelled();
-      this.trackProfile = null;
-      this.loadUrl(track.blob);
-    } else {
-      const file = this.decideFileFromTrack(track);
-      let url: string;
-      if (file.size == -1) {
-        this.loadUrl(null); // unload current track before await
-        url = await track.requestFileUrl(file);
-        ct.throwIfCancelled();
+  // A selection owns its source and loudness work. Concurrent play requests
+  // share its pending source load; selecting again invalidates that work.
+  private _loadct = new CancelToken();
+  private _loadTask: Promise<void> | null = null;
+  private _playRequest = 0;
+  private loadTrack(track: Track) {
+    if (this._loadTask) return this._loadTask;
+    const ct = this._loadct;
+    this._loadTask = (async () => {
+      if (track.blob) {
+        this.trackProfile = null;
+        this.loadUrl(track.blob);
       } else {
-        url = await track.requestFileUrl(file);
+        const file = this.decideFileFromTrack(track);
+        const url = await track.requestFileUrl(file);
+        ct.throwIfCancelled();
+        this.trackProfile = file;
+        this.loadUrl(api.processUrl(url));
       }
-      this.trackProfile = file;
-      this.loadUrl(api.processUrl(url));
-    }
+    })().finally(() => {
+      if (!ct.cancelled) this._loadTask = null;
+    });
+    return this._loadTask;
   }
   decideFileFromTrack(track: Track) {
     let cur = { profile: "", bitrate: 0, size: track.size } as Api.TrackFile;
@@ -326,15 +342,20 @@ export const playerCore = new (class PlayerCore {
     return cur;
   }
   async play() {
-    if (this.volumeByGainNode && !playerFX.webAudioInited) {
-      playerFX.initWebAudio();
-    }
-    if (this.volumeByGainNode) playerFX.resumeWebAudio();
-    await this.ensureLoaded();
+    const playRequest = ++this._playRequest;
+    const ct = this._loadct;
     try {
-      this.audio.play();
+      // Keep WebAudio activation in the user's gesture, before any await.
+      if (this.volumeByGainNode && !playerFX.webAudioInited) {
+        playerFX.initWebAudio();
+      }
+      if (this.volumeByGainNode) playerFX.resumeWebAudio();
+      await this.ensureLoaded();
+      if (ct.cancelled || playRequest !== this._playRequest || !this.track) return;
+      await this.audio.play(); // The native bridge may also return undefined.
     } catch (error) {
-      console.error("audio.play() error", error);
+      if (ct.cancelled || playRequest !== this._playRequest) return;
+      console.error("play() error", error);
       this.state = "none";
     }
   }
@@ -347,12 +368,16 @@ export const playerCore = new (class PlayerCore {
     }
   }
   async computeNormalizingGain() {
+    const ct = this._loadct;
+    const track = this.track;
     if (this.siPlayer.data.loudnessNormalization === false) {
       this.normalizingGain.value = 1;
       return;
     }
-    const data = await this.track?.getLoudnessMap();
-    if (!data || data.length < 10) {
+    const data = await track?.getLoudnessMap();
+    if (ct.cancelled) return;
+    const normalizationEnabled = this.siPlayer.data.loudnessNormalization ?? true;
+    if (!normalizationEnabled || !data || data.length < 10) {
       this.normalizingGain.value = 1;
       return;
     }
@@ -366,7 +391,7 @@ export const playerCore = new (class PlayerCore {
     const trackDb = Math.log10(trackGain / 128) * 10;
     const targetDb = -7;
     const gain = Math.pow(10, (targetDb - trackDb) / 10);
-    console.info("[PlayerCore] computed normalizing gain", this.track?.name, {
+    console.info("[PlayerCore] computed normalizing gain", track?.name, {
       avg,
       trackGain,
       trackDb,
@@ -375,7 +400,11 @@ export const playerCore = new (class PlayerCore {
     this.normalizingGain.value = Math.min(1, gain);
   }
   pause() {
+    ++this._playRequest;
+    this._loadRetryTimer.tryCancel();
     this.audio.pause();
+    // An unloaded, already-paused element does not emit a pause event.
+    if (this.track && this.audio.paused) this.state = "paused";
   }
 
   preloadedTrack: Track | null = null;
@@ -417,23 +446,34 @@ export let syncMediaSession = () => {};
 if (navigator.mediaSession) {
   const { mediaSession } = navigator;
   syncMediaSession = () => {
-    mediaSession.setPositionState?.({
-      position: playerCore.currentTime,
-      duration: playerCore.duration,
-      playbackRate: playerCore.playbackRate,
-    });
+    try {
+      if (!playerCore.track) {
+        mediaSession.setPositionState?.();
+        return;
+      }
+      const position = playerCore.currentTime;
+      const duration = playerCore.duration ?? NaN;
+      const playbackRate = playerCore.playbackRate;
+      if (
+        !Number.isFinite(duration) || duration <= 0 ||
+        !Number.isFinite(position) || position < 0 || position > duration ||
+        !Number.isFinite(playbackRate) || playbackRate <= 0
+      ) return;
+      mediaSession.setPositionState?.({ position, duration, playbackRate });
+    } catch (e) {
+      console.warn("[PlayerCore] mediaSession position error", e);
+    }
   };
   playerCore.onTrackChanged.add(() => {
     try {
       var track = playerCore.track;
-      if (!track) return;
-      syncMediaSession();
-      mediaSession.metadata = new MediaMetadata({
-        title: track?.name,
-        artist: track?.artist,
-        artwork: !track?.picurl ? [] : [{ src: api.processUrl(track?.picurl) }],
-      });
+      mediaSession.metadata = track ? new MediaMetadata({
+        title: track.name,
+        artist: track.artist,
+        artwork: !track.picurl ? [] : [{ src: api.processUrl(track.picurl) }],
+      }) : null;
     } catch {}
+    syncMediaSession();
   });
   playerCore.onStateChanged.add(() => {
     try {
@@ -443,10 +483,10 @@ if (navigator.mediaSession) {
           : playerCore.state === "none"
           ? "none"
           : "paused";
-      syncMediaSession();
     } catch (e) {
       console.warn("[PlayerCore] mediaSession error, maybe not supported", e);
     }
+    syncMediaSession();
   });
   mediaSession.setActionHandler("play", () => playerCore.play());
   mediaSession.setActionHandler("pause", () => playerCore.pause());
