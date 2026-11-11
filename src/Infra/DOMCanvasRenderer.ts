@@ -2,6 +2,7 @@ import { PaintImages, PaintRect, PaintSnapshot, readPaint, rasterPaint, readBoxS
 import { CanvasCompositor, CanvasLayer, PaintPlacement } from "./CanvasCompositor";
 import { DOMPaintTree, intersect } from "./DOMPaintTree";
 import { DOMCanvasEffects } from "./DOMCanvasEffects";
+import { OverlayScrollbars } from "./OverlayScrollbars";
 
 interface Resource { canvas: HTMLCanvasElement; texture: WebGLTexture; snapshot: PaintSnapshot; version: number }
 
@@ -32,6 +33,7 @@ export class DOMCanvasRenderer {
   private ancestors: MutationObserver;
   private sizes: ResizeObserver;
   private intersections: IntersectionObserver;
+  private scrollbars: OverlayScrollbars | undefined;
   private suppression = document.createElement("style");
   private cleanup: (() => void)[] = [];
 
@@ -98,7 +100,16 @@ export class DOMCanvasRenderer {
       target.addEventListener(name, fn, { capture, passive: true });
       this.cleanup.push(() => target.removeEventListener(name, fn, capture));
     };
-    listen(source, "scroll", () => this.schedule());
+    listen(source, "scroll", event => {
+      // An unfragmented cached parent may contain an ordinary nested scroller.
+      // Explicit overlay viewports are split by DOMPaintTree instead.
+      if (event.target !== source) {
+        let owner = event.target as HTMLElement | null;
+        while (owner && !this.members.has(owner)) owner = owner.parentElement;
+        if (owner && !this.tree?.byElement.get(owner)?.ownOnly) this.dirty.add(owner);
+      }
+      this.schedule();
+    }, true);
     for (const event of ["pointerover", "pointerout", "pointerdown", "focusin", "focusout", "keydown", "keyup"]) listen(source, event, () => this.invalidate(), true);
     listen(source, "dragstart", event => {
       const drag = event as DragEvent;
@@ -119,12 +130,15 @@ export class DOMCanvasRenderer {
     listen(this.canvas, "webglcontextlost", () => this.fail(new Error("Canvas WebGL context lost")));
     document.fonts?.ready.then(() => { if (!this.disposed) this.invalidate(); });
     if (document.fonts) listen(document.fonts, "loadingdone", () => this.invalidate());
+    try { this.scrollbars = new OverlayScrollbars(source, shell, () => this.schedule()); }
+    catch (error) { this.dispose(); throw error; }
     this.schedule();
   }
   invalidate() { this.version++; this.schedule(); }
   private schedule() { if (!this.frame && !this.disposed) this.frame = requestAnimationFrame(() => this.paint()); }
   private rebuild() {
     this.topologyDirty = false;
+    this.scrollbars?.sync();
     this.effects = new DOMCanvasEffects(this.source);
     this.tree = new DOMPaintTree(this.source, this.effects.selectedSources);
     const next = new Set(this.tree.units.map(unit => unit.element));
@@ -140,7 +154,11 @@ export class DOMCanvasRenderer {
       if (!this.observed) return;
       const origin = this.source.getBoundingClientRect(), host = this.shell.getBoundingClientRect();
       const width = this.source.clientWidth, height = this.source.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 3);
-      if (!width || !height) return;
+      if (!width || !height) {
+        this.canvas.style.width = this.canvas.style.height = "0px";
+        this.scrollbars?.hide();
+        return;
+      }
       if (this.rootStyleVersion !== this.version) {
         const active = this.source.hasAttribute("data-canvas-rendered");
         if (active) this.source.removeAttribute("data-canvas-rendered");
@@ -184,9 +202,7 @@ export class DOMCanvasRenderer {
       }
       const shadows = new Map<HTMLElement, ReturnType<typeof readBoxShadow>>();
       for (const element of placements.keys()) shadows.set(element, readBoxShadow(styles.get(element)!.boxShadow));
-      const scrollHeight = this.source.scrollHeight, thumbHeight = Math.max(24, height * height / scrollHeight);
-      const thumbColor = getComputedStyle(this.source, "::-webkit-scrollbar-thumb").backgroundColor.match(/[\d.]+/g)?.map(Number) ?? [204, 204, 204];
-      if (scrollHeight > height) layers.push({ kind: "solid", rect: { x: width - 4, y: this.source.scrollTop / (scrollHeight - height) * (height - thumbHeight), width: 4, height: thumbHeight }, color: [thumbColor[0] / 255, thumbColor[1] / 255, thumbColor[2] / 255, 1] });
+      layers.push(...(this.scrollbars?.measure(origin, width, height) ?? []));
       const animations = this.source.getAnimations({ subtree: true }).filter(a => a.playState === "running" && a.effect?.getComputedTiming().iterations !== Infinity);
       Object.assign(this.canvas.style, { left: `${origin.x - host.x}px`, top: `${origin.y - host.y}px`, width: `${width}px`, height: `${height}px` });
       this.compositor.resize(width, height, dpr);
@@ -221,6 +237,7 @@ export class DOMCanvasRenderer {
         if (decoration) sources[unit.id + "/shadow"].push(surface(decoration.snapshot, decoration.texture));
       }
       this.compositor.render(sources, layers, this.rootOpacity);
+      this.scrollbars?.commit(origin.x - host.x, origin.y - host.y, width, height);
       this.stats.frames++; this.stats.cachedResources = this.resources.size;
       if (!this.source.hasAttribute("data-canvas-rendered")) this.source.setAttribute("data-canvas-rendered", "");
       if (animations.length) {
@@ -239,7 +256,7 @@ export class DOMCanvasRenderer {
     if (this.disposed) return; this.disposed = true;
     cancelAnimationFrame(this.frame); this.frame = 0; this.source.removeAttribute("data-canvas-rendered");
     this.mutations.disconnect(); this.ancestors.disconnect(); this.sizes.disconnect(); this.intersections.disconnect();
-    this.cleanup.forEach(fn => fn()); this.images.dispose();
+    this.cleanup.forEach(fn => fn()); this.images.dispose(); this.scrollbars?.dispose();
     this.resources.forEach(r => this.compositor.remove(r.texture)); this.resources.clear();
     this.decorations.forEach(r => this.compositor.remove(r.texture)); this.decorations.clear();
     this.dragImage?.remove(); this.dragImage = null;

@@ -31,7 +31,7 @@ export class DOMPaintTree {
     const boundary = (element: Element) => {
       const style = getComputedStyle(element);
       return style.position === "sticky" || style.position === "fixed" ||
-        element.hasAttribute("data-canvas-blur") || selectedSources.has(element) ||
+        element.hasAttribute("data-canvas-blur") || element.getAttribute("data-canvas-scrollbar") === "overlay" || selectedSources.has(element) ||
         (createsContext(style, element.parentElement ? getComputedStyle(element.parentElement).display : "") && style.zIndex !== "auto" && style.zIndex !== "0");
     };
     const walk = (element: HTMLElement, root = false): PaintBranch => {
@@ -39,7 +39,7 @@ export class DOMPaintTree {
       const branch: PaintBranch = { element, children: [] };
       if (style.display === "none" || style.visibility === "hidden") return branch;
       const descendants = Array.from(element.querySelectorAll<HTMLElement>("*"));
-      const atomic = element instanceof SVGSVGElement || element instanceof HTMLImageElement || !root && element.offsetHeight <= Math.max(128, source.clientHeight / 2) &&
+      const atomic = element instanceof SVGSVGElement || element instanceof HTMLImageElement || !root && element.getAttribute("data-canvas-scrollbar") !== "overlay" && element.offsetHeight <= Math.max(128, source.clientHeight / 2) &&
         !descendants.some(boundary);
       if (atomic || ownsPixels(element, style)) {
         branch.unit = { id: `paint-${nextId++}`, element, ownOnly: !atomic };

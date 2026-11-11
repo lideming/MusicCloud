@@ -196,6 +196,93 @@ test('production sidebar paints, reuses resources, routes native hits and restor
   await api.js('unrelatedRenderer.dispose();unrelatedHost.remove()');
 });
 
+test('overlay scrollbars share painted/input geometry and restore native viewports', { skip: !supported, timeout: 60000 }, async t => {
+  const { api } = await browser(t);
+  await api.call('Emulation.setDeviceMetricsOverride', { width: 1100, height: 800, deviceScaleFactor: 1, mobile: false });
+  await api.js(`window.ScrollRenderer=mcloud.ui.sidebar.renderer.constructor;mcloud.ui.sidebar.renderer.dispose();
+    const s=mcloud.ui.sidebar.dom;s.style.setProperty('scrollbar-width','thin','important');s.style.setProperty('scrollbar-gutter','stable','important');`);
+  const geometry = () => api.js(`(()=>{const s=mcloud.ui.sidebar.dom,r=s.getBoundingClientRect(),c=mcloud.ui.sidebar.renderer.canvas.getBoundingClientRect();return {outer:s.offsetWidth,client:s.clientWidth,right:r.right,canvasRight:c.right,height:s.clientHeight,top:s.scrollTop,opacity:getComputedStyle(s).opacity,style:s.getAttribute('style'),declaration:s.getAttribute('data-canvas-scrollbar'),controls:document.querySelectorAll('#sidebar-shell .dom-canvas-scrollbars').length}})()`);
+  const native = await geometry(); assert.equal(native.outer - native.client, 10, 'Desktop Chromium starts with a real thin native gutter');
+  await api.js('mcloud.ui.sidebar.renderer=new ScrollRenderer(mcloud.ui.sidebar.dom,mcloud.ui.sidebar.shell)'); await delay(300);
+  const overlay = await geometry(); assert.equal(overlay.outer, overlay.client); assert.equal(overlay.right, overlay.canvasRight);
+  const rect = selector => api.js(`(()=>{const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`);
+  const rootTrack = '#sidebar-shell [data-canvas-scrollbar-axis="vertical"]';
+  const thumb = await rect(rootTrack + ' [data-canvas-scrollbar-thumb]');
+  assert.equal(await api.js(`(()=>{const gl=mcloud.ui.sidebar.renderer.canvas.getContext('webgl'),s=mcloud.ui.sidebar.dom,r=s.getBoundingClientRect(),p=new Uint8Array(4);gl.readPixels(Math.floor(${thumb.x + thumb.width / 2}-r.x),gl.drawingBufferHeight-1-Math.floor(${thumb.y + thumb.height / 2}-r.y),1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);return p[3]})()`), 255, 'The actual hit thumb center is painted on the GPU');
+  async function drag(r, dx, dy, touch = false, cancel = false) {
+    const x = r.x + r.width / 2, y = r.y + r.height / 2;
+    if (touch) await api.call('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    else await api.call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
+    for (let i = 1; i <= 8; i++) {
+      if (touch) await api.call('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * i / 8, y: y + dy * i / 8 }] });
+      else await api.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x + dx * i / 8, y: y + dy * i / 8, button: 'left', buttons: 1 });
+      await delay(15);
+    }
+    if (touch) await api.call('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] });
+    else await api.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x + dx, y: y + dy, button: 'left', buttons: 0, clickCount: 1 });
+    await delay(150);
+  }
+  await drag(thumb, 0, 160);
+  assert.ok((await geometry()).top > 200); assert.deepEqual(await api.js('clicked'), [], 'Captured thumb drag never activates a row');
+  await api.js('mcloud.ui.sidebar.dom.scrollTop=0'); await delay(100);
+  const track = await rect(rootTrack), tx = track.x + track.width / 2, ty = track.y + track.height * .7;
+  for (const type of ['mousePressed', 'mouseReleased']) await api.call('Input.dispatchMouseEvent', { type, x: tx, y: ty, button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 1 });
+  await delay(100); assert.ok((await geometry()).top > 0); assert.deepEqual(await api.js('clicked'), []);
+  await api.js('mcloud.ui.sidebar.dom.scrollTop=0'); await delay(100);
+  await api.call('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 100, y: 250, deltaY: 180, deltaX: 0 }); await delay(300);
+  assert.ok((await geometry()).top > 0, 'Wheel over ordinary DOM content remains native');
+  await api.call('Emulation.setDeviceMetricsOverride', { width: 393, height: 759, deviceScaleFactor: 2, mobile: true });
+  await api.js('mcloud.ui.sidebar.toggleHide(false)'); await delay(250);
+  const mobile = await geometry(); assert.equal(mobile.outer, mobile.client); assert.equal(mobile.outer, 450); assert.equal(mobile.right, mobile.canvasRight);
+  await api.call('Emulation.setDeviceMetricsOverride', { width: 1100, height: 800, deviceScaleFactor: 1, mobile: false }); await delay(250);
+  const beforeCollapse = await rect(rootTrack + ' [data-canvas-scrollbar-thumb]');
+  await api.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: beforeCollapse.x + beforeCollapse.width / 2, y: beforeCollapse.y + beforeCollapse.height / 2, button: 'left', buttons: 1, clickCount: 1 });
+  await api.js("mcloud.ui.sidebar.dom.style.height='0px'"); await delay(150);
+  assert.equal(await api.js('document.querySelector("#sidebar-shell .dom-canvas-scrollbars").getBoundingClientRect().height'), 0, 'Collapsed viewport hides stale controls and releases capture');
+  await api.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: beforeCollapse.x + beforeCollapse.width / 2, y: beforeCollapse.y + beforeCollapse.height / 2, button: 'left', buttons: 0, clickCount: 1 });
+  await api.js('mcloud.ui.sidebar.dom.style.removeProperty("height")'); await delay(150);
+  assert.ok((await rect(rootTrack)).height > 0);
+  await api.js('mcloud.ui.sidebar.renderer.dispose()');
+  const disposed = await geometry(); assert.equal(disposed.outer - disposed.client, 10); assert.equal(disposed.opacity, '1'); assert.equal(disposed.controls, 0); assert.equal(disposed.declaration, 'overlay'); assert.equal(disposed.style, native.style, 'Authored inline values/priorities survive takeover');
+  await api.js('mcloud.ui.sidebar.renderer=new ScrollRenderer(mcloud.ui.sidebar.dom,mcloud.ui.sidebar.shell)'); await delay(250);
+  await api.js('mcloud.ui.sidebar.renderer.canvas.getContext("webgl").getExtension("WEBGL_lose_context").loseContext()'); await delay(150);
+  const lost = await geometry(); assert.equal(lost.outer - lost.client, 10); assert.equal(lost.controls, 0); assert.equal(lost.style, native.style); assert.equal(lost.opacity, '1');
+  assert.equal(await api.js(`(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return kind==='webgl'?null:get.call(this,kind,...args)};try{new ScrollRenderer(mcloud.ui.sidebar.dom,mcloud.ui.sidebar.shell);return false}catch{return true}finally{HTMLCanvasElement.prototype.getContext=get}})()`), true);
+  assert.equal((await geometry()).style, native.style, 'Unavailable WebGL never takes native scrollbar ownership');
+  await api.js(`window.headerBlur=document.querySelector('#sidebar-header').getAttribute('data-canvas-blur');document.querySelector('#sidebar-header').setAttribute('data-canvas-blur','[');mcloud.ui.sidebar.renderer=new ScrollRenderer(mcloud.ui.sidebar.dom,mcloud.ui.sidebar.shell)`); await delay(200);
+  const failed = await geometry(); assert.equal(failed.outer - failed.client, 10); assert.equal(failed.controls, 0); assert.equal(failed.style, native.style); assert.equal(failed.opacity, '1', 'Failed initial paint restores content and native bars');
+  await api.js(`document.querySelector('#sidebar-header').setAttribute('data-canvas-blur',headerBlur)`);
+
+  await api.js(`const host=document.createElement('section');Object.assign(host.style,{position:'fixed',left:'500px',top:'30px',width:'320px',height:'320px',zIndex:'1000'});const source=document.createElement('article');Object.assign(source.style,{position:'absolute',inset:'0',overflow:'auto',scrollbarWidth:'thin'});source.setAttribute('data-canvas-scrollbar','overlay');source.innerHTML='<div style="width:800px;height:80px;background:#adf">Horizontal content</div>';host.append(source);document.body.append(host);window.scrollHost=host;window.scrollSource=source;window.genericClicks=[];source.addEventListener('click',()=>genericClicks.push('row'));window.scrollRenderer=new ScrollRenderer(source,host)`); await delay(300);
+  const horizontal = '.dom-canvas-scrollbars [data-canvas-scrollbar-axis="horizontal"] [data-canvas-scrollbar-thumb]';
+  await drag(await rect(horizontal), 120, 0); assert.ok(await api.js('scrollSource.scrollLeft>100 && scrollSource.scrollTop===0')); assert.deepEqual(await api.js('genericClicks'), []);
+  await api.js("scrollSource.style.direction='rtl';scrollSource.scrollLeft=0"); await delay(150);
+  const rtlThumb = await rect(horizontal), rtlTrack = await rect('.dom-canvas-scrollbars [data-canvas-scrollbar-axis="horizontal"]');
+  assert.ok(Math.abs(rtlThumb.x + rtlThumb.width - rtlTrack.x - rtlTrack.width) < .5, 'Native RTL offset zero places the thumb at the right edge');
+  await drag(rtlThumb, -100, 0); assert.ok(await api.js('scrollSource.scrollLeft < -100 && scrollSource.scrollTop===0')); assert.deepEqual(await api.js('genericClicks'), []);
+  await api.js("scrollSource.style.direction='ltr'");
+  await api.js(`scrollSource.innerHTML='<div id="scroll-child" data-canvas-scrollbar="overlay" tabindex="0" style="position:absolute;left:30px;top:40px;width:230px;height:140px;overflow:auto;scrollbar-width:thin;border:1px solid #557"><div style="height:640px;width:380px">'+Array.from({length:16},(_,i)=>'<div style="height:40px;background:'+(i%2?'rgb(210,60,180)':'rgb(10,200,100)')+'">Nested row '+i+'</div>').join('')+'</div>';window.scrollChild=document.getElementById('scroll-child');scrollSource.scrollLeft=0;scrollSource.scrollTop=0`); await delay(300);
+  const sample = `(()=>{const gl=scrollRenderer.canvas.getContext('webgl'),p=new Uint8Array(4);gl.readPixels(130,gl.drawingBufferHeight-1-100,1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);return [...p]})()`;
+  const before = await api.js(sample);
+  const nestedThumb = '.dom-canvas-scrollbars [data-canvas-scrollbar-axis="vertical"] [data-canvas-scrollbar-thumb]';
+  await drag(await rect(nestedThumb), 0, 75);
+  assert.ok(await api.js('scrollChild.scrollTop>100 && scrollSource.scrollTop===0')); assert.notDeepEqual(await api.js(sample), before, 'Nested scroll changes actual clipped Canvas content, not only an offset counter'); assert.deepEqual(await api.js('genericClicks'), []);
+  await api.js('scrollChild.scrollTop=0'); await delay(100);
+  await api.call('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  await drag(await rect(nestedThumb), 0, 50, true, true); assert.ok(await api.js('scrollChild.scrollTop>0'));
+  await api.js('scrollChild.scrollTop=0'); await delay(100);
+  await drag(await rect(nestedThumb), 0, 50); assert.ok(await api.js('scrollChild.scrollTop>0'), 'Pointer cancellation releases the previous drag'); assert.deepEqual(await api.js('genericClicks'), []);
+  await api.js('scrollChild.scrollTop=0;scrollChild.focus()');
+  for (const type of ['keyDown', 'keyUp']) await api.call('Input.dispatchKeyEvent', { type, key: 'PageDown', code: 'PageDown', windowsVirtualKeyCode: 34 }); await delay(250);
+  assert.ok(await api.js('scrollChild.scrollTop>0'), 'Original scroll element retains keyboard scrolling');
+  await api.js(`scrollChild.firstElementChild.style.height='30px';scrollChild.firstElementChild.style.width='100px';scrollChild.firstElementChild.innerHTML='Small content'`); await delay(250);
+  assert.equal(await api.js('scrollHost.querySelectorAll("[data-canvas-scrollbar-axis]").length'), 0, 'No phantom input/paint control remains without overflow');
+  await api.js('scrollChild.remove()'); await delay(100);
+  assert.equal(await api.js('scrollChild.style.getPropertyValue("scrollbar-gutter")'), '', 'Detached nested scroller releases owned overrides'); assert.equal(await api.js('scrollChild.style.scrollbarWidth'), 'thin');
+  await api.js('scrollRenderer.dispose()');
+  assert.equal(await api.js('scrollHost.children.length'), 1); assert.equal(await api.js('scrollSource.style.scrollbarWidth'), 'thin'); assert.equal(await api.js('scrollSource.style.getPropertyValue("scrollbar-gutter")'), '');
+});
+
 test('GPU blur replaces sharp band pixels, excludes background, and preserves crisp foreground', { skip: !supported, timeout: 60000 }, async t => {
   const { api } = await browser(t);
   const source = ts.transpileModule(fs.readFileSync(path.join(root, 'src/Infra/CanvasCompositor.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2017 } }).outputText;
