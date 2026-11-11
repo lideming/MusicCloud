@@ -20,6 +20,7 @@ import {
 import * as views from "./ui-views";
 import { MainContainer } from "./ui-views";
 import { BottomBar } from "./BottomBar";
+import { createSidebarRenderer } from "./SidebarCanvas";
 
 View.debugging = true;
 
@@ -319,6 +320,8 @@ export const ui = new (class {
   })();
   sidebar = new (class {
     dom = document.getElementById("sidebar")!;
+    shell = document.getElementById("sidebar-shell")!;
+    renderer: ReturnType<typeof createSidebarRenderer> = null;
     header = mainContainer.sidebar.header;
     sidebarToggle = mainContainer.sidebarToggle;
     overlay: Overlay | null;
@@ -343,6 +346,9 @@ export const ui = new (class {
     private _isMobile = false;
 
     init() {
+      this.header.dom.setAttribute("data-canvas-blur", "#sidebar-list ul, #sidebar-features");
+      this.shell.querySelector(".sidebar-material")!.setAttribute("aria-hidden", "true");
+      this.renderer = createSidebarRenderer(this.dom, this.shell);
       this.initPanHandler();
       this.toggleBtn(true);
       this.checkWidth();
@@ -351,10 +357,10 @@ export const ui = new (class {
         if (this.float) this.toggleHide(true);
       });
       dragManager.onDragStart.add(() => {
-        toggleClass(this.dom, "peek", true);
+        toggleClass(this.shell, "peek", true);
       });
       dragManager.onDragEnd.add(() => {
-        toggleClass(this.dom, "peek", false);
+        toggleClass(this.shell, "peek", false);
       });
       this.dom.addEventListener("dragover", () => this.toggleHide(false));
 
@@ -374,7 +380,7 @@ export const ui = new (class {
     private _panxHandler: TouchPanListener = null!;
     private _leftPadding = 200;
     private _getWidth() {
-      return this.dom.offsetWidth - 200;
+      return this.shell.offsetWidth - 200;
     }
     private _movingPos: number | null = null;
     private get movingPos() {
@@ -387,12 +393,12 @@ export const ui = new (class {
       const ratio = 1 + pos! / width;
       this.overlay!.dom.style.opacity = pos == null ? "" : `${ratio}`;
       this.overlay!.dom.style.transition = pos == null ? "opacity .3s" : "none";
-      this.dom.style.transform = pos == null ? "" : `translate(${pos}px, 0)`;
-      this.dom.style.transition = pos == null ? "" : "none";
+      this.shell.style.transform = pos == null ? "" : `translate(${pos}px, 0)`;
+      this.shell.style.transition = pos == null ? "" : "none";
       ui.content.container.dom.style.transition = pos == null ? "" : "none";
       ui.content.container.dom.style.transform =
         pos == null ? "" : `translate(${30 * ratio}%, 0)`;
-      this.dom.style.boxShadow =
+      this.shell.style.boxShadow =
         pos == null ? "" : `0 0 20px var(--color-shadow)`;
       if (pos != null && pos > 0) {
         this.sidebarToggle.dom.style.transform = `translate(${pos}px, 0)`;
@@ -415,7 +421,7 @@ export const ui = new (class {
       this._panxHandler.onStart.add(() => {
         this.toggleHide(false);
         this.movingPos =
-          this.dom.getBoundingClientRect().left + this._leftPadding;
+          this.shell.getBoundingClientRect().left + this._leftPadding;
       });
       var lastDelta = 0;
       this._panxHandler.onMove.add(({ deltaX }) => {
@@ -455,7 +461,7 @@ export const ui = new (class {
     }
 
     toggleHide(hide?) {
-      this._hide = toggleClass(this.dom, "hide", hide);
+      this._hide = toggleClass(this.shell, "hide", hide);
       if (this.isMobile()) this._hideMobile = this._hide;
       else this._hideLarge = this._hide;
       this.toggleFloat(this.isMobile() || this._hide);

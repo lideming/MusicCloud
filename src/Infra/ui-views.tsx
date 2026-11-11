@@ -35,7 +35,10 @@ export class MainContainer extends View {
   createDom() {
     return (
       <div id="main-container" class="no-transition">
-        {this.sidebar}
+        <div id="sidebar-shell">
+          <div class="sidebar-material"></div>
+          {this.sidebar}
+        </div>
         {this.contentOuter}
         {this.sidebarToggle}
       </div>

@@ -55,6 +55,8 @@ body {
   margin: 0;
   font-family: sans-serif;
   --color-bg: white;
+  --sidebar-material-tint: rgba(248, 248, 248, 0.72);
+  --sidebar-header-tint: rgba(248, 248, 248, 0.72);
   --color-bg-transparent: var(--color-bg);
   --color-text: black;
   --color-text-gray: #666;
@@ -87,6 +89,8 @@ body {
 }
 body.dark {
   --color-bg: black;
+  --sidebar-material-tint: rgba(17, 17, 17, 0.72);
+  --sidebar-header-tint: rgba(17, 17, 17, 0.72);
   --color-text: #ddd;
   --color-text-gray: #aaa;
   --color-bg-selection: hsl(var(--color-hs), 20%);
@@ -242,30 +246,52 @@ a {
     clear: both;
   }
 }
-#sidebar {
+#sidebar-shell {
   position: absolute;
   height: 100%;
-  overflow: hidden;
-  contain: strict;
   top: 0;
   left: 0;
   width: 200px;
-  overflow-y: auto;
-  background: var(--color-bg-f8);
-  border-right: 1px solid var(--color-bg-cc);
-  will-change: transform, scroll-position;
+  will-change: transform;
   box-sizing: content-box;
   transform: translate(0, 0);
   z-index: 1;
   animation: showing 0.3s;
+}
+// The native host owns the only external backdrop filter. Padding used for
+// slide gestures is outside this painted material, as well as Canvas content.
+.sidebar-material {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--leftpadding, 0px);
+  right: -1px;
+  pointer-events: none;
+  background: var(--sidebar-material-tint);
+  border-right: 1px solid var(--color-bg-cc);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  backdrop-filter: blur(20px) saturate(1.25);
+}
+#sidebar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding-left: inherit;
+  overflow: hidden auto;
+  contain: strict;
+  background: transparent;
   scrollbar-width: thin;
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-  .section-header {
-    background: var(--color-bg-f8);
-    z-index: 1;
-  }
+  &::-webkit-scrollbar { width: 8px; }
+  .section-header { background: var(--sidebar-header-tint); z-index: 1; }
+}
+.sidebar-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 #content-outer {
   position: absolute;
@@ -286,7 +312,7 @@ a {
   --color-bg-selection: hsl(var(--color-hs), 50%, 0.3);
 }
 .float-sidebar {
-  #sidebar {
+  #sidebar-shell {
     float: none;
     position: absolute;
     left: 0;
@@ -307,12 +333,12 @@ a {
     transition: transform 0.3s;
     // will-change: transform;
   }
-  #sidebar.hide {
+  #sidebar-shell.hide {
     transform: translate(calc(-100% + var(--leftpadding)), 0);
     transition: transform 0.3s, opacity 0.3s 0.3s, width 0s 0.3s;
     box-shadow: none;
   }
-  #sidebar.hide.peek {
+  #sidebar-shell.hide.peek {
     transform: translate(calc(-100% + var(--leftpadding) + 50px), 0);
     opacity: 0.3;
     transition: transform 0.3s, opacity 0.3s;
@@ -337,7 +363,7 @@ a {
   min-height: 50px;
   position: sticky;
   top: 0;
-  background: inherit;
+  background: var(--sidebar-header-tint);
   z-index: 3;
   display: flex;
   border-bottom: 1px solid var(--color-bg-cc);
@@ -1390,7 +1416,7 @@ a {
   }
 }
 @media only screen and (min-width: 800px) {
-  #sidebar {
+  #sidebar-shell {
     width: calc(200px + (100vw - 800px) * 0.2);
   }
   #content-outer {

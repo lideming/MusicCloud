@@ -150,6 +150,7 @@ export class ListIndex {
       title: () => I`Playlists`,
       content: this.listView,
     });
+    this.section.headerView.dom.setAttribute("data-canvas-blur", "#sidebar-list ul");
     const icon = new Icon({ icon: svgAdd });
     icon.dom.style.fontSize = "1.4em";
     this.section.addAction(
