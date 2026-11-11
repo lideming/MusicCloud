@@ -4,10 +4,11 @@ The renderer paints an existing DOM subtree. DOM and CSS retain layout, native s
 
 ## Native material ownership
 
-- MusicCloud creates `.sidebar-material` outside the source scroller, inside `#sidebar-shell`. This DOM element alone owns the external `backdrop-filter`, translucent light/dark tint and right border. The filter samples the browser's actual underlying main-page DOM.
+- MusicCloud creates `.sidebar-material` outside the source scroller, inside `#sidebar-shell`. This DOM element alone owns the external `backdrop-filter` and right border; its color fill is transparent in both themes. The filter samples the browser's actual underlying main-page DOM.
 - Material starts at the shell's content edge. The mobile 200-pixel gesture padding stays outside the painted material. The shell retains existing pan/hide/peek transforms and stacking above the z99 overlay. The material ends at the main container, above the bottom player.
 - `#sidebar` has a transparent background. The output Canvas has no native-material pixels. On disposal/failure/context loss the material remains and ordinary DOM content becomes visible again; an opaque source background does not cover the glass.
-- Internal headers have ordinary CSS background tint, border and shadow. They have no second native backdrop filter. Their custom content blur only reads selected source-subtree paint resources, never the external material or main page.
+- Internal headers have transparent backgrounds and ordinary CSS borders/shadows, with no second native backdrop filter. Their custom content blur only reads selected source-subtree paint resources, never the external material or main page.
+- The application's light/dark translucent palette is defined globally, so sidebar, content and other items share the same hover/pressed/selected feedback without sidebar-only overrides.
 
 ## Generic renderer entry point
 
@@ -26,7 +27,7 @@ Callers provide no list/header arrays, semantic membership, z-index threshold or
 
 - MusicCloud's login/settings header declares `data-canvas-blur="#sidebar-list ul, #sidebar-features"`.
 - The playlist heading declares `data-canvas-blur="#sidebar-list ul"`.
-- Their positions and paint order come from their native sticky layout and CSS stacking. The effect runs at that element's paint position, replaces sharp pixels only in its actual band, and then ordinary header CSS paints the crisp foreground/tint.
+- Their positions and paint order come from their native sticky layout and CSS stacking. The effect runs at that element's paint position, replaces sharp pixels only in its actual band, and then ordinary header CSS paints the crisp foreground.
 - Blur uses a fixed separable Gaussian kernel. Offsets and sampling margins are CSS pixels, so DPR changes resolution rather than radius. Work is restricted to the actual band and its sampling margin.
 
 Native drag images reuse cached paint surfaces, while existing DOM handlers own reordering. These browser decorations are not a full native-widget renderer.

@@ -110,6 +110,27 @@ test('production sidebar paints, reuses resources, routes native hits and restor
   assert.deepEqual(await api.js(`['#sidebar-header','#sidebar-list .section-header'].map(selector=>document.querySelector(selector).getAttribute('data-canvas-blur'))`), ['#sidebar-list ul, #sidebar-features', '#sidebar-list ul'], 'Both production header effects are real DOM attributes');
   const material = await api.js(`(()=>{const e=document.querySelector('.sidebar-material'),r=e.getBoundingClientRect(),style=getComputedStyle(e);return {filter:style.backdropFilter,tint:style.backgroundColor,x:r.x,bottom:r.bottom,source:getComputedStyle(mcloud.ui.sidebar.dom).backgroundColor,headerFilter:getComputedStyle(document.querySelector('#sidebar-header')).backdropFilter}})()`);
   assert.notEqual(material.filter, 'none'); assert.equal(material.source, 'rgba(0, 0, 0, 0)'); assert.equal(material.headerFilter, 'none');
+  const transparentBackgrounds = () => api.js(`['.sidebar-material','#sidebar-header','#sidebar-list .section-header'].map(selector=>getComputedStyle(document.querySelector(selector)).backgroundColor)`);
+  const checkGlobalItemStates = async () => {
+    await api.js(`window.itemStyleProbe=document.createElement('div');itemStyleProbe.id='item-style-probe';itemStyleProbe.className='item';document.body.appendChild(itemStyleProbe)`);
+    const { root: documentNode } = await api.call('DOM.getDocument');
+    const { nodeId } = await api.call('DOM.querySelector', { nodeId: documentNode.nodeId, selector: '#item-style-probe' });
+    const colors = [];
+    for (const forcedPseudoClasses of [['hover'], ['hover', 'active']]) {
+      await api.call('CSS.forcePseudoState', { nodeId, forcedPseudoClasses });
+      colors.push(await api.js('getComputedStyle(itemStyleProbe).backgroundColor'));
+    }
+    await api.call('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
+    await api.js('itemStyleProbe.classList.add("active")');
+    colors.push(await api.js('getComputedStyle(itemStyleProbe).backgroundColor'));
+    await api.js('itemStyleProbe.remove()');
+    const alphas = colors.map(color => color.startsWith('rgba(') ? Number(color.slice(5, -1).split(',')[3]) : 1);
+    assert.ok(alphas.every(alpha => alpha > 0 && alpha < 1), `Global hover/pressed/selected backgrounds are translucent: ${colors}`);
+    assert.ok(alphas[1] > alphas[0]); assert.equal(colors[1], colors[2]);
+  };
+  await api.call('DOM.enable'); await api.call('CSS.enable');
+  await checkGlobalItemStates();
+  assert.deepEqual(await transparentBackgrounds(), ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)']);
   assert.equal(material.x, 0, 'Mobile gesture padding is outside the painted material');
   assert.equal(material.bottom, 679, 'Native material stops above the bottom player');
   const idle = await api.js(`({...mcloud.ui.sidebar.renderer.stats})`); await delay(300);
@@ -133,8 +154,10 @@ test('production sidebar paints, reuses resources, routes native hits and restor
   const sharpEdges = await api.js(edgeVariation);
   await api.js(`document.querySelector('#sidebar-header').setAttribute('data-canvas-blur','#sidebar-list ul, #sidebar-features')`); await delay(200);
   assert.ok(sharpEdges > filteredEdges * 1.5, `The production header blurs underlying content edges: ${filteredEdges} vs ${sharpEdges}`);
-  const hit = await api.js(`(()=>{const rows=[...document.querySelectorAll('#sidebar-list li')],row=rows.find(e=>{let r=e.getBoundingClientRect();return r.top>180&&r.bottom<550}),r=row.getBoundingClientRect();return {x:r.left+60,y:r.top+r.height/2,id:900000+rows.indexOf(row),hit:document.elementFromPoint(r.left+60,r.top+r.height/2).closest('li')===row}})()`);
+  const hit = await api.js(`(()=>{const rows=[...document.querySelectorAll('#sidebar-list li')],row=rows.find(e=>{let r=e.getBoundingClientRect();return r.top>180&&r.bottom<550&&!e.classList.contains('active')}),r=row.getBoundingClientRect();return {x:r.left+60,y:r.top+r.height/2,id:900000+rows.indexOf(row),hit:document.elementFromPoint(r.left+60,r.top+r.height/2).closest('li')===row}})()`);
   assert.ok(hit.hit);
+  await api.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hit.x, y: hit.y }); await delay(100);
+  assert.match(await api.js(`getComputedStyle(mcloud.listIndex.getViewItem(${hit.id}).dom).backgroundColor`), /^rgba\(/, 'Sidebar hover uses the global translucent palette');
   await api.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: hit.x, y: hit.y, button: 'left', buttons: 1, clickCount: 1 }); await delay(80);
   const pressed = await api.js(`(()=>{const e=mcloud.listIndex.getViewItem(${hit.id}).dom,s=getComputedStyle(e);return {active:e.matches(':active'),opacity:Number(s.opacity),transform:s.transform}})()`);
   assert.ok(pressed.active && pressed.opacity < 1 && pressed.transform !== 'none');
@@ -145,6 +168,8 @@ test('production sidebar paints, reuses resources, routes native hits and restor
   assert.ok(await api.js('mcloud.ui.sidebar.renderer.stats.rasterizations') > beforeUpdate);
   assert.ok(await api.js(`mcloud.listIndex.getViewItem(${hit.id}).dom.textContent.includes('Changed dynamically')`));
   await api.js('mcloud.ui.theme.set("dark-rounded")'); await delay(700);
+  await checkGlobalItemStates();
+  assert.deepEqual(await transparentBackgrounds(), ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)']);
   assert.equal(await api.js('mcloud.ui.sidebar.dom.hasAttribute("data-canvas-rendered")'), true);
   // Login-name/avatar changes use the same production DOM path, without login.
   await api.js(`mcloud.user.info.username='Canvas account';mcloud.user.info.avatar='/avatar.svg';mcloud.user.setState('logged');`); await delay(400);
@@ -208,7 +233,7 @@ test('overlay scrollbars share painted/input geometry and restore native viewpor
   const rect = selector => api.js(`(()=>{const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`);
   const rootTrack = '#sidebar-shell [data-canvas-scrollbar-axis="vertical"]';
   const thumb = await rect(rootTrack + ' [data-canvas-scrollbar-thumb]');
-  assert.equal(await api.js(`(()=>{const gl=mcloud.ui.sidebar.renderer.canvas.getContext('webgl'),s=mcloud.ui.sidebar.dom,r=s.getBoundingClientRect(),p=new Uint8Array(4);gl.readPixels(Math.floor(${thumb.x + thumb.width / 2}-r.x),gl.drawingBufferHeight-1-Math.floor(${thumb.y + thumb.height / 2}-r.y),1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);return p[3]})()`), 255, 'The actual hit thumb center is painted on the GPU');
+  assert.ok(await api.js(`(()=>{const gl=mcloud.ui.sidebar.renderer.canvas.getContext('webgl'),s=mcloud.ui.sidebar.dom,r=s.getBoundingClientRect(),p=new Uint8Array(4);gl.readPixels(Math.floor(${thumb.x + thumb.width / 2}-r.x),gl.drawingBufferHeight-1-Math.floor(${thumb.y + thumb.height / 2}-r.y),1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);return p[3]>0})()`), 'The actual hit thumb center is painted on the GPU');
   async function drag(r, dx, dy, touch = false, cancel = false) {
     const x = r.x + r.width / 2, y = r.y + r.height / 2;
     if (touch) await api.call('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
