@@ -61,11 +61,23 @@ function svgImage(element: SVGSVGElement, rootOpacityInPlacement: boolean) {
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(clone));
 }
 
+/** Fractional, untransformed border-box dimensions. offsetWidth/Height round
+ * layout pixels, which would turn ordinary fractional layout into a scale. */
+export function readPaintSize(element: HTMLElement, style = getComputedStyle(element)) {
+  const borderBox = (axis: "width" | "height", sides: string[], fallback: number) => {
+    const size = parseFloat(style[axis]);
+    if (!Number.isFinite(size)) return fallback;
+    return size + (style.boxSizing === "border-box" ? 0 : sides.reduce((sum, side) => sum +
+      (parseFloat(style.getPropertyValue(`padding-${side}`)) || 0) + (parseFloat(style.getPropertyValue(`border-${side}-width`)) || 0), 0));
+  };
+  return { width: borderBox("width", ["left", "right"], element.offsetWidth), height: borderBox("height", ["top", "bottom"], element.offsetHeight) };
+}
+
 /** Coordinates are normalized to the untransformed resource; row scale/opacity
  * belongs to compositor placement, so pressing a row reuses its raster. */
 export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = false): PaintSnapshot {
   const bounds = element.getBoundingClientRect();
-  const width = element.offsetWidth ?? parseFloat(getComputedStyle(element).width), height = element.offsetHeight ?? parseFloat(getComputedStyle(element).height);
+  const { width, height } = readPaintSize(element);
   const sx = bounds.width / width || 1, sy = bounds.height / height || 1;
   const rect = (r: DOMRect): PaintRect => ({ x: (r.x - bounds.x) / sx, y: (r.y - bounds.y) / sy, width: r.width / sx, height: r.height / sy });
   const walk = (node: Element, isRoot = false): PaintNode | null => {

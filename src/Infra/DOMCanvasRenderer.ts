@@ -1,10 +1,10 @@
-import { PaintImages, PaintRect, PaintSnapshot, readPaint, rasterPaint, readBoxShadow, shadowSnapshot } from "./CanvasPaint";
+import { PaintImages, PaintRect, PaintSnapshot, readPaint, readPaintSize, rasterPaint, readBoxShadow, shadowSnapshot } from "./CanvasPaint";
 import { CanvasCompositor, CanvasLayer, PaintPlacement } from "./CanvasCompositor";
 import { DOMPaintTree, intersect } from "./DOMPaintTree";
 import { DOMCanvasEffects } from "./DOMCanvasEffects";
 import { OverlayScrollbars } from "./OverlayScrollbars";
 
-interface Resource { canvas: HTMLCanvasElement; texture: WebGLTexture; snapshot: PaintSnapshot; version: number }
+interface Resource { canvas: HTMLCanvasElement; texture: WebGLTexture; snapshot: PaintSnapshot; version: number; dpr: number }
 
 /** Paint an existing DOM subtree using a bounded CSS paint subset. The browser
  * owns layout, scroll/sticky, events and accessibility; the host owns any native
@@ -17,7 +17,7 @@ export class DOMCanvasRenderer {
   private tree: DOMPaintTree;
   private effects: DOMCanvasEffects;
   private resources = new Map<HTMLElement, Resource>();
-  private decorations = new Map<HTMLElement, { texture: WebGLTexture; snapshot: PaintSnapshot; key: string }>();
+  private decorations = new Map<HTMLElement, { texture: WebGLTexture; snapshot: PaintSnapshot; pixelWidth: number; pixelHeight: number; key: string }>();
   private dirty = new Set<HTMLElement>();
   private near = new Set<HTMLElement>();
   private members = new Set<HTMLElement>();
@@ -184,8 +184,8 @@ export class DOMCanvasRenderer {
           if (s.overflowX !== "visible" || s.overflowY !== "visible" || /paint|strict|content/.test(s.contain)) clip = intersect(clip, rect(bounds.get(parent)!));
         }
         placements.set(element, { rect: rect(r), opacity: 1, selectionOpacity, clip });
-        const old = this.resources.get(element), layoutWidth = element.offsetWidth ?? parseFloat(style.width), layoutHeight = element.offsetHeight ?? parseFloat(style.height);
-        if (!old || old.version !== this.version || this.dirty.has(element) || old.snapshot.layoutWidth !== layoutWidth || old.snapshot.layoutHeight !== layoutHeight) {
+        const old = this.resources.get(element), { width: layoutWidth, height: layoutHeight } = readPaintSize(element, style);
+        if (!old || old.version !== this.version || old.dpr !== dpr || this.dirty.has(element) || old.snapshot.layoutWidth !== layoutWidth || old.snapshot.layoutHeight !== layoutHeight) {
           snapshots.set(element, readPaint(element, this.images, unit.ownOnly)); this.stats.snapshots++;
         }
       }
@@ -209,7 +209,7 @@ export class DOMCanvasRenderer {
       for (const [element, snapshot] of snapshots) {
         const old = this.resources.get(element); if (old) this.compositor.remove(old.texture);
         const canvas = rasterPaint({ ...snapshot, shadow: undefined }, dpr);
-        this.resources.set(element, { canvas, texture: this.compositor.upload(canvas), snapshot, version: this.version }); this.stats.rasterizations++;
+        this.resources.set(element, { canvas, texture: this.compositor.upload(canvas), snapshot, version: this.version, dpr }); this.stats.rasterizations++;
       }
       for (const [element, resource] of this.resources) if (!placements.has(element)) { this.compositor.remove(resource.texture); this.resources.delete(element); }
       for (const [element, resource] of this.resources) {
@@ -219,7 +219,8 @@ export class DOMCanvasRenderer {
         if (old?.key === key) continue;
         if (old) this.compositor.remove(old.texture);
         const snapshot = shadowSnapshot(resource.snapshot, shadow);
-        this.decorations.set(element, { texture: this.compositor.upload(rasterPaint(snapshot, dpr)), snapshot, key }); this.stats.decorationRasterizations++;
+        const canvas = rasterPaint(snapshot, dpr);
+        this.decorations.set(element, { texture: this.compositor.upload(canvas), snapshot, pixelWidth: canvas.width, pixelHeight: canvas.height, key }); this.stats.decorationRasterizations++;
       }
       for (const [element, resource] of this.decorations) if (!placements.has(element)) { this.compositor.remove(resource.texture); this.decorations.delete(element); }
       this.dirty.clear();
@@ -228,13 +229,19 @@ export class DOMCanvasRenderer {
         const placement = placements.get(unit.element), resource = this.resources.get(unit.element);
         sources[unit.id] = []; sources[unit.id + "/shadow"] = [];
         if (!placement || !resource) continue;
-        const surface = (s: PaintSnapshot, texture: WebGLTexture): PaintPlacement => {
+        const surface = (s: PaintSnapshot, texture: WebGLTexture, pixelWidth: number, pixelHeight: number): PaintPlacement => {
           const sx = s.layoutWidth ? placement.rect.width / s.layoutWidth : 1, sy = s.layoutHeight ? placement.rect.height / s.layoutHeight : 1;
-          return { ...placement, texture, rect: { x: placement.rect.x + s.offsetX * sx, y: placement.rect.y + s.offsetY * sy, width: s.width * sx, height: s.height * sy } };
+          let x = placement.rect.x + s.offsetX * sx, y = placement.rect.y + s.offsetY * sy;
+          // Keep cached, unscaled texels on the output pixel grid. Intentional
+          // CSS scaling retains its geometry and LINEAR texture sampling.
+          if (sx === 1 && sy === 1) { x = Math.round(x * dpr) / dpr; y = Math.round(y * dpr) / dpr; }
+          // ceil allocation leaves transparent padding at the raster's edge;
+          // preserve its extent instead of squeezing it into the logical box.
+          return { ...placement, texture, rect: { x, y, width: pixelWidth / dpr * sx, height: pixelHeight / dpr * sy } };
         };
-        sources[unit.id].push(surface(resource.snapshot, resource.texture));
+        sources[unit.id].push(surface(resource.snapshot, resource.texture, resource.canvas.width, resource.canvas.height));
         const decoration = this.decorations.get(unit.element);
-        if (decoration) sources[unit.id + "/shadow"].push(surface(decoration.snapshot, decoration.texture));
+        if (decoration) sources[unit.id + "/shadow"].push(surface(decoration.snapshot, decoration.texture, decoration.pixelWidth, decoration.pixelHeight));
       }
       this.compositor.render(sources, layers, this.rootOpacity);
       this.scrollbars?.commit(origin.x - host.x, origin.y - host.y, width, height);

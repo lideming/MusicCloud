@@ -75,6 +75,7 @@ async function browser(t) {
   await api.call('Page.enable'); await api.call('Network.enable');
   await api.call('Network.setBypassServiceWorker', { bypass: true });
   await api.call('Emulation.setDeviceMetricsOverride', { width: 393, height: 759, deviceScaleFactor: 2, mobile: true });
+  await api.call('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
   await api.call('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/` });
   for (let i = 0; i < 100; i++) { if (await api.js('Boolean(window.mcloud?.listIndex.section)')) break; if (i === 99) throw Error('App initialization timeout'); await delay(100); }
   await api.js(`(async () => {
@@ -221,6 +222,40 @@ test('production sidebar paints, reuses resources, routes native hits and restor
   await api.js('unrelatedRenderer.dispose();unrelatedHost.remove()');
 });
 
+test('mobile scrim follows the sidebar without dimming its backdrop', { skip: !supported, timeout: 60000 }, async t => {
+  const { api } = await browser(t);
+  await api.js(`const backdrop=document.createElement('div');backdrop.style.cssText='position:absolute;inset:0;background:rgb(200,200,200);z-index:98;pointer-events:none';mcloud.ui.mainContainer.dom.appendChild(backdrop);mcloud.ui.sidebar.renderer.canvas.style.visibility='hidden'`);
+  const samples = async () => {
+    const shot = await api.call('Page.captureScreenshot', { format: 'png' });
+    return api.js(`(async()=>{const image=new Image();image.src='data:image/png;base64,${shot.data}';await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const ctx=c.getContext('2d');ctx.drawImage(image,0,0);return [50,350].map(x=>ctx.getImageData(Math.floor(x*image.width/393),Math.floor(300*image.width/393),1,1).data[0])})()`);
+  };
+  const aligned = async () => {
+    const geometry = await api.js(`({edge:mcloud.ui.sidebar.shell.getBoundingClientRect().right,start:mcloud.ui.sidebar.overlay.dom.getBoundingClientRect().left})`);
+    assert.ok(Math.abs(geometry.edge - geometry.start) < 1, 'Scrim follows the actual sidebar edge');
+    return geometry;
+  };
+  for (const theme of ['light-rounded', 'dark-rounded']) {
+    await api.js(`mcloud.ui.theme.set('${theme}')`); await delay(800);
+    const [inside, outside] = await samples();
+    assert.ok(inside >= 195, `Sidebar backdrop stays undimmed in ${theme}: ${inside}`);
+    assert.ok(outside < 180, `Outside content remains dimmed in ${theme}: ${outside}`);
+    await aligned();
+  }
+  await api.call('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 100, y: 400 }] });
+  for (let x = 90; x >= 20; x -= 10) {
+    await api.call('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: 400 }] }); await delay(20);
+  }
+  const duringPan = await aligned(); assert.ok(duringPan.edge > 50 && duringPan.edge < 240, `Partial touch pan moved the sidebar: ${JSON.stringify(duringPan)}`);
+  assert.ok((await samples())[0] >= 195, 'Dragging does not bring the scrim behind the glass');
+  await api.call('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await delay(400);
+  await api.js('mcloud.ui.sidebar.toggleHide(false)'); await delay(400);
+  for (const type of ['mousePressed', 'mouseReleased']) await api.call('Input.dispatchMouseEvent', { type, x: 350, y: 300, button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 1 });
+  await delay(400);
+  assert.equal(await api.js('mcloud.ui.sidebar.hide && !mcloud.ui.sidebar.overlay'), true, 'Clicking outside closes the sidebar');
+  assert.equal(await api.js('document.querySelectorAll(".sidebar-overlay").length'), 0, 'The faded scrim is removed');
+  assert.ok((await samples()).every(value => value >= 195), 'Closing removes all dimming');
+});
+
 test('overlay scrollbars share painted/input geometry and restore native viewports', { skip: !supported, timeout: 60000 }, async t => {
   const { api } = await browser(t);
   await api.call('Emulation.setDeviceMetricsOverride', { width: 1100, height: 800, deviceScaleFactor: 1, mobile: false });
@@ -337,4 +372,90 @@ test('GPU blur replaces sharp band pixels, excludes background, and preserves cr
     assert.deepEqual(result.foreground, [255, 0, 0, 255], 'Header foreground stays crisp');
   }
   assert.ok(Math.abs(results[0].replaced[3] - results[1].replaced[3]) < 12, 'Blur radius stays in CSS pixels across device pixel ratios');
+});
+
+test('GPU preserves aligned raster texels at integer and fractional DPR', { skip: !supported, timeout: 60000 }, async t => {
+  const { api } = await browser(t);
+  const results = await api.js(`(() => {
+    const Compositor=mcloud.ui.sidebar.renderer.compositor.constructor;
+    return [1,1.25,2].map(dpr=>{
+      const output=document.createElement('canvas'), compositor=new Compositor(output);compositor.resize(160,80,dpr);
+      const input=document.createElement('canvas');input.width=Math.ceil(121*dpr);input.height=Math.ceil(31*dpr);
+      const ctx=input.getContext('2d');ctx.fillStyle='black';
+      for(let x=10;x<90;x+=8)ctx.fillRect(x*dpr,5*dpr,2*dpr,20*dpr);
+      ctx.font=(14*dpr)+'px sans-serif';ctx.fillText('Text',95*dpr,22*dpr);
+      const original=ctx.getImageData(0,0,input.width,input.height).data,texture=compositor.upload(input);
+      const difference=(x,width,height)=>{
+        compositor.render({text:[{texture,rect:{x,y:0,width,height},opacity:1}]},[{kind:'source',source:'text'}]);
+        const gl=compositor.gl,pixels=new Uint8Array(output.width*output.height*4);gl.readPixels(0,0,output.width,output.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+        let max=0;for(let y=0;y<input.height;y++)for(let x=0;x<input.width;x++)max=Math.max(max,Math.abs(original[(y*input.width+x)*4+3]-pixels[((output.height-1-y)*output.width+x)*4+3]));
+        return max;
+      };
+      const result={dpr,aligned:difference(0,input.width/dpr,input.height/dpr),squeezed:difference(0,121,31),shifted:difference(.5/dpr,input.width/dpr,input.height/dpr)};
+      compositor.remove(texture);compositor.dispose();return result;
+    });
+  })()`);
+  for (const result of results) {
+    assert.equal(result.aligned, 0, `Allocated raster extents preserve every alpha texel at DPR ${result.dpr}`);
+    assert.ok(result.shifted > 0, 'A half-device-pixel placement reproduces interpolation loss');
+  }
+  assert.ok(results.find(result => result.dpr === 1.25).squeezed > 0, 'Squeezing ceil padding into logical dimensions reproduces fractional-DPR interpolation');
+});
+
+test('fractional layout text retains sharp rasters, transformed geometry and cache reuse', { skip: !supported, timeout: 60000 }, async t => {
+  const { api } = await browser(t);
+  await api.call('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
+  await api.js(`window.SharpRenderer=mcloud.ui.sidebar.renderer.constructor;mcloud.ui.sidebar.renderer.dispose();
+    const host=document.createElement('section');host.style.cssText='position:fixed;left:500px;top:20px;width:280px;height:240px;z-index:1000';
+    const source=document.createElement('article');source.style.cssText='position:absolute;inset:0;overflow:auto;font:16px/19.1875px sans-serif;color:black';source.setAttribute('data-canvas-scrollbar','overlay');
+    source.innerHTML=Array.from({length:16},(_,i)=>'<div style="'+(i%2?'box-sizing:border-box;width:274px;height:43.1875px':'box-sizing:content-box;width:250px;height:19.1875px')+';padding:8px;border:4px solid transparent;'+(i===0?'box-shadow:rgba(0,0,0,.3) .5px .5px 2.5px;':'')+'">Sharp text 0123456789</div>').join('');
+    source.firstElementChild.style.marginTop='2.5px';host.append(source);document.body.append(host);
+    window.sharpHost=host;window.sharpSource=source;window.sharpRenderer=new SharpRenderer(source,host);
+    const compositor=sharpRenderer.compositor,render=compositor.render;
+    compositor.render=function(sources,layers,opacity){window.sharpSources=sources;return render.call(this,sources,layers,opacity)};
+  `);
+  for (const dpr of [1, 1.25, 2]) {
+    await api.call('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: dpr, mobile: false });
+    await api.js('sharpSource.scrollTop=0;sharpSource.dispatchEvent(new Event("scroll"))'); await delay(250);
+    const state = await api.js(`(()=>{
+      const renderer=sharpRenderer,row=sharpSource.children[1],resource=renderer.resources.get(row),unit=renderer.tree.byElement.get(row),placement=sharpSources[unit.id][0],rect=row.getBoundingClientRect();
+      const gl=renderer.compositor.gl,pixels=new Uint8Array(renderer.canvas.width*renderer.canvas.height*4);gl.readPixels(0,0,renderer.canvas.width,renderer.canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+      const original=resource.canvas.getContext('2d').getImageData(0,0,resource.canvas.width,resource.canvas.height).data;
+      const x0=Math.round(placement.rect.x*devicePixelRatio),y0=Math.round(placement.rect.y*devicePixelRatio);let maxAlphaError=0,ink=0;
+      for(let y=Math.ceil(12*devicePixelRatio);y<Math.floor(32*devicePixelRatio);y++)for(let x=Math.ceil(12*devicePixelRatio);x<Math.floor(240*devicePixelRatio);x++){
+        const alpha=original[(y*resource.canvas.width+x)*4+3];if(alpha)ink++;
+        maxAlphaError=Math.max(maxAlphaError,Math.abs(alpha-pixels[((renderer.canvas.height-1-y0-y)*renderer.canvas.width+x0+x)*4+3]));
+      }
+      const shadow=renderer.decorations.get(sharpSource.firstElementChild),shadowUnit=renderer.tree.byElement.get(sharpSource.firstElementChild),shadowRect=sharpSources[shadowUnit.id+'/shadow'][0].rect;
+      window.sharpCachedCanvas=resource.canvas;
+      return {dpr:resource.dpr,sizes:[...renderer.resources].slice(0,2).map(([element,r])=>({boxSizing:getComputedStyle(element).boxSizing,layout:[r.snapshot.layoutWidth,r.snapshot.layoutHeight],actual:[element.getBoundingClientRect().width,element.getBoundingClientRect().height]})),raster:[resource.canvas.width,resource.canvas.height],placement:placement.rect,actual:[rect.width,rect.height],maxAlphaError,ink,shadow:{extent:[shadowRect.width,shadowRect.height],pixels:[shadow.pixelWidth,shadow.pixelHeight],offset:[shadow.snapshot.offsetX,shadow.snapshot.offsetY]}};
+    })()`);
+    assert.equal(state.dpr, dpr, 'A cached raster always uses the current DPR');
+    assert.deepEqual(state.sizes.map(size => size.boxSizing), ['content-box', 'border-box']);
+    for (const size of state.sizes) {
+      assert.deepEqual(size.layout, [274, 43.1875], 'Snapshot dimensions preserve fractional border-box layout');
+      assert.deepEqual(size.actual, size.layout, 'Ordinary layout introduces no artificial scale');
+    }
+    assert.deepEqual(state.raster, [Math.ceil(274 * dpr), Math.ceil(43.1875 * dpr)]);
+    assert.equal(state.placement.width * dpr, state.raster[0]); assert.equal(state.placement.height * dpr, state.raster[1]);
+    assert.equal(state.placement.x * dpr, Math.round(state.placement.x * dpr)); assert.equal(state.placement.y * dpr, Math.round(state.placement.y * dpr));
+    assert.ok(state.ink > 100); assert.equal(state.maxAlphaError, 0, 'Actual WebGL foreground preserves Canvas2D text alpha without extra resampling');
+    assert.deepEqual(state.shadow.extent, state.shadow.pixels.map(size => size / dpr), 'Shadow textures preserve the same allocated raster extent');
+    assert.ok(state.shadow.offset.every(offset => offset < 0), 'The shadow check includes a nonzero raster offset');
+
+    const before = await api.js('({...sharpRenderer.stats})');
+    await api.js('sharpSource.scrollTop=1'); await delay(100);
+    await api.js('sharpSource.scrollTop=2;sharpHost.style.transform="translate(.25px,.5px)"'); await delay(100);
+    assert.equal(await api.js('sharpRenderer.stats.rasterizations'), before.rasterizations, 'Tiny native scrolls and host pan reuse fractional-size rasters');
+    await api.js('sharpSource.children[1].style.transform="translate(.25px,.375px) scale(.97)"'); await delay(100);
+    const transformed = await api.js(`(()=>{const r=sharpRenderer,row=sharpSource.children[1],resource=r.resources.get(row),p=sharpSources[r.tree.byElement.get(row).id][0].rect,b=row.getBoundingClientRect(),origin=sharpSource.getBoundingClientRect();return {sameCanvas:resource.canvas===sharpCachedCanvas,rasterizations:r.stats.rasterizations,scale:[p.width/(resource.canvas.width/devicePixelRatio),p.height/(resource.canvas.height/devicePixelRatio)],origin:[p.x,p.y],actualOrigin:[b.x-origin.x,b.y-origin.y]}})()`);
+    assert.equal(transformed.sameCanvas, true); assert.equal(transformed.rasterizations, before.rasterizations);
+    for (const scale of transformed.scale) assert.ok(Math.abs(scale - .97) < 1e-5, 'Intentional CSS scale changes output geometry');
+    for (let i = 0; i < 2; i++) assert.ok(Math.abs(transformed.origin[i] - transformed.actualOrigin[i]) < 1e-5, 'Scaled surfaces retain their fractional placement');
+    await api.js('sharpSource.children[1].style.transform="";sharpHost.style.transform=""'); await delay(100);
+    assert.equal(await api.js('sharpRenderer.stats.rasterizations'), before.rasterizations, 'Releasing a scale transform reuses the text raster');
+    const idle = await api.js('({...sharpRenderer.stats})'); await delay(150);
+    assert.deepEqual(await api.js('({...sharpRenderer.stats})'), idle, 'Fractional size comparisons do not cause idle rerasterization');
+  }
+  await api.js('sharpRenderer.dispose();sharpHost.remove()');
 });

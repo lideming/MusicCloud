@@ -30,15 +30,18 @@ import { fadeout, FadeoutResult } from "@yuuza/webfx";
 
 export class MainContainer extends View {
   sidebar = new Sidebar();
+  sidebarShell = new View(
+    <div id="sidebar-shell">
+      <div class="sidebar-material"></div>
+      {this.sidebar}
+    </div>
+  );
   sidebarToggle = new SidebarToggle();
   contentOuter = new View(<main id="content-outer"></main>);
   createDom() {
     return (
       <div id="main-container" class="no-transition">
-        <div id="sidebar-shell">
-          <div class="sidebar-material"></div>
-          {this.sidebar}
-        </div>
+        {this.sidebarShell}
         {this.contentOuter}
         {this.sidebarToggle}
       </div>

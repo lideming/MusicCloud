@@ -473,13 +473,13 @@ export const ui = new (class {
       if (showOverlay != !!this.overlay) {
         if (showOverlay) {
           this.overlay = new Overlay({
-            tag: "div.overlay",
+            tag: "div.overlay.sidebar-overlay",
             style: "z-index: 99; animation: none; transition: opacity .3s;",
             onclick: () => this.toggleHide(true),
             ondragover: () => this.toggleHide(true),
           });
           this.overlay.dom.style.opacity = "0";
-          mainContainer.appendView(this.overlay);
+          mainContainer.sidebarShell.appendView(this.overlay);
           this.overlay.dom.offsetLeft;
           this.overlay.dom.style.opacity = "1";
         } else {
@@ -487,7 +487,7 @@ export const ui = new (class {
           this.overlay = null;
           overlay.dom.style.opacity = "0";
           fadeout(overlay.dom).onFinished(() => {
-            mainContainer.removeView(overlay);
+            mainContainer.sidebarShell.removeView(overlay);
           });
         }
       }
