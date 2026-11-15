@@ -15,7 +15,7 @@ function ownsPixels(element: HTMLElement, style: CSSStyleDeclaration) {
   return !transparent(style.backgroundColor) || style.boxShadow !== "none" || style.outlineStyle !== "none" ||
     ["top", "right", "bottom", "left"].some(side => parseFloat(style.getPropertyValue(`border-${side}-width`)) > 0 && !transparent(style.getPropertyValue(`border-${side}-color`))) ||
     Array.from(element.childNodes).some(child => child instanceof Text && !!child.textContent?.trim()) ||
-    element instanceof HTMLImageElement || element instanceof SVGSVGElement ||
+    element instanceof HTMLImageElement || element instanceof HTMLCanvasElement || element instanceof SVGSVGElement ||
     ["::before", "::after"].some(pseudo => { const s = getComputedStyle(element, pseudo); return s.content !== "none" && s.content !== "normal"; });
 }
 
@@ -30,7 +30,7 @@ export class DOMPaintTree {
     let nextId = 0;
     const boundary = (element: Element) => {
       const style = getComputedStyle(element);
-      return style.position === "sticky" || style.position === "fixed" ||
+      return element instanceof HTMLCanvasElement || style.animationName !== "none" || style.position === "sticky" || style.position === "fixed" ||
         element.hasAttribute("data-canvas-blur") || element.getAttribute("data-canvas-scrollbar") === "overlay" || selectedSources.has(element) ||
         (createsContext(style, element.parentElement ? getComputedStyle(element.parentElement).display : "") && style.zIndex !== "auto" && style.zIndex !== "0");
     };
@@ -39,7 +39,7 @@ export class DOMPaintTree {
       const branch: PaintBranch = { element, children: [] };
       if (style.display === "none" || style.visibility === "hidden") return branch;
       const descendants = Array.from(element.querySelectorAll<HTMLElement>("*"));
-      const atomic = element instanceof SVGSVGElement || element instanceof HTMLImageElement || !root && element.getAttribute("data-canvas-scrollbar") !== "overlay" && element.offsetHeight <= Math.max(128, source.clientHeight / 2) &&
+      const atomic = element instanceof SVGSVGElement || element instanceof HTMLImageElement || element instanceof HTMLCanvasElement || !root && element.getAttribute("data-canvas-scrollbar") !== "overlay" && element.offsetHeight <= Math.max(128, source.clientHeight / 2) &&
         !descendants.some(boundary);
       if (atomic || ownsPixels(element, style)) {
         branch.unit = { id: `paint-${nextId++}`, element, ownOnly: !atomic };
@@ -66,20 +66,30 @@ export class DOMPaintTree {
       if (isolated) result.push({ kind: "begin", element: branch.element, opacity });
       own(branch);
       const normal: PaintBranch[] = [], positioned: PaintBranch[] = [], contexts: PaintBranch[] = [];
-      const collect = (child: PaintBranch) => {
+      const scopes = new Map<PaintBranch, PaintBranch[]>();
+      const collect = (child: PaintBranch, flow: PaintBranch[]) => {
         if (!styles.has(child.element)) return;
         const s = style(child);
         if (isContext(child)) { contexts.push(child); return; }
-        if (s.position !== "static") positioned.push(child); else normal.push(child);
-        child.children.forEach(collect);
+        if (s.position !== "static") {
+          positioned.push(child);
+          // A positioned auto-z box paints its own in-flow subtree together.
+          // Positioned descendants and real contexts still join this context.
+          flow = [];
+          scopes.set(child, flow);
+        } else flow.push(child);
+        child.children.forEach(descendant => collect(descendant, flow));
       };
-      branch.children.forEach(collect);
+      branch.children.forEach(child => collect(child, normal));
       const z = (b: PaintBranch) => Number(style(b).zIndex) || 0;
       contexts.filter(b => z(b) < 0).sort((a, b) => z(a) - z(b)).forEach(context);
       normal.forEach(own);
       // Both collections were collected in preorder; compareDocumentPosition
       // merges their zero-level entries without changing local context nesting.
-      [...positioned, ...contexts.filter(b => z(b) === 0)].sort((a, b) => a.element.compareDocumentPosition(b.element) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1).forEach(b => isContext(b) ? context(b) : own(b));
+      [...positioned, ...contexts.filter(b => z(b) === 0)].sort((a, b) => a.element.compareDocumentPosition(b.element) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1).forEach(b => {
+        if (isContext(b)) context(b);
+        else { own(b); scopes.get(b)!.forEach(own); }
+      });
       contexts.filter(b => z(b) > 0).sort((a, b) => z(a) - z(b)).forEach(context);
       if (isolated) result.push({ kind: "end", element: branch.element });
     };

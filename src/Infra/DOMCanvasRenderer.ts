@@ -11,7 +11,7 @@ interface Resource { canvas: HTMLCanvasElement; texture: WebGLTexture; snapshot:
  * backdrop material. Callers supply no semantic groups or paint ordering. */
 export class DOMCanvasRenderer {
   readonly canvas = document.createElement("canvas");
-  readonly stats = { frames: 0, rasterizations: 0, snapshots: 0, cachedResources: 0, decorationRasterizations: 0 };
+  readonly stats = { frames: 0, rasterizations: 0, snapshots: 0, cachedResources: 0, decorationRasterizations: 0, cachedImages: 0 };
   private compositor: CanvasCompositor;
   private images: PaintImages;
   private tree: DOMPaintTree;
@@ -42,7 +42,10 @@ export class DOMCanvasRenderer {
     this.canvas.setAttribute("aria-hidden", "true");
     Object.assign(this.canvas.style, { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", pointerEvents: "none" });
     this.compositor = new CanvasCompositor(this.canvas);
-    this.images = new PaintImages(() => this.invalidate(), error => this.fail(error));
+    this.images = new PaintImages(url => {
+      for (const [element, resource] of this.resources) if (resource.snapshot.imageUrls.includes(url)) this.dirty.add(element);
+      this.schedule();
+    }, error => this.fail(error));
     // Generic, root-only suppression is owned by the renderer, not app CSS.
     this.suppression.textContent = "[data-canvas-rendered] { opacity: 0 !important; }";
     document.head.appendChild(this.suppression);
@@ -76,9 +79,9 @@ export class DOMCanvasRenderer {
           if (before.cssText === after.cssText) continue;
         }
         this.topologyDirty = true;
-        let element = record.target instanceof Element ? record.target : record.target.parentElement;
-        while (element && element !== source && !this.members.has(element as HTMLElement)) element = element.parentElement;
-        if (element && this.members.has(element as HTMLElement)) this.dirty.add(element as HTMLElement); else this.version++;
+        const element = record.target instanceof Element ? record.target : record.target.parentElement;
+        if (element === source && record.type === "attributes") this.version++;
+        else if (element) for (const member of this.members) if (member.contains(element) || element.contains(member)) this.dirty.add(member);
       }
       if (changed) this.schedule();
     });
@@ -110,7 +113,12 @@ export class DOMCanvasRenderer {
       }
       this.schedule();
     }, true);
-    for (const event of ["pointerover", "pointerout", "pointerdown", "focusin", "focusout", "keydown", "keyup"]) listen(source, event, () => this.invalidate(), true);
+    // The owner of an ordinary canvas dispatches this after changing its pixels.
+    // Canvas drawing itself has no DOM mutation notification.
+    listen(source, "canvas-content-changed", event => this.invalidate(event.target as Element), true);
+    for (const event of ["pointerover", "pointerout", "pointerdown", "focusin", "focusout", "keydown", "keyup"]) listen(source, event, event => this.invalidate(event.target as Element), true);
+    let pressed: Element | undefined;
+    listen(source, "pointerdown", event => { pressed = event.target as Element; }, true);
     listen(source, "dragstart", event => {
       const drag = event as DragEvent;
       let element = drag.target as HTMLElement | null;
@@ -124,7 +132,9 @@ export class DOMCanvasRenderer {
       drag.dataTransfer.setDragImage(this.dragImage, Math.max(0, drag.clientX - bounds.left), Math.max(0, drag.clientY - bounds.top));
     });
     listen(window, "dragend", () => { this.dragImage?.remove(); this.dragImage = null; });
-    listen(window, "pointerup", () => this.invalidate()); listen(window, "pointercancel", () => this.invalidate());
+    for (const event of ["pointerup", "pointercancel"]) listen(window, event, () => {
+      if (pressed) { this.invalidate(pressed); pressed = undefined; }
+    });
     listen(window, "resize", () => this.invalidate()); listen(document, "visibilitychange", () => this.schedule());
     for (const event of ["transitionrun", "transitionend", "transitioncancel", "animationstart", "animationend", "animationcancel"]) listen(source, event, () => this.schedule(), true);
     listen(this.canvas, "webglcontextlost", () => this.fail(new Error("Canvas WebGL context lost")));
@@ -134,7 +144,11 @@ export class DOMCanvasRenderer {
     catch (error) { this.dispose(); throw error; }
     this.schedule();
   }
-  invalidate() { this.version++; this.schedule(); }
+  invalidate(element?: Element) {
+    if (!element) this.version++;
+    else for (const member of this.members) if (member.contains(element) || element.contains(member)) this.dirty.add(member);
+    this.schedule();
+  }
   private schedule() { if (!this.frame && !this.disposed) this.frame = requestAnimationFrame(() => this.paint()); }
   private rebuild() {
     this.topologyDirty = false;
@@ -153,6 +167,10 @@ export class DOMCanvasRenderer {
       if (this.topologyDirty) this.rebuild();
       if (!this.observed) return;
       const origin = this.source.getBoundingClientRect(), host = this.shell.getBoundingClientRect();
+      // Source and output inherit the host's translation/scale together. DOM
+      // client rects already include it; paint placements must stay host-local.
+      const hostSize = readPaintSize(this.shell), scaleX = host.width / hostSize.width || 1, scaleY = host.height / hostSize.height || 1;
+      const left = (origin.x - host.x) / scaleX, top = (origin.y - host.y) / scaleY;
       const width = this.source.clientWidth, height = this.source.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 3);
       if (!width || !height) {
         this.canvas.style.width = this.canvas.style.height = "0px";
@@ -166,17 +184,27 @@ export class DOMCanvasRenderer {
         if (active) this.source.setAttribute("data-canvas-rendered", "");
         this.rootStyleVersion = this.version;
       }
+      // Align only an untransformed output. Intentional host/ancestor movement
+      // and scaling carry both source and Canvas without quantizing the motion.
+      let transformed: HTMLElement | null = this.shell;
+      while (transformed && getComputedStyle(transformed).transform === "none") transformed = transformed.parentElement;
+      let outputX = origin.x, outputY = origin.y;
+      if (!transformed && scaleX === 1 && scaleY === 1) {
+        outputX = Math.round(outputX * dpr) / dpr;
+        outputY = Math.round(outputY * dpr) / dpr;
+      }
+      const canvasLeft = (outputX - host.x) / scaleX, canvasTop = (outputY - host.y) / scaleY;
       const snapshots = new Map<HTMLElement, PaintSnapshot>();
       const placements = new Map<HTMLElement, { rect: PaintRect; opacity: number; selectionOpacity: number; clip: PaintRect }>();
       const wanted = new Set([...this.near, ...this.effects.elements]);
       const styles = new Map<HTMLElement, CSSStyleDeclaration>(), bounds = new Map<HTMLElement, DOMRect>();
       for (const element of this.tree.ancestors(wanted)) { styles.set(element, getComputedStyle(element)); bounds.set(element, element.getBoundingClientRect()); }
-      const rect = (r: DOMRect): PaintRect => ({ x: r.x - origin.x, y: r.y - origin.y, width: r.width, height: r.height });
+      const rect = (r: DOMRect): PaintRect => ({ x: (r.x - origin.x) / scaleX, y: (r.y - origin.y) / scaleY, width: r.width / scaleX, height: r.height / scaleY });
       for (const element of wanted) {
         const unit = this.tree.byElement.get(element);
         if (!unit || !this.members.has(element)) continue;
         const r = bounds.get(element)!, style = styles.get(element)!;
-        if (!r.width || r.bottom < origin.top - 128 || r.top > origin.top + height + 128 || style.display === "none" || style.visibility === "hidden") continue;
+        if (!r.width || r.bottom < origin.top - 128 * scaleY || r.top > origin.top + (height + 128) * scaleY || style.display === "none" || style.visibility === "hidden") continue;
         let clip: PaintRect = { x: 0, y: 0, width, height }, selectionOpacity = element === this.source ? 1 : Number(style.opacity);
         for (let parent = element.parentElement; parent && this.source.contains(parent); parent = parent.parentElement) {
           const s = styles.get(parent)!;
@@ -202,10 +230,16 @@ export class DOMCanvasRenderer {
       }
       const shadows = new Map<HTMLElement, ReturnType<typeof readBoxShadow>>();
       for (const element of placements.keys()) shadows.set(element, readBoxShadow(styles.get(element)!.boxShadow));
-      layers.push(...(this.scrollbars?.measure(origin, width, height) ?? []));
-      const animations = this.source.getAnimations({ subtree: true }).filter(a => a.playState === "running" && a.effect?.getComputedTiming().iterations !== Infinity);
-      Object.assign(this.canvas.style, { left: `${origin.x - host.x}px`, top: `${origin.y - host.y}px`, width: `${width}px`, height: `${height}px` });
+      layers.push(...(this.scrollbars?.measure(origin, width, height, scaleX, scaleY) ?? []));
+      const animations = this.source.getAnimations({ subtree: true }).filter(animation => {
+        if (animation.playState !== "running") return false;
+        const target = (animation.effect as KeyframeEffect)?.target;
+        if (!(target instanceof Element)) return false;
+        const r = target.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.bottom > origin.top && r.top < origin.bottom && r.right > origin.left && r.left < origin.right;
+      });
       this.compositor.resize(width, height, dpr);
+      Object.assign(this.canvas.style, { left: `${canvasLeft}px`, top: `${canvasTop}px`, width: `${this.canvas.width / dpr}px`, height: `${this.canvas.height / dpr}px` });
       for (const [element, snapshot] of snapshots) {
         const old = this.resources.get(element); if (old) this.compositor.remove(old.texture);
         const canvas = rasterPaint({ ...snapshot, shadow: undefined }, dpr);
@@ -223,6 +257,7 @@ export class DOMCanvasRenderer {
         this.decorations.set(element, { texture: this.compositor.upload(canvas), snapshot, pixelWidth: canvas.width, pixelHeight: canvas.height, key }); this.stats.decorationRasterizations++;
       }
       for (const [element, resource] of this.decorations) if (!placements.has(element)) { this.compositor.remove(resource.texture); this.decorations.delete(element); }
+      this.images.retain(new Set(Array.from(this.resources.values()).reduce<string[]>((urls, resource) => urls.concat(resource.snapshot.imageUrls), [])));
       this.dirty.clear();
       const sources: { [id: string]: PaintPlacement[] } = {};
       for (const unit of activeUnits) {
@@ -244,8 +279,8 @@ export class DOMCanvasRenderer {
         if (decoration) sources[unit.id + "/shadow"].push(surface(decoration.snapshot, decoration.texture, decoration.pixelWidth, decoration.pixelHeight));
       }
       this.compositor.render(sources, layers, this.rootOpacity);
-      this.scrollbars?.commit(origin.x - host.x, origin.y - host.y, width, height);
-      this.stats.frames++; this.stats.cachedResources = this.resources.size;
+      this.scrollbars?.commit(left, top, width, height);
+      this.stats.frames++; this.stats.cachedResources = this.resources.size; this.stats.cachedImages = this.images.size;
       if (!this.source.hasAttribute("data-canvas-rendered")) this.source.setAttribute("data-canvas-rendered", "");
       if (animations.length) {
         animations.forEach(a => {
@@ -267,6 +302,6 @@ export class DOMCanvasRenderer {
     this.resources.forEach(r => this.compositor.remove(r.texture)); this.resources.clear();
     this.decorations.forEach(r => this.compositor.remove(r.texture)); this.decorations.clear();
     this.dragImage?.remove(); this.dragImage = null;
-    this.compositor.dispose(); this.canvas.remove(); this.suppression.remove(); this.stats.cachedResources = 0;
+    this.compositor.dispose(); this.canvas.remove(); this.suppression.remove(); this.stats.cachedResources = 0; this.stats.cachedImages = 0;
   }
 }

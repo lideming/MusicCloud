@@ -15,6 +15,7 @@ import {
   jsx,
   listenPointerEvents,
   numLimit,
+  MountState,
   TextView,
   ToolTip,
   View,
@@ -38,6 +39,7 @@ import { I, i18n } from "../I18n/I18n";
 import { trackContextMenu } from "../Track/TrackContextMenu";
 import { desktopApi } from "./desktopApi";
 import { isIOS } from "./utils";
+import { DOMCanvasRenderer } from "./DOMCanvasRenderer";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -47,6 +49,25 @@ const loopModeToIcon: Record<PlayingLoopMode, string> = {
 };
 
 export class BottomBar extends View {
+  renderer: DOMCanvasRenderer | null = null;
+  private contentRoot = new Ref<HTMLElement>();
+
+  override mountStateChanged(state: MountState) {
+    super.mountStateChanged(state);
+    if (state === MountState.Mounted) {
+      try {
+        this.renderer = new DOMCanvasRenderer(this.contentRoot.value!, this.dom);
+        this.renderer.canvas.classList.add("player-canvas");
+      } catch (error) {
+        console.warn("[BottomBar] Canvas unavailable; using DOM paint", error);
+      }
+    } else if (state === MountState.Unmounted) {
+      this.renderer?.dispose();
+      this.renderer = null;
+      this.btnVolume.tipView.close();
+    }
+  }
+
   trackImg = new View<HTMLImageElement>(<img src="" />);
   trackImgOuter = new View(
     (
@@ -81,7 +102,7 @@ export class BottomBar extends View {
         hidden={() => !this.track}
       >
         <span class="name">{() => this.track?.name}</span>
-        <span class="artist">{() => this.track?.artist}</span>
+        <span class="artist">{() => this.track ? ` - ${this.track.artist}` : ""}</span>
       </span>
     )
   );
@@ -97,19 +118,21 @@ export class BottomBar extends View {
   createDom() {
     return (
       <div class="bottombar no-lyrics">
-        {this.trackImgOuter}
-        <div class="control-split-h">
-          {this.progressBar}
-          <div class="bottom-controls">
-            {this.trackInfo}
-            {this.btnOrder}
-            {this.btnPrev}
-            {this.btnPlay}
-            {this.btnNext}
-            {this.btnGroup}
-            {this.btnVolume}
-            {this.lyrics}
-            {this.btnFullscreen}
+        <div class="bottombar-content" ref={this.contentRoot}>
+          {this.trackImgOuter}
+          <div class="control-split-h">
+            {this.progressBar}
+            <div class="bottom-controls">
+              {this.trackInfo}
+              {this.btnOrder}
+              {this.btnPrev}
+              {this.btnPlay}
+              {this.btnNext}
+              {this.btnGroup}
+              {this.btnVolume}
+              {this.lyrics}
+              {this.btnFullscreen}
+            </div>
           </div>
         </div>
       </div>
@@ -300,11 +323,10 @@ class LoudnessMap extends View<HTMLCanvasElement> {
 
   async updateLoudnessMap(player: typeof playerCore) {
     const track = player.track;
-    if (track && !track._loudmap && this.dom) {
-      const ctx = this.dom.getContext("2d")!;
-      const { width, height } = this.dom;
-      ctx.clearRect(0, 0, width, height);
-    }
+    const ctx = this.dom.getContext("2d")!;
+    ctx.clearRect(0, 0, this.dom.width, this.dom.height);
+    this.hidden = true;
+    this.dom.dispatchEvent(new Event("canvas-content-changed", { bubbles: true }));
     const louds = await track?.getLoudnessMap();
     if (player.track !== track) return;
     if (louds && louds.length > 20) {
@@ -356,6 +378,7 @@ class LoudnessMap extends View<HTMLCanvasElement> {
     } else {
       this.hidden = true;
     }
+    this.dom.dispatchEvent(new Event("canvas-content-changed", { bubbles: true }));
   }
 
   smooth(arr: number[]) {
@@ -423,6 +446,7 @@ class VolumeButton extends ProgressButton {
     super(dom);
     this.addView(new View(<span innerHTML={volume} />));
     this.toggleClass("volume-btn", true);
+    this.dom.tabIndex = 0;
     this.tipView.toggleClass("volume-tip", true);
     this.InputStateTracker = new InputStateTracker(this.dom);
     this.InputStateTracker.onChanged.add(() => this.updateTip());
@@ -482,7 +506,8 @@ class VolumeButton extends ProgressButton {
     if (showing == this.tipView.shown) {
     } else if (showing) {
       const rect = this.dom.getBoundingClientRect();
-      const parent = this.parentView!.dom;
+      // The tooltip stays native, outside the player content paint root.
+      const parent = this.dom.closest<HTMLElement>(".bottombar")!;
       const parentRect = parent.getBoundingClientRect();
       this.tipView.show({
         x: rect.left + rect.width / 2 - parentRect.left,

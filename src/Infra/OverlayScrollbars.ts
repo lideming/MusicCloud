@@ -30,6 +30,8 @@ export class OverlayScrollbars {
   private sizes: ResizeObserver;
   private controls = new Map<HTMLElement, Controls>();
   private measurements: Measurement[] = [];
+  private scaleX = 1;
+  private scaleY = 1;
   private dragging: { controls: Controls; track: HTMLElement; axis: Bar["axis"]; pointer: number; grab: number } | null = null;
 
   constructor(private source: HTMLElement, host: HTMLElement, private changed: () => void) {
@@ -64,7 +66,8 @@ export class OverlayScrollbars {
       style.setProperty(saved.name, saved.owned, "important");
     }
   }
-  measure(origin: DOMRect, width: number, height: number): CanvasLayer[] {
+  measure(origin: DOMRect, width: number, height: number, scaleX = 1, scaleY = 1): CanvasLayer[] {
+    this.scaleX = scaleX; this.scaleY = scaleY;
     this.measurements = [];
     const layers: CanvasLayer[] = [];
     const bounds = new Map<HTMLElement, PaintRect>(), styles = new Map<HTMLElement, CSSStyleDeclaration>();
@@ -73,7 +76,7 @@ export class OverlayScrollbars {
       let result = bounds.get(element);
       if (!result) {
         const r = element.getBoundingClientRect(), sx = r.width / element.offsetWidth || 1, sy = r.height / element.offsetHeight || 1;
-        result = { x: r.x - origin.x + element.clientLeft * sx, y: r.y - origin.y + element.clientTop * sy, width: element.clientWidth * sx, height: element.clientHeight * sy };
+        result = { x: (r.x - origin.x + element.clientLeft * sx) / scaleX, y: (r.y - origin.y + element.clientTop * sy) / scaleY, width: element.clientWidth * sx / scaleX, height: element.clientHeight * sy / scaleY };
         bounds.set(element, result);
       }
       return result;
@@ -135,7 +138,7 @@ export class OverlayScrollbars {
     track.setAttribute("data-canvas-scrollbar-axis", axis); thumb.setAttribute("data-canvas-scrollbar-thumb", "");
     Object.assign(track.style, { position: "absolute", pointerEvents: "auto", touchAction: "none", userSelect: "none" });
     Object.assign(thumb.style, { position: "absolute" }); track.appendChild(thumb);
-    const coordinate = (event: PointerEvent) => { const r = this.source.getBoundingClientRect(); return axis === "vertical" ? event.clientY - r.y : event.clientX - r.x; };
+    const coordinate = (event: PointerEvent) => { const r = this.source.getBoundingClientRect(); return axis === "vertical" ? (event.clientY - r.y) / this.scaleY : (event.clientX - r.x) / this.scaleX; };
     track.addEventListener("pointerdown", event => {
       if (event.button !== 0 || this.dragging) return;
       const bar = controls.bars.get(axis); if (!bar) return;

@@ -97,10 +97,14 @@ export class CanvasCompositor {
     return texture;
   }
   resize(width: number, height: number, dpr: number) {
+    // Round native input once, then use that backing's CSS extent throughout
+    // projection/composition. Fractional padding must not scale every texel.
+    const pixelWidth = Math.max(1, Math.ceil(width * dpr)), pixelHeight = Math.max(1, Math.ceil(height * dpr));
+    width = pixelWidth / dpr; height = pixelHeight / dpr;
     if (width === this.width && height === this.height && dpr === this.dpr) return;
     const gl = this.gl;
     this.width = width; this.height = height; this.dpr = dpr;
-    this.canvas.width = Math.max(1, Math.ceil(width * dpr)); this.canvas.height = Math.max(1, Math.ceil(height * dpr));
+    this.canvas.width = pixelWidth; this.canvas.height = pixelHeight;
     [...this.targets, ...this.groups].forEach(t => { gl.deleteTexture(t.texture); gl.deleteFramebuffer(t.buffer); });
     this.groups = [];
     this.targets = Array.from({ length: 4 }, () => this.createTarget());

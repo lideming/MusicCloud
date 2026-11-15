@@ -18,6 +18,7 @@ type PaintNode = PaintBox | PaintText | PaintImage;
 export interface PaintSnapshot {
   width: number; height: number; layoutWidth: number; layoutHeight: number;
   offsetX: number; offsetY: number; root: PaintBox;
+  imageUrls: string[];
   shadow?: { color: string; x: number; y: number; blur: number; spread: number };
 }
 
@@ -28,18 +29,25 @@ export function readBoxShadow(value: string): PaintSnapshot["shadow"] {
 
 export class PaintImages {
   private images = new Map<string, HTMLImageElement>();
-  constructor(private changed: () => void, private failed: (error: Error) => void) {}
+  constructor(private changed: (url: string) => void, private failed: (error: Error) => void) {}
   get(url: string) {
     let image = this.images.get(url);
     if (!image) {
       image = new Image();
       image.crossOrigin = "anonymous";
-      image.onload = this.changed;
+      image.onload = () => this.changed(url);
       image.onerror = () => this.failed(new Error("Canvas paint image failed to load"));
       image.src = url;
       this.images.set(url, image);
     }
     return image.complete && image.naturalWidth ? image : null;
+  }
+  get size() { return this.images.size; }
+  retain(urls: Set<string>) {
+    for (const [url, image] of this.images) if (!urls.has(url)) {
+      image.onload = image.onerror = null;
+      this.images.delete(url);
+    }
   }
   dispose() {
     for (const image of this.images.values()) image.onload = image.onerror = null;
@@ -76,6 +84,8 @@ export function readPaintSize(element: HTMLElement, style = getComputedStyle(ele
 /** Coordinates are normalized to the untransformed resource; row scale/opacity
  * belongs to compositor placement, so pressing a row reuses its raster. */
 export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = false): PaintSnapshot {
+  const imageUrls: string[] = [];
+  const imageFor = (url: string) => { imageUrls.push(url); return images.get(url); };
   const bounds = element.getBoundingClientRect();
   const { width, height } = readPaintSize(element);
   const sx = bounds.width / width || 1, sy = bounds.height / height || 1;
@@ -86,16 +96,31 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
     const box = rect(node.getBoundingClientRect());
     if (!box.width) return null;
     if (node instanceof SVGSVGElement) {
-      const image = images.get(svgImage(node, true));
+      const image = imageFor(svgImage(node, true));
       const result = makeBox();
       if (image) result.children.push({ rect: box, image });
       return result;
     }
-    if (node instanceof HTMLImageElement) {
-      const image = node.currentSrc || node.src ? images.get(node.currentSrc || node.src) : null;
-      // The avatar background/radius is painted by its box as well.
+    if (node instanceof HTMLImageElement || node instanceof HTMLCanvasElement) {
+      const image = node instanceof HTMLCanvasElement ? node : node.getAttribute("src") || node.getAttribute("srcset") ? imageFor(node.currentSrc || node.src) : null;
       const result = makeBox();
-      if (image) result.children.push({ rect: box, image });
+      if (image) {
+        const naturalWidth = image instanceof HTMLImageElement ? image.naturalWidth : image.width;
+        const naturalHeight = image instanceof HTMLImageElement ? image.naturalHeight : image.height;
+        const left = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft), top = parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
+        const width = box.width - left - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
+        const height = box.height - top - parseFloat(style.borderBottomWidth) - parseFloat(style.paddingBottom);
+        let w = width, h = height;
+        if (naturalWidth && naturalHeight && style.objectFit !== "fill") {
+          let scale = style.objectFit === "cover" ? Math.max(width / naturalWidth, height / naturalHeight) : Math.min(width / naturalWidth, height / naturalHeight);
+          if (style.objectFit === "none") scale = 1;
+          if (style.objectFit === "scale-down") scale = Math.min(1, scale);
+          w = naturalWidth * scale; h = naturalHeight * scale;
+        }
+        const position = style.objectPosition.split(/\s+/);
+        const offset = (v: string, space: number) => v.endsWith("%") ? parseFloat(v) * space / 100 : parseFloat(v) || 0;
+        result.children.push({ rect: { x: box.x + left + offset(position[0], width - w), y: box.y + top + offset(position[1] || position[0], height - h), width: w, height: h }, image });
+      }
       return result;
     }
     function makeBox(): PaintBox {
@@ -104,7 +129,7 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
         borders: ["top", "right", "bottom", "left"].map(side => ({ color: style.getPropertyValue(`border-${side}-color`), width: parseFloat(style.getPropertyValue(`border-${side}-width`)) || 0 })),
         radii: [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius].map(v => parseFloat(v) || 0),
         opacity: isRoot ? 1 : parseFloat(style.opacity),
-        clip: style.overflow !== "visible" || node instanceof HTMLImageElement,
+        clip: style.overflow !== "visible" || node instanceof HTMLImageElement || node instanceof HTMLCanvasElement,
         outline: style.outlineColor, outlineWidth: style.outlineStyle === "none" ? 0 : parseFloat(style.outlineWidth) || 0,
         children: [],
       };
@@ -174,16 +199,12 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
     left = Math.min(left, child.rect.x); top = Math.min(top, child.rect.y);
     right = Math.max(right, child.rect.x + child.rect.width); bottom = Math.max(bottom, child.rect.y + child.rect.height);
   }
-  return { width: right - left, height: bottom - top, layoutWidth: width, layoutHeight: height, offsetX: left, offsetY: top, root, shadow };
+  return { width: right - left, height: bottom - top, layoutWidth: width, layoutHeight: height, offsetX: left, offsetY: top, root, shadow, imageUrls };
 }
 
 function rounded(ctx: CanvasRenderingContext2D, r: PaintRect, radii: number[]) {
-  const [a, b, c, d] = radii.map(v => Math.min(v, r.width / 2, r.height / 2));
-  const { x, y, width: w, height: h } = r;
-  ctx.beginPath(); ctx.moveTo(x + a, y); ctx.lineTo(x + w - b, y); ctx.quadraticCurveTo(x + w, y, x + w, y + b);
-  ctx.lineTo(x + w, y + h - c); ctx.quadraticCurveTo(x + w, y + h, x + w - c, y + h);
-  ctx.lineTo(x + d, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - d);
-  ctx.lineTo(x, y + a); ctx.quadraticCurveTo(x, y, x + a, y); ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(r.x, r.y, r.width, r.height, radii);
 }
 
 export function shadowSnapshot(snapshot: PaintSnapshot, shadow: NonNullable<PaintSnapshot["shadow"]>): PaintSnapshot {

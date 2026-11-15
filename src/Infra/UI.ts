@@ -65,6 +65,7 @@ import { uploads } from "../Track/Uploads";
 import { api } from "../API/Api";
 
 export const ui = new (class {
+  bottomBar = bottomBar;
   usingKeyboardInput = false;
   isVisible = new Ref(document.visibilityState === "visible");
   init() {

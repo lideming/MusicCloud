@@ -263,7 +263,8 @@ test('overlay scrollbars share painted/input geometry and restore native viewpor
     const s=mcloud.ui.sidebar.dom;s.style.setProperty('scrollbar-width','thin','important');s.style.setProperty('scrollbar-gutter','stable','important');`);
   const geometry = () => api.js(`(()=>{const s=mcloud.ui.sidebar.dom,r=s.getBoundingClientRect(),c=mcloud.ui.sidebar.renderer.canvas.getBoundingClientRect();return {outer:s.offsetWidth,client:s.clientWidth,right:r.right,canvasRight:c.right,height:s.clientHeight,top:s.scrollTop,opacity:getComputedStyle(s).opacity,style:s.getAttribute('style'),declaration:s.getAttribute('data-canvas-scrollbar'),controls:document.querySelectorAll('#sidebar-shell .dom-canvas-scrollbars').length}})()`);
   const native = await geometry(); assert.equal(native.outer - native.client, 10, 'Desktop Chromium starts with a real thin native gutter');
-  await api.js('mcloud.ui.sidebar.renderer=new ScrollRenderer(mcloud.ui.sidebar.dom,mcloud.ui.sidebar.shell)'); await delay(300);
+  await api.js(`mcloud.ui.sidebar.renderer=new ScrollRenderer(mcloud.ui.sidebar.dom,mcloud.ui.sidebar.shell);
+    new Promise(resolve=>{const source=mcloud.ui.sidebar.dom;if(source.hasAttribute('data-canvas-rendered'))return resolve();const observer=new MutationObserver(()=>{if(source.hasAttribute('data-canvas-rendered')){observer.disconnect();resolve()}});observer.observe(source,{attributes:true,attributeFilter:['data-canvas-rendered']})})`);
   const overlay = await geometry(); assert.equal(overlay.outer, overlay.client); assert.equal(overlay.right, overlay.canvasRight);
   const rect = selector => api.js(`(()=>{const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`);
   const rootTrack = '#sidebar-shell [data-canvas-scrollbar-axis="vertical"]';
@@ -378,8 +379,8 @@ test('GPU preserves aligned raster texels at integer and fractional DPR', { skip
   const { api } = await browser(t);
   const results = await api.js(`(() => {
     const Compositor=mcloud.ui.sidebar.renderer.compositor.constructor;
-    return [1,1.25,2].map(dpr=>{
-      const output=document.createElement('canvas'), compositor=new Compositor(output);compositor.resize(160,80,dpr);
+    return [1,1.25,1.1,2].map(dpr=>{
+      const output=document.createElement('canvas'), compositor=new Compositor(output);compositor.resize(169.75,70,dpr);
       const input=document.createElement('canvas');input.width=Math.ceil(121*dpr);input.height=Math.ceil(31*dpr);
       const ctx=input.getContext('2d');ctx.fillStyle='black';
       for(let x=10;x<90;x+=8)ctx.fillRect(x*dpr,5*dpr,2*dpr,20*dpr);
@@ -391,11 +392,12 @@ test('GPU preserves aligned raster texels at integer and fractional DPR', { skip
         let max=0;for(let y=0;y<input.height;y++)for(let x=0;x<input.width;x++)max=Math.max(max,Math.abs(original[(y*input.width+x)*4+3]-pixels[((output.height-1-y)*output.width+x)*4+3]));
         return max;
       };
-      const result={dpr,aligned:difference(0,input.width/dpr,input.height/dpr),squeezed:difference(0,121,31),shifted:difference(.5/dpr,input.width/dpr,input.height/dpr)};
+      const result={dpr,backing:[output.width,output.height],aligned:difference(0,input.width/dpr,input.height/dpr),squeezed:difference(0,121,31),shifted:difference(.5/dpr,input.width/dpr,input.height/dpr)};
       compositor.remove(texture);compositor.dispose();return result;
     });
   })()`);
   for (const result of results) {
+    assert.deepEqual(result.backing,[Math.ceil(169.75*result.dpr),Math.ceil(70*result.dpr)],'Backing dimensions are rounded from native input once');
     assert.equal(result.aligned, 0, `Allocated raster extents preserve every alpha texel at DPR ${result.dpr}`);
     assert.ok(result.shifted > 0, 'A half-device-pixel placement reproduces interpolation loss');
   }
