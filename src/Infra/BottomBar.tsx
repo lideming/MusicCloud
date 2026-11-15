@@ -40,6 +40,7 @@ import { trackContextMenu } from "../Track/TrackContextMenu";
 import { desktopApi } from "./desktopApi";
 import { isIOS } from "./utils";
 import { DOMCanvasRenderer } from "./DOMCanvasRenderer";
+import { settings } from "../Settings/Settings";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -55,18 +56,30 @@ export class BottomBar extends View {
   override mountStateChanged(state: MountState) {
     super.mountStateChanged(state);
     if (state === MountState.Mounted) {
-      try {
-        this.renderer = new DOMCanvasRenderer(this.contentRoot.value!, this.dom);
-        this.renderer.canvas.classList.add("player-canvas");
-      } catch (error) {
-        console.warn("[BottomBar] Canvas unavailable; using DOM paint", error);
-      }
+      settings.renderer.onChanged.add(this.updateRenderer);
+      this.updateRenderer();
     } else if (state === MountState.Unmounted) {
+      settings.renderer.onChanged.remove(this.updateRenderer);
       this.renderer?.dispose();
       this.renderer = null;
       this.btnVolume.tipView.close();
     }
   }
+
+  private updateRenderer = () => {
+    if (settings.renderer.current === "dom") {
+      this.renderer?.dispose();
+      this.renderer = null;
+      return;
+    }
+    if (this.renderer) return;
+    try {
+      this.renderer = new DOMCanvasRenderer(this.contentRoot.value!, this.dom);
+      this.renderer.canvas.classList.add("player-canvas");
+    } catch (error) {
+      console.warn("[BottomBar] Canvas unavailable; using DOM paint", error);
+    }
+  };
 
   trackImg = new View<HTMLImageElement>(<img src="" />);
   trackImgOuter = new View(

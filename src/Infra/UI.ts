@@ -21,6 +21,7 @@ import * as views from "./ui-views";
 import { MainContainer } from "./ui-views";
 import { BottomBar } from "./BottomBar";
 import { createSidebarRenderer } from "./SidebarCanvas";
+import { settings } from "../Settings/Settings";
 
 View.debugging = true;
 
@@ -349,7 +350,8 @@ export const ui = new (class {
     init() {
       this.header.dom.setAttribute("data-canvas-blur", "#sidebar-list ul, #sidebar-features");
       this.shell.querySelector(".sidebar-material")!.setAttribute("aria-hidden", "true");
-      this.renderer = createSidebarRenderer(this.dom, this.shell);
+      settings.renderer.onChanged.add(this.updateRenderer);
+      this.updateRenderer();
       this.initPanHandler();
       this.toggleBtn(true);
       this.checkWidth();
@@ -377,6 +379,15 @@ export const ui = new (class {
         });
       }
     }
+
+    private updateRenderer = () => {
+      if (settings.renderer.current === "canvas") {
+        if (!this.renderer) this.renderer = createSidebarRenderer(this.dom, this.shell);
+      } else {
+        this.renderer?.dispose();
+        this.renderer = null;
+      }
+    };
 
     private _panxHandler: TouchPanListener = null!;
     private _leftPadding = 200;

@@ -159,6 +159,18 @@ class SettingsDialog extends Dialog {
     );
 
     this.addContent(
+      <SettingItem label={() => I`Renderer:`}>
+        <RadioContainer
+          currentValue={settings.renderer.current}
+          onCurrentChange={(option) => settings.renderer.set(option.value)}
+        >
+          <RadioOption value="dom">{() => I`Browser DOM`}</RadioOption>
+          <RadioOption value="canvas">{() => I`Canvas`}</RadioOption>
+        </RadioContainer>
+      </SettingItem>,
+    );
+
+    this.addContent(
       <SettingItem label={() => I`Language:`}>
         <RadioContainer
           currentValue={ui.lang.siLang.data}

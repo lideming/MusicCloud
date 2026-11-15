@@ -91,6 +91,11 @@ async function browser(t) {
   await api.call('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
   await api.call('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/` });
   for (let i = 0; i < 100; i++) { if (await api.js('Boolean(window.mcloud?.listIndex.section)')) break; if (i === 99) throw Error('App initialization timeout'); await delay(100); }
+  await setupScene(api);
+  return { api, requests };
+}
+
+async function setupScene(api) {
   await api.js(`(async () => {
     mcloud.user.closeUI(); mcloud.playerCore.pause(); mcloud.ui.theme.set('light-rounded');
     mcloud.listIndex.setIndex({ lists: [{ id: 700001, owner: mcloud.user.info.id, visibility: 0, version: 0, name: 'Canvas tracks' }] });
@@ -118,7 +123,6 @@ async function browser(t) {
       let ink = 0, sum = 0; for (let i = 0; i < p.length; i += 4) { if (p[i+3]) ink++; sum += p[i] + p[i+1] + p[i+2] + p[i+3]; } return { ink, sum };
     };
   })()`);
-  return { api, requests };
 }
 
 const supported = fs.existsSync(chromium);
@@ -358,4 +362,76 @@ test('fractional player output keeps cached text texels, backing scale and align
   assert.equal(await api.js("playerBar.dom.querySelector('.dom-canvas-scrollbars').style.display"),'none');
   await api.js("playerBar.renderer.source.style.height=''"); await wait(api,"playerBar.renderer.canvas.style.height==='70.4px'"); await delay(150);
   assert.ok(await api.js("sceneInk(playerBar.renderer,playerBar.dom.querySelector('.track-info')).ink")>100,'A resumed unchanged backing restores visible text and its allocated CSS extent');
+});
+
+
+test('settings switch all mounted roots without resetting native state and persist through routes and reload', { skip: !supported, timeout: 60000 }, async t => {
+  const { api, requests } = await browser(t);
+  const rendererOptions = `[...mcloud.settingsUI.dialog.dom.querySelectorAll('.setting-item')].find(e=>e.querySelector('.setting-label')?.textContent==='Renderer:').querySelectorAll('.radio-option')`;
+  const choose = async index => click(api, await point(api, `(${rendererOptions})[${index}]`));
+  const open = async () => { await api.js('mcloud.settingsUI.openUI()'); await delay(150); };
+  const close = async () => { await api.js('mcloud.settingsUI.dialog.close()'); await delay(150); };
+  const active = `mcloud.ui.sidebar.renderer && view.renderer && playerBar.renderer && [mcloud.ui.sidebar.renderer,view.renderer,playerBar.renderer].every(r=>r.source.hasAttribute('data-canvas-rendered'))`;
+  const native = `!mcloud.ui.sidebar.renderer && !view.renderer && !playerBar.renderer && !document.querySelector('.sidebar-canvas,.list-content-canvas,.player-canvas,[data-canvas-rendered],.dom-canvas-scrollbars')`;
+  const remember = `void(window.renderers=[mcloud.ui.sidebar.renderer,view.renderer,playerBar.renderer])`;
+  const same = `renderers.every((r,i)=>r===[mcloud.ui.sidebar.renderer,view.renderer,playerBar.renderer][i])`;
+  await wait(api, active);
+  assert.equal(await api.js('localStorage.getItem("mcloud-renderer")'), null, 'No saved choice defaults to Canvas');
+  await api.js(`mcloud.playerCore.setTrack(list.tracks[0]);mcloud.playerCore.currentTime=17;mcloud.playerCore.play();view.scrollBox.dom.scrollTop=700;view.listView.selectionHelper.toggleItemSelection(view.listView.get(15),true);window.source=view.scrollBox.dom;window.audio=mcloud.playerCore.audio`);
+  await wait(api, 'mcloud.playerCore.state==="playing"');
+  const scroll = await api.js('view.scrollBox.dom.scrollTop');
+  const preserved = async () => {
+    assert.equal(await api.js('source===view.scrollBox.dom && audio===mcloud.playerCore.audio && mcloud.playerCore.track===list.tracks[0] && mcloud.playerCore.state==="playing" && mcloud.playerCore.currentTime>=17 && view.listView.get(15).selected'), true, 'Switch keeps source, media, current track, playback position/state and selection');
+    assert.equal(await api.js('view.scrollBox.dom.scrollTop'), scroll, 'Switch retains the native scroll offset');
+  };
+  await api.js(remember); await open();
+  assert.equal(await api.js(same), true, 'Opening settings does not recreate live surfaces');
+  await choose(1); await api.js('mcloud.settings.renderer.set("canvas")');
+  assert.equal(await api.js(same), true, 'Selecting the current value is a no-op');
+  await choose(0); await wait(api, native); await preserved();
+  assert.equal(await api.js('localStorage.getItem("mcloud-renderer")'), 'dom');
+  assert.equal(await api.js(`[mcloud.ui.sidebar.dom,view.scrollBox.dom,playerBar.dom.querySelector('.bottombar-content')].every(e=>getComputedStyle(e).opacity==='1' && e.style.scrollbarWidth!=='none')`), true, 'DOM paint and authored scrollbar styles are restored');
+  assert.equal(await api.js('renderers.every(r=>!r.canvas.isConnected)'), true, 'Owned canvases are removed');
+  await close();
+  // Native keyboard and editing handlers remain usable after takeover ends.
+  await api.js('playerBar.btnVolume.dom.focus();window.volumeBefore=mcloud.playerCore.volume');
+  await key(api,'ArrowDown');
+  assert.equal(await api.js('mcloud.playerCore.volume<volumeBefore'), true);
+  await click(api, await point(api,'view.header.dom.querySelector(".title")'));
+  assert.equal(await api.js('view.header.dom.querySelector("input")===document.activeElement'), true);
+  await api.call('Input.insertText', { text: 'Native input' });
+  assert.equal(await api.js('document.activeElement.value'), 'Native input');
+  await key(api,'Escape');
+  await open(); await choose(1); await wait(api,active); await preserved();
+  assert.deepEqual(await api.js(`[...['sidebar-canvas','list-content-canvas','player-canvas']].map(c=>document.querySelectorAll('.'+c).length)`), [1,1,1]);
+  assert.ok(await api.js('sceneInk(view.renderer,view.listView.get(15).dom).ink')>100, 'Recreated Canvas paints the current viewport');
+  await api.js(remember); await choose(1);
+  assert.equal(await api.js(same), true);
+  await choose(0); await wait(api,native); await preserved(); await close();
+  await api.js('mcloud.playerCore.pause()');
+  for(let i=0;i<3;i++) {
+    await api.js('mcloud.router.nav("home")'); await wait(api,'!view.parentView');
+    await api.js('mcloud.settings.renderer.set("canvas")');
+    assert.equal(await api.js('view.renderer===null && !view.dom.querySelector(".list-content-canvas")'), true, 'Removed lists do not retain preference listeners that create detached contexts');
+    await api.js('mcloud.settings.renderer.set("dom");mcloud.listIndex.showTracklist(700001)'); await wait(api,'Boolean(view.parentView)'); await delay(450);
+    assert.equal(await api.js(native), true, 'Route entry honors DOM preference');
+  }
+  await api.js('mcloud.webfx.unmountView(document.body,playerBar)');
+  await api.js('mcloud.settings.renderer.set("canvas")');
+  assert.equal(await api.js('playerBar.renderer===null && !playerBar.dom.querySelector(".player-canvas")'), true, 'Unmounted player does not create a context');
+  await api.js('mcloud.settings.renderer.set("dom");mcloud.webfx.mountView(document.body,playerBar)');
+  assert.equal(await api.js(native), true, 'Player remount honors the current choice');
+  // Reload the same browser profile; both early-mounted player and sidebar must honor storage.
+  await api.js('window.beforeRendererReload=true');
+  await api.call('Page.reload', { ignoreCache: true });
+  await wait(api,'!window.beforeRendererReload && Boolean(window.mcloud?.listIndex.section)');
+  assert.equal(await api.js('mcloud.settings.renderer.current'), 'dom');
+  await setupScene(api);
+  assert.equal(await api.js(native), true, 'Reload and first list route stay native');
+  await open();
+  assert.equal(await api.js(`(${rendererOptions})[0].classList.contains('selected')`), true, 'Dialog reflects the saved choice');
+  await choose(1); await wait(api,active);
+  assert.deepEqual(await api.js(`[...['sidebar-canvas','list-content-canvas','player-canvas']].map(c=>document.querySelectorAll('.'+c).length)`), [1,1,1]);
+  assert.equal(await api.js('localStorage.getItem("mcloud-renderer")'), 'canvas');
+  assert.ok(requests.every(method=>method==='GET'), 'Rendering preference never writes an account/backend');
 });
