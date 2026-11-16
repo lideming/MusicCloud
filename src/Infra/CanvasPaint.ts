@@ -1,6 +1,25 @@
 // A small paint vocabulary for DOM-laid-out controls, not a CSS layout engine.
 // All DOM reads finish before Canvas2D or WebGL drawing starts.
 export interface PaintRect { x: number; y: number; width: number; height: number }
+export interface PaintClip { rect: PaintRect; radii: { x: number; y: number }[] }
+
+/** The overflow clip follows the padding edge, with the border's inner radii.
+ * Resolve percentages against the border box before normalizing adjacent arcs. */
+export function readOverflowClip(style: CSSStyleDeclaration, rect: PaintRect, layoutWidth = rect.width, layoutHeight = rect.height): PaintClip {
+  const sx = rect.width / layoutWidth || 1, sy = rect.height / layoutHeight || 1;
+  const borders = [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth].map(v => parseFloat(v) || 0);
+  const radii = [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius].map(value => {
+    const parts = value.split(/\s+/), length = (v: string, basis: number) => v.endsWith("%") ? parseFloat(v) * basis / 100 : parseFloat(v) || 0;
+    return { x: length(parts[0], layoutWidth), y: length(parts[1] || parts[0], layoutHeight) };
+  });
+  const ratio = (size: number, sum: number) => sum ? size / sum : 1;
+  const factor = Math.min(1, ratio(layoutWidth, radii[0].x + radii[1].x), ratio(layoutWidth, radii[3].x + radii[2].x),
+    ratio(layoutHeight, radii[0].y + radii[3].y), ratio(layoutHeight, radii[1].y + radii[2].y));
+  return { rect: { x: rect.x + borders[3] * sx, y: rect.y + borders[0] * sy,
+    width: Math.max(0, rect.width - (borders[1] + borders[3]) * sx), height: Math.max(0, rect.height - (borders[0] + borders[2]) * sy) },
+    radii: radii.map((r, i) => ({ x: Math.max(0, r.x * factor - borders[i === 0 || i === 3 ? 3 : 1]) * sx,
+      y: Math.max(0, r.y * factor - borders[i < 2 ? 0 : 2]) * sy })) };
+}
 interface PaintBox {
   rect: PaintRect;
   background: string;
@@ -8,6 +27,7 @@ interface PaintBox {
   radii: number[];
   opacity: number;
   clip: boolean;
+  clipShape?: PaintClip;
   outline: string;
   outlineWidth: number;
   children: PaintNode[];
@@ -129,7 +149,8 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
         borders: ["top", "right", "bottom", "left"].map(side => ({ color: style.getPropertyValue(`border-${side}-color`), width: parseFloat(style.getPropertyValue(`border-${side}-width`)) || 0 })),
         radii: [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius].map(v => parseFloat(v) || 0),
         opacity: isRoot ? 1 : parseFloat(style.opacity),
-        clip: style.overflow !== "visible" || node instanceof HTMLImageElement || node instanceof HTMLCanvasElement,
+        clip: style.overflow !== "visible" || /paint|strict|content/.test(style.contain) || node instanceof HTMLImageElement || node instanceof HTMLCanvasElement,
+        clipShape: readOverflowClip(style, box, readPaintSize(node as HTMLElement, style).width, readPaintSize(node as HTMLElement, style).height),
         outline: style.outlineColor, outlineWidth: style.outlineStyle === "none" ? 0 : parseFloat(style.outlineWidth) || 0,
         children: [],
       };
@@ -254,7 +275,6 @@ export function rasterPaint(snapshot: PaintSnapshot, dpr: number) {
       ctx.save(); ctx.globalAlpha *= isolated ? 1 : node.opacity;
       rounded(ctx, r, node.radii); ctx.fillStyle = node.background; ctx.fill();
       if (node.outlineWidth) { ctx.strokeStyle = node.outline; ctx.lineWidth = node.outlineWidth * 2; ctx.stroke(); }
-      if (node.clip) ctx.clip();
       const border = node.borders[0];
       ctx.save();
       if (node.borders.every(b => b.width === border.width && b.color === border.color)) {
@@ -269,6 +289,10 @@ export function rasterPaint(snapshot: PaintSnapshot, dpr: number) {
         node.borders.forEach((b, i) => { ctx.fillStyle = b.color; ctx.fillRect(...corners[i] as [number, number, number, number]); });
       }
       ctx.restore();
+      if (node.clip) {
+        if (node.clipShape) { const shape = node.clipShape; ctx.beginPath(); ctx.roundRect(shape.rect.x, shape.rect.y, shape.rect.width, shape.rect.height, shape.radii); }
+        ctx.clip();
+      }
       node.children.forEach(child => paint(child, ctx)); ctx.restore();
     }
   };

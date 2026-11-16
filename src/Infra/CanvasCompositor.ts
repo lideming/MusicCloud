@@ -1,6 +1,6 @@
-import { PaintRect } from "./CanvasPaint";
+import { PaintClip, PaintRect } from "./CanvasPaint";
 
-export interface PaintPlacement { texture: WebGLTexture; rect: PaintRect; opacity: number; clip?: PaintRect; selectionOpacity?: number }
+export interface PaintPlacement { texture: WebGLTexture; rect: PaintRect; opacity: number; clip?: PaintRect; selectionOpacity?: number; roundedClips?: PaintClip[] }
 export interface PaintSolid { rect: PaintRect; color: number[] }
 export type CanvasLayer =
   | { kind: "source"; source: string }
@@ -13,15 +13,21 @@ attribute vec2 a_position;
 uniform vec2 u_size;
 uniform vec4 u_rect;
 varying vec2 v_uv;
+varying vec2 v_position;
 void main() {
   v_uv = a_position;
   vec2 p = u_rect.xy + a_position * u_rect.zw;
+  v_position = p;
   gl_Position = vec4(p.x / u_size.x * 2.0 - 1.0, 1.0 - p.y / u_size.y * 2.0, 0, 1);
 }`;
 // Every texture uses top-left UVs (framebuffer textures are flipped explicitly).
 const fragment = `
-precision mediump float;
+precision highp float;
 varying vec2 v_uv;
+varying vec2 v_position;
+uniform sampler2D u_mask;
+uniform vec4 u_maskRect;
+uniform float u_masked;
 uniform sampler2D u_image;
 uniform vec2 u_step;
 uniform float u_flip;
@@ -40,7 +46,13 @@ void main() {
   }
   c /= total;
   }
-  gl_FragColor = (c * (1.0 - u_tint.a) + vec4(u_tint.rgb * u_tint.a, u_tint.a)) * u_opacity;
+  float coverage = 1.0;
+  if (u_masked > 0.5) {
+    vec2 maskUV = (v_position - u_maskRect.xy) / u_maskRect.zw;
+    coverage = texture2D(u_mask, maskUV).a;
+    if (maskUV.x < 0.0 || maskUV.y < 0.0 || maskUV.x > 1.0 || maskUV.y > 1.0) coverage = 0.0;
+  }
+  gl_FragColor = (c * (1.0 - u_tint.a) + vec4(u_tint.rgb * u_tint.a, u_tint.a)) * u_opacity * coverage;
 }`;
 
 /** Ordered, content-only composition. Effects select their input sources
@@ -55,6 +67,7 @@ export class CanvasCompositor {
   private width = 0;
   private height = 0;
   private dpr = 1;
+  private masks = new Map<string, { texture: WebGLTexture; width: number; height: number }>();
   private locations: { [name: string]: WebGLUniformLocation | null } = {};
   constructor(readonly canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: false, preserveDrawingBuffer: true });
@@ -77,7 +90,8 @@ export class CanvasCompositor {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]), gl.STATIC_DRAW);
     const position = gl.getAttribLocation(this.program, "a_position");
     gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-    for (const name of ["size", "rect", "step", "flip", "opacity", "tint"]) this.locations[name] = gl.getUniformLocation(this.program, "u_" + name);
+    for (const name of ["size", "rect", "step", "flip", "opacity", "tint", "image", "mask", "maskRect", "masked"]) this.locations[name] = gl.getUniformLocation(this.program, "u_" + name);
+    gl.uniform1i(this.locations.image, 0); gl.uniform1i(this.locations.mask, 1);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   }
@@ -89,6 +103,7 @@ export class CanvasCompositor {
   remove(texture: WebGLTexture) { this.gl.deleteTexture(texture); }
   private makeTexture() {
     const gl = this.gl, texture = gl.createTexture()!;
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -124,9 +139,14 @@ export class CanvasCompositor {
     gl.disable(gl.SCISSOR_TEST);
     if (clear) { gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); }
   }
-  private draw(texture: WebGLTexture, rect: PaintRect, opacity = 1, flip = false, step = [0, 0], tint = [0, 0, 0, 0]) {
+  private draw(texture: WebGLTexture, rect: PaintRect, opacity = 1, flip = false, step = [0, 0], tint = [0, 0, 0, 0], mask?: { texture: WebGLTexture; rect: PaintRect }) {
     const gl = this.gl, u = this.locations;
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1f(u.masked, mask ? 1 : 0);
+    if (mask) {
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, mask.texture);
+      gl.uniform4f(u.maskRect, mask.rect.x, mask.rect.y, mask.rect.width, mask.rect.height);
+    }
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.uniform2f(u.size, this.width, this.height);
     gl.uniform4f(u.rect, rect.x, rect.y, rect.width, rect.height);
     gl.uniform2f(u.step, step[0], step[1]); gl.uniform1f(u.flip, flip ? 1 : 0);
@@ -140,13 +160,43 @@ export class CanvasCompositor {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(Math.floor(left * this.dpr), Math.floor((this.height - bottom) * this.dpr), Math.max(0, Math.ceil((right - left) * this.dpr)), Math.max(0, Math.ceil((bottom - top) * this.dpr)));
   }
+  private mask(clips: PaintClip[], used: Set<string>, clip: PaintRect) {
+    const left = Math.max(0, clip.x, ...clips.map(c => c.rect.x)), top = Math.max(0, clip.y, ...clips.map(c => c.rect.y));
+    const right = Math.min(this.width, clip.x + clip.width, ...clips.map(c => c.rect.x + c.rect.width)), bottom = Math.min(this.height, clip.y + clip.height, ...clips.map(c => c.rect.y + c.rect.height));
+    const shapes = clips.map(c => ({ rect: { ...c.rect, x: c.rect.x - left, y: c.rect.y - top }, radii: c.radii }));
+    // Translation-independent: scrolling and placement-only movement reuse the
+    // same mask texels. Restrict allocation to the output viewport as well.
+    const key = JSON.stringify([this.dpr, shapes]);
+    used.add(key);
+    let cached = this.masks.get(key);
+    if (!cached) {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.ceil(Math.max(0, right - left) * this.dpr));
+      canvas.height = Math.max(1, Math.ceil(Math.max(0, bottom - top) * this.dpr));
+      const ctx = canvas.getContext("2d")!; ctx.scale(this.dpr, this.dpr);
+      for (const shape of shapes) { const r = shape.rect; ctx.beginPath(); ctx.roundRect(r.x, r.y, r.width, r.height, shape.radii); ctx.clip(); }
+      ctx.fillStyle = "white"; ctx.fillRect(0, 0, Math.max(0, right - left), Math.max(0, bottom - top));
+      cached = { texture: this.upload(canvas), width: canvas.width / this.dpr, height: canvas.height / this.dpr };
+      this.masks.set(key, cached);
+    }
+    return { texture: cached.texture, rect: { x: left, y: top, width: cached.width, height: cached.height } };
+  }
   render(sources: { [id: string]: PaintPlacement[] }, layers: CanvasLayer[], opacity = 1) {
     const [selected, horizontal, blurred, composed] = this.targets;
+    const usedMasks = new Set<string>();
     const full = { x: 0, y: 0, width: this.width, height: this.height };
     const drawSource = (id: string, selection = false) => {
       sources[id].forEach(p => {
         if (p.clip) this.clip(p.clip); else this.gl.disable(this.gl.SCISSOR_TEST);
-        this.draw(p.texture, p.rect, selection ? p.selectionOpacity ?? p.opacity : p.opacity);
+        // A source wholly within either straight interior band cannot meet a
+        // rounded corner. Long clipped ancestors need no scrolling mask there.
+        const rounded = p.roundedClips?.filter(c => {
+          const r = c.rect, a = c.radii, b = p.rect;
+          return !(b.y >= r.y + Math.max(a[0].y, a[1].y) && b.y + b.height <= r.y + r.height - Math.max(a[2].y, a[3].y) ||
+            b.x >= r.x + Math.max(a[0].x, a[3].x) && b.x + b.width <= r.x + r.width - Math.max(a[1].x, a[2].x));
+        });
+        const mask = rounded?.length ? this.mask(rounded, usedMasks, p.clip ?? full) : undefined;
+        this.draw(p.texture, p.rect, selection ? p.selectionOpacity ?? p.opacity : p.opacity, false, [0, 0], [0, 0, 0, 0], mask);
       });
       this.gl.disable(this.gl.SCISSOR_TEST);
     };
@@ -182,11 +232,13 @@ export class CanvasCompositor {
     };
     compose(layers, composed);
     this.target(null); this.draw(composed.texture, full, opacity, true);
+    for (const [key, mask] of this.masks) if (!usedMasks.has(key)) { this.remove(mask.texture); this.masks.delete(key); }
     if (this.gl.isContextLost()) throw new Error("Canvas WebGL context lost");
   }
   dispose() {
     const gl = this.gl;
     [...this.targets, ...this.groups].forEach(t => { gl.deleteTexture(t.texture); gl.deleteFramebuffer(t.buffer); });
+    this.masks.forEach(mask => this.remove(mask.texture)); this.masks.clear();
     gl.deleteBuffer(this.vertices); gl.deleteProgram(this.program);
   }
 }

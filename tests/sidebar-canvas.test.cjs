@@ -160,8 +160,8 @@ test('production sidebar paints, reuses resources, routes native hits and restor
   await api.call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hit.x, y: hit.y }); await delay(100);
   assert.match(await api.js(`getComputedStyle(mcloud.listIndex.getViewItem(${hit.id}).dom).backgroundColor`), /^rgba\(/, 'Sidebar hover uses the global translucent palette');
   await api.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: hit.x, y: hit.y, button: 'left', buttons: 1, clickCount: 1 }); await delay(80);
-  const pressed = await api.js(`(()=>{const e=mcloud.listIndex.getViewItem(${hit.id}).dom,s=getComputedStyle(e);return {active:e.matches(':active'),opacity:Number(s.opacity),transform:s.transform}})()`);
-  assert.ok(pressed.active && pressed.opacity < 1 && pressed.transform !== 'none');
+  const pressed = await api.js(`(async()=>{const e=mcloud.listIndex.getViewItem(${hit.id}).dom;let result;for(let i=0;i<20;i++){const s=getComputedStyle(e);result={active:e.matches(':active'),opacity:Number(s.opacity),transform:s.transform};if(result.active&&result.opacity<1&&result.transform!=='none')break;await new Promise(requestAnimationFrame)}return result})()`);
+  assert.ok(pressed.active && pressed.opacity < 1 && pressed.transform !== 'none', JSON.stringify(pressed));
   await api.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: hit.x, y: hit.y, button: 'left', buttons: 0, clickCount: 1 }); await delay(700);
   assert.equal(await api.js('clicked.at(-1)'), hit.id);
   const beforeUpdate = await api.js('mcloud.ui.sidebar.renderer.stats.rasterizations');

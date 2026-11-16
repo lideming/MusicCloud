@@ -369,7 +369,12 @@ test('settings switch all mounted roots without resetting native state and persi
   const { api, requests } = await browser(t);
   const rendererOptions = `[...mcloud.settingsUI.dialog.dom.querySelectorAll('.setting-item')].find(e=>e.querySelector('.setting-label')?.textContent==='Renderer:').querySelectorAll('.radio-option')`;
   const choose = async index => click(api, await point(api, `(${rendererOptions})[${index}]`));
-  const open = async () => { await api.js('mcloud.settingsUI.openUI()'); await delay(150); };
+  const open = async () => {
+    await api.js('mcloud.settingsUI.openUI()');
+    // The dialog moves during its entrance. Click only after native animation
+    // geometry settles, otherwise this point can hit the Language row below.
+    await wait(api, 'mcloud.settingsUI.dialog.dom.getAnimations({subtree:true}).every(a=>a.playState!=="running")');
+  };
   const close = async () => { await api.js('mcloud.settingsUI.dialog.close()'); await delay(150); };
   const active = `mcloud.ui.sidebar.renderer && view.renderer && playerBar.renderer && [mcloud.ui.sidebar.renderer,view.renderer,playerBar.renderer].every(r=>r.source.hasAttribute('data-canvas-rendered'))`;
   const native = `!mcloud.ui.sidebar.renderer && !view.renderer && !playerBar.renderer && !document.querySelector('.sidebar-canvas,.list-content-canvas,.player-canvas,[data-canvas-rendered],.dom-canvas-scrollbars')`;
@@ -434,4 +439,99 @@ test('settings switch all mounted roots without resetting native state and persi
   assert.deepEqual(await api.js(`[...['sidebar-canvas','list-content-canvas','player-canvas']].map(c=>document.querySelectorAll('.'+c).length)`), [1,1,1]);
   assert.equal(await api.js('localStorage.getItem("mcloud-renderer")'), 'canvas');
   assert.ok(requests.every(method=>method==='GET'), 'Rendering preference never writes an account/backend');
+});
+
+async function nativeCanvasDifference(api, renderer, element, width) {
+  const rect = await api.js(`(()=>{const r=(${element}).getBoundingClientRect();return {x:r.left,y:r.top,width:Math.min(r.width,${width || 10000}),height:r.height,scale:1}})()`);
+  const canvas = await api.call('Page.captureScreenshot', { format: 'png', clip: rect });
+  await api.js(`(${renderer}).canvas.style.visibility='hidden';(${renderer}).source.removeAttribute('data-canvas-rendered')`);
+  const native = await api.call('Page.captureScreenshot', { format: 'png', clip: rect });
+  await api.js(`(${renderer}).canvas.style.visibility='';(${renderer}).source.setAttribute('data-canvas-rendered','')`);
+  return api.js(`(async()=>{const decode=async data=>{const image=new Image();image.src='data:image/png;base64,'+data;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const x=c.getContext('2d');x.drawImage(image,0,0);return x.getImageData(0,0,c.width,c.height).data};const a=await decode('${canvas.data}'),b=await decode('${native.data}');let error=0,changed=0;for(let i=0;i<a.length;i+=4){for(let c=0;c<3;c++)error+=Math.abs(a[i+c]-b[i+c]);if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>60)changed++}return {mean:error/(a.length/4*3),changed,pixels:a.length/4}})()`);
+}
+
+test('rounded overflow clips cross-resource descendants and the actual short player fill at fractional DPR', { skip: !supported, timeout: 60000 }, async t => {
+  const { api } = await browser(t);
+  await api.call('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1.25, mobile: false });
+  await api.js(`(()=>{
+    const host=document.createElement('section'),source=document.createElement('article');
+    host.style.cssText='position:fixed;left:400px;top:100px;width:280px;height:180px;background:white;z-index:1000';
+    source.style.cssText='position:absolute;inset:0';
+    source.innerHTML='<div style="position:relative;margin:16px;width:220px;height:24px;border:3px solid blue;border-radius:15px;overflow:hidden;opacity:.6"><div style="position:relative;z-index:2;height:100%;background:red;box-shadow:0 0 3px red"></div><canvas style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas></div>';
+    host.append(source);document.body.append(host);window.clipSource=source;window.clipOuter=source.firstElementChild;window.clipFill=clipOuter.firstElementChild;window.clipRenderer=new view.renderer.constructor(source,host);
+  })()`);
+  await wait(api, 'clipSource.hasAttribute("data-canvas-rendered")');
+  for (const width of ['1px', '96px', '220px']) {
+    await api.js(`clipFill.style.width='${width}'`); await delay(120);
+    assert.equal(await api.js('getComputedStyle(clipFill).borderTopLeftRadius'), '0px');
+    assert.ok(await api.js('clipRenderer.resources.has(clipFill) && clipRenderer.resources.has(clipOuter)'), 'Foreground and clip ancestor are independent paint resources');
+    const difference = await nativeCanvasDifference(api, 'clipRenderer', 'clipOuter');
+    t.diagnostic(`Generic rounded ${width}: ${JSON.stringify(difference)}`);
+    assert.ok(difference.mean < 6, 'Cross-resource clip, border and group opacity match native rounded overflow: '+JSON.stringify(difference));
+  }
+  await api.js(`window.clipStyle=document.createElement('style');clipStyle.textContent='#clip-parent:has(.flag){background:rgb(0,200,0)}';document.head.append(clipStyle);clipOuter.id='clip-parent';clipFill.style.width='96px';clipFill.classList.add('flag')`); await delay(150);
+  assert.ok(await api.js('(()=>{const r=clipOuter.getBoundingClientRect(),p=scenePixel(clipRenderer,r.left+180,r.top+15);return p[1]>p[0]+60})()'), 'An own-only ancestor background changed by :has is dirtied along with the descendant resource');
+  await api.js(`clipStyle.remove();clipFill.classList.remove('flag');window.clipUploads=[];const upload=clipRenderer.compositor.upload;clipRenderer.compositor.upload=function(c){clipUploads.push([c.width,c.height]);return upload.call(this,c)};clipOuter.style.cssText='position:relative;margin:16px;width:220px;height:100000px;border-radius:15px;overflow:hidden';clipFill.style.height='24px';clipOuter.lastElementChild.style.height='1px'`); await delay(150);
+  assert.ok(await api.js('clipUploads.length>0 && clipUploads.every(([w,h])=>w<=clipRenderer.canvas.width&&h<=clipRenderer.canvas.height)'), 'A 100,000px rounded ancestor allocates only visible clip/resource surfaces');
+  assert.deepEqual(await api.js('(()=>{const r=clipOuter.getBoundingClientRect();return scenePixel(clipRenderer,r.left+40,r.top+12).slice(0,3)})()'), [255,0,0], 'Bounded mask allocation retains actual clipped foreground');
+  await api.js('clipRenderer.dispose();clipRenderer.shell.remove();mcloud.playerCore.setTrack(list.tracks[0]);playerBar.progressBar.loudnessMap.hidden=true;playerBar.progressBar.refFill.value.style.transition="none"');
+  await delay(200);
+  for (const width of ['1px', '50%', '100%']) {
+    await api.js(`playerBar.progressBar.refFill.value.style.width='${width}'`); await delay(120);
+    assert.equal(await api.js('getComputedStyle(playerBar.progressBar.refFill.value).borderTopLeftRadius'), '0px', 'The outer background, not a new fill radius, supplies the left arc');
+    const difference = await nativeCanvasDifference(api, 'playerBar.renderer', 'playerBar.progressBar.refBackground.value', 24);
+    t.diagnostic(`Player rounded ${width}: ${JSON.stringify(difference)}`);
+    assert.ok(difference.mean < 8, 'Actual BottomBar left clip matches native at short/medium/full progress: '+JSON.stringify(difference));
+  }
+});
+
+test('local content and boundary changes retain distant native-flow selection, nested scrolling and real cached pixels', { skip: !supported, timeout: 60000 }, async t => {
+  const { api } = await browser(t);
+  await api.js(`(()=>{
+    const host=document.createElement('section'),source=document.createElement('article');
+    host.style.cssText='position:fixed;left:420px;top:40px;width:320px;height:260px;background:white;z-index:1000';
+    source.style.cssText='position:absolute;inset:0;overflow:auto;scrollbar-width:none';
+    source.innerHTML='<div>'+Array.from({length:2400},(_,i)=>'<section style="position:relative;contain:paint;height:'+(32+i%5*3)+'px;background:'+(i%2?'rgb(0,120,220)':'rgb(220,50,0)')+'"><span>Native row '+i+'</span></section>').join('')+'</div>';
+    host.append(source);document.body.append(host);window.flowSource=source;window.flowContent=source.firstElementChild;window.flowRows=[...flowContent.children];window.flowRenderer=new view.renderer.constructor(source,host);
+    window.flowSample=()=>{const row=flowRows.find(e=>{const r=e.getBoundingClientRect(),v=flowSource.getBoundingClientRect();return r.top>=v.top&&r.bottom<=v.bottom});const r=row.getBoundingClientRect();return {index:flowRows.indexOf(row),color:scenePixel(flowRenderer,r.right-5,r.top+8),ink:sceneInk(flowRenderer,row).ink,stats:{...flowRenderer.stats},observed:flowRenderer.sizeTargets.size}};
+  })()`);
+  await wait(api, 'flowSource.hasAttribute("data-canvas-rendered")'); await delay(150);
+  // The application's real mousedown/keydown handlers repeatedly remove/add
+  // body.keyboard-input. A no-op class mutation must not rebuild either tree.
+  await api.js('document.body.classList.remove("keyboard-input")'); await delay(100);
+  const beforeNoOp = await api.js('({list:{...view.renderer.stats},flow:{...flowRenderer.stats}})');
+  const noOp = await api.js(`(()=>{let reads=0;const get=window.getComputedStyle;window.getComputedStyle=(...args)=>{reads++;return get(...args)};document.body.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));document.body.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));return new Promise(resolve=>setTimeout(()=>{window.getComputedStyle=get;resolve({reads,list:{...view.renderer.stats},flow:{...flowRenderer.stats}})},100))})()`);
+  assert.ok(noOp.reads < 100, 'Repeated native body-input mode assignment does not walk either list: '+noOp.reads);
+  assert.deepEqual({list:noOp.list,flow:noOp.flow},beforeNoOp,'No-op native input-mode notifications do not schedule either renderer');
+  const initial = await api.js('flowSample()');
+  assert.ok(initial.ink > 100); assert.ok(initial.observed < 30, 'Native resize observation is viewport-bounded');
+  // Mutating a resource far from the viewport changes its layout in the real
+  // DOM now; subsequent large and reverse jumps must find current geometry.
+  const locality = await api.js(`(()=>{let reads=0;const get=window.getComputedStyle;window.getComputedStyle=(...args)=>{reads++;return get(...args)};flowRows[1900].querySelector('span').textContent='Changed distant content';flowRows[1900].style.height='84px';return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{window.getComputedStyle=get;resolve(reads)})))})()`);
+  assert.ok(locality < 300, 'A local update does not read all 2400 row styles: '+locality);
+  const geometryReads = await api.js(`(()=>{let reads=0;const get=Element.prototype.getBoundingClientRect;Element.prototype.getBoundingClientRect=function(){reads++;return get.call(this)};flowSource.scrollTop=flowRows[1900].offsetTop;return new Promise(resolve=>setTimeout(()=>{Element.prototype.getBoundingClientRect=get;resolve(reads)},150))})()`);
+  assert.ok(geometryReads < 400, 'Far scroll reads nearby boxes and logarithmic native probes, not all rows: '+geometryReads);
+  for (const index of [1900, 80, 2300, 0]) {
+    await api.js(`flowSource.scrollTop=flowRows[${index}].offsetTop`); await delay(150);
+    const sample = await api.js('flowSample()');
+    t.diagnostic('Native flow jump: '+JSON.stringify(sample));
+    assert.equal(sample.index, index); assert.ok(sample.ink > 100); assert.ok(sample.observed < 35); assert.ok(sample.stats.cachedResources < 25);
+    assert.deepEqual(sample.color.slice(0,3),index%2?[0,120,220]:[220,50,0], 'Visible cache holds the row currently at this real native scroll offset');
+  }
+  await api.js(`window.insertedFlow=flowRows[1].cloneNode(true);insertedFlow.style.background='rgb(10,20,30)';flowContent.insertBefore(insertedFlow,flowRows[1]);flowSource.scrollTop=insertedFlow.offsetTop`); await delay(150);
+  assert.deepEqual(await api.js('(()=>{const r=insertedFlow.getBoundingClientRect();return scenePixel(flowRenderer,r.right-5,r.top+8).slice(0,3)})()'),[10,20,30],'Inserting a flow sibling updates membership and native selection');
+  await api.js('insertedFlow.remove();flowSource.scrollTop=0'); await delay(150);
+  await api.js(`(()=>{const row=flowRows[0];row.innerHTML='<div style="position:absolute;left:0;top:0;width:100px;height:30px;background:yellow;z-index:0"></div>';window.flowOverlay=row.firstElementChild;})()`); await delay(100);
+  assert.equal(await api.js('flowRenderer.resources.has(flowOverlay)'),false,'A zero-level descendant remains in the ordinary atomic row');
+  await api.js("flowOverlay.style.zIndex='3'"); await delay(150);
+  assert.equal(await api.js('flowRenderer.resources.has(flowOverlay)'),true,'A new nonzero stacking context changes the local resource boundary');
+  assert.deepEqual(await api.js('(()=>{const r=flowRows[0].getBoundingClientRect();return scenePixel(flowRenderer,r.left+10,r.top+10).slice(0,3)})()'),[255,255,0]);
+  await api.js(`flowOverlay.remove();flowRows[0].textContent='Restored row';flowRows[0].style.background='rgb(0,180,0)'`); await delay(150);
+  assert.deepEqual(await api.js('flowSample().color.slice(0,3)'),[0,180,0],'Removing a split descendant restores the enclosing cached content');
+  await api.js(`(()=>{const row=flowRows[0];row.style.height='180px';row.innerHTML='<div style="height:140px;overflow:auto;border-radius:12px"><div>'+Array.from({length:160},(_,i)=>'<section style="position:relative;contain:paint;height:30px;background:'+(i%2?'red':'lime')+'">Nested '+i+'</section>').join('')+'</div></div>';window.flowNested=row.firstElementChild;flowNested.scrollTop=3010})()`); await delay(200);
+  const nested = await api.js('(()=>{const r=flowNested.getBoundingClientRect();return {top:flowNested.scrollTop,pixel:scenePixel(flowRenderer,r.left+200,r.top+15),resources:flowRenderer.stats.cachedResources}})()');
+  assert.equal(nested.top,3010); assert.deepEqual(nested.pixel.slice(0,3),[0,255,0]); assert.ok(nested.resources<30,JSON.stringify(nested));
+  const idle = await api.js('({...flowRenderer.stats})'); await delay(200);
+  assert.deepEqual(await api.js('({...flowRenderer.stats})'),idle,'Nested clipping and local invalidation leave no idle loop');
+  await api.js('flowRenderer.dispose();flowRenderer.shell.remove()');
 });
