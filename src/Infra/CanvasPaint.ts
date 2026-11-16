@@ -1,3 +1,4 @@
+import { boxOrigin, isAxisAligned, localRect, readBasis } from "./DOMPaintGeometry";
 // A small paint vocabulary for DOM-laid-out controls, not a CSS layout engine.
 // All DOM reads finish before Canvas2D or WebGL drawing starts.
 export interface PaintRect { x: number; y: number; width: number; height: number }
@@ -23,6 +24,7 @@ export function readOverflowClip(style: CSSStyleDeclaration, rect: PaintRect, la
 interface PaintBox {
   rect: PaintRect;
   background: string;
+  backgroundImage?: PaintImage;
   borders: { color: string; width: number }[];
   radii: number[];
   opacity: number;
@@ -32,13 +34,16 @@ interface PaintBox {
   outlineWidth: number;
   children: PaintNode[];
 }
-interface PaintText { rect: PaintRect; text: string; font: string; color: string; size: number; direction: CanvasDirection }
+interface PaintText { rect: PaintRect; text: string; font: string; color: string; size: number; direction: CanvasDirection;
+  opacity?: number; decoration?: { color: string; width: number }; shadow?: PaintSnapshot["shadow"] }
 interface PaintImage { rect: PaintRect; image: CanvasImageSource }
 type PaintNode = PaintBox | PaintText | PaintImage;
 export interface PaintSnapshot {
   width: number; height: number; layoutWidth: number; layoutHeight: number;
   offsetX: number; offsetY: number; root: PaintBox;
   imageUrls: string[];
+  videos?: HTMLVideoElement[];
+  filter?: string;
   shadow?: { color: string; x: number; y: number; blur: number; spread: number };
 }
 
@@ -104,16 +109,19 @@ export function readPaintSize(element: HTMLElement, style = getComputedStyle(ele
 /** Coordinates are normalized to the untransformed resource; row scale/opacity
  * belongs to compositor placement, so pressing a row reuses its raster. */
 export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = false): PaintSnapshot {
-  const imageUrls: string[] = [];
+  const imageUrls: string[] = [], videos: HTMLVideoElement[] = [];
   const imageFor = (url: string) => { imageUrls.push(url); return images.get(url); };
   const bounds = element.getBoundingClientRect();
   const { width, height } = readPaintSize(element);
+  const basis = readBasis(element), rotated = !isAxisAligned(basis), point = boxOrigin(bounds, basis, width, height);
   const sx = bounds.width / width || 1, sy = bounds.height / height || 1;
-  const rect = (r: DOMRect): PaintRect => ({ x: (r.x - bounds.x) / sx, y: (r.y - bounds.y) / sy, width: r.width / sx, height: r.height / sy });
+  const rect = (r: DOMRect, size?: { width: number; height: number }, fontHeight = 0): PaintRect => rotated ? localRect(r, basis, point, size, fontHeight) :
+    ({ x: (r.x - bounds.x) / sx, y: (r.y - bounds.y) / sy, width: r.width / sx, height: r.height / sy });
   const walk = (node: Element, isRoot = false): PaintNode | null => {
+    if (node.hasAttribute("data-canvas-owned")) return null;
     const style = getComputedStyle(node);
     if (style.display === "none" || style.visibility === "hidden") return null;
-    const box = rect(node.getBoundingClientRect());
+    const box = rect(node.getBoundingClientRect(), readPaintSize(node as HTMLElement, style));
     if (!box.width) return null;
     if (node instanceof SVGSVGElement) {
       const image = imageFor(svgImage(node, true));
@@ -121,12 +129,13 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
       if (image) result.children.push({ rect: box, image });
       return result;
     }
-    if (node instanceof HTMLImageElement || node instanceof HTMLCanvasElement) {
-      const image = node instanceof HTMLCanvasElement ? node : node.getAttribute("src") || node.getAttribute("srcset") ? imageFor(node.currentSrc || node.src) : null;
+    if (node instanceof HTMLImageElement || node instanceof HTMLVideoElement || node instanceof HTMLCanvasElement) {
+      if (node instanceof HTMLVideoElement) videos.push(node);
+      const image = node instanceof HTMLVideoElement ? node.readyState >= 2 && node.videoWidth ? node : null : node instanceof HTMLCanvasElement ? node : node.getAttribute("src") || node.getAttribute("srcset") ? imageFor(node.currentSrc || node.src) : null;
       const result = makeBox();
       if (image) {
-        const naturalWidth = image instanceof HTMLImageElement ? image.naturalWidth : image.width;
-        const naturalHeight = image instanceof HTMLImageElement ? image.naturalHeight : image.height;
+        const naturalWidth = image instanceof HTMLImageElement ? image.naturalWidth : image instanceof HTMLVideoElement ? image.videoWidth : image.width;
+        const naturalHeight = image instanceof HTMLImageElement ? image.naturalHeight : image instanceof HTMLVideoElement ? image.videoHeight : image.height;
         const left = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft), top = parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
         const width = box.width - left - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
         const height = box.height - top - parseFloat(style.borderBottomWidth) - parseFloat(style.paddingBottom);
@@ -144,7 +153,7 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
       return result;
     }
     function makeBox(): PaintBox {
-      return {
+      const result: PaintBox = {
         rect: box, background: style.backgroundColor,
         borders: ["top", "right", "bottom", "left"].map(side => ({ color: style.getPropertyValue(`border-${side}-color`), width: parseFloat(style.getPropertyValue(`border-${side}-width`)) || 0 })),
         radii: [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius].map(v => parseFloat(v) || 0),
@@ -154,11 +163,57 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
         outline: style.outlineColor, outlineWidth: style.outlineStyle === "none" ? 0 : parseFloat(style.outlineWidth) || 0,
         children: [],
       };
+      if (style.backgroundImage !== "none") {
+        const match = /^url\(["']?(.*?)["']?\)$/.exec(style.backgroundImage);
+        if (!match) throw new Error("Unsupported Canvas background image: " + style.backgroundImage);
+        const image = imageFor(match[1]);
+        if (image) {
+          const insetX = parseFloat(style.borderLeftWidth) || 0, insetY = parseFloat(style.borderTopWidth) || 0;
+          const area = { x: box.x + insetX, y: box.y + insetY, width: box.width - insetX - (parseFloat(style.borderRightWidth) || 0), height: box.height - insetY - (parseFloat(style.borderBottomWidth) || 0) };
+          let w = image.naturalWidth, h = image.naturalHeight;
+          if (style.backgroundSize === "cover" || style.backgroundSize === "contain") {
+            const scale = style.backgroundSize === "cover" ? Math.max(area.width / w, area.height / h) : Math.min(area.width / w, area.height / h);
+            w *= scale; h *= scale;
+          } else if (style.backgroundSize !== "auto" && style.backgroundSize !== "auto auto") {
+            const size = style.backgroundSize.split(/\s+/), length = (v: string, basis: number) => v.endsWith("%") ? parseFloat(v) * basis / 100 : parseFloat(v);
+            const width = length(size[0], area.width), height = length(size[1] || "auto", area.height);
+            if (Number.isFinite(width)) { h *= width / w; w = width; }
+            if (Number.isFinite(height)) { if (!Number.isFinite(width)) w *= height / h; h = height; }
+          }
+          if (style.backgroundRepeat !== "no-repeat" && (w < area.width || h < area.height)) throw new Error("Unsupported repeated Canvas background");
+          const position = style.backgroundPosition.split(/\s+/), offset = (v: string, space: number) => v.endsWith("%") ? parseFloat(v) * space / 100 : parseFloat(v) || 0;
+          result.backgroundImage = { rect: { x: area.x + offset(position[0], area.width - w), y: area.y + offset(position[1] || position[0], area.height - h), width: w, height: h }, image };
+        }
+      }
+      return result;
     }
     const result = makeBox();
+    const font = (s: CSSStyleDeclaration) => s.font || `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
+    const textStyle = (s: CSSStyleDeclaration) => ({ font: font(s), color: s.color, size: parseFloat(s.fontSize), direction: s.direction as CanvasDirection,
+      decoration: s.textDecorationLine.includes("underline") ? { color: s.textDecorationColor, width: parseFloat(s.textDecorationThickness) || parseFloat(s.fontSize) / 16 } : undefined,
+      shadow: readBoxShadow(s.textShadow) });
+    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement) {
+      result.clip = true;
+      const placeholder = !(node instanceof HTMLSelectElement) && !node.value;
+      const s = placeholder ? getComputedStyle(node, "::placeholder") : style;
+      let value = node instanceof HTMLSelectElement ? node.selectedOptions[0]?.textContent ?? "" : node.value || node.placeholder;
+      if (node instanceof HTMLInputElement && node.type === "password" && node.value) value = "•".repeat(Array.from(node.value).length);
+      const left = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft), top = parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
+      const available = box.width - left - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
+      const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+      const lines = node instanceof HTMLTextAreaElement ? wrapText(value, available, font(style)) : [value.replace(/\n/g, " ")];
+      lines.forEach((text, i) => result.children.push({ rect: { x: box.x + left - node.scrollLeft, y: node instanceof HTMLTextAreaElement ? box.y + top + i * lineHeight - node.scrollTop : box.y + (box.height - lineHeight) / 2,
+        width: available, height: lineHeight }, text, ...textStyle(s), opacity: placeholder ? Number(s.opacity) : 1 }));
+      return result;
+    }
     const pseudo = (name: "::before" | "::after") => {
       const p = getComputedStyle(node, name);
-      if (p.content === "none" || p.content === "normal" || p.content.replace(/["']/g, "").trim() || p.display === "none") return;
+      if (p.content === "none" || p.content === "normal" || p.display === "none") return;
+      const generated = /^(["'])(.*?)\1$/.exec(p.content)?.[2];
+      if (generated) {
+        result.children.push({ rect: { x: name === "::before" ? box.x : box.x + box.width - measureText(generated, font(p)), y: box.y + parseFloat(style.fontSize) - parseFloat(p.fontSize), width: measureText(generated, font(p)), height: parseFloat(p.fontSize) * 1.2 }, text: generated, ...textStyle(p), opacity: Number(p.opacity) });
+        return;
+      }
       const length = (v: string, basis: number) => v.endsWith("%") ? parseFloat(v) * basis / 100 : parseFloat(v) || 0;
       const w = p.width === "auto" ? box.width : length(p.width, box.width), h = length(p.height, box.height);
       if (!w || !h) return;
@@ -180,7 +235,11 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
         const painted = walk(child);
         if (painted) result.children.push(painted);
       } else if (child instanceof Text && child.textContent) {
-        const text = child.textContent;
+        let text = child.textContent;
+        if (style.textOverflow === "ellipsis" && style.whiteSpace === "nowrap" && (node as HTMLElement).scrollWidth > (node as HTMLElement).clientWidth) {
+          const width = box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+          text = ellipsize(text, width, font(style));
+        }
         const range = document.createRange();
         let line: PaintText | null = null;
         // Ranges find line boundaries only. Keep each logical line intact so
@@ -188,16 +247,21 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
         // Glyph x coordinates may run backwards or overlap on the same line.
         for (let i = 0; i < text.length;) {
           const character = String.fromCodePoint(text.codePointAt(i)!);
-          range.setStart(child, i); range.setEnd(child, i + character.length);
+          range.setStart(child, Math.min(i, child.length)); range.setEnd(child, Math.min(i + character.length, child.length));
           i += character.length;
-          const r = rect(range.getBoundingClientRect());
+          let fontHeight = 0;
+          if (rotated) {
+            const ctx = textMeasure ?? (textMeasure = document.createElement("canvas").getContext("2d")!); ctx.font = font(style);
+            const metrics = ctx.measureText(character); fontHeight = (metrics.fontBoundingBoxAscent || parseFloat(style.fontSize) * .8) + (metrics.fontBoundingBoxDescent || parseFloat(style.fontSize) * .2);
+          }
+          const r = rect(range.getBoundingClientRect(), undefined, fontHeight);
           if (!r.width || !r.height) {
             if (line && !/\s/.test(character)) line.text += character;
             continue;
           }
           const separateLine = line && Math.abs((line.rect.y + line.rect.height / 2) - (r.y + r.height / 2)) > Math.min(line.rect.height, r.height) / 2;
           if (!line || separateLine) {
-            line = { rect: r, text: character, font: style.font || `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`, color: style.color, size: parseFloat(style.fontSize), direction: style.direction as CanvasDirection };
+            line = { rect: r, text: character, ...textStyle(style) };
             result.children.push(line);
           } else {
             line.text += character;
@@ -206,6 +270,12 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
             line.rect.x = Math.min(line.rect.x, r.x); line.rect.y = Math.min(line.rect.y, r.y);
             line.rect.width = right - line.rect.x; line.rect.height = bottom - line.rect.y;
           }
+        }
+        const clamp = parseInt(style.webkitLineClamp);
+        const lines = result.children.filter((entry): entry is PaintText => "text" in entry);
+        if (clamp > 0 && lines.length > clamp) {
+          lines.slice(clamp).forEach(line => result.children.splice(result.children.indexOf(line), 1));
+          const last = lines[clamp - 1]; last.text = ellipsize(last.text, box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), font(style));
         }
         range.detach();
       }
@@ -220,7 +290,40 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
     left = Math.min(left, child.rect.x); top = Math.min(top, child.rect.y);
     right = Math.max(right, child.rect.x + child.rect.width); bottom = Math.max(bottom, child.rect.y + child.rect.height);
   }
-  return { width: right - left, height: bottom - top, layoutWidth: width, layoutHeight: height, offsetX: left, offsetY: top, root, shadow, imageUrls };
+  const filter = getComputedStyle(element).filter;
+  if (filter !== "none") {
+    const blur = Math.max(0, ...(filter.match(/blur\([\d.]+px\)/g) ?? []).map(value => parseFloat(value.slice(5)))) * 3;
+    const shadow = filter.includes("drop-shadow") ? readBoxShadow(filter) : undefined;
+    const margin = blur + (shadow ? shadow.blur * 3 + Math.max(Math.abs(shadow.x), Math.abs(shadow.y)) : 0);
+    left -= margin; top -= margin; right += margin; bottom += margin;
+  }
+  return { width: right - left, height: bottom - top, layoutWidth: width, layoutHeight: height, offsetX: left, offsetY: top, root, shadow, imageUrls, videos, filter: filter === "none" ? undefined : filter };
+}
+
+let textMeasure: CanvasRenderingContext2D | undefined;
+function measureText(text: string, font: string) {
+  const ctx = textMeasure ?? (textMeasure = document.createElement("canvas").getContext("2d")!);
+  ctx.font = font; return ctx.measureText(text).width;
+}
+function ellipsize(text: string, width: number, font: string) {
+  const characters = Array.from(text); let low = 0, high = characters.length;
+  while (low < high) { const middle = Math.ceil((low + high) / 2); if (measureText(characters.slice(0, middle).join("") + "…", font) <= width) low = middle; else high = middle - 1; }
+  return characters.slice(0, low).join("") + "…";
+}
+function wrapText(value: string, width: number, font: string) {
+  const lines: string[] = [];
+  for (const paragraph of value.split("\n")) {
+    let line = "";
+    for (const part of paragraph.split(/(\s+)/)) {
+      if (line && measureText(line + part, font) > width) { lines.push(line); line = ""; }
+      for (const character of Array.from(part)) {
+        if (line && measureText(line + character, font) > width) { lines.push(line); line = ""; }
+        line += character;
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
 }
 
 function rounded(ctx: CanvasRenderingContext2D, r: PaintRect, radii: number[]) {
@@ -263,17 +366,23 @@ export function rasterPaint(snapshot: PaintSnapshot, dpr: number) {
     }
     const r = node.rect;
     if ("text" in node) {
+      ctx.save(); ctx.globalAlpha *= node.opacity ?? 1;
+      if (node.shadow) { ctx.shadowColor = node.shadow.color; ctx.shadowBlur = node.shadow.blur * dpr; ctx.shadowOffsetX = node.shadow.x * dpr; ctx.shadowOffsetY = node.shadow.y * dpr; }
       ctx.font = node.font; ctx.fillStyle = node.color; ctx.textBaseline = "alphabetic";
       ctx.direction = node.direction; ctx.textAlign = "left";
       const metrics = ctx.measureText(node.text);
       const ascent = metrics.fontBoundingBoxAscent ?? node.size * 0.9;
       const descent = metrics.fontBoundingBoxDescent ?? node.size * 0.2;
-      ctx.fillText(node.text, r.x, r.y + (r.height - ascent - descent) / 2 + ascent);
+      const baseline = r.y + (r.height - ascent - descent) / 2 + ascent;
+      ctx.fillText(node.text, r.x, baseline);
+      if (node.decoration) { ctx.fillStyle = node.decoration.color; ctx.fillRect(r.x, baseline + descent * .45, ctx.measureText(node.text).width, node.decoration.width); }
+      ctx.restore();
     } else if ("image" in node) {
       ctx.drawImage(node.image, r.x, r.y, r.width, r.height);
     } else {
       ctx.save(); ctx.globalAlpha *= isolated ? 1 : node.opacity;
       rounded(ctx, r, node.radii); ctx.fillStyle = node.background; ctx.fill();
+      if (node.backgroundImage) { ctx.save(); ctx.clip(); const image = node.backgroundImage; ctx.drawImage(image.image, image.rect.x, image.rect.y, image.rect.width, image.rect.height); ctx.restore(); }
       if (node.outlineWidth) { ctx.strokeStyle = node.outline; ctx.lineWidth = node.outlineWidth * 2; ctx.stroke(); }
       const border = node.borders[0];
       ctx.save();

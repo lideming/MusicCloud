@@ -11,8 +11,6 @@ import {
 } from "./viewlib";
 import { I } from "../I18n/I18n";
 import { ContentView, ContentHeader, ActionBtn } from "./ui-views";
-import { DOMCanvasRenderer } from "./DOMCanvasRenderer";
-import { settings } from "../Settings/Settings";
 
 class DataBackedListViewItem extends ListViewItem {
   data: any;
@@ -65,7 +63,6 @@ export class ListContentView extends ContentView {
   emptyIndicator: LoadingIndicator;
 
   _scrollPos = 0;
-  renderer: DOMCanvasRenderer | null = null;
 
   get rendered() {
     return this.domCreated;
@@ -165,27 +162,8 @@ export class ListContentView extends ContentView {
       this.listView.dom.style.minHeight = "";
     });
     this.header.onScrollboxScroll();
-    this.scrollBox.dom.setAttribute("data-canvas-scrollbar", "overlay");
-    this.shownEvents.add(settings.renderer.onChanged, this.updateRenderer);
-    this.updateRenderer();
   }
-  private updateRenderer = () => {
-    if (settings.renderer.current === "dom") {
-      this.renderer?.dispose();
-      this.renderer = null;
-      return;
-    }
-    if (this.renderer) return;
-    try {
-      this.renderer = new DOMCanvasRenderer(this.scrollBox.dom, this.dom);
-      this.renderer.canvas.classList.add("list-content-canvas");
-    } catch (error) {
-      console.warn("[ListContentView] Canvas unavailable; using DOM paint", error);
-    }
-  };
   onRemove() {
-    this.renderer?.dispose();
-    this.renderer = null;
     if (this.scrollBox) {
       this._scrollPos = this.scrollBox.dom.scrollTop;
     }

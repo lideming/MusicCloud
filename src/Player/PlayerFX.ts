@@ -112,6 +112,7 @@ class FXDialog extends Dialog {
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
+      this.canvas.dom.dispatchEvent(new Event("canvas-content-changed", { bubbles: true }));
     };
 
     requestAnimationFrame(update);

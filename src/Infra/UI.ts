@@ -20,8 +20,7 @@ import {
 import * as views from "./ui-views";
 import { MainContainer } from "./ui-views";
 import { BottomBar } from "./BottomBar";
-import { createSidebarRenderer } from "./SidebarCanvas";
-import { settings } from "../Settings/Settings";
+import { PageCanvas } from "./PageCanvas";
 
 View.debugging = true;
 
@@ -67,6 +66,7 @@ import { api } from "../API/Api";
 
 export const ui = new (class {
   bottomBar = bottomBar;
+  pageCanvas: PageCanvas;
   usingKeyboardInput = false;
   isVisible = new Ref(document.visibilityState === "visible");
   init() {
@@ -139,6 +139,7 @@ export const ui = new (class {
         { passive: true, capture: true },
       ),
     );
+    this.pageCanvas = new PageCanvas();
   }
   addErrorListener() {
     window.addEventListener("error", (e) => {
@@ -323,7 +324,6 @@ export const ui = new (class {
   sidebar = new (class {
     dom = document.getElementById("sidebar")!;
     shell = document.getElementById("sidebar-shell")!;
-    renderer: ReturnType<typeof createSidebarRenderer> = null;
     header = mainContainer.sidebar.header;
     sidebarToggle = mainContainer.sidebarToggle;
     overlay: Overlay | null;
@@ -350,8 +350,6 @@ export const ui = new (class {
     init() {
       this.header.dom.setAttribute("data-canvas-blur", "#sidebar-list ul, #sidebar-features");
       this.shell.querySelector(".sidebar-material")!.setAttribute("aria-hidden", "true");
-      settings.renderer.onChanged.add(this.updateRenderer);
-      this.updateRenderer();
       this.initPanHandler();
       this.toggleBtn(true);
       this.checkWidth();
@@ -379,15 +377,6 @@ export const ui = new (class {
         });
       }
     }
-
-    private updateRenderer = () => {
-      if (settings.renderer.current === "canvas") {
-        if (!this.renderer) this.renderer = createSidebarRenderer(this.dom, this.shell);
-      } else {
-        this.renderer?.dispose();
-        this.renderer = null;
-      }
-    };
 
     private _panxHandler: TouchPanListener = null!;
     private _leftPadding = 200;

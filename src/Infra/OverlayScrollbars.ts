@@ -16,48 +16,100 @@ interface Controls {
   element: HTMLElement;
   styleAbsent: boolean;
   styles: { name: string; value: string; priority: string; owned: string }[];
-  clip: HTMLDivElement;
-  tracks: Map<Bar["axis"], HTMLDivElement>;
   bars: Map<Bar["axis"], Bar>;
 }
 interface Measurement { controls: Controls; clip: PaintRect; bars: Bar[] }
 
-/** Explicit overlay-only extension. CSS removes native bar/gutter occupancy;
- * DOM scroll offsets remain the only scrolling state. Painted and interactive
- * tracks/thumbs share one measured geometry, outside suppressed source paint. */
+/** CSS removes native bar/gutter occupancy. The original DOM remains the hit
+ * tree: delegated pointer events use the same clipped bar geometry as painting.
+ * No moving transparent controls participate in native layout/paint/HitTest. */
 export class OverlayScrollbars {
-  private layer = document.createElement("div");
+  private cleanup: (() => void)[] = [];
   private sizes: ResizeObserver;
   private controls = new Map<HTMLElement, Controls>();
   private measurements: Measurement[] = [];
+  readonly paint = new Map<HTMLElement, CanvasLayer[]>();
+  private suspended = false;
+  private completedPointer: number | undefined;
   private scaleX = 1;
   private scaleY = 1;
-  private dragging: { controls: Controls; track: HTMLElement; axis: Bar["axis"]; pointer: number; grab: number } | null = null;
+  private dragging: { controls: Controls; axis: Bar["axis"]; pointer: number; grab: number } | null = null;
 
-  constructor(private source: HTMLElement, host: HTMLElement, private changed: () => void) {
-    this.layer.className = "dom-canvas-scrollbars";
-    this.layer.setAttribute("aria-hidden", "true");
-    Object.assign(this.layer.style, { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", pointerEvents: "none", zIndex: "1" });
+  constructor(private source: HTMLElement, private changed: () => void, private scopedPaint = false) {
     this.sizes = new ResizeObserver(changed);
-    try {
-      host.appendChild(this.layer);
-      this.sync();
-    } catch (error) { this.dispose(); throw error; }
+    const listen = (name: string, fn: EventListener) => {
+      source.addEventListener(name, fn, { capture: true, passive: false });
+      this.cleanup.push(() => source.removeEventListener(name, fn, true));
+    };
+    listen("pointerdown", event => {
+      const pointer = event as PointerEvent;
+      this.completedPointer = undefined;
+      if (pointer.button !== 0 || this.dragging) return;
+      const hit = this.hit(pointer.target, pointer.clientX, pointer.clientY); if (!hit) return;
+      pointer.preventDefault(); pointer.stopImmediatePropagation();
+      const point = this.coordinate(pointer, hit.bar.axis), start = hit.bar.axis === "vertical" ? hit.bar.thumb.y : hit.bar.thumb.x;
+      const length = hit.bar.axis === "vertical" ? hit.bar.thumb.height : hit.bar.thumb.width;
+      const thumb = point >= start && point <= start + length;
+      this.dragging = { controls: hit.controls, axis: hit.bar.axis, pointer: pointer.pointerId, grab: thumb ? (point-start)/length : .5 };
+      source.setPointerCapture(pointer.pointerId);
+      if (!thumb) this.move(point);
+    });
+    listen("pointermove", event => {
+      const pointer = event as PointerEvent; if (pointer.pointerId !== this.dragging?.pointer) return;
+      pointer.preventDefault(); pointer.stopImmediatePropagation(); this.move(this.coordinate(pointer, this.dragging.axis));
+    });
+    for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) listen(name, event => {
+      const pointer = event as PointerEvent; if (pointer.pointerId !== this.dragging?.pointer) return;
+      pointer.preventDefault(); pointer.stopImmediatePropagation(); this.finish();
+      if (name === "pointerup") this.completedPointer = pointer.pointerId;
+    });
+    listen("keydown", () => { this.completedPointer = undefined; });
+    listen("click", event => {
+      const mouse = event as PointerEvent, completed = this.completedPointer;
+      this.completedPointer = undefined;
+      // Pointer capture retargets completion to source, including an off-track
+      // release. Match its pointer rather than the release coordinates. Older
+      // MouseEvent clicks lack pointerId; detail distinguishes keyboard clicks.
+      const completion = completed !== undefined && (mouse.pointerId === undefined || mouse.pointerId === completed);
+      if (mouse.detail > 0 && (completion || this.hit(mouse.target, mouse.clientX, mouse.clientY, true))) { mouse.preventDefault(); mouse.stopImmediatePropagation(); }
+    });
+    for (const name of ["touchstart", "touchmove"]) listen(name, event => {
+      const touch = event as TouchEvent, point = touch.touches[0];
+      if (this.dragging || point && this.hit(touch.target, point.clientX, point.clientY)) {
+        touch.preventDefault(); touch.stopImmediatePropagation();
+      }
+    });
+    try { this.sync(); } catch (error) { this.dispose(); throw error; }
+  }
+  private coordinate(event: MouseEvent, axis: Bar["axis"]) {
+    const rect = this.source.getBoundingClientRect();
+    return axis === "vertical" ? (event.clientY-rect.y)/this.scaleY : (event.clientX-rect.x)/this.scaleX;
+  }
+  private hit(target: EventTarget | null, clientX: number, clientY: number, rootClick = false) {
+    if (this.suspended || !(target instanceof Node)) return;
+    const rect = this.source.getBoundingClientRect(), x = (clientX-rect.x)/this.scaleX, y = (clientY-rect.y)/this.scaleY;
+    const inside = (r: PaintRect) => x >= r.x && x <= r.x+r.width && y >= r.y && y <= r.y+r.height;
+    let hit: { controls: Controls; bar: Bar } | undefined;
+    for (const { controls, clip, bars } of this.measurements) {
+      if ((!controls.element.contains(target) && !(rootClick && target === this.source)) || !inside(clip)) continue;
+      const bar = bars.find(bar => inside(bar.track)); if (!bar) continue;
+      if (!hit || (this.scopedPaint ? controls.element.contains(hit.controls.element) : hit.controls.element.contains(controls.element))) hit = { controls, bar };
+    }
+    return hit;
   }
   /** Runs before source measurements, including the first takeover frame. */
-  sync() {
+  sync(elements?: Iterable<HTMLElement>) {
+    if (this.suspended) return;
     const next = new Set<HTMLElement>(this.source.matches(declaration) ? [this.source] : []);
-    this.source.querySelectorAll<HTMLElement>(declaration).forEach(element => next.add(element));
+    if (elements) for (const element of elements) next.add(element);
+    else this.source.querySelectorAll<HTMLElement>(declaration).forEach(element => next.add(element));
     for (const [element, controls] of this.controls) if (!next.has(element)) this.remove(controls);
     for (const element of next) if (!this.controls.has(element)) {
-      const clip = document.createElement("div");
-      Object.assign(clip.style, { position: "absolute", overflow: "hidden", pointerEvents: "none" });
-      clip.setAttribute("data-canvas-scrollbar-controls", "");
       const controls: Controls = { element, styleAbsent: !element.hasAttribute("style"),
         styles: [["scrollbar-width", "none"], ["scrollbar-gutter", "auto"]].map(([name, owned]) => ({ name, owned, value: element.style.getPropertyValue(name), priority: element.style.getPropertyPriority(name) })),
-        clip, tracks: new Map(), bars: new Map() };
+        bars: new Map() };
       this.controls.set(element, controls);
-      this.sizes.observe(element); this.layer.appendChild(clip);
+      this.sizes.observe(element);
     }
     for (const controls of this.controls.values()) for (const saved of controls.styles) {
       const style = controls.element.style;
@@ -68,7 +120,7 @@ export class OverlayScrollbars {
   }
   measure(origin: DOMRect, width: number, height: number, scaleX = 1, scaleY = 1): CanvasLayer[] {
     this.scaleX = scaleX; this.scaleY = scaleY;
-    this.measurements = [];
+    this.measurements = []; this.paint.clear();
     const layers: CanvasLayer[] = [];
     const bounds = new Map<HTMLElement, PaintRect>(), styles = new Map<HTMLElement, CSSStyleDeclaration>();
     const style = (element: HTMLElement) => { let value = styles.get(element); if (!value) { value = getComputedStyle(element); styles.set(element, value); } return value; };
@@ -109,58 +161,16 @@ export class OverlayScrollbars {
       const color = (value: string | undefined, fallback: number[]) => { const parts = value?.match(/[\d.]+/g)?.map(Number); return parts ? [parts[0] / 255, parts[1] / 255, parts[2] / 255, parts[3] ?? 1] : fallback; };
       const thumbColor = color(colors[0], [0.5, 0.5, 0.5, 0.65]), trackColor = color(colors[1], [0, 0, 0, 0]);
       this.measurements.push({ controls, clip, bars });
+      controls.bars = new Map(bars.map(bar => [bar.axis, bar]));
+      const painted: CanvasLayer[] = []; this.paint.set(element, painted);
       for (const bar of bars) for (const [rect, rgba] of [[bar.track, trackColor], [bar.thumb, thumbColor]] as [PaintRect, number[]][]) {
         const visible = intersect(rect, clip);
-        if (visible.width && visible.height && rgba[3]) layers.push({ kind: "solid", rect: visible, color: [rgba[0], rgba[1], rgba[2], rgba[3] * opacity] });
+        if (visible.width && visible.height && rgba[3]) { const layer: CanvasLayer = { kind: "solid", rect: visible, color: [rgba[0], rgba[1], rgba[2], rgba[3] * (this.scopedPaint ? 1 : opacity)] }; layers.push(layer); painted.push(layer); }
       }
     }
     return layers;
   }
-  hide() { this.finish(); this.layer.style.display = "none"; }
-  /** Called only after the matching Canvas frame succeeds. No geometry reads. */
-  commit(left: number, top: number, width: number, height: number) {
-    Object.assign(this.layer.style, { display: "block", left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px` });
-    for (const { controls, clip, bars } of this.measurements) {
-      Object.assign(controls.clip.style, { left: `${clip.x}px`, top: `${clip.y}px`, width: `${clip.width}px`, height: `${clip.height}px` });
-      controls.bars = new Map(bars.map(bar => [bar.axis, bar]));
-      for (const [axis, track] of controls.tracks) if (!controls.bars.has(axis)) { if (this.dragging?.track === track) this.finish(); track.remove(); controls.tracks.delete(axis); }
-      for (const bar of bars) {
-        let track = controls.tracks.get(bar.axis);
-        if (!track) { track = this.createTrack(controls, bar.axis); controls.tracks.set(bar.axis, track); controls.clip.appendChild(track); }
-        Object.assign(track.style, { left: `${bar.track.x - clip.x}px`, top: `${bar.track.y - clip.y}px`, width: `${bar.track.width}px`, height: `${bar.track.height}px` });
-        const thumb = track.firstElementChild as HTMLElement;
-        Object.assign(thumb.style, { left: `${bar.thumb.x - bar.track.x}px`, top: `${bar.thumb.y - bar.track.y}px`, width: `${bar.thumb.width}px`, height: `${bar.thumb.height}px` });
-      }
-    }
-  }
-  private createTrack(controls: Controls, axis: Bar["axis"]) {
-    const track = document.createElement("div"), thumb = document.createElement("div");
-    track.setAttribute("data-canvas-scrollbar-axis", axis); thumb.setAttribute("data-canvas-scrollbar-thumb", "");
-    Object.assign(track.style, { position: "absolute", pointerEvents: "auto", touchAction: "none", userSelect: "none" });
-    Object.assign(thumb.style, { position: "absolute" }); track.appendChild(thumb);
-    const coordinate = (event: PointerEvent) => { const r = this.source.getBoundingClientRect(); return axis === "vertical" ? (event.clientY - r.y) / this.scaleY : (event.clientX - r.x) / this.scaleX; };
-    track.addEventListener("pointerdown", event => {
-      if (event.button !== 0 || this.dragging) return;
-      const bar = controls.bars.get(axis); if (!bar) return;
-      event.preventDefault(); event.stopPropagation();
-      const point = coordinate(event), start = axis === "vertical" ? bar.thumb.y : bar.thumb.x, length = axis === "vertical" ? bar.thumb.height : bar.thumb.width;
-      const grab = event.target === thumb ? Math.max(0, Math.min(1, (point - start) / length)) : 0.5;
-      this.dragging = { controls, track, axis, pointer: event.pointerId, grab };
-      track.setPointerCapture(event.pointerId);
-      if (event.target !== thumb) this.move(point);
-    });
-    track.addEventListener("pointermove", event => { if (this.dragging?.pointer !== event.pointerId) return; event.preventDefault(); event.stopPropagation(); this.move(coordinate(event)); });
-    for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) track.addEventListener(name, event => { if (this.dragging?.pointer !== (event as PointerEvent).pointerId) return; event.preventDefault(); event.stopPropagation(); this.finish(); });
-    track.addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); });
-    track.addEventListener("wheel", event => {
-      event.preventDefault(); event.stopPropagation();
-      const line = parseFloat(getComputedStyle(controls.element).lineHeight) || 16, multiplier = event.deltaMode === 1 ? line : event.deltaMode === 2 ? controls.element.clientHeight : 1;
-      controls.element.scrollTop += event.shiftKey ? 0 : event.deltaY * multiplier;
-      controls.element.scrollLeft += (event.deltaX || (event.shiftKey ? event.deltaY : 0)) * multiplier;
-      this.changed();
-    }, { passive: false });
-    return track;
-  }
+  hide() { this.finish(); this.measurements = []; this.paint.clear(); }
   private move(point: number) {
     const drag = this.dragging; if (!drag) return;
     const bar = drag.controls.bars.get(drag.axis); if (!bar || !bar.travel) return;
@@ -170,23 +180,42 @@ export class OverlayScrollbars {
     this.changed();
   }
   private finish() {
+    this.completedPointer = undefined;
     const drag = this.dragging; this.dragging = null;
-    if (drag?.track.hasPointerCapture(drag.pointer)) drag.track.releasePointerCapture(drag.pointer);
+    if (drag && this.source.hasPointerCapture(drag.pointer)) this.source.releasePointerCapture(drag.pointer);
   }
   private remove(controls: Controls) {
     if (this.dragging?.controls === controls) this.finish();
-    this.sizes.unobserve(controls.element); controls.clip.remove();
+    this.sizes.unobserve(controls.element);
+    this.restore(controls);
+    this.controls.delete(controls.element);
+  }
+  private restore(controls: Controls) {
     for (const saved of controls.styles) {
       const style = controls.element.style;
       if (style.getPropertyValue(saved.name) !== saved.owned || style.getPropertyPriority(saved.name) !== "important") continue;
       if (saved.value) style.setProperty(saved.name, saved.value, saved.priority); else style.removeProperty(saved.name);
     }
     if (controls.styleAbsent && !controls.element.style.cssText) controls.element.removeAttribute("style");
-    this.controls.delete(controls.element);
+  }
+  ownsMutation(record: MutationRecord) {
+    if (record.type !== "attributes" || record.attributeName !== "style") return false;
+    const controls = this.controls.get(record.target as HTMLElement); if (!controls) return false;
+    const before = document.createElement("span").style, after = document.createElement("span").style;
+    before.cssText = record.oldValue ?? ""; after.cssText = controls.element.style.cssText;
+    controls.styles.forEach(saved => { before.removeProperty(saved.name); after.removeProperty(saved.name); });
+    if (before.cssText !== after.cssText) return false;
+    if (!this.suspended && !controls.styles.every(saved => controls.element.style.getPropertyValue(saved.name) === saved.owned && controls.element.style.getPropertyPriority(saved.name) === "important")) this.sync(this.controls.keys());
+    return true;
+  }
+  setSuspended(suspended: boolean) {
+    this.suspended = suspended;
+    if (suspended) { this.hide(); this.controls.forEach(controls => this.restore(controls)); }
   }
   dispose() {
     this.finish(); this.sizes.disconnect();
     for (const controls of this.controls.values()) this.remove(controls);
-    this.layer.remove(); this.measurements = [];
+    this.cleanup.forEach(remove => remove()); this.cleanup = [];
+    this.measurements = []; this.paint.clear();
   }
 }

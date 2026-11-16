@@ -15,7 +15,6 @@ import {
   jsx,
   listenPointerEvents,
   numLimit,
-  MountState,
   TextView,
   ToolTip,
   View,
@@ -39,8 +38,6 @@ import { I, i18n } from "../I18n/I18n";
 import { trackContextMenu } from "../Track/TrackContextMenu";
 import { desktopApi } from "./desktopApi";
 import { isIOS } from "./utils";
-import { DOMCanvasRenderer } from "./DOMCanvasRenderer";
-import { settings } from "../Settings/Settings";
 
 const loopModeToIcon: Record<PlayingLoopMode, string> = {
   "list-seq": order_seq,
@@ -50,37 +47,6 @@ const loopModeToIcon: Record<PlayingLoopMode, string> = {
 };
 
 export class BottomBar extends View {
-  renderer: DOMCanvasRenderer | null = null;
-  private contentRoot = new Ref<HTMLElement>();
-
-  override mountStateChanged(state: MountState) {
-    super.mountStateChanged(state);
-    if (state === MountState.Mounted) {
-      settings.renderer.onChanged.add(this.updateRenderer);
-      this.updateRenderer();
-    } else if (state === MountState.Unmounted) {
-      settings.renderer.onChanged.remove(this.updateRenderer);
-      this.renderer?.dispose();
-      this.renderer = null;
-      this.btnVolume.tipView.close();
-    }
-  }
-
-  private updateRenderer = () => {
-    if (settings.renderer.current === "dom") {
-      this.renderer?.dispose();
-      this.renderer = null;
-      return;
-    }
-    if (this.renderer) return;
-    try {
-      this.renderer = new DOMCanvasRenderer(this.contentRoot.value!, this.dom);
-      this.renderer.canvas.classList.add("player-canvas");
-    } catch (error) {
-      console.warn("[BottomBar] Canvas unavailable; using DOM paint", error);
-    }
-  };
-
   trackImg = new View<HTMLImageElement>(<img src="" />);
   trackImgOuter = new View(
     (
@@ -131,7 +97,7 @@ export class BottomBar extends View {
   createDom() {
     return (
       <div class="bottombar no-lyrics">
-        <div class="bottombar-content" ref={this.contentRoot}>
+        <div class="bottombar-content">
           {this.trackImgOuter}
           <div class="control-split-h">
             {this.progressBar}

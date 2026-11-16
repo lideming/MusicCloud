@@ -17,11 +17,29 @@ export function createsContext(style: CSSStyleDeclaration, parentDisplay = "") {
 }
 function transparent(color: string) { return color === "transparent" || /rgba\([^)]*,\s*0\s*\)/.test(color); }
 function ownsPixels(element: HTMLElement, style: CSSStyleDeclaration, text: boolean) {
-  return !transparent(style.backgroundColor) || style.boxShadow !== "none" || style.outlineStyle !== "none" ||
+  return style.backgroundImage !== "none" || style.backdropFilter !== "none" || !transparent(style.backgroundColor) || style.boxShadow !== "none" || style.outlineStyle !== "none" ||
     ["top", "right", "bottom", "left"].some(side => parseFloat(style.getPropertyValue(`border-${side}-width`)) > 0 && !transparent(style.getPropertyValue(`border-${side}-color`))) ||
     text ||
-    element instanceof HTMLImageElement || element instanceof HTMLCanvasElement || element instanceof SVGSVGElement ||
+    element instanceof HTMLImageElement || element instanceof HTMLVideoElement || element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element instanceof HTMLCanvasElement || element instanceof SVGSVGElement ||
     ["::before", "::after"].some(pseudo => { const s = getComputedStyle(element, pseudo); return s.content !== "none" && s.content !== "normal"; });
+}
+
+/** Structural/sibling selectors can restyle untouched sibling subtrees.
+ * Without them, child-list edits can retain those nodes. Inaccessible sheets
+ * conservatively keep the subtree refresh path. This is a CSS capability gate,
+ * not a selector dependency graph or an application-specific grouping rule. */
+function hasStructuralSelectors() {
+  const seen = new Set<CSSStyleSheet>();
+  const rules = (list: CSSRuleList): boolean => Array.from(list).some(rule => {
+    const item = rule as CSSRule & { selectorText?: string; cssRules?: CSSRuleList; styleSheet?: CSSStyleSheet };
+    return !!item.selectorText && /:(?:nth-|first-|last-|only-|empty|has\()|[+~]/.test(item.selectorText) ||
+      !!item.cssRules && rules(item.cssRules) || !!item.styleSheet && sheet(item.styleSheet);
+  });
+  const sheet = (style: CSSStyleSheet): boolean => {
+    if (seen.has(style)) return false; seen.add(style);
+    try { return rules(style.cssRules); } catch { return true; }
+  };
+  return Array.from(document.styleSheets).some(sheet);
 }
 
 /** A DOM hierarchy, not a second layout model. Boundary summaries make local
@@ -30,6 +48,7 @@ function ownsPixels(element: HTMLElement, style: CSSStyleDeclaration, text: bool
 export class DOMPaintTree {
   readonly byElement = new Map<HTMLElement, PaintUnit>();
   readonly members = new Set<HTMLElement>();
+  readonly scrollers = new Set<HTMLElement>();
   private nodes = new Map<HTMLElement, PaintBranch>();
   private ids = new WeakMap<HTMLElement, string>();
   private nextId = 0;
@@ -43,9 +62,12 @@ export class DOMPaintTree {
     const element = branch.element, style = getComputedStyle(element);
     const contained = /paint|strict|content/.test(style.contain);
     const scroller = /(auto|scroll)/.test(style.overflowY) || /(auto|scroll)/.test(style.overflowX);
+    if (scroller && !(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) this.scrollers.add(element); else this.scrollers.delete(element);
     branch.visible = style.display !== "none" && style.visibility !== "hidden";
     branch.split = element.getAttribute("data-canvas-scrollbar") === "overlay" || scroller && (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth);
-    branch.boundary = element instanceof HTMLCanvasElement || style.animationName !== "none" || style.position === "sticky" || style.position === "fixed" ||
+    const matrix = style.transform === "none" ? null : new DOMMatrixReadOnly(style.transform);
+    const transformed = matrix && (!matrix.is2D || Math.abs(matrix.a-1) > 1e-7 || Math.abs(matrix.d-1) > 1e-7 || Math.abs(matrix.b) > 1e-7 || Math.abs(matrix.c) > 1e-7);
+    branch.boundary = !!transformed || style.backdropFilter !== "none" || element instanceof HTMLVideoElement || element instanceof HTMLCanvasElement || style.animationName !== "none" || style.position === "sticky" || style.position === "fixed" ||
       element.hasAttribute("data-canvas-blur") || this.selectedSources.has(element) ||
       // A real nested scroll viewport must not bake its scrolling children into
       // a parent surface, whether or not overlay chrome is requested.
@@ -68,7 +90,7 @@ export class DOMPaintTree {
   }
   private summarize(branch: PaintBranch) {
     branch.small = branch.element.offsetHeight <= Math.max(128, this.source.clientHeight / 2);
-    branch.atomic = branch.element instanceof SVGSVGElement || branch.element instanceof HTMLImageElement || branch.element instanceof HTMLCanvasElement ||
+    branch.atomic = branch.element instanceof SVGSVGElement || branch.element instanceof HTMLImageElement || branch.element instanceof HTMLVideoElement || branch.element instanceof HTMLInputElement || branch.element instanceof HTMLTextAreaElement || branch.element instanceof HTMLSelectElement || branch.element instanceof HTMLCanvasElement ||
       branch.element !== this.source && !branch.split && branch.small && branch.boundaryCount === 0;
   }
   private indexChildren(branch: PaintBranch) {
@@ -92,8 +114,8 @@ export class DOMPaintTree {
     this.read(branch);
     // SVG descendants are painted through SVG image serialization, not HTML
     // resources. Their changes still find their enclosing SVG via ancestors.
-    if (!(element instanceof SVGSVGElement) && !(element instanceof HTMLImageElement) && !(element instanceof HTMLCanvasElement)) {
-      branch.children = Array.from(element.children).map(child => this.build(child as HTMLElement, branch));
+    if (!(element instanceof SVGSVGElement) && !(element instanceof HTMLImageElement) && !(element instanceof HTMLVideoElement) && !(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement) && !(element instanceof HTMLSelectElement) && !(element instanceof HTMLCanvasElement)) {
+      branch.children = Array.from(element.children).filter(child => !child.hasAttribute("data-canvas-owned")).map(child => this.build(child as HTMLElement, branch));
     }
     branch.boundaryCount = branch.children.reduce((n, child) => n + Number(child.boundary) + child.boundaryCount, 0);
     branch.unsafeChildren = branch.children.reduce((n, child) => n + Number(!child.safeFlow), 0);
@@ -115,19 +137,29 @@ export class DOMPaintTree {
     if (wasActive !== active || !!wasAtomic !== branch.atomic) branch.children.forEach(child => this.activate(child, active && !branch.atomic));
   }
   private remove(branch: PaintBranch) {
-    this.nodes.delete(branch.element); this.byElement.delete(branch.element); this.members.delete(branch.element);
+    this.nodes.delete(branch.element); this.scrollers.delete(branch.element); this.byElement.delete(branch.element); this.members.delete(branch.element);
     branch.children.forEach(child => this.remove(child));
   }
   /** Content/CSS/child-list changes re-read their DOM subtree, including
    * structural selectors and inherited styles there. Size and direct text
    * changes only need the box and the cached descendant-boundary summary. */
-  refresh(element: Element, shallow = false) {
+  refresh(element: Element, shallow = false, childrenOnly = false) {
     let current: Element | null = element;
     while (current && !this.nodes.has(current as HTMLElement)) current = current.parentElement;
     if (!current) return;
     const branch = this.nodes.get(current as HTMLElement)!;
     const parent = branch.parent;
     const oldCount = Number(branch.boundary) + branch.boundaryCount, oldSafe = branch.safeFlow, oldFlow = branch.flow, oldBounded = branch.bounded;
+    if (branch.element instanceof SVGSVGElement || branch.element instanceof HTMLCanvasElement || branch.element instanceof HTMLVideoElement || branch.element instanceof HTMLInputElement || branch.element instanceof HTMLTextAreaElement || branch.element instanceof HTMLSelectElement) childrenOnly = false;
+    if (childrenOnly && !hasStructuralSelectors()) {
+      const children = new Set(Array.from(branch.element.children).filter(child => !child.hasAttribute("data-canvas-owned")) as HTMLElement[]);
+      for (const child of branch.children) if (!children.has(child.element) && child.parent === branch) this.remove(child);
+      branch.children = Array.from(children).map(child => this.nodes.get(child) ?? this.build(child, branch));
+      branch.children.forEach(child => { child.parent = branch; this.activate(child, branch.active && !branch.atomic); });
+      branch.boundaryCount = branch.children.reduce((count, child) => count + Number(child.boundary) + child.boundaryCount, 0);
+      branch.unsafeChildren = branch.children.reduce((count, child) => count + Number(!child.safeFlow), 0);
+      this.indexChildren(branch); shallow = true;
+    }
     if (shallow) {
       branch.text = Array.from(branch.element.childNodes).some(child => child instanceof Text && !!child.textContent?.trim());
       this.read(branch); this.summarize(branch); this.activate(branch, branch.active || !parent);
@@ -163,7 +195,7 @@ export class DOMPaintTree {
    * Uncontained, positioned, sticky/transformed and other escaping branches are
    * always visited; grids, reordered flex, floats and negative margins fall back
    * to their ordinary hierarchy. No row heights or scroll offsets are cached. */
-  nearby(viewport: PaintRect): Set<HTMLElement> {
+  nearby(viewport: PaintRect, margin = 128): Set<HTMLElement> {
     const result = new Set<HTMLElement>();
     const overlaps = (r: DOMRect, v: PaintRect) => r.bottom >= v.y && r.top <= v.y + v.height && r.right >= v.x && r.left <= v.x + v.width;
     const visit = (branch: PaintBranch, clip: PaintRect) => {
@@ -173,7 +205,7 @@ export class DOMPaintTree {
       if (branch.unit && overlaps(r, clip)) result.add(branch.element);
       if (branch.atomic) return;
       if (branch.clips && branch.element !== this.source) {
-        clip = intersect(clip, { x: r.x, y: r.y, width: r.width, height: r.height });
+        clip = intersect(clip, { x: r.x, y: r.y - margin, width: r.width, height: r.height + margin * 2 });
         if (!clip.width || !clip.height) return;
       }
       if (!branch.vertical || branch.unsafeChildren) { branch.children.forEach(child => visit(child, clip)); return; }

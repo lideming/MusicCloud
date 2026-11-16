@@ -1,3 +1,4 @@
+import { boxOrigin, isAxisAligned, readBasis } from "./DOMPaintGeometry";
 import { PaintImages, PaintClip, PaintRect, readOverflowClip, PaintSnapshot, readPaint, readPaintSize, rasterPaint, readBoxShadow, shadowSnapshot } from "./CanvasPaint";
 import { CanvasCompositor, CanvasLayer, PaintPlacement } from "./CanvasCompositor";
 import { DOMPaintTree, intersect } from "./DOMPaintTree";
@@ -22,23 +23,26 @@ export class DOMCanvasRenderer {
   private members = new Set<HTMLElement>();
   private topologyDirty = true;
   private effectsDirty = false;
+  private effectElements = new Set<HTMLElement>();
   private version = 0;
   private rootStyleVersion = -1;
   private rootOpacity = 1;
   private frame = 0;
   private disposed = false;
+  private nativePresentation = false;
+  private videos = new Map<HTMLVideoElement, number>();
   private dragImage: HTMLCanvasElement | null = null;
   private mutations: MutationObserver;
   private ancestors: MutationObserver;
   private sizes: ResizeObserver;
   private sizeTargets = new Set<HTMLElement>();
   private measuredSizes = new WeakMap<HTMLElement, { width: number; height: number }>();
-  private pending = new Map<Element, boolean>();
+  private pending = new Map<Element, "box" | "children" | "subtree">();
   private scrollbars: OverlayScrollbars | undefined;
   private suppression = document.createElement("style");
   private cleanup: (() => void)[] = [];
 
-  constructor(readonly source: HTMLElement, readonly shell: HTMLElement) {
+  constructor(readonly source: HTMLElement, readonly shell: HTMLElement, private options: { autoScrollbars?: boolean } = {}) {
     this.canvas.className = "dom-canvas";
     this.canvas.setAttribute("aria-hidden", "true");
     Object.assign(this.canvas.style, { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", pointerEvents: "none" });
@@ -67,6 +71,10 @@ export class DOMCanvasRenderer {
     this.mutations = new MutationObserver(records => {
       let changed = false;
       for (const record of records) {
+        const target = record.target instanceof Element ? record.target : record.target.parentElement;
+        if (target?.closest("[data-canvas-owned]")) continue;
+        if (record.type === "childList" && [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)].every(node => node instanceof Element && node.hasAttribute("data-canvas-owned"))) continue;
+        if (this.scrollbars?.ownsMutation(record)) continue;
         if (record.type === "attributes" && (record.attributeName === "data-canvas-rendered" ||
           (record.target as Element).getAttribute(record.attributeName!) === record.oldValue)) continue;
         changed = true;
@@ -75,22 +83,31 @@ export class DOMCanvasRenderer {
         if (element === source && record.type === "attributes") {
           this.rootStyleVersion = -1; this.version++; this.topologyDirty = true;
         } else {
-          // Placement-only changes of a resource root do not change its pixels.
+          // Placement-only changes of a root or structural ancestor preserve cached pixels.
           // Boundary/context metadata is still refreshed, including z-index.
           let placementOnly = false;
-          if (record.type === "attributes" && record.attributeName === "style" && this.members.has(element as HTMLElement)) {
+          if (record.type === "attributes" && record.attributeName === "style") {
             const before = document.createElement("span").style, after = document.createElement("span").style;
             before.cssText = record.oldValue ?? ""; after.cssText = (element as HTMLElement).style.cssText;
             for (const property of ["transform", "transform-origin", "opacity", "z-index", "box-shadow", "transition", "transition-duration"]) { before.removeProperty(property); after.removeProperty(property); }
             placementOnly = before.cssText === after.cssText;
           }
-          if (!placementOnly) this.markDirty(element);
-          this.queueRefresh(element, record.type === "characterData");
+          if (placementOnly) this.dirtyContainingAtomic(element); else this.markDirty(element);
+          const textOnly = record.type === "childList" && [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)].every(node => node instanceof Text);
+          this.queueRefresh(element, placementOnly || record.type === "characterData" || textOnly, record.type === "childList" && !textOnly);
           // Selector membership may change without changing any pixels or
           // boundaries elsewhere. Refresh effect selections once per batch,
           // then update only the branches whose selection actually changed.
-          if (this.effects?.elements.length || record.attributeName === "data-canvas-blur" ||
-            Array.from(record.addedNodes).some(node => node instanceof Element && (node.hasAttribute("data-canvas-blur") || !!node.querySelector("[data-canvas-blur]")))) this.effectsDirty = true;
+          if (record.attributeName === "data-canvas-blur") {
+            if (element.hasAttribute("data-canvas-blur")) this.effectElements.add(element as HTMLElement); else this.effectElements.delete(element as HTMLElement);
+            this.effectsDirty = true;
+          }
+          for (const removed of Array.from(record.removedNodes)) if (removed instanceof Element) for (const effect of this.effectElements) if (removed.contains(effect)) this.effectElements.delete(effect);
+          for (const added of Array.from(record.addedNodes)) if (added instanceof Element) {
+            if (added.hasAttribute("data-canvas-blur")) this.effectElements.add(added as HTMLElement);
+            added.querySelectorAll<HTMLElement>("[data-canvas-blur]").forEach(effect => this.effectElements.add(effect));
+          }
+          if (this.effectElements.size || this.effects?.elements.length) this.effectsDirty = true;
         }
       }
       if (changed) this.schedule();
@@ -124,11 +141,15 @@ export class DOMCanvasRenderer {
       }
       this.schedule();
     }, true);
+    for (const name of ["loadeddata", "seeked", "timeupdate", "play", "pause", "resize"]) listen(source, name, event => {
+      if (event.target instanceof HTMLVideoElement) this.invalidate(event.target);
+    }, true);
+    listen(source, "error", event => { if (event.target instanceof HTMLVideoElement && event.target.currentSrc) this.fail(new Error("Canvas video could not be decoded")); }, true);
     listen(source, "load", event => this.invalidate(event.target as Element), true);
     // The owner of an ordinary canvas dispatches this after changing its pixels.
     // Canvas drawing itself has no DOM mutation notification.
     listen(source, "canvas-content-changed", event => this.invalidate(event.target as Element), true);
-    for (const event of ["pointerover", "pointerout", "pointerdown", "focusin", "focusout", "keydown", "keyup"]) listen(source, event, event => this.invalidate(event.target as Element), true);
+    for (const event of ["input", "change", "pointerover", "pointerout", "pointerdown", "focusin", "focusout", "keydown", "keyup"]) listen(source, event, event => this.invalidate(event.target as Element), true);
     let pressed: Element | undefined;
     listen(source, "pointerdown", event => { pressed = event.target as Element; }, true);
     listen(source, "dragstart", event => {
@@ -139,6 +160,7 @@ export class DOMCanvasRenderer {
       if (!resource || !drag.dataTransfer) return;
       this.dragImage = resource.canvas;
       Object.assign(this.dragImage.style, { position: "fixed", left: "-10000px", top: "0", width: `${resource.snapshot.width}px`, height: `${resource.snapshot.height}px`, pointerEvents: "none" });
+      this.dragImage.setAttribute("data-canvas-owned", ""); this.dragImage.setAttribute("aria-hidden", "true");
       document.body.appendChild(this.dragImage);
       const bounds = element!.getBoundingClientRect();
       drag.dataTransfer.setDragImage(this.dragImage, Math.max(0, drag.clientX - bounds.left), Math.max(0, drag.clientY - bounds.top));
@@ -152,7 +174,7 @@ export class DOMCanvasRenderer {
     listen(this.canvas, "webglcontextlost", () => this.fail(new Error("Canvas WebGL context lost")));
     document.fonts?.ready.then(() => { if (!this.disposed) this.invalidate(); });
     if (document.fonts) listen(document.fonts, "loadingdone", () => this.invalidate());
-    try { this.scrollbars = new OverlayScrollbars(source, shell, () => this.schedule()); }
+    try { this.scrollbars = new OverlayScrollbars(source, () => this.schedule(), !!options.autoScrollbars); }
     catch (error) { this.dispose(); throw error; }
     this.schedule();
   }
@@ -165,38 +187,48 @@ export class DOMCanvasRenderer {
     }
     for (const member of this.resources.keys()) if (element.contains(member)) this.dirty.add(member);
   }
-  private queueRefresh(element: Element, shallow = false) {
-    this.pending.set(element, (this.pending.get(element) ?? true) && shallow);
+  private dirtyContainingAtomic(element: Element) {
+    if (this.members.has(element as HTMLElement)) return;
+    for (let owner = element.parentElement; owner && this.source.contains(owner); owner = owner.parentElement) if (this.members.has(owner)) {
+      if (!this.tree.byElement.get(owner)?.ownOnly) this.dirty.add(owner);
+      return;
+    }
+  }
+  private queueRefresh(element: Element, shallow = false, children = false) {
+    const mode = shallow ? "box" : children ? "children" : "subtree", previous = this.pending.get(element);
+    if (previous === "subtree" || previous === "children" && mode === "box") return;
+    this.pending.set(element, mode);
   }
   invalidate(element?: Element) {
     if (!element) { this.version++; this.topologyDirty = true; }
     else { this.markDirty(element); this.queueRefresh(element); }
     this.schedule();
   }
-  private schedule() { if (!this.frame && !this.disposed) this.frame = requestAnimationFrame(() => this.paint()); }
+  private schedule() { if (!this.frame && !this.disposed && !this.nativePresentation) this.frame = requestAnimationFrame(() => this.paint()); }
   private rebuild() {
     this.topologyDirty = false;
-    this.scrollbars?.sync();
     this.effects = new DOMCanvasEffects(this.source);
+    this.effectElements = new Set(this.effects.elements);
     this.tree = new DOMPaintTree(this.source, this.effects.selectedSources);
     this.members = this.tree.members;
+    this.scrollbars?.sync(this.options.autoScrollbars ? this.tree.scrollers : undefined);
     this.pending.clear(); this.effectsDirty = false;
   }
   private refresh() {
-    this.scrollbars?.sync();
     if (this.effectsDirty) {
-      this.effects = new DOMCanvasEffects(this.source);
+      this.effects = new DOMCanvasEffects(this.source, this.effectElements);
       this.tree.updateSources(this.effects.selectedSources); this.effectsDirty = false;
     }
-    for (const [element, shallow] of this.pending) {
+    for (const [element, mode] of this.pending) {
       if (!this.source.contains(element)) continue;
       // An ancestor already queued for a deep refresh subsumes its descendants.
       let ancestor = element.parentElement;
       while (ancestor && !this.pending.has(ancestor)) ancestor = ancestor.parentElement;
-      if (ancestor && this.pending.get(ancestor) === false) continue;
-      this.tree.refresh(element, shallow);
+      if (ancestor && this.pending.get(ancestor) === "subtree") continue;
+      this.tree.refresh(element, mode === "box", mode === "children");
     }
     this.pending.clear();
+    this.scrollbars?.sync(this.options.autoScrollbars ? this.tree.scrollers : undefined);
   }
   private observeSizes(elements: Set<HTMLElement>) {
     for (const element of this.sizeTargets) if (!elements.has(element)) { this.sizes.unobserve(element); this.sizeTargets.delete(element); }
@@ -204,7 +236,7 @@ export class DOMCanvasRenderer {
   }
   private paint() {
     this.frame = 0;
-    if (this.disposed || document.visibilityState === "hidden") return;
+    if (this.disposed || this.nativePresentation || document.visibilityState === "hidden") return;
     try {
       if (this.topologyDirty) this.rebuild();
       else if (this.pending.size) this.refresh();
@@ -238,7 +270,7 @@ export class DOMCanvasRenderer {
       const canvasLeft = (outputX - host.x) / scaleX, canvasTop = (outputY - host.y) / scaleY;
       const snapshots = new Map<HTMLElement, PaintSnapshot>();
       const placements = new Map<HTMLElement, { rect: PaintRect; opacity: number; selectionOpacity: number; clip: PaintRect; roundedClips: PaintClip[] }>();
-      const wanted = this.tree.nearby({ x: origin.left, y: origin.top - 128 * scaleY, width: origin.width, height: origin.height + 256 * scaleY });
+      const wanted = this.tree.nearby({ x: origin.left, y: origin.top - 128 * scaleY, width: origin.width, height: origin.height + 256 * scaleY }, 128 * scaleY);
       this.effects.elements.forEach(element => wanted.add(element));
       const styles = new Map<HTMLElement, CSSStyleDeclaration>(), bounds = new Map<HTMLElement, DOMRect>();
       const ancestry = this.tree.ancestors(wanted);
@@ -271,16 +303,38 @@ export class DOMCanvasRenderer {
       // before touching Canvas or GPU state.
       const activeUnits = Array.from(placements.keys()).map(element => this.tree.byElement.get(element)!);
       const order = this.tree.order(styles, new Set(placements.keys()));
+      const scrollLayers = this.scrollbars?.measure(origin, width, height, scaleX, scaleY) ?? [];
+      const barsBefore = new Map<number, CanvasLayer[]>(), barsAfter = new Map<number, CanvasLayer[]>();
+      if (this.options.autoScrollbars) for (const [element, bars] of this.scrollbars?.paint ?? []) {
+        if (!bars.length) continue;
+        const end = order.findIndex(entry => entry.kind === "end" && entry.element === element);
+        let index = end;
+        if (index < 0) for (let i = 0; i < order.length; i++) if (element.contains(order[i].element)) index = i;
+        if (index >= 0) { const map = end >= 0 ? barsBefore : barsAfter; map.set(index, [...(map.get(index) ?? []), ...bars]); }
+      }
       const layers: CanvasLayer[] = [], stack: { layers: CanvasLayer[]; opacity: number }[] = [{ layers, opacity: 1 }];
-      for (const entry of order) {
+      for (let index = 0; index < order.length; index++) {
+        const entry = order[index];
+        stack[stack.length - 1].layers.push(...(barsBefore.get(index) ?? []));
         if (entry.kind === "begin") stack.push({ layers: [], opacity: entry.opacity! });
         else if (entry.kind === "end") { const group = stack.pop()!; stack[stack.length - 1].layers.push({ kind: "group", ...group }); }
         else if (entry.kind === "effect") stack[stack.length - 1].layers.push(this.effects.layer(entry.element, activeUnits, rect(bounds.get(entry.element)!)));
-        else stack[stack.length - 1].layers.push({ kind: "source", source: entry.unit!.id + "/shadow" }, { kind: "source", source: entry.unit!.id });
+        else {
+          const style = styles.get(entry.element)!, placement = placements.get(entry.element)!;
+          if (style.backdropFilter !== "none") {
+            const size = readPaintSize(entry.element, style), shape = readOverflowClip(style, placement.rect, size.width, size.height);
+            stack[stack.length - 1].layers.push({ kind: "backdrop", rect: placement.rect, clip: intersect(placement.clip, shape.rect), roundedClips: [...placement.roundedClips, shape],
+              radius: Number(/blur\(([\d.]+)px\)/.exec(style.backdropFilter)?.[1] ?? 0), saturation: Number(/saturate\(([\d.]+)\)/.exec(style.backdropFilter)?.[1] ?? 1) });
+          }
+          stack[stack.length - 1].layers.push({ kind: "source", source: entry.unit!.id + "/shadow" }, { kind: "source", source: entry.unit!.id });
+        }
+        stack[stack.length - 1].layers.push(...(barsAfter.get(index) ?? []));
       }
+      const bases = new Map<Element, ReturnType<typeof readBasis>>();
+      for (const unit of activeUnits) readBasis(unit.element, styles, bases);
       const shadows = new Map<HTMLElement, ReturnType<typeof readBoxShadow>>();
       for (const element of placements.keys()) shadows.set(element, readBoxShadow(styles.get(element)!.boxShadow));
-      layers.push(...(this.scrollbars?.measure(origin, width, height, scaleX, scaleY) ?? []));
+      if (!this.options.autoScrollbars) layers.push(...scrollLayers);
       const animations = this.source.getAnimations({ subtree: true }).filter(animation => {
         if (animation.playState !== "running") return false;
         const target = (animation.effect as KeyframeEffect)?.target;
@@ -293,7 +347,7 @@ export class DOMCanvasRenderer {
       for (const [element, snapshot] of snapshots) {
         const old = this.resources.get(element); if (old) this.compositor.remove(old.texture);
         const canvas = rasterPaint({ ...snapshot, shadow: undefined }, dpr);
-        this.resources.set(element, { canvas, texture: this.compositor.upload(canvas), snapshot, version: this.version, dpr, ownOnly: this.tree.byElement.get(element)!.ownOnly }); this.stats.rasterizations++;
+        this.resources.set(element, { canvas, texture: this.compositor.upload(canvas, snapshot.filter), snapshot, version: this.version, dpr, ownOnly: this.tree.byElement.get(element)!.ownOnly }); this.stats.rasterizations++;
       }
       for (const [element, resource] of this.resources) if (!placements.has(element)) { this.compositor.remove(resource.texture); this.resources.delete(element); }
       for (const [element, resource] of this.resources) {
@@ -304,9 +358,10 @@ export class DOMCanvasRenderer {
         if (old) this.compositor.remove(old.texture);
         const snapshot = shadowSnapshot(resource.snapshot, shadow);
         const canvas = rasterPaint(snapshot, dpr);
-        this.decorations.set(element, { texture: this.compositor.upload(canvas), snapshot, pixelWidth: canvas.width, pixelHeight: canvas.height, key }); this.stats.decorationRasterizations++;
+        this.decorations.set(element, { texture: this.compositor.upload(canvas, snapshot.filter), snapshot, pixelWidth: canvas.width, pixelHeight: canvas.height, key }); this.stats.decorationRasterizations++;
       }
       for (const [element, resource] of this.decorations) if (!placements.has(element)) { this.compositor.remove(resource.texture); this.decorations.delete(element); }
+      this.watchVideos();
       this.images.retain(new Set(Array.from(this.resources.values()).reduce<string[]>((urls, resource) => urls.concat(resource.snapshot.imageUrls), [])));
       this.dirty.clear();
       const sources: { [id: string]: PaintPlacement[] } = {};
@@ -315,6 +370,17 @@ export class DOMCanvasRenderer {
         sources[unit.id] = []; sources[unit.id + "/shadow"] = [];
         if (!placement || !resource) continue;
         const surface = (s: PaintSnapshot, texture: WebGLTexture, pixelWidth: number, pixelHeight: number): PaintPlacement => {
+          const basis = bases.get(unit.element)!;
+          if (!isAxisAligned(basis)) {
+            const border = boxOrigin(bounds.get(unit.element)!, basis, s.layoutWidth, s.layoutHeight);
+            const quad = { x: (border.x - origin.x + basis.a * s.offsetX + basis.c * s.offsetY) / scaleX,
+              y: (border.y - origin.y + basis.b * s.offsetX + basis.d * s.offsetY) / scaleY,
+              ax: basis.a * pixelWidth / dpr / scaleX, ay: basis.b * pixelWidth / dpr / scaleY,
+              bx: basis.c * pixelHeight / dpr / scaleX, by: basis.d * pixelHeight / dpr / scaleY };
+            const x = Math.min(quad.x, quad.x+quad.ax, quad.x+quad.bx, quad.x+quad.ax+quad.bx), y = Math.min(quad.y, quad.y+quad.ay, quad.y+quad.by, quad.y+quad.ay+quad.by);
+            const right = Math.max(quad.x,quad.x+quad.ax,quad.x+quad.bx,quad.x+quad.ax+quad.bx), bottom = Math.max(quad.y,quad.y+quad.ay,quad.y+quad.by,quad.y+quad.ay+quad.by);
+            return { ...placement, texture, flip: !!s.filter, quad, rect: {x,y,width:right-x,height:bottom-y} };
+          }
           const sx = s.layoutWidth ? placement.rect.width / s.layoutWidth : 1, sy = s.layoutHeight ? placement.rect.height / s.layoutHeight : 1;
           let x = placement.rect.x + s.offsetX * sx, y = placement.rect.y + s.offsetY * sy;
           // Keep cached, unscaled texels on the output pixel grid. Intentional
@@ -322,32 +388,57 @@ export class DOMCanvasRenderer {
           if (sx === 1 && sy === 1) { x = Math.round(x * dpr) / dpr; y = Math.round(y * dpr) / dpr; }
           // ceil allocation leaves transparent padding at the raster's edge;
           // preserve its extent instead of squeezing it into the logical box.
-          return { ...placement, texture, rect: { x, y, width: pixelWidth / dpr * sx, height: pixelHeight / dpr * sy } };
+          return { ...placement, texture, flip: !!s.filter, rect: { x, y, width: pixelWidth / dpr * sx, height: pixelHeight / dpr * sy } };
         };
         sources[unit.id].push(surface(resource.snapshot, resource.texture, resource.canvas.width, resource.canvas.height));
         const decoration = this.decorations.get(unit.element);
         if (decoration) sources[unit.id + "/shadow"].push(surface(decoration.snapshot, decoration.texture, decoration.pixelWidth, decoration.pixelHeight));
       }
       this.compositor.render(sources, layers, this.rootOpacity);
-      this.scrollbars?.commit(left, top, width, height);
       this.stats.frames++; this.stats.cachedResources = this.resources.size; this.stats.cachedImages = this.images.size;
       if (!this.source.hasAttribute("data-canvas-rendered")) this.source.setAttribute("data-canvas-rendered", "");
       if (animations.length) {
         animations.forEach(a => {
           let target = (a.effect as KeyframeEffect).target as HTMLElement | null;
           const keys = (a.effect as KeyframeEffect).getKeyframes();
-          if (target && this.members.has(target) && keys.every(k => Object.keys(k).every(name => ["offset", "computedOffset", "easing", "composite", "transform", "opacity"].includes(name)))) return;
+          if (target && keys.every(k => Object.keys(k).every(name => ["offset", "computedOffset", "easing", "composite", "transform", "opacity"].includes(name)))) { this.dirtyContainingAtomic(target); return; }
           while (target && !this.members.has(target)) target = target.parentElement;
           if (target) this.dirty.add(target);
         }); this.schedule();
       }
     } catch (error) { this.fail(error); }
   }
+  private watchVideos() {
+    const wanted = new Set(Array.from(this.resources.values()).reduce<HTMLVideoElement[]>((all, resource) => all.concat(resource.snapshot.videos ?? []), []));
+    for (const [video, id] of this.videos) if (!wanted.has(video)) { video.cancelVideoFrameCallback?.(id); this.videos.delete(video); }
+    for (const video of wanted) if (!this.videos.has(video) && video.requestVideoFrameCallback) {
+      const frame = () => {
+        if (!this.videos.has(video) || this.disposed) return;
+        this.markDirty(video); this.schedule();
+        this.videos.set(video, video.requestVideoFrameCallback(frame));
+      };
+      this.videos.set(video, video.requestVideoFrameCallback(frame));
+    }
+  }
+  setNativePresentation(native: boolean) {
+    if (this.disposed || native === this.nativePresentation) return;
+    this.nativePresentation = native;
+    this.canvas.style.visibility = native ? "hidden" : "";
+    this.scrollbars?.setSuspended(native);
+    if (native) {
+      cancelAnimationFrame(this.frame); this.frame = 0;
+      this.source.removeAttribute("data-canvas-rendered");
+    } else {
+      this.scrollbars?.sync(this.options.autoScrollbars ? this.tree?.scrollers : undefined);
+      this.schedule();
+    }
+  }
   private fail(error: unknown) { if (!this.disposed) { console.warn("[DOMCanvasRenderer] Restoring DOM paint", error); this.dispose(); } }
   dispose() {
     if (this.disposed) return; this.disposed = true;
     cancelAnimationFrame(this.frame); this.frame = 0; this.source.removeAttribute("data-canvas-rendered");
     this.mutations.disconnect(); this.ancestors.disconnect(); this.sizes.disconnect();
+    this.videos.forEach((id, video) => video.cancelVideoFrameCallback?.(id)); this.videos.clear();
     this.cleanup.forEach(fn => fn()); this.images.dispose(); this.scrollbars?.dispose();
     this.resources.forEach(r => this.compositor.remove(r.texture)); this.resources.clear();
     this.decorations.forEach(r => this.compositor.remove(r.texture)); this.decorations.clear();

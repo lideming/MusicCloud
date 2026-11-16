@@ -8,8 +8,9 @@ import { PaintUnit } from "./DOMPaintTree";
 export class DOMCanvasEffects {
   readonly selectedSources = new Set<Element>();
   private sources = new Map<HTMLElement, Element[]>();
-  constructor(root: HTMLElement) {
-    for (const element of Array.from(root.querySelectorAll<HTMLElement>("[data-canvas-blur]"))) {
+  constructor(root: HTMLElement, elements: Iterable<HTMLElement> = Array.from(root.querySelectorAll<HTMLElement>("[data-canvas-blur]"))) {
+    for (const element of elements) {
+      if (!root.contains(element) || !element.hasAttribute("data-canvas-blur")) continue;
       const selected = Array.from(root.querySelectorAll(element.getAttribute("data-canvas-blur") || ":scope"));
       this.sources.set(element, selected);
       selected.forEach(source => this.selectedSources.add(source));
