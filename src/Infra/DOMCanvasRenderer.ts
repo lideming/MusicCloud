@@ -3,6 +3,7 @@ import { PaintImages, PaintClip, PaintRect, readOverflowClip, PaintSnapshot, rea
 import { CanvasCompositor, CanvasLayer, PaintPlacement } from "./CanvasCompositor";
 import { DOMPaintTree, intersect } from "./DOMPaintTree";
 import { DOMCanvasEffects } from "./DOMCanvasEffects";
+import { DOMTextEditing } from "./DOMTextEditing";
 import { OverlayScrollbars } from "./OverlayScrollbars";
 
 interface Resource { canvas: HTMLCanvasElement; texture: WebGLTexture; snapshot: PaintSnapshot; version: number; dpr: number; ownOnly: boolean }
@@ -39,6 +40,8 @@ export class DOMCanvasRenderer {
   private measuredSizes = new WeakMap<HTMLElement, { width: number; height: number }>();
   private pending = new Map<Element, "box" | "children" | "subtree">();
   private scrollbars: OverlayScrollbars | undefined;
+  private editing: DOMTextEditing;
+  private selectedResources = new Set<HTMLElement>();
   private suppression = document.createElement("style");
   private cleanup: (() => void)[] = [];
 
@@ -47,6 +50,7 @@ export class DOMCanvasRenderer {
     this.canvas.setAttribute("aria-hidden", "true");
     Object.assign(this.canvas.style, { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", pointerEvents: "none" });
     this.compositor = new CanvasCompositor(this.canvas);
+    this.editing = new DOMTextEditing(source, () => this.editingChanged());
     this.images = new PaintImages(url => {
       for (const [element, resource] of this.resources) if (resource.snapshot.imageUrls.includes(url)) this.dirty.add(element);
       this.schedule();
@@ -178,6 +182,14 @@ export class DOMCanvasRenderer {
     catch (error) { this.dispose(); throw error; }
     this.schedule();
   }
+  private editingChanged() {
+    const selected = new Set<HTMLElement>();
+    for (const [element, resource] of this.resources) if (this.editing.affects(element, resource.ownOnly, !!this.tree.byElement.get(element)?.text)) selected.add(element);
+    for (const element of this.selectedResources) this.dirty.add(element);
+    for (const element of selected) this.dirty.add(element);
+    this.selectedResources = selected;
+    if (this.dirty.size) this.schedule();
+  }
   private markDirty(element: Element) {
     // Retained surfaces are already viewport-bounded. Dirty containing units
     // along ancestry (including own-only :hover/:has backgrounds), then retained descendants of an invalidated
@@ -296,7 +308,7 @@ export class DOMCanvasRenderer {
         placements.set(element, { rect: rect(r), opacity: 1, selectionOpacity, clip, roundedClips });
         const old = this.resources.get(element), { width: layoutWidth, height: layoutHeight } = readPaintSize(element, style);
         if (!old || old.ownOnly !== unit.ownOnly || old.version !== this.version || old.dpr !== dpr || this.dirty.has(element) || old.snapshot.layoutWidth !== layoutWidth || old.snapshot.layoutHeight !== layoutHeight) {
-          snapshots.set(element, readPaint(element, this.images, unit.ownOnly)); this.stats.snapshots++;
+          snapshots.set(element, readPaint(element, this.images, unit.ownOnly, this.editing)); this.stats.snapshots++;
         }
       }
       // CSS paint order, custom effects and native scroll decorations are read
@@ -361,7 +373,12 @@ export class DOMCanvasRenderer {
         this.decorations.set(element, { texture: this.compositor.upload(canvas, snapshot.filter), snapshot, pixelWidth: canvas.width, pixelHeight: canvas.height, key }); this.stats.decorationRasterizations++;
       }
       for (const [element, resource] of this.decorations) if (!placements.has(element)) { this.compositor.remove(resource.texture); this.decorations.delete(element); }
+      // Scrolling can introduce already-selected resources without a new
+      // selectionchange. Track those too so collapsing later clears their pixels.
+      this.selectedResources.clear();
+      for (const [element, resource] of this.resources) if (this.editing.affects(element, resource.ownOnly, !!this.tree.byElement.get(element)?.text)) this.selectedResources.add(element);
       this.watchVideos();
+      this.editing.settle();
       this.images.retain(new Set(Array.from(this.resources.values()).reduce<string[]>((urls, resource) => urls.concat(resource.snapshot.imageUrls), [])));
       this.dirty.clear();
       const sources: { [id: string]: PaintPlacement[] } = {};
@@ -423,12 +440,14 @@ export class DOMCanvasRenderer {
   setNativePresentation(native: boolean) {
     if (this.disposed || native === this.nativePresentation) return;
     this.nativePresentation = native;
+    this.editing.settle(native);
     this.canvas.style.visibility = native ? "hidden" : "";
     this.scrollbars?.setSuspended(native);
     if (native) {
       cancelAnimationFrame(this.frame); this.frame = 0;
       this.source.removeAttribute("data-canvas-rendered");
     } else {
+      this.editing.update();
       this.scrollbars?.sync(this.options.autoScrollbars ? this.tree?.scrollers : undefined);
       this.schedule();
     }
@@ -439,8 +458,8 @@ export class DOMCanvasRenderer {
     cancelAnimationFrame(this.frame); this.frame = 0; this.source.removeAttribute("data-canvas-rendered");
     this.mutations.disconnect(); this.ancestors.disconnect(); this.sizes.disconnect();
     this.videos.forEach((id, video) => video.cancelVideoFrameCallback?.(id)); this.videos.clear();
-    this.cleanup.forEach(fn => fn()); this.images.dispose(); this.scrollbars?.dispose();
-    this.resources.forEach(r => this.compositor.remove(r.texture)); this.resources.clear();
+    this.cleanup.forEach(fn => fn()); this.editing.dispose(); this.images.dispose(); this.scrollbars?.dispose();
+    this.resources.forEach(r => this.compositor.remove(r.texture)); this.resources.clear(); this.selectedResources.clear();
     this.decorations.forEach(r => this.compositor.remove(r.texture)); this.decorations.clear();
     this.dragImage?.remove(); this.dragImage = null;
     this.compositor.dispose(); this.canvas.remove(); this.suppression.remove(); this.stats.cachedResources = 0; this.stats.cachedImages = 0;

@@ -1,5 +1,5 @@
 // Build first: npm run build:bundle
-// Run: node --test tests/app-canvas.test.cjs (Node 22+, Chromium).
+// Run: node --test tests/page-canvas.test.cjs (Node 22+, Chromium).
 // Set CHROMIUM_PATH and TMPDIR when the environment requires custom paths.
 // Exercises maintained TrackListView/PlayerCore through the production entry point, with local media and no account.
 const test = require('node:test');
@@ -165,13 +165,14 @@ test('one page scene paints the real application background, header, list and pl
 
 async function evidence(api,name){if(!process.env.CANVAS_EVIDENCE_DIR)return;fs.mkdirSync(process.env.CANVAS_EVIDENCE_DIR,{recursive:true});const png=await api.call('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.CANVAS_EVIDENCE_DIR,name+'.png'),Buffer.from(png.data,'base64'));}
 
-test('page dialogs and context menus paint with native input, selection and renderer preference continuity', {skip:!supported,timeout:60000},async t=>{
+test('page dialogs and context menus paint with Canvas input, selection and renderer preference continuity', {skip:!supported,timeout:60000},async t=>{
   const {api,requests}=await browser(t);
   assert.equal(await api.js('colorInk(view.header.dom)>100 && colorInk(view.listView.get(0).dom.querySelector(".name"))>30'),true,'Real header and row text, not only an opaque page background, is on the output');
   await api.js('window.originalPage=mcloud.ui.pageCanvas.renderer;window.originalSource=view.scrollBox.dom;window.originalAudio=mcloud.playerCore.audio');
   await click(api,await point(api,'view.header.dom.querySelector(".title")'));
   await wait(api,'Boolean(view.header.dom.querySelector("input")) && document.activeElement===view.header.dom.querySelector("input")');
-  assert.equal(await api.js('!document.body.hasAttribute("data-canvas-rendered") && originalPage.canvas.style.visibility==="hidden"'),true,'Editing presents the original native page');
+  assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && originalPage.canvas.style.visibility!=="hidden"'),true,'Ordinary title editing keeps the original page suppressed and the single Canvas visible');
+  const titleDifference=await nativeCanvasDifference(api,'pageRenderer','view.header.dom.querySelector("input")');t.diagnostic('Focused title native selection '+JSON.stringify(titleDifference));assert.ok(titleDifference.mean<14,JSON.stringify(titleDifference));
   await api.call('Input.insertText',{text:'Canvas title editing'});
   assert.equal(await api.js('document.activeElement.value'), 'Canvas title editing');
   await click(api,await point(api,'view.header.dom.querySelector(".catalog")'));await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
@@ -190,18 +191,19 @@ test('page dialogs and context menus paint with native input, selection and rend
   await api.call('Input.dispatchMouseEvent',{type:'mousePressed',x:selection.x,y:selection.y,button:'left',buttons:1,clickCount:1});
   await api.call('Input.dispatchMouseEvent',{type:'mouseMoved',x:selection.end,y:selection.y,button:'left',buttons:1});
   await api.call('Input.dispatchMouseEvent',{type:'mouseReleased',x:selection.end,y:selection.y,button:'left',buttons:0});
-  await wait(api,'getSelection().toString().length>0 && !document.body.hasAttribute("data-canvas-rendered")');
+  await wait(api,'getSelection().toString().length>0 && document.body.hasAttribute("data-canvas-rendered")');
   await api.js('getSelection().removeAllRanges()');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
   const input=await point(api,'mcloud.settingsUI.dialog.dom.querySelector("input")');await click(api,input);
-  await wait(api,'!document.body.hasAttribute("data-canvas-rendered")');
+  await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
   await api.call('Input.insertText',{text:await api.js('location.origin+"/api/"')});assert.equal(await api.js('document.activeElement.value'),await api.js('location.origin+"/api/"'));
+  await delay(120);const settingsInputDifference=await nativeCanvasDifference(api,'pageRenderer','document.activeElement');t.diagnostic('Focused Settings input '+JSON.stringify(settingsInputDifference));assert.ok(settingsInputDifference.mean<14,JSON.stringify(settingsInputDifference));
   await api.js('document.activeElement.blur()');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
   assert.ok(await api.js('colorInk(mcloud.settingsUI.dialog.dom.querySelector("input"))')>10,'Static edited value returns to Canvas');
   const options=`[...mcloud.settingsUI.dialog.dom.querySelectorAll('.setting-item')].find(e=>e.querySelector('.setting-label')?.textContent==='Renderer:').querySelectorAll('.radio-option')`;
   await click(api,await point(api,`(${options})[0]`));await wait(api,'!mcloud.ui.pageCanvas.renderer && !document.querySelector(".page-canvas")');
   await click(api,await point(api,`(${options})[1]`));await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
   assert.equal(await api.js('originalSource===view.scrollBox.dom && originalAudio===mcloud.playerCore.audio'),true);
-  await click(api,await point(api,'mcloud.settingsUI.dialog.dom.querySelector("input")'));await wait(api,'!document.body.hasAttribute("data-canvas-rendered")');
+  await click(api,await point(api,'mcloud.settingsUI.dialog.dom.querySelector("input")'));await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
   await key(api,'Escape');await wait(api,'!document.querySelector(".dialog") && document.body.hasAttribute("data-canvas-rendered")');await delay(350);
   await api.js(`mcloud.webfx.Toast.show('Page compositor toast',2500);void 0`);await delay(150);
   await wait(api,'colorInk([...document.querySelectorAll(".toast")].find(e=>e.textContent.includes("Page compositor toast")))>40');await evidence(api,'toast');const toastDifference=await nativeCanvasDifference(api,'pageRenderer','[...document.querySelectorAll(".toast")].find(e=>e.textContent.includes("Page compositor toast"))');t.diagnostic('Toast native '+JSON.stringify(toastDifference));assert.ok(toastDifference.mean<10,JSON.stringify(toastDifference));
@@ -284,6 +286,7 @@ async function nativeCanvasDifference(api, renderer, element, width) {
   await api.js(`(${renderer}).canvas.style.visibility='hidden';(${renderer}).source.removeAttribute('data-canvas-rendered')`);
   const native = await api.call('Page.captureScreenshot', { format: 'png', clip: rect });
   await api.js(`(${renderer}).canvas.style.visibility='';(${renderer}).source.setAttribute('data-canvas-rendered','')`);
+  if(process.env.CANVAS_EVIDENCE_DIR){fs.mkdirSync(process.env.CANVAS_EVIDENCE_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.CANVAS_EVIDENCE_DIR,'compare-canvas.png'),Buffer.from(canvas.data,'base64'));fs.writeFileSync(path.join(process.env.CANVAS_EVIDENCE_DIR,'compare-native.png'),Buffer.from(native.data,'base64'));}
   return api.js(`(async()=>{const decode=async data=>{const image=new Image();image.src='data:image/png;base64,'+data;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const x=c.getContext('2d');x.drawImage(image,0,0);return x.getImageData(0,0,c.width,c.height).data};const a=await decode('${canvas.data}'),b=await decode('${native.data}');let error=0,changed=0;for(let i=0;i<a.length;i+=4){for(let c=0;c<3;c++)error+=Math.abs(a[i+c]-b[i+c]);if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>60)changed++}return {mean:error/(a.length/4*3),changed,pixels:a.length/4}})()`);
 }
 
@@ -293,12 +296,22 @@ test('ordinary lyrics and search routes share the page scene across theme, DPR a
   await api.js(`(async()=>{await mcloud.playerCore.setTrack(list.tracks[0]);mcloud.router.nav('nowplaying')})()`);await wait(api,'!!document.querySelector(".playingview .lyricsview")');
   await api.js(`mcloud.nowPlaying.view.lyricsView.setLyrics({bpm:null,lang:'ja',translationLang:'zh',lines:[{startTime:0,orderTime:0,rawLine:null,translation:'中文译文 · English translation',spans:[{startTime:0,text:'漢字',ruby:'かんじ',timeStamp:{time:0,beats:null,beatsDiv:null}},{startTime:1,text:' mixed text 🎵',ruby:null,timeStamp:null}]},{startTime:20,orderTime:20,rawLine:null,translation:null,spans:[{startTime:20,text:'Second lyric line',ruby:null,timeStamp:null}]}]});mcloud.nowPlaying.view.lyricsView.setCurrentTime(.5)`);await delay(400);
   await evidence(api,'lyrics');const lyricsDifference=await nativeCanvasDifference(api,'pageRenderer','document.querySelector(".lyrics")');t.diagnostic('Lyric native difference '+JSON.stringify(lyricsDifference));assert.ok(lyricsDifference.mean<10,JSON.stringify(lyricsDifference));const rubyDifference=await nativeCanvasDifference(api,'pageRenderer','document.querySelector(".playingview rt")');t.diagnostic('Ruby native difference '+JSON.stringify(rubyDifference));assert.ok(rubyDifference.mean<12,JSON.stringify(rubyDifference));
+  await api.js(`(()=>{const range=document.createRange();range.selectNodeContents(document.querySelector('.playingview ruby'));getSelection().removeAllRanges();getSelection().addRange(range)})()`);await delay(120);
+  const rubySelectionDifference=await nativeCanvasDifference(api,'pageRenderer','document.querySelector(".playingview ruby")');t.diagnostic('Ruby selection native difference '+JSON.stringify(rubySelectionDifference));assert.ok(rubySelectionDifference.mean<12,JSON.stringify(rubySelectionDifference));
+  await api.js('getSelection().removeAllRanges()');
   await api.js('mcloud.lyricsEdit.startEdit(list.tracks[0],'+JSON.stringify('[00:00.00]First lyric line\n[00:20.00]Second lyric line')+')');await wait(api,'!!document.querySelector(".lyricsview.edit .span.ts")');await delay(400);
   const timestampDifference=await nativeCanvasDifference(api,'pageRenderer','document.querySelector(".lyricsview.edit .span.ts")');t.diagnostic('Timestamp native difference '+JSON.stringify(timestampDifference));assert.ok(timestampDifference.mean<12,JSON.stringify(timestampDifference));
-  await api.js('mcloud.lyricsEdit.view.setMode("source")');await wait(api,'!!document.querySelector(".lyricsedit textarea")');await api.js('document.activeElement.blur()');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');await delay(150);assert.ok(await api.js('colorInk(document.querySelector(".lyricsedit textarea"))>40'),'Static real lyric-source textarea values enter the page output');
+  await api.js('mcloud.lyricsEdit.view.setMode("source")');await wait(api,'!!document.querySelector(".lyricsedit textarea")');
+  await api.js('window.sourceArea=document.querySelector(".lyricsedit textarea");sourceArea.focus();sourceArea.select()');
+  await api.call('Input.insertText',{text:'[00:00.00]First 日本語 lyric line\n'+Array.from({length:64},(_,i)=>'Line '+i+' more text 中文').join('\n')});
+  await api.js('sourceArea.setSelectionRange(10,15)');
+  await api.call('Input.dispatchKeyEvent',{type:'keyDown',key:'r',code:'KeyR',windowsVirtualKeyCode:82,modifiers:2});await api.call('Input.dispatchKeyEvent',{type:'keyUp',key:'r',code:'KeyR',windowsVirtualKeyCode:82,modifiers:2});
+  assert.equal(await api.js('sourceArea.value.includes("[First]{}") && sourceArea.selectionStart===18 && document.body.hasAttribute("data-canvas-rendered")'),true,'Real lyric-source Ctrl+R changes value/caret through the application setRangeText handler without an input event');
+  await api.js('sourceArea.scrollTop=80');await delay(120);assert.ok(await api.js('sourceArea.scrollTop')>0);
+  await api.js('document.activeElement.blur()');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');await delay(150);assert.ok(await api.js('colorInk(document.querySelector(".lyricsedit textarea"))>40'),'Static real lyric-source textarea values enter the page output');
   await api.js(`mcloud.router.nav('search')`);await wait(api,'!!document.querySelector(".searchbar input")');await delay(350);
   assert.equal(await api.js('mcloud.ui.pageCanvas.renderer===pageRenderer && document.querySelectorAll(".page-canvas").length===1'),true);
-  const input=await point(api,'document.querySelector(".searchbar input")');await click(api,input);await delay(100);await wait(api,'!document.body.hasAttribute("data-canvas-rendered")');await api.call('Input.insertText',{text:'Search 日本語'});await key(api,'Tab');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');assert.equal(await api.js('document.querySelector(".searchbar input").value'),'Search 日本語');assert.ok(await api.js('colorInk(document.querySelector(".searchbar input"))>20'),'The unfocused native search value is drawn in the same scene');
+  const input=await point(api,'document.querySelector(".searchbar input")');await click(api,input);await delay(100);await wait(api,'document.body.hasAttribute("data-canvas-rendered")');await api.call('Input.insertText',{text:'Search 日本語'});await key(api,'Tab');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');assert.equal(await api.js('document.querySelector(".searchbar input").value'),'Search 日本語');await wait(api,'colorInk(document.querySelector(".searchbar input"))>20');
   await api.js("mcloud.listIndex.showTracklist(700001)");await wait(api,'mcloud.ui.content.current===view');await delay(400);
   for(const [width,dpr,theme]of [[1000,1.25,'dark-rounded'],[390,2,'light-rounded']]){await api.call('Emulation.setDeviceMetricsOverride',{width,height:800,deviceScaleFactor:dpr,mobile:false});await api.js('mcloud.ui.theme.set('+JSON.stringify(theme)+')');await delay(600);assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && !pageRenderer.disposed'),true);assert.equal(await api.js('pageRenderer.canvas.width'),Math.round(width*dpr));await evidence(api,theme+'-'+width);}
   await api.js('mcloud.ui.sidebar.toggleHide(true)');await delay(400);
@@ -343,4 +356,56 @@ test('page context loss and failed paint restore the same native DOM and do not 
  await api.js(`window.corsVideo=document.createElement('video');Object.assign(corsVideo.style,{position:'fixed',left:'10px',top:'10px',width:'80px',height:'40px'});corsVideo.crossOrigin='anonymous';document.body.append(corsVideo);corsVideo.src='http://localhost:'+location.port+'/video.webm';corsVideo.load()`);
  await wait(api,'!document.body.hasAttribute("data-canvas-rendered") && !document.querySelector(".page-canvas")');await api.js('corsVideo.remove()');assert.equal(await api.js('nativeSource===view.scrollBox.dom && nativeAudio===mcloud.playerCore.audio'),true);
 
+});
+
+test('page Canvas paints browser-owned cross-node selections, textarea scrolling and contenteditable carets locally', {skip:!supported,timeout:60000},async t=>{
+  const {api}=await browser(t);
+  await api.call('Emulation.setDeviceMetricsOverride',{width:1200,height:800,deviceScaleFactor:1.25,mobile:false});
+  await api.js(`window.editFixture=document.createElement('section');editFixture.style.cssText='position:fixed;z-index:9000;left:380px;top:160px;width:420px;padding:16px;background:white;color:black;font:20px/28px Arial';editFixture.innerHTML='<style>.edit-sample::selection,.edit-sample *::selection{background:rgb(25,103,210);color:white}</style><div class="edit-sample" id="selected-copy">Plain <b>日本語 é 🎵</b><br>Second line <span>across nodes</span></div><textarea class="edit-sample" id="edit-area" style="display:block;width:250px;height:85px;box-sizing:border-box;padding:6px;border:1px solid black;font:20px/28px Arial;margin-top:12px;resize:none"></textarea><div class="edit-sample" id="edit-rich" contenteditable="true" style="padding:4px;border:1px solid black;margin-top:12px;min-height:32px">Edit <b>中文</b> text</div>';document.body.append(editFixture);window.area=document.querySelector('#edit-area');window.rich=document.querySelector('#edit-rich');area.value='First 日本語 é 🎵 wraps naturally across several lines.\\nSecond paragraph with long content.\\nThird paragraph.\\nFourth paragraph.';area.dispatchEvent(new Event('input',{bubbles:true}));window.selectionPaint=()=>{const out=[];const walk=n=>{if(n.selection)out.push(n.selection);for(const child of n.children??[])walk(child)};for(const r of pageRenderer.resources.values())walk(r.snapshot.root);return out};`);
+  await delay(500);
+  await api.js(`window.editRow=pageRenderer.resources.get(view.listView.get(0).dom).canvas;window.fullRebuilds=0;window.editRebuild=pageRenderer.rebuild;pageRenderer.rebuild=function(){fullRebuilds++;return editRebuild.call(this)};const e=document.querySelector('#selected-copy'),r=document.createRange();r.setStart(e.firstChild,2);r.setEnd(e.lastChild.firstChild,7);getSelection().removeAllRanges();getSelection().addRange(r)`);
+  await wait(api,'selectionPaint().length>=3');
+  assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && document.querySelectorAll(".page-canvas").length===1'),true);
+  assert.match(await api.js('getSelection().toString()'),/日本語/);
+  const selected=await nativeCanvasDifference(api,'pageRenderer','document.querySelector("#selected-copy")');
+  t.diagnostic('Cross-node native selection '+JSON.stringify(selected));assert.ok(selected.mean<10,JSON.stringify(selected));await evidence(api,'editing-cross-node');
+  const selectedPixel=await api.js(`({count:selectionPaint().reduce((n,s)=>n+s.rects.length,0),cache:pageRenderer.resources.get(view.listView.get(0).dom).canvas===editRow,rebuilds:fullRebuilds})`);
+  assert.ok(selectedPixel.count>=3);assert.equal(selectedPixel.cache,true);assert.equal(selectedPixel.rebuilds,0);
+  await api.js('getSelection().removeAllRanges();area.focus();area.setSelectionRange(6,70)');await delay(180);
+  assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && selectionPaint().length>0'),true);
+  let difference=await nativeCanvasDifference(api,'pageRenderer','area');t.diagnostic('Wrapped textarea native selection '+JSON.stringify(difference));assert.ok(difference.mean<14,JSON.stringify(difference));await evidence(api,'editing-textarea');
+  await api.js('area.scrollTop=42');await delay(180);
+  difference=await nativeCanvasDifference(api,'pageRenderer','area');t.diagnostic('Scrolled textarea native selection '+JSON.stringify(difference));assert.ok(difference.mean<14,JSON.stringify(difference));
+  await api.call('Input.insertText',{text:'Replacement 中文\nnext'});await delay(150);
+  assert.equal(await api.js('area.value.includes("Replacement 中文\\nnext")'),true);
+  const beforeDelete=await api.js('area.value');await key(api,'ArrowLeft');await key(api,'ArrowLeft',8); // Browser Shift-selection, then deletion.
+  await api.call('Input.dispatchKeyEvent',{type:'keyDown',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});
+  await api.call('Input.dispatchKeyEvent',{type:'keyUp',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});await delay(100);
+  assert.notEqual(await api.js('area.value'),beforeDelete);
+  await api.call('Input.dispatchKeyEvent',{type:'keyDown',key:'z',code:'KeyZ',windowsVirtualKeyCode:90,modifiers:2});await api.call('Input.dispatchKeyEvent',{type:'keyUp',key:'z',code:'KeyZ',windowsVirtualKeyCode:90,modifiers:2});assert.equal(await api.js('area.value'),beforeDelete,'Browser undo restores the deleted selection');
+  assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && !pageRenderer.disposed'),true);
+  await api.js(`area.value='A long unwrapped 日本語 line '.repeat(12);area.wrap='off';area.setSelectionRange(32,44);area.scrollLeft=320;area.dispatchEvent(new Event('input',{bubbles:true}))`);await delay(200);
+  assert.ok(await api.js('area.scrollLeft')>100);
+  difference=await nativeCanvasDifference(api,'pageRenderer','area');t.diagnostic('Horizontal textarea native selection '+JSON.stringify(difference));assert.ok(difference.mean<18,JSON.stringify(difference));
+
+  await api.js(`(()=>{rich.focus();const r=document.createRange();r.setStart(rich.querySelector('b').firstChild,1);r.collapse(true);getSelection().removeAllRanges();getSelection().addRange(r)})()`);await delay(120);
+  const blinkBefore=await api.js('editRow=pageRenderer.resources.get(view.listView.get(0).dom).canvas;fullRebuilds=0;({...pageRenderer.stats,ink:sceneInk(pageRenderer,rich).sum})');await delay(530);
+  assert.notEqual(await api.js('sceneInk(pageRenderer,rich).sum'),blinkBefore.ink,'Caret blinking changes the actual GPU pixels');
+  assert.ok(await api.js('pageRenderer.stats.frames')>blinkBefore.frames,'A focused collapsed native selection blinks in the page Canvas');
+  t.diagnostic('Edit retention '+JSON.stringify(await api.js('({rebuilds:fullRebuilds,same:pageRenderer.resources.get(view.listView.get(0).dom).canvas===editRow,stats:pageRenderer.stats})')));assert.equal(await api.js('fullRebuilds===0 && pageRenderer.resources.get(view.listView.get(0).dom).canvas===editRow'),true,'Selection and blinking retain list pixels without rebuilding the tree');
+  await api.call('Input.insertText',{text:'字'});await api.call('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});await api.call('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});await api.call('Input.insertText',{text:'second 中文'});await delay(150);
+  assert.equal(await api.js('rich.innerText.includes("字") && rich.innerText.includes("second 中文") && rich.innerText.includes("\\n")'),true);
+  await key(api,'ArrowLeft',8);await delay(80);
+  difference=await nativeCanvasDifference(api,'pageRenderer','rich');t.diagnostic('Contenteditable native selection '+JSON.stringify(difference));assert.ok(difference.mean<18,JSON.stringify(difference));await evidence(api,'editing-contenteditable');
+  await api.js(`rich.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));`);await wait(api,'!document.body.hasAttribute("data-canvas-rendered")');
+  await api.js(`rich.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));`);await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
+  await api.js(`(()=>{rich.blur();window.copyScroller=document.createElement('div');copyScroller.style.cssText='height:70px;overflow:auto;position:relative;contain:paint;margin-top:8px';copyScroller.innerHTML=Array.from({length:30},(_,i)=>'<div style="height:28px">Selectable row '+i+'</div>').join('');editFixture.append(copyScroller);const range=document.createRange();range.selectNodeContents(copyScroller);getSelection().removeAllRanges();getSelection().addRange(range)})()`);await delay(180);
+  await api.js('copyScroller.scrollTop=400');await delay(180);
+  assert.ok(await api.js('selectionPaint().length')>0,'Newly visible selected text is painted during native scrolling');
+  await api.js('getSelection().removeAllRanges()');await wait(api,'selectionPaint().length===0');
+  await api.js('editFixture.remove()');await delay(400);
+  const idle=await api.js('({...pageRenderer.stats})');await delay(700);assert.deepEqual(await api.js('({...pageRenderer.stats})'),idle,'Removed editor cancels caret wakeups and the page returns to idle');
+  t.diagnostic('Editing final state '+JSON.stringify(await api.js('({active:document.body.hasAttribute("data-canvas-rendered"),disposed:pageRenderer.disposed,errors:canvasErrors,warnings:canvasWarnings})')));
+  assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && !pageRenderer.disposed && canvasErrors.length===0 && !canvasWarnings.some(w=>w.includes("DOMCanvasRenderer"))'),true);
+  await api.js('mcloud.settings.renderer.set("dom")');assert.equal(await api.js('document.querySelectorAll("[data-canvas-owned]").length'),0,'Disposal releases the unfocusable layout mirror');
 });

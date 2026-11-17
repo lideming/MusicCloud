@@ -1,3 +1,4 @@
+import { DOMTextEditing, TextSelectionPaint, isTextControl } from "./DOMTextEditing";
 import { boxOrigin, isAxisAligned, localRect, readBasis } from "./DOMPaintGeometry";
 // A small paint vocabulary for DOM-laid-out controls, not a CSS layout engine.
 // All DOM reads finish before Canvas2D or WebGL drawing starts.
@@ -35,9 +36,10 @@ interface PaintBox {
   children: PaintNode[];
 }
 interface PaintText { rect: PaintRect; text: string; font: string; color: string; size: number; direction: CanvasDirection;
-  opacity?: number; decoration?: { color: string; width: number }; shadow?: PaintSnapshot["shadow"] }
+  selection?: TextSelectionPaint; opacity?: number; decoration?: { color: string; width: number }; shadow?: PaintSnapshot["shadow"] }
 interface PaintImage { rect: PaintRect; image: CanvasImageSource }
-type PaintNode = PaintBox | PaintText | PaintImage;
+interface PaintFill { rect: PaintRect; fill: string }
+type PaintNode = PaintBox | PaintText | PaintImage | PaintFill;
 export interface PaintSnapshot {
   width: number; height: number; layoutWidth: number; layoutHeight: number;
   offsetX: number; offsetY: number; root: PaintBox;
@@ -108,7 +110,7 @@ export function readPaintSize(element: HTMLElement, style = getComputedStyle(ele
 
 /** Coordinates are normalized to the untransformed resource; row scale/opacity
  * belongs to compositor placement, so pressing a row reuses its raster. */
-export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = false): PaintSnapshot {
+export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = false, editing?: DOMTextEditing): PaintSnapshot {
   const imageUrls: string[] = [], videos: HTMLVideoElement[] = [];
   const imageFor = (url: string) => { imageUrls.push(url); return images.get(url); };
   const bounds = element.getBoundingClientRect();
@@ -188,6 +190,9 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
       return result;
     }
     const result = makeBox();
+    const addCaret = (caret: PaintRect) => result.children.push({ rect: rect(new DOMRect(caret.x, caret.y, caret.width, caret.height)), fill: style.caretColor === "auto" ? style.color : style.caretColor });
+    const localSelection = (selected?: TextSelectionPaint) => selected && { ...selected, rects: selected.rects.map(r => rect(new DOMRect(r.x, r.y, r.width, r.height))) };
+    const addSelection = (selection: TextSelectionPaint | undefined) => selection?.rects.forEach(r => result.children.push({ rect: { ...r, width: r.width || measureText(" ", font(style)) }, fill: selection.background }));
     const font = (s: CSSStyleDeclaration) => s.font || `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
     const textStyle = (s: CSSStyleDeclaration) => ({ font: font(s), color: s.color, size: parseFloat(s.fontSize), direction: s.direction as CanvasDirection,
       decoration: s.textDecorationLine.includes("underline") ? { color: s.textDecorationColor, width: parseFloat(s.textDecorationThickness) || parseFloat(s.fontSize) / 16 } : undefined,
@@ -198,14 +203,22 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
       const s = placeholder ? getComputedStyle(node, "::placeholder") : style;
       let value = node instanceof HTMLSelectElement ? node.selectedOptions[0]?.textContent ?? "" : node.value || node.placeholder;
       if (node instanceof HTMLInputElement && node.type === "password" && node.value) value = "•".repeat(Array.from(node.value).length);
-      const left = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft), top = parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
-      const available = box.width - left - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
-      const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
-      const lines = node instanceof HTMLTextAreaElement ? wrapText(value, available, font(style)) : [value.replace(/\n/g, " ")];
-      lines.forEach((text, i) => result.children.push({ rect: { x: box.x + left - node.scrollLeft, y: node instanceof HTMLTextAreaElement ? box.y + top + i * lineHeight - node.scrollTop : box.y + (box.height - lineHeight) / 2,
-        width: available, height: lineHeight }, text, ...textStyle(s), opacity: placeholder ? Number(s.opacity) : 1 }));
+      if (editing && isTextControl(node)) {
+        const layout = editing.control(node, style);
+        const selection = localSelection(layout.selection);
+        addSelection(selection);
+        layout.runs.forEach(run => result.children.push({ rect: rect(new DOMRect(run.rect.x, run.rect.y, run.rect.width, run.rect.height)), text: run.text, ...textStyle(s), selection, opacity: placeholder ? Number(s.opacity) : 1 }));
+        if (layout.caret) addCaret(layout.caret);
+      } else {
+        const left = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+        const available = box.width - left - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
+        const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+        result.children.push({ rect: { x: box.x + left - node.scrollLeft, y: box.y + (box.height - lineHeight) / 2,
+          width: available, height: lineHeight }, text: value.replace(/\n/g, " "), ...textStyle(s), opacity: placeholder ? Number(s.opacity) : 1 });
+      }
       return result;
     }
+    if (node instanceof HTMLBRElement) addSelection(localSelection(editing?.lineBreak(node)));
     const pseudo = (name: "::before" | "::after") => {
       const p = getComputedStyle(node, name);
       if (p.content === "none" || p.content === "normal" || p.display === "none") return;
@@ -240,6 +253,9 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
           const width = box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
           text = ellipsize(text, width, font(style));
         }
+        const selected = editing?.text(child);
+        const selection = localSelection(selected);
+        addSelection(selection);
         const range = document.createRange();
         let line: PaintText | null = null;
         // Ranges find line boundaries only. Keep each logical line intact so
@@ -261,7 +277,7 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
           }
           const separateLine = line && Math.abs((line.rect.y + line.rect.height / 2) - (r.y + r.height / 2)) > Math.min(line.rect.height, r.height) / 2;
           if (!line || separateLine) {
-            line = { rect: r, text: character, ...textStyle(style) };
+            line = { rect: r, text: character, ...textStyle(style), selection };
             result.children.push(line);
           } else {
             line.text += character;
@@ -281,6 +297,8 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
       }
     }
     pseudo("::after");
+    const caret = editing?.caret(node);
+    if (caret) addCaret(caret);
     return result;
   };
   const root = walk(element, true) as PaintBox;
@@ -309,21 +327,6 @@ function ellipsize(text: string, width: number, font: string) {
   const characters = Array.from(text); let low = 0, high = characters.length;
   while (low < high) { const middle = Math.ceil((low + high) / 2); if (measureText(characters.slice(0, middle).join("") + "…", font) <= width) low = middle; else high = middle - 1; }
   return characters.slice(0, low).join("") + "…";
-}
-function wrapText(value: string, width: number, font: string) {
-  const lines: string[] = [];
-  for (const paragraph of value.split("\n")) {
-    let line = "";
-    for (const part of paragraph.split(/(\s+)/)) {
-      if (line && measureText(line + part, font) > width) { lines.push(line); line = ""; }
-      for (const character of Array.from(part)) {
-        if (line && measureText(line + character, font) > width) { lines.push(line); line = ""; }
-        line += character;
-      }
-    }
-    lines.push(line);
-  }
-  return lines;
 }
 
 function rounded(ctx: CanvasRenderingContext2D, r: PaintRect, radii: number[]) {
@@ -375,8 +378,15 @@ export function rasterPaint(snapshot: PaintSnapshot, dpr: number) {
       const descent = metrics.fontBoundingBoxDescent ?? node.size * 0.2;
       const baseline = r.y + (r.height - ascent - descent) / 2 + ascent;
       ctx.fillText(node.text, r.x, baseline);
+      if (node.selection) {
+        ctx.save(); ctx.shadowColor = "transparent"; ctx.beginPath();
+        node.selection.rects.forEach(s => ctx.rect(s.x, s.y, s.width, s.height)); ctx.clip();
+        ctx.fillStyle = node.selection.color; ctx.fillText(node.text, r.x, baseline); ctx.restore();
+      }
       if (node.decoration) { ctx.fillStyle = node.decoration.color; ctx.fillRect(r.x, baseline + descent * .45, ctx.measureText(node.text).width, node.decoration.width); }
       ctx.restore();
+    } else if ("fill" in node) {
+      ctx.fillStyle = node.fill; ctx.fillRect(r.x, r.y, r.width, r.height);
     } else if ("image" in node) {
       ctx.drawImage(node.image, r.x, r.y, r.width, r.height);
     } else {

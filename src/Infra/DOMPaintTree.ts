@@ -1,6 +1,6 @@
 import { PaintRect } from "./CanvasPaint";
 
-export interface PaintUnit { id: string; element: HTMLElement; ownOnly: boolean }
+export interface PaintUnit { id: string; element: HTMLElement; ownOnly: boolean; text: boolean }
 interface PaintBranch {
   element: HTMLElement; parent?: PaintBranch; index: number; children: PaintBranch[]; unit?: PaintUnit; active: boolean;
   text: boolean; split: boolean; boundary: boolean; boundaryCount: number; atomic: boolean; small: boolean; visible: boolean; pixels: boolean;
@@ -129,7 +129,7 @@ export class DOMPaintTree {
     if (active && (branch.atomic || branch.pixels)) {
       let id = this.ids.get(branch.element);
       if (!id) { id = `paint-${this.nextId++}`; this.ids.set(branch.element, id); }
-      branch.unit = { id, element: branch.element, ownOnly: !branch.atomic };
+      branch.unit = { id, element: branch.element, ownOnly: !branch.atomic, text: branch.text };
       this.byElement.set(branch.element, branch.unit); this.members.add(branch.element);
     } else {
       branch.unit = undefined; this.byElement.delete(branch.element); this.members.delete(branch.element);
