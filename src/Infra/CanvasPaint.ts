@@ -33,6 +33,7 @@ interface PaintBox {
   clipShape?: PaintClip;
   outline: string;
   outlineWidth: number;
+  outlineOffset: number;
   children: PaintNode[];
 }
 interface PaintText { rect: PaintRect; text: string; font: string; color: string; size: number; direction: CanvasDirection;
@@ -162,7 +163,7 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
         opacity: isRoot ? 1 : parseFloat(style.opacity),
         clip: style.overflow !== "visible" || /paint|strict|content/.test(style.contain) || node instanceof HTMLImageElement || node instanceof HTMLCanvasElement,
         clipShape: readOverflowClip(style, box, readPaintSize(node as HTMLElement, style).width, readPaintSize(node as HTMLElement, style).height),
-        outline: style.outlineColor, outlineWidth: style.outlineStyle === "none" ? 0 : parseFloat(style.outlineWidth) || 0,
+        outline: style.outlineColor, outlineWidth: style.outlineStyle === "none" ? 0 : parseFloat(style.outlineWidth) || 0, outlineOffset: parseFloat(style.outlineOffset) || 0,
         children: [],
       };
       if (style.backgroundImage !== "none") {
@@ -234,7 +235,7 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
       result.children.push({ rect: { x: box.x + length(p.left, box.width) + matrix.m41, y: box.y + length(p.top, box.height) + matrix.m42, width: w * matrix.m11, height: h * matrix.m22 }, background: p.backgroundColor,
         borders: ["top", "right", "bottom", "left"].map(side => ({ color: p.getPropertyValue(`border-${side}-color`), width: parseFloat(p.getPropertyValue(`border-${side}-width`)) || 0 })),
         radii: [p.borderTopLeftRadius, p.borderTopRightRadius, p.borderBottomRightRadius, p.borderBottomLeftRadius].map(v => parseFloat(v) || 0),
-        opacity: Number(p.opacity), clip: false, outline: "transparent", outlineWidth: 0, children: [] });
+        opacity: Number(p.opacity), clip: false, outline: "transparent", outlineWidth: 0, outlineOffset: 0, children: [] });
     };
     pseudo("::before");
     // In an atomic surface, positioned auto/zero descendants paint after its
@@ -308,6 +309,18 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
     left = Math.min(left, child.rect.x); top = Math.min(top, child.rect.y);
     right = Math.max(right, child.rect.x + child.rect.width); bottom = Math.max(bottom, child.rect.y + child.rect.height);
   }
+  // An outline is outside the owner's overflow clip, but remains inside every
+  // ancestor clip. Include outward ink even for an atomic, clipped input.
+  const outlineBounds = (node: PaintNode) => {
+    if (!("children" in node)) return;
+    const extent = Math.max(0, node.outlineOffset + node.outlineWidth);
+    if (node.outlineWidth) {
+      left = Math.min(left, node.rect.x - extent); top = Math.min(top, node.rect.y - extent);
+      right = Math.max(right, node.rect.x + node.rect.width + extent); bottom = Math.max(bottom, node.rect.y + node.rect.height + extent);
+    }
+    if (!node.clip) node.children.forEach(outlineBounds);
+  };
+  if (root) outlineBounds(root);
   const filter = getComputedStyle(element).filter;
   if (filter !== "none") {
     const blur = Math.max(0, ...(filter.match(/blur\([\d.]+px\)/g) ?? []).map(value => parseFloat(value.slice(5)))) * 3;
@@ -315,6 +328,10 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
     const margin = blur + (shadow ? shadow.blur * 3 + Math.max(Math.abs(shadow.x), Math.abs(shadow.y)) : 0);
     left -= margin; top -= margin; right += margin; bottom += margin;
   }
+  // Padding must add whole backing texels. A half-pixel selection/outline
+  // extent must not move already-shaped text onto a different raster phase.
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  left = Math.floor(left * dpr) / dpr; top = Math.floor(top * dpr) / dpr;
   return { width: right - left, height: bottom - top, layoutWidth: width, layoutHeight: height, offsetX: left, offsetY: top, root, shadow, imageUrls, videos, filter: filter === "none" ? undefined : filter };
 }
 
@@ -377,12 +394,19 @@ export function rasterPaint(snapshot: PaintSnapshot, dpr: number) {
       const ascent = metrics.fontBoundingBoxAscent ?? node.size * 0.9;
       const descent = metrics.fontBoundingBoxDescent ?? node.size * 0.2;
       const baseline = r.y + (r.height - ascent - descent) / 2 + ascent;
-      ctx.fillText(node.text, r.x, baseline);
-      if (node.selection) {
+      if (node.selection && node.selection.color !== node.color) {
+        // Complementary clips keep native shaping intact and paint each glyph
+        // region once. Repainting the ordinary glyph underneath darkens its AA.
+        ctx.save();
+        for (const selection of node.selection.rects) {
+          ctx.beginPath(); ctx.rect(snapshot.offsetX, snapshot.offsetY, snapshot.width, snapshot.height);
+          ctx.rect(selection.x, selection.y, selection.width, selection.height); ctx.clip("evenodd");
+        }
+        ctx.fillText(node.text, r.x, baseline); ctx.restore();
         ctx.save(); ctx.shadowColor = "transparent"; ctx.beginPath();
         node.selection.rects.forEach(s => ctx.rect(s.x, s.y, s.width, s.height)); ctx.clip();
         ctx.fillStyle = node.selection.color; ctx.fillText(node.text, r.x, baseline); ctx.restore();
-      }
+      } else ctx.fillText(node.text, r.x, baseline);
       if (node.decoration) { ctx.fillStyle = node.decoration.color; ctx.fillRect(r.x, baseline + descent * .45, ctx.measureText(node.text).width, node.decoration.width); }
       ctx.restore();
     } else if ("fill" in node) {
@@ -393,7 +417,6 @@ export function rasterPaint(snapshot: PaintSnapshot, dpr: number) {
       ctx.save(); ctx.globalAlpha *= isolated ? 1 : node.opacity;
       rounded(ctx, r, node.radii); ctx.fillStyle = node.background; ctx.fill();
       if (node.backgroundImage) { ctx.save(); ctx.clip(); const image = node.backgroundImage; ctx.drawImage(image.image, image.rect.x, image.rect.y, image.rect.width, image.rect.height); ctx.restore(); }
-      if (node.outlineWidth) { ctx.strokeStyle = node.outline; ctx.lineWidth = node.outlineWidth * 2; ctx.stroke(); }
       const border = node.borders[0];
       ctx.save();
       if (node.borders.every(b => b.width === border.width && b.color === border.color)) {
@@ -408,11 +431,18 @@ export function rasterPaint(snapshot: PaintSnapshot, dpr: number) {
         node.borders.forEach((b, i) => { ctx.fillStyle = b.color; ctx.fillRect(...corners[i] as [number, number, number, number]); });
       }
       ctx.restore();
+      ctx.save();
       if (node.clip) {
         if (node.clipShape) { const shape = node.clipShape; ctx.beginPath(); ctx.roundRect(shape.rect.x, shape.rect.y, shape.rect.width, shape.rect.height, shape.radii); }
         ctx.clip();
       }
       node.children.forEach(child => paint(child, ctx)); ctx.restore();
+      if (node.outlineWidth) {
+        const outset = node.outlineOffset + node.outlineWidth / 2;
+        rounded(ctx, { x: r.x - outset, y: r.y - outset, width: Math.max(0, r.width + 2 * outset), height: Math.max(0, r.height + 2 * outset) }, node.radii.map(radius => Math.max(0, radius + outset)));
+        ctx.strokeStyle = node.outline; ctx.lineWidth = node.outlineWidth; ctx.stroke();
+      }
+      ctx.restore();
     }
   };
   if (snapshot.root) paint(snapshot.root);

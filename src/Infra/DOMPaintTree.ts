@@ -62,7 +62,7 @@ export class DOMPaintTree {
     const element = branch.element, style = getComputedStyle(element);
     const contained = /paint|strict|content/.test(style.contain);
     const scroller = /(auto|scroll)/.test(style.overflowY) || /(auto|scroll)/.test(style.overflowX);
-    if (scroller && !(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) this.scrollers.add(element); else this.scrollers.delete(element);
+    if (scroller && !(element instanceof HTMLInputElement || element instanceof HTMLSelectElement)) this.scrollers.add(element); else this.scrollers.delete(element);
     branch.visible = style.display !== "none" && style.visibility !== "hidden";
     branch.split = element.getAttribute("data-canvas-scrollbar") === "overlay" || scroller && (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth);
     const matrix = style.transform === "none" ? null : new DOMMatrixReadOnly(style.transform);
