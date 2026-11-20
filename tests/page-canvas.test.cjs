@@ -146,6 +146,35 @@ async function key(api, key, modifiers = 0) {
   await api.call('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, modifiers, windowsVirtualKeyCode });
 }
 
+async function composeInCanvas(api, element) {
+  await api.js(`window.compositionTarget=${element};window.compositionRenderer=mcloud.ui.pageCanvas.renderer;window.compositionEvents=[];window.recordComposition=e=>compositionEvents.push({type:e.type,trusted:e.isTrusted,composing:e.isComposing});for(const name of ['compositionstart','compositionend','input'])compositionTarget.addEventListener(name,recordComposition);window.compositionText=()=>compositionTarget.value??compositionTarget.textContent;window.compositionPaint=()=>{const texts=[];const walk=n=>{if(n.text!=null)texts.push(n.text);for(const c of n.children??[])walk(c)};for(const r of compositionRenderer.resources.values())walk(r.snapshot.root);return texts.join('')};`);
+  async function retained() {
+    assert.equal(await api.js('mcloud.ui.pageCanvas.renderer===compositionRenderer && document.body.hasAttribute("data-canvas-rendered") && compositionRenderer.canvas.style.visibility!=="hidden" && document.querySelectorAll(".page-canvas").length===1 && document.activeElement===compositionTarget'),true,'Composition keeps the same Canvas output and focused native editor');
+    assert.equal(await api.js('!(compositionTarget instanceof HTMLTextAreaElement) || compositionTarget.style.getPropertyValue("scrollbar-width")==="none"'),true,'Composition keeps the textarea overlay viewport');
+  }
+  for (const text of ['nihao','你好']) {
+    await api.call('Input.imeSetComposition',{text,selectionStart:text.length,selectionEnd:text.length});
+    await retained();
+    await wait(api,`compositionText().includes(${JSON.stringify(text)}) && compositionPaint().includes(${JSON.stringify(text)})`);
+  }
+  await api.call('Input.insertText',{text:'你好'});
+  await retained();
+  await wait(api,'compositionText().includes("你好") && compositionPaint().includes("你好")');
+  const committed=await api.js('compositionText()');
+  await api.call('Input.imeSetComposition',{text:'取消',selectionStart:2,selectionEnd:2});
+  await retained();
+  await wait(api,'compositionText().includes("取消") && compositionPaint().includes("取消")');
+  await api.call('Input.imeSetComposition',{text:'',selectionStart:0,selectionEnd:0});
+  await retained();
+  await wait(api,'!compositionPaint().includes("取消")');
+  assert.equal(await api.js('compositionText()'),committed,'Cancelling composition preserves the committed text');
+  const events=await api.js('compositionEvents');
+  assert.equal(events.filter(e=>e.type==='compositionstart'&&e.trusted).length,2,JSON.stringify(events));
+  assert.equal(events.filter(e=>e.type==='compositionend').length,2,JSON.stringify(events));
+  assert.ok(events.some(e=>e.type==='input'&&e.trusted&&e.composing),'The browser emits composing input events');
+  await api.js(`for(const name of ['compositionstart','compositionend','input'])compositionTarget.removeEventListener(name,recordComposition)`);
+}
+
 test('one page scene paints the real application background, header, list and player', { skip: !supported, timeout: 60000 }, async t => {
   const {api}=await browser(t);
   const state=await api.js(`(()=>{const r=mcloud.ui.pageCanvas.renderer;window.pageRenderer=r;return {active:document.body.hasAttribute('data-canvas-rendered'),disposed:r?.disposed,outputs:document.querySelectorAll('.page-canvas').length,old:document.querySelectorAll('.sidebar-canvas,.list-content-canvas,.player-canvas').length,stats:r?.stats,warnings:canvasWarnings,errors:canvasErrors,resources:[...r.resources.keys()].map(e=>e.id||e.className).slice(0,50)}})()`);
@@ -173,6 +202,8 @@ test('page dialogs and context menus paint with Canvas input, selection and rend
   await wait(api,'Boolean(view.header.dom.querySelector("input")) && document.activeElement===view.header.dom.querySelector("input")');
   assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && originalPage.canvas.style.visibility!=="hidden"'),true,'Ordinary title editing keeps the original page suppressed and the single Canvas visible');
   const titleDifference=await nativeCanvasDifference(api,'pageRenderer','view.header.dom.querySelector("input")');t.diagnostic('Focused title native selection '+JSON.stringify(titleDifference));assert.ok(titleDifference.mean<14,JSON.stringify(titleDifference));
+  await composeInCanvas(api,'view.header.dom.querySelector("input")');
+  await api.js('document.activeElement.select()');
   await api.call('Input.insertText',{text:'Canvas title editing'});
   assert.equal(await api.js('document.activeElement.value'), 'Canvas title editing');
   await click(api,await point(api,'view.header.dom.querySelector(".catalog")'));await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
@@ -315,8 +346,7 @@ test('ordinary lyrics and search routes share the page scene across theme, DPR a
   await api.js(`const index=sourceArea.value.indexOf('Line 20');sourceArea.setSelectionRange(index,index+7);sourceArea.scrollTop=400`);await delay(120);
   const sourceDifference=await nativeCanvasDifference(api,'pageRenderer','sourceArea');t.diagnostic('Real scrolled source selection '+JSON.stringify(sourceDifference));assert.ok(sourceDifference.mean<12,JSON.stringify(sourceDifference));await evidence(api,'lyrics-source-editing');
   await api.js('sourceArea.setSelectionRange(sourceArea.selectionEnd,sourceArea.selectionEnd)');await delay(120);const scrolledCaret=await api.js('sceneInk(pageRenderer,sourceArea).sum');await delay(530);assert.notEqual(await api.js('sceneInk(pageRenderer,sourceArea).sum'),scrolledCaret,'The visible caret still blinks in GPU pixels after textarea thumb scrolling');
-  await api.js('sourceArea.dispatchEvent(new CompositionEvent("compositionstart",{bubbles:true}))');await wait(api,'!document.body.hasAttribute("data-canvas-rendered")');assert.equal(await api.js('sourceArea.style.getPropertyValue("scrollbar-width")==="thin" && sourceArea.style.getPropertyPriority("scrollbar-width")==="important" && sourceArea.style.getPropertyValue("scrollbar-gutter")==="stable"'),true,'Composition restores authored textarea scrollbar declarations');
-  await api.js('sourceArea.dispatchEvent(new CompositionEvent("compositionend",{bubbles:true}))');await wait(api,'document.body.hasAttribute("data-canvas-rendered") && sourceArea.style.getPropertyValue("scrollbar-width")==="none"');
+  await composeInCanvas(api,'sourceArea');
   await api.js('mcloud.settings.renderer.set("dom")');assert.equal(await api.js('sourceArea.style.getPropertyValue("scrollbar-width")==="thin" && sourceArea.style.getPropertyPriority("scrollbar-width")==="important" && sourceArea.style.getPropertyValue("scrollbar-gutter")==="stable"'),true,'Renderer disposal restores authored textarea declarations');
   await api.js('mcloud.settings.renderer.set("canvas");window.pageRenderer=mcloud.ui.pageCanvas.renderer');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
   await api.js('document.activeElement.blur()');await wait(api,'document.body.hasAttribute("data-canvas-rendered")');await delay(150);assert.ok(await api.js('colorInk(document.querySelector(".lyricsedit textarea"))>40'),'Static real lyric-source textarea values enter the page output');
@@ -408,8 +438,7 @@ test('page Canvas paints browser-owned cross-node selections, textarea scrolling
   assert.equal(await api.js('rich.innerText.includes("字") && rich.innerText.includes("second 中文") && rich.innerText.includes("\\n")'),true);
   await key(api,'ArrowLeft',8);await delay(80);
   difference=await nativeCanvasDifference(api,'pageRenderer','rich');t.diagnostic('Contenteditable native selection '+JSON.stringify(difference));assert.ok(difference.mean<18,JSON.stringify(difference));await evidence(api,'editing-contenteditable');
-  await api.js(`rich.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));`);await wait(api,'!document.body.hasAttribute("data-canvas-rendered")');
-  await api.js(`rich.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));`);await wait(api,'document.body.hasAttribute("data-canvas-rendered")');
+  await composeInCanvas(api,'rich');
   await api.js(`(()=>{rich.blur();window.copyScroller=document.createElement('div');copyScroller.style.cssText='height:70px;overflow:auto;position:relative;contain:paint;margin-top:8px';copyScroller.innerHTML=Array.from({length:30},(_,i)=>'<div style="height:28px">Selectable row '+i+'</div>').join('');editFixture.append(copyScroller);const range=document.createRange();range.selectNodeContents(copyScroller);getSelection().removeAllRanges();getSelection().addRange(range)})()`);await delay(180);
   await api.js('copyScroller.scrollTop=400');await delay(180);
   assert.ok(await api.js('selectionPaint().length')>0,'Newly visible selected text is painted during native scrolling');

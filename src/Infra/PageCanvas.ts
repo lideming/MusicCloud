@@ -6,7 +6,6 @@ import { settings } from "../Settings/Settings";
  * and selection keep browser state while their pixels enter the same scene. */
 export class PageCanvas {
   renderer: DOMCanvasRenderer | null = null;
-  private composing: Element | null = null;
   private host: HTMLDivElement | null = null;
   private editChanges = new MutationObserver(() => this.editing());
   private cleanup: (() => void)[] = [];
@@ -16,10 +15,8 @@ export class PageCanvas {
       document.addEventListener(name, callback, true);
       this.cleanup.push(() => document.removeEventListener(name, callback, true));
     };
-    for (const name of ["focusin", "focusout", "compositionstart", "compositionend", "fullscreenchange"]) {
-      listen(name, event => {
-        if (name === "compositionstart") this.composing = event.target instanceof Element ? event.target : null;
-        if (name === "compositionend" || name === "focusout") this.composing = null;
+    for (const name of ["focusin", "focusout", "fullscreenchange"]) {
+      listen(name, () => {
         queueMicrotask(() => {
           this.editing();
           if (name === "fullscreenchange") this.renderer?.invalidate();
@@ -32,7 +29,7 @@ export class PageCanvas {
     const active = document.activeElement;
     const nativeControl = active instanceof HTMLSelectElement || active instanceof HTMLInputElement && !isTextControl(active);
     const fullscreen = document.fullscreenElement;
-    const native = nativeControl || !!this.composing?.isConnected || !!fullscreen && !fullscreen.contains(this.host);
+    const native = nativeControl || !!fullscreen && !fullscreen.contains(this.host);
     this.renderer?.setNativePresentation(native);
     // Removing a focused input (for example Escape-closing its dialog) need
     // not dispatch focusout. Observe DOM changes only during native editing.
