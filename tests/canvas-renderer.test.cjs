@@ -281,7 +281,7 @@ test('fractional layout text retains sharp rasters, transformed geometry and cac
       }
       const shadow=renderer.decorations.get(sharpSource.firstElementChild),shadowUnit=renderer.tree.byElement.get(sharpSource.firstElementChild),shadowRect=sharpSources[shadowUnit.id+'/shadow'][0].rect;
       window.sharpCachedCanvas=resource.canvas;
-      return {dpr:resource.dpr,sizes:[...renderer.resources].slice(0,2).map(([element,r])=>({boxSizing:getComputedStyle(element).boxSizing,layout:[r.snapshot.layoutWidth,r.snapshot.layoutHeight],actual:[element.getBoundingClientRect().width,element.getBoundingClientRect().height]})),raster:[resource.canvas.width,resource.canvas.height],placement:placement.rect,actual:[rect.width,rect.height],maxAlphaError,ink,shadow:{extent:[shadowRect.width,shadowRect.height],pixels:[shadow.pixelWidth,shadow.pixelHeight],offset:[shadow.snapshot.offsetX,shadow.snapshot.offsetY]}};
+      return {dpr:resource.dpr,sizes:[...renderer.resources].slice(0,2).map(([element,r])=>({boxSizing:getComputedStyle(element).boxSizing,layout:[r.snapshot.layoutWidth,r.snapshot.layoutHeight],actual:[element.getBoundingClientRect().width,element.getBoundingClientRect().height]})),raster:[resource.canvas.width,resource.canvas.height],placement:placement.rect,actual:[rect.width,rect.height],actualOrigin:[rect.x-sharpSource.getBoundingClientRect().x,rect.y-sharpSource.getBoundingClientRect().y],maxAlphaError,ink,shadow:{extent:[shadowRect.width,shadowRect.height],pixels:[shadow.pixelWidth,shadow.pixelHeight],offset:[shadow.snapshot.offsetX,shadow.snapshot.offsetY]}};
     })()`);
     assert.equal(state.dpr, dpr, 'A cached raster always uses the current DPR');
     assert.deepEqual(state.sizes.map(size => size.boxSizing), ['content-box', 'border-box']);
@@ -289,7 +289,8 @@ test('fractional layout text retains sharp rasters, transformed geometry and cac
       assert.deepEqual(size.layout, [274, 43.1875], 'Snapshot dimensions preserve fractional border-box layout');
       assert.deepEqual(size.actual, size.layout, 'Ordinary layout introduces no artificial scale');
     }
-    assert.deepEqual(state.raster, [Math.ceil(274 * dpr), Math.ceil(43.1875 * dpr)]);
+    const extent = (start, size) => Math.ceil((start + size) * dpr) - Math.floor(start * dpr);
+    assert.deepEqual(state.raster, [extent(state.actualOrigin[0], 274), extent(state.actualOrigin[1], 43.1875)]);
     assert.equal(state.placement.width * dpr, state.raster[0]); assert.equal(state.placement.height * dpr, state.raster[1]);
     assert.equal(state.placement.x * dpr, Math.round(state.placement.x * dpr)); assert.equal(state.placement.y * dpr, Math.round(state.placement.y * dpr));
     assert.ok(state.ink > 100); assert.equal(state.maxAlphaError, 0, 'Actual WebGL foreground preserves Canvas2D text alpha without extra resampling');
@@ -301,10 +302,10 @@ test('fractional layout text retains sharp rasters, transformed geometry and cac
     await api.js('sharpSource.scrollTop=2;sharpHost.style.transform="translate(.25px,.5px)"'); await delay(100);
     assert.equal(await api.js('sharpRenderer.stats.rasterizations'), before.rasterizations, 'Tiny native scrolls and host pan reuse fractional-size rasters');
     await api.js('sharpSource.children[1].style.transform="translate(.25px,.375px) scale(.97)"'); await delay(100);
-    const transformed = await api.js(`(()=>{const r=sharpRenderer,row=sharpSource.children[1],resource=r.resources.get(row),p=sharpSources[r.tree.byElement.get(row).id][0].rect,b=row.getBoundingClientRect(),origin=sharpSource.getBoundingClientRect();return {sameCanvas:resource.canvas===sharpCachedCanvas,rasterizations:r.stats.rasterizations,scale:[p.width/(resource.canvas.width/devicePixelRatio),p.height/(resource.canvas.height/devicePixelRatio)],origin:[p.x,p.y],actualOrigin:[b.x-origin.x,b.y-origin.y]}})()`);
+    const transformed = await api.js(`(()=>{const r=sharpRenderer,row=sharpSource.children[1],resource=r.resources.get(row),p=sharpSources[r.tree.byElement.get(row).id][0].rect,b=row.getBoundingClientRect(),origin=sharpSource.getBoundingClientRect();return {sameCanvas:resource.canvas===sharpCachedCanvas,rasterizations:r.stats.rasterizations,scale:[p.width/(resource.canvas.width/devicePixelRatio),p.height/(resource.canvas.height/devicePixelRatio)],origin:[p.x,p.y],actualOrigin:[b.x-origin.x,b.y-origin.y],padding:[-resource.snapshot.offsetX,-resource.snapshot.offsetY]}})()`);
     assert.equal(transformed.sameCanvas, true); assert.equal(transformed.rasterizations, before.rasterizations);
     for (const scale of transformed.scale) assert.ok(Math.abs(scale - .97) < 1e-5, 'Intentional CSS scale changes output geometry');
-    for (let i = 0; i < 2; i++) assert.ok(Math.abs(transformed.origin[i] - transformed.actualOrigin[i]) < 1e-5, 'Scaled surfaces retain their fractional placement');
+    for (let i = 0; i < 2; i++) assert.ok(Math.abs(transformed.origin[i] + transformed.padding[i]*transformed.scale[i] - transformed.actualOrigin[i]) < 1e-5, 'The border box inside the padded bitmap retains its native fractional placement');
     await api.js('sharpSource.children[1].style.transform="";sharpHost.style.transform=""'); await delay(100);
     assert.equal(await api.js('sharpRenderer.stats.rasterizations'), before.rasterizations, 'Releasing a scale transform reuses the text raster');
     const idle = await api.js('({...sharpRenderer.stats})'); await delay(150);

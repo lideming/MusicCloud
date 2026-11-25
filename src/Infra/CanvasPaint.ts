@@ -111,7 +111,7 @@ export function readPaintSize(element: HTMLElement, style = getComputedStyle(ele
 
 /** Coordinates are normalized to the untransformed resource; row scale/opacity
  * belongs to compositor placement, so pressing a row reuses its raster. */
-export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = false, editing?: DOMTextEditing): PaintSnapshot {
+export function readPaint(element: HTMLElement, images: PaintImages, placement: PaintRect, dpr: number, ownOnly = false, editing?: DOMTextEditing): PaintSnapshot {
   const imageUrls: string[] = [], videos: HTMLVideoElement[] = [];
   const imageFor = (url: string) => { imageUrls.push(url); return images.get(url); };
   const bounds = element.getBoundingClientRect();
@@ -328,10 +328,13 @@ export function readPaint(element: HTMLElement, images: PaintImages, ownOnly = f
     const margin = blur + (shadow ? shadow.blur * 3 + Math.max(Math.abs(shadow.x), Math.abs(shadow.y)) : 0);
     left -= margin; top -= margin; right += margin; bottom += margin;
   }
-  // Padding must add whole backing texels. A half-pixel selection/outline
-  // extent must not move already-shaped text onto a different raster phase.
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  left = Math.floor(left * dpr) / dpr; top = Math.floor(top * dpr) / dpr;
+  // Align the bitmap origin in output space, not the glyphs inside it. A row
+  // at device x=2.5 needs half a texel of leading space when placed at x=2.
+  // Only the initial raster uses this phase; scrolling can still move it intact.
+  const unscaled = !rotated && placement.width === width && placement.height === height;
+  const x = unscaled ? placement.x : 0, y = unscaled ? placement.y : 0;
+  left = Math.floor((x + left) * dpr) / dpr - x;
+  top = Math.floor((y + top) * dpr) / dpr - y;
   return { width: right - left, height: bottom - top, layoutWidth: width, layoutHeight: height, offsetX: left, offsetY: top, root, shadow, imageUrls, videos, filter: filter === "none" ? undefined : filter };
 }
 

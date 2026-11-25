@@ -305,10 +305,11 @@ export class DOMCanvasRenderer {
             if (shape.radii.some(r => r.x > 0 && r.y > 0)) roundedClips.push(shape);
           }
         }
-        placements.set(element, { rect: rect(r), opacity: 1, selectionOpacity, clip, roundedClips });
+        const placementRect = rect(r);
+        placements.set(element, { rect: placementRect, opacity: 1, selectionOpacity, clip, roundedClips });
         const old = this.resources.get(element), { width: layoutWidth, height: layoutHeight } = readPaintSize(element, style);
         if (!old || old.ownOnly !== unit.ownOnly || old.version !== this.version || old.dpr !== dpr || this.dirty.has(element) || old.snapshot.layoutWidth !== layoutWidth || old.snapshot.layoutHeight !== layoutHeight) {
-          snapshots.set(element, readPaint(element, this.images, unit.ownOnly, this.editing)); this.stats.snapshots++;
+          snapshots.set(element, readPaint(element, this.images, placementRect, dpr, unit.ownOnly, this.editing)); this.stats.snapshots++;
         }
       }
       // CSS paint order, custom effects and native scroll decorations are read

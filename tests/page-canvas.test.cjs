@@ -196,29 +196,38 @@ test('displayed playlist text preserves framebuffer pixels at fractional viewpor
   const {api} = await browser(t);
   await api.call('Emulation.setDeviceMetricsOverride', {width:1201,height:850,deviceScaleFactor:1.25,mobile:false});
   await wait(api, 'pageRenderer.canvas.width===1502 && pageRenderer.canvas.height===1063');
-  const shot = await api.call('Page.captureScreenshot', {format:'png'});
+  const capture = async () => (await api.call('Page.captureScreenshot', {format:'png'})).data;
+  const displayed = await capture();
+  await api.js(`pageRenderer.canvas.style.visibility='hidden';document.body.removeAttribute('data-canvas-rendered')`);
+  const native = await capture();
   const result = await api.js(`(async () => {
-    const image = new Image(); image.src = 'data:image/png;base64,${shot.data}'; await image.decode();
-    const copy = document.createElement('canvas'); copy.width = image.width; copy.height = image.height;
-    const ctx = copy.getContext('2d'); ctx.drawImage(image, 0, 0);
-    const gl = pageRenderer.compositor.gl;
-    let ink = 0, difference = 0, pixels = 0;
-    for (const i of [0, 3, 7]) {
-      const row = view.listView.get(i).dom, r = row.getBoundingClientRect();
-      const x = Math.ceil((r.left + 72) * devicePixelRatio), y = Math.ceil((r.top + 3) * devicePixelRatio);
-      const w = Math.floor((r.width - 84) * devicePixelRatio), h = Math.floor((r.height - 6) * devicePixelRatio);
-      const displayed = ctx.getImageData(x, y, w, h).data, drawn = new Uint8Array(w*h*4);
-      gl.readPixels(x, gl.drawingBufferHeight-y-h, w, h, gl.RGBA, gl.UNSIGNED_BYTE, drawn);
-      for (let j=0;j<h;j++) for (let k=0;k<w;k++) {
-        const a=(j*w+k)*4, b=((h-1-j)*w+k)*4;
-        if (drawn[b]<128) ink++;
-        for(let c=0;c<3;c++) difference+=Math.abs(displayed[a+c]-drawn[b+c]);
+    async function decode(data) {
+      const image = new Image(); image.src = 'data:image/png;base64,' + data; await image.decode();
+      const copy = document.createElement('canvas'); copy.width=image.width; copy.height=image.height;
+      const ctx=copy.getContext('2d'); ctx.drawImage(image,0,0); return ctx;
+    }
+    const screen = await decode('${displayed}'), dom = await decode('${native}'), gl = pageRenderer.compositor.gl;
+    let pixels=0, displayError=0, nativeInk=0, nativeError=0;
+    for (const index of [0,3,7]) {
+      const range=document.createRange(); range.selectNodeContents(view.listView.get(index).dom.querySelector('.name'));
+      const r=range.getBoundingClientRect(), d=devicePixelRatio, x=Math.floor(r.left*d)-2, y=Math.floor(r.top*d)-2;
+      const w=Math.ceil(r.right*d)+2-x, h=Math.ceil(r.bottom*d)+2-y;
+      const seen=screen.getImageData(x,y,w,h).data, reference=dom.getImageData(x,y,w,h).data;
+      const framebuffer=new Uint8Array(w*h*4);
+      gl.readPixels(x,gl.drawingBufferHeight-y-h,w,h,gl.RGBA,gl.UNSIGNED_BYTE,framebuffer);
+      for (let row=0;row<h;row++) for (let col=0;col<w;col++) {
+        const a=4*(row*w+col), b=4*((h-1-row)*w+col);
+        for (let c=0;c<3;c++) {
+          displayError+=Math.abs(seen[a+c]-framebuffer[b+c]);
+          nativeError+=Math.abs(seen[a+c]-reference[a+c]);
+          nativeInk+=255-reference[a+c];
+        }
       }
       pixels+=w*h;
     }
-    return {ink, mean:difference/(3*pixels)};
+    return {nativeInk, displayError:displayError/(3*pixels), nativeError:nativeError/(3*pixels)};
   })()`);
-  assert.ok(result.ink > 500 && result.mean < 0.02, JSON.stringify(result));
+  assert.ok(result.nativeInk > 10000 && result.displayError < 0.02 && result.nativeError < 0.5, JSON.stringify(result));
 });
 
 async function evidence(api,name){if(!process.env.CANVAS_EVIDENCE_DIR)return;fs.mkdirSync(process.env.CANVAS_EVIDENCE_DIR,{recursive:true});const png=await api.call('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.CANVAS_EVIDENCE_DIR,name+'.png'),Buffer.from(png.data,'base64'));}
