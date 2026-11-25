@@ -93,7 +93,7 @@ async function browser(t) {
 
 const supported = fs.existsSync(chromium);
 const wait = async (api,expression) => { for(let i=0;i<100;i++){if(await api.js(expression))return;await delay(50)}throw Error('Condition not reached: '+expression); };
-test('overlay scrollbars share painted/input geometry and restore native viewports', { skip: !supported, timeout: 60000 }, async t => {
+test('overlay scrollbars auto-hide, retain a wider hit area and restore native viewports', { skip: !supported, timeout: 60000 }, async t => {
   const { api } = await browser(t);
   await api.call('Emulation.setDeviceMetricsOverride', { width: 1100, height: 800, deviceScaleFactor: 1, mobile: false }); await delay(400);
   await api.js(`window.ScrollRenderer=GenericRenderer;
@@ -106,7 +106,7 @@ test('overlay scrollbars share painted/input geometry and restore native viewpor
   const overlay = await geometry(); assert.equal(overlay.outer, overlay.client); assert.equal(overlay.right, overlay.canvasRight);
   const barRect = (renderer,element,axis,thumb=false) => api.js(`(()=>{const r=${renderer},measurement=r.scrollbars.measurements.find(m=>m.controls.element===${element}),bar=measurement.bars.find(b=>b.axis===${JSON.stringify(axis)}),box=bar[${JSON.stringify(thumb?'thumb':'track')}],origin=r.source.getBoundingClientRect();return {x:origin.x+box.x*r.scrollbars.scaleX,y:origin.y+box.y*r.scrollbars.scaleY,width:box.width*r.scrollbars.scaleX,height:box.height*r.scrollbars.scaleY}})()`);
   const thumb = await barRect('genericRenderer','mcloud.ui.sidebar.dom','vertical',true);
-  assert.ok(await api.js(`(()=>{const gl=genericRenderer.canvas.getContext('webgl'),s=mcloud.ui.sidebar.dom,r=s.getBoundingClientRect(),p=new Uint8Array(4);gl.readPixels(Math.floor(${thumb.x + thumb.width / 2}-r.x),gl.drawingBufferHeight-1-Math.floor(${thumb.y + thumb.height / 2}-r.y),1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);return p[3]>0})()`), 'The actual hit thumb center is painted on the GPU');
+  assert.equal(thumb.width, 6);
   async function drag(r, dx, dy, touch = false, cancel = false) {
     const x = r.x + r.width / 2, y = r.y + r.height / 2;
     if (touch) await api.call('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
@@ -136,8 +136,8 @@ test('overlay scrollbars share painted/input geometry and restore native viewpor
   await api.call('Emulation.setDeviceMetricsOverride', { width: 1100, height: 800, deviceScaleFactor: 1, mobile: false }); await delay(400); await delay(250);
   const beforeCollapse = await barRect('genericRenderer','mcloud.ui.sidebar.dom','vertical',true);
   await api.call('Input.dispatchMouseEvent', { type: 'mousePressed', x: beforeCollapse.x + beforeCollapse.width / 2, y: beforeCollapse.y + beforeCollapse.height / 2, button: 'left', buttons: 1, clickCount: 1 });
-  await api.js("mcloud.ui.sidebar.dom.style.height='0px'"); await delay(150);
-  assert.equal(await api.js('genericRenderer.scrollbars.measurements.length'), 0, 'Collapsed viewport hides stale controls and releases capture');
+  await api.js("mcloud.ui.sidebar.dom.style.height='0px'");
+  await wait(api,'mcloud.ui.sidebar.dom.clientHeight===0 && genericRenderer.scrollbars.measurements.length===0 && !genericRenderer.scrollbars.dragging');
   await api.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: beforeCollapse.x + beforeCollapse.width / 2, y: beforeCollapse.y + beforeCollapse.height / 2, button: 'left', buttons: 0, clickCount: 1 });
   await api.js('mcloud.ui.sidebar.dom.style.removeProperty("height")'); await delay(150);
   assert.ok((await barRect('genericRenderer','mcloud.ui.sidebar.dom','vertical')).height > 0);
@@ -153,8 +153,25 @@ test('overlay scrollbars share painted/input geometry and restore native viewpor
   await api.js(`document.querySelector('#sidebar-header').setAttribute('data-canvas-blur',headerBlur)`);
 
   await api.js(`const host=document.createElement('section');Object.assign(host.style,{position:'fixed',left:'500px',top:'30px',width:'320px',height:'320px',zIndex:'1000'});const source=document.createElement('article');Object.assign(source.style,{position:'absolute',inset:'0',overflow:'auto',scrollbarWidth:'thin'});source.setAttribute('data-canvas-scrollbar','overlay');source.innerHTML='<div style="width:800px;height:80px;background:#adf">Horizontal content <button id="normal-action">Normal action</button></div>';host.append(source);document.body.append(host);window.scrollHost=host;window.scrollSource=source;window.genericClicks=[];source.addEventListener('click',()=>genericClicks.push('row'));window.scrollRenderer=new ScrollRenderer(source,host)`); await delay(300);
-  await drag(await barRect('scrollRenderer','scrollSource','horizontal',true), 120, 0); assert.ok(await api.js('scrollSource.scrollLeft>100 && scrollSource.scrollTop===0')); assert.deepEqual(await api.js('genericClicks'), []);
-  await api.js('scrollSource.scrollLeft=0;barDocumentClicks=0');await delay(100);
+  const horizontalThumb = await barRect('scrollRenderer','scrollSource','horizontal',true);
+  assert.equal(horizontalThumb.height, 6);
+  const bars = 'scrollRenderer.scrollbars.paint.get(scrollSource)';
+  assert.equal(await api.js(`Boolean(${bars}?.length)`), false, 'Initially hidden');
+  const edge = {x:horizontalThumb.x+horizontalThumb.width/2, y:horizontalThumb.y+0.5};
+  await api.call('Input.dispatchMouseEvent',{type:'mouseMoved',...edge});
+  await wait(api, `${bars}?.some(layer=>layer.rect.height===4 && layer.rect.y===scrollSource.clientHeight-5)`);
+  await delay(1100);
+  assert.ok(await api.js(`${bars}?.length`), 'Hover in the unpainted margin keeps the scrollbar visible');
+  await api.call('Input.dispatchMouseEvent',{type:'mouseMoved',x:edge.x,y:edge.y-12});
+  await wait(api, `!${bars}?.length`);
+
+  await drag({...horizontalThumb, y:horizontalThumb.y + 0.5, height:0}, 120, 0);
+  assert.ok(await api.js('scrollRenderer.scrollbars.paint.get(scrollSource)?.some(layer => layer.rect.height===4)'));  assert.ok(await api.js('scrollSource.scrollLeft>100 && scrollSource.scrollTop===0')); assert.deepEqual(await api.js('genericClicks'), []);
+  await api.call('Input.dispatchMouseEvent',{type:'mouseMoved',x:edge.x,y:edge.y-12});
+  await wait(api, `!${bars}?.length`);
+  await api.js('scrollSource.scrollLeft=0;barDocumentClicks=0');
+  await wait(api, `${bars}?.length`);
+  await wait(api, `!${bars}?.length`);
   const ordinary=await api.js('(()=>{const r=document.querySelector("#normal-action").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()');
   for(const type of ['mousePressed','mouseReleased'])await api.call('Input.dispatchMouseEvent',{type,...ordinary,button:'left',buttons:type==='mousePressed'?1:0,clickCount:1});
   assert.equal(await api.js('genericClicks.length'),1,'The next ordinary click is not swallowed');

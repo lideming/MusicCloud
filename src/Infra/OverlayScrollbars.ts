@@ -3,7 +3,9 @@ import { PaintRect } from "./CanvasPaint";
 import { intersect } from "./DOMPaintTree";
 
 const declaration = '[data-canvas-scrollbar="overlay"]';
-const thickness = 8;
+const hitThickness = 6;
+const paintThickness = 4;
+const hideDelay = 1000;
 interface Bar {
   axis: "vertical" | "horizontal";
   track: PaintRect;
@@ -14,6 +16,8 @@ interface Bar {
 }
 interface Controls {
   element: HTMLElement;
+  visible: boolean;
+  timer?: number;
   styleAbsent: boolean;
   styles: { name: string; value: string; priority: string; owned: string }[];
   bars: Map<Bar["axis"], Bar>;
@@ -30,6 +34,7 @@ export class OverlayScrollbars {
   private measurements: Measurement[] = [];
   readonly paint = new Map<HTMLElement, CanvasLayer[]>();
   private suspended = false;
+  private hovered?: Controls;
   private completedPointer: number | undefined;
   private scaleX = 1;
   private scaleY = 1;
@@ -41,6 +46,11 @@ export class OverlayScrollbars {
       source.addEventListener(name, fn, { capture: true, passive: false });
       this.cleanup.push(() => source.removeEventListener(name, fn, true));
     };
+    listen("scroll", event => {
+      const controls = this.controls.get(event.target as HTMLElement);
+      if (controls && !this.suspended) this.show(controls);
+    });
+    listen("pointerleave", event => { if (event.target === source || event.target === this.hovered?.element) this.setHovered(undefined); });
     listen("pointerdown", event => {
       const pointer = event as PointerEvent;
       this.completedPointer = undefined;
@@ -51,16 +61,26 @@ export class OverlayScrollbars {
       const length = hit.bar.axis === "vertical" ? hit.bar.thumb.height : hit.bar.thumb.width;
       const thumb = point >= start && point <= start + length;
       this.dragging = { controls: hit.controls, axis: hit.bar.axis, pointer: pointer.pointerId, grab: thumb ? (point-start)/length : .5 };
+      this.show(hit.controls);
       source.setPointerCapture(pointer.pointerId);
       if (!thumb) this.move(point);
     });
     listen("pointermove", event => {
-      const pointer = event as PointerEvent; if (pointer.pointerId !== this.dragging?.pointer) return;
+      const pointer = event as PointerEvent;
+      if (!this.dragging) {
+        if (pointer.pointerType === "mouse") this.setHovered(this.hit(pointer.target, pointer.clientX, pointer.clientY)?.controls);
+        return;
+      }
+      if (pointer.pointerId !== this.dragging.pointer) return;
       pointer.preventDefault(); pointer.stopImmediatePropagation(); this.move(this.coordinate(pointer, this.dragging.axis));
     });
     for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) listen(name, event => {
       const pointer = event as PointerEvent; if (pointer.pointerId !== this.dragging?.pointer) return;
-      pointer.preventDefault(); pointer.stopImmediatePropagation(); this.finish();
+      pointer.preventDefault(); pointer.stopImmediatePropagation();
+      const underMouse = name === "pointerup" && pointer.pointerType === "mouse" ? document.elementFromPoint(pointer.clientX, pointer.clientY) : null;
+      this.setHovered(underMouse ? this.hit(underMouse, pointer.clientX, pointer.clientY)?.controls : undefined);
+      const controls = this.dragging.controls;
+      this.finish(); this.show(controls);
       if (name === "pointerup") this.completedPointer = pointer.pointerId;
     });
     listen("keydown", () => { this.completedPointer = undefined; });
@@ -80,6 +100,25 @@ export class OverlayScrollbars {
       }
     });
     try { this.sync(); } catch (error) { this.dispose(); throw error; }
+  }
+  private setHovered(controls?: Controls) {
+    if (this.hovered === controls) return;
+    const previous = this.hovered;
+    this.hovered = controls;
+    if (previous) this.show(previous);
+    if (controls) this.show(controls);
+  }
+  private show(controls: Controls) {
+    if (!controls.visible) { controls.visible = true; this.changed(); }
+    clearTimeout(controls.timer);
+    if (controls !== this.hovered && controls !== this.dragging?.controls) {
+      controls.timer = window.setTimeout(() => { controls.visible = false; this.changed(); }, hideDelay);
+    }
+  }
+  private resetVisibility(controls: Controls) {
+    clearTimeout(controls.timer);
+    controls.visible = false;
+    if (this.hovered === controls) this.hovered = undefined;
   }
   private coordinate(event: MouseEvent, axis: Bar["axis"]) {
     const rect = this.source.getBoundingClientRect();
@@ -105,7 +144,7 @@ export class OverlayScrollbars {
     else this.source.querySelectorAll<HTMLElement>(declaration).forEach(element => next.add(element));
     for (const [element, controls] of this.controls) if (!next.has(element)) this.remove(controls);
     for (const element of next) if (!this.controls.has(element)) {
-      const controls: Controls = { element, styleAbsent: !element.hasAttribute("style"),
+      const controls: Controls = { element, visible: false, styleAbsent: !element.hasAttribute("style"),
         styles: [["scrollbar-width", "none"], ["scrollbar-gutter", "auto"]].map(([name, owned]) => ({ name, owned, value: element.style.getPropertyValue(name), priority: element.style.getPropertyPriority(name) })),
         bars: new Map() };
       this.controls.set(element, controls);
@@ -154,23 +193,27 @@ export class OverlayScrollbars {
           const thumb = axis === "vertical" ? { ...track, y: track.y + position, height: thumbLength } : { ...track, x: track.x + position, width: thumbLength };
           bars.push({ axis, track, thumb, range, travel, rtl });
         };
-        if (hasY) make("vertical", { x: view.x + view.width - thickness, y: view.y, width: thickness, height: Math.max(0, view.height - (hasX ? thickness : 0)) }, vertical, element.clientHeight, element.scrollHeight, element.scrollTop);
-        if (hasX) make("horizontal", { x: view.x, y: view.y + view.height - thickness, width: Math.max(0, view.width - (hasY ? thickness : 0)), height: thickness }, horizontal, element.clientWidth, element.scrollWidth, s.direction === "rtl" ? horizontal + element.scrollLeft : element.scrollLeft, s.direction === "rtl");
+        if (hasY) make("vertical", { x: view.x + view.width - hitThickness, y: view.y, width: hitThickness, height: Math.max(0, view.height - (hasX ? hitThickness : 0)) }, vertical, element.clientHeight, element.scrollHeight, element.scrollTop);
+        if (hasX) make("horizontal", { x: view.x, y: view.y + view.height - hitThickness, width: Math.max(0, view.width - (hasY ? hitThickness : 0)), height: hitThickness }, horizontal, element.clientWidth, element.scrollWidth, s.direction === "rtl" ? horizontal + element.scrollLeft : element.scrollLeft, s.direction === "rtl");
       }
+      controls.bars = new Map(bars.map(bar => [bar.axis, bar]));
+      if (!bars.length) { this.resetVisibility(controls); continue; }
+      this.measurements.push({ controls, clip, bars });
+      if (!controls.visible) continue;
       const colors = s.getPropertyValue("scrollbar-color").match(/rgba?\([^)]*\)/g) ?? [];
       const color = (value: string | undefined, fallback: number[]) => { const parts = value?.match(/[\d.]+/g)?.map(Number); return parts ? [parts[0] / 255, parts[1] / 255, parts[2] / 255, parts[3] ?? 1] : fallback; };
       const thumbColor = color(colors[0], [0.5, 0.5, 0.5, 0.65]), trackColor = color(colors[1], [0, 0, 0, 0]);
-      this.measurements.push({ controls, clip, bars });
-      controls.bars = new Map(bars.map(bar => [bar.axis, bar]));
       const painted: CanvasLayer[] = []; this.paint.set(element, painted);
       for (const bar of bars) for (const [rect, rgba] of [[bar.track, trackColor], [bar.thumb, thumbColor]] as [PaintRect, number[]][]) {
-        const visible = intersect(rect, clip);
+        const inset = (hitThickness - paintThickness) / 2;
+        const ink = bar.axis === "vertical" ? { ...rect, x: rect.x + inset, width: paintThickness } : { ...rect, y: rect.y + inset, height: paintThickness };
+        const visible = intersect(ink, clip);
         if (visible.width && visible.height && rgba[3]) { const layer: CanvasLayer = { kind: "solid", rect: visible, color: [rgba[0], rgba[1], rgba[2], rgba[3] * (this.scopedPaint ? 1 : opacity)] }; layers.push(layer); painted.push(layer); }
       }
     }
     return layers;
   }
-  hide() { this.finish(); this.measurements = []; this.paint.clear(); }
+  hide() { this.finish(); this.controls.forEach(c => this.resetVisibility(c)); this.measurements = []; this.paint.clear(); }
   private move(point: number) {
     const drag = this.dragging; if (!drag) return;
     const bar = drag.controls.bars.get(drag.axis); if (!bar || !bar.travel) return;
@@ -186,6 +229,7 @@ export class OverlayScrollbars {
   }
   private remove(controls: Controls) {
     if (this.dragging?.controls === controls) this.finish();
+    this.resetVisibility(controls);
     this.sizes.unobserve(controls.element);
     this.restore(controls);
     this.controls.delete(controls.element);
