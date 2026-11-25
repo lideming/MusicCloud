@@ -48,7 +48,7 @@ export class DOMCanvasRenderer {
   constructor(readonly source: HTMLElement, readonly shell: HTMLElement, private options: { autoScrollbars?: boolean } = {}) {
     this.canvas.className = "dom-canvas";
     this.canvas.setAttribute("aria-hidden", "true");
-    Object.assign(this.canvas.style, { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", pointerEvents: "none" });
+    Object.assign(this.canvas.style, { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", transformOrigin: "0 0", pointerEvents: "none" });
     this.compositor = new CanvasCompositor(this.canvas);
     this.editing = new DOMTextEditing(source, () => this.editingChanged());
     this.images = new PaintImages(url => {
@@ -355,7 +355,12 @@ export class DOMCanvasRenderer {
         return r.width > 0 && r.height > 0 && r.bottom > origin.top && r.top < origin.bottom && r.right > origin.left && r.left < origin.right;
       });
       this.compositor.resize(width, height, dpr);
-      Object.assign(this.canvas.style, { left: `${canvasLeft}px`, top: `${canvasTop}px`, width: `${this.canvas.width / dpr}px`, height: `${this.canvas.height / dpr}px` });
+      // A composited canvas layer can round a fractional CSS box to whole CSS
+      // pixels before mapping the framebuffer. Keep the layout box integral
+      // and apply the backing's fractional edge padding in the final transform.
+      const displayScaleX = this.canvas.width / (width * dpr), displayScaleY = this.canvas.height / (height * dpr);
+      Object.assign(this.canvas.style, { left: `${canvasLeft}px`, top: `${canvasTop}px`, width: `${width}px`, height: `${height}px`,
+        transform: displayScaleX === 1 && displayScaleY === 1 ? "none" : `scale(${displayScaleX}, ${displayScaleY})` });
       for (const [element, snapshot] of snapshots) {
         const old = this.resources.get(element); if (old) this.compositor.remove(old.texture);
         const canvas = rasterPaint({ ...snapshot, shadow: undefined }, dpr);

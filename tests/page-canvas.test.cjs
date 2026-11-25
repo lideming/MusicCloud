@@ -192,6 +192,35 @@ test('one page scene paints the real application background, header, list and pl
 
 });
 
+test('displayed playlist text preserves framebuffer pixels at fractional viewport extents', {skip:!supported,timeout:60000}, async t => {
+  const {api} = await browser(t);
+  await api.call('Emulation.setDeviceMetricsOverride', {width:1201,height:850,deviceScaleFactor:1.25,mobile:false});
+  await wait(api, 'pageRenderer.canvas.width===1502 && pageRenderer.canvas.height===1063');
+  const shot = await api.call('Page.captureScreenshot', {format:'png'});
+  const result = await api.js(`(async () => {
+    const image = new Image(); image.src = 'data:image/png;base64,${shot.data}'; await image.decode();
+    const copy = document.createElement('canvas'); copy.width = image.width; copy.height = image.height;
+    const ctx = copy.getContext('2d'); ctx.drawImage(image, 0, 0);
+    const gl = pageRenderer.compositor.gl;
+    let ink = 0, difference = 0, pixels = 0;
+    for (const i of [0, 3, 7]) {
+      const row = view.listView.get(i).dom, r = row.getBoundingClientRect();
+      const x = Math.ceil((r.left + 72) * devicePixelRatio), y = Math.ceil((r.top + 3) * devicePixelRatio);
+      const w = Math.floor((r.width - 84) * devicePixelRatio), h = Math.floor((r.height - 6) * devicePixelRatio);
+      const displayed = ctx.getImageData(x, y, w, h).data, drawn = new Uint8Array(w*h*4);
+      gl.readPixels(x, gl.drawingBufferHeight-y-h, w, h, gl.RGBA, gl.UNSIGNED_BYTE, drawn);
+      for (let j=0;j<h;j++) for (let k=0;k<w;k++) {
+        const a=(j*w+k)*4, b=((h-1-j)*w+k)*4;
+        if (drawn[b]<128) ink++;
+        for(let c=0;c<3;c++) difference+=Math.abs(displayed[a+c]-drawn[b+c]);
+      }
+      pixels+=w*h;
+    }
+    return {ink, mean:difference/(3*pixels)};
+  })()`);
+  assert.ok(result.ink > 500 && result.mean < 0.02, JSON.stringify(result));
+});
+
 async function evidence(api,name){if(!process.env.CANVAS_EVIDENCE_DIR)return;fs.mkdirSync(process.env.CANVAS_EVIDENCE_DIR,{recursive:true});const png=await api.call('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.CANVAS_EVIDENCE_DIR,name+'.png'),Buffer.from(png.data,'base64'));}
 
 test('page dialogs and context menus paint with Canvas input, selection and renderer preference continuity', {skip:!supported,timeout:60000},async t=>{
