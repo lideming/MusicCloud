@@ -139,7 +139,8 @@ test('overlay scrollbars auto-hide, retain a wider hit area and restore native v
   await api.js("mcloud.ui.sidebar.dom.style.height='0px'");
   await wait(api,'mcloud.ui.sidebar.dom.clientHeight===0 && genericRenderer.scrollbars.measurements.length===0 && !genericRenderer.scrollbars.dragging');
   await api.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: beforeCollapse.x + beforeCollapse.width / 2, y: beforeCollapse.y + beforeCollapse.height / 2, button: 'left', buttons: 0, clickCount: 1 });
-  await api.js('mcloud.ui.sidebar.dom.style.removeProperty("height")'); await delay(150);
+  await api.js('mcloud.ui.sidebar.dom.style.removeProperty("height")');
+  await wait(api, 'genericRenderer.scrollbars.measurements.some(m => m.controls.element === mcloud.ui.sidebar.dom)');
   assert.ok((await barRect('genericRenderer','mcloud.ui.sidebar.dom','vertical')).height > 0);
   await api.js('genericRenderer.dispose()');
   const disposed = await geometry(); assert.equal(disposed.outer - disposed.client, 10); assert.equal(disposed.opacity, '1'); assert.equal(disposed.controls, 0); assert.equal(disposed.declaration, 'overlay'); assert.equal(disposed.style, native.style, 'Authored inline values/priorities survive takeover');

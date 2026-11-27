@@ -255,9 +255,22 @@ export class DOMCanvasRenderer {
       const origin = this.source.getBoundingClientRect(), host = this.shell.getBoundingClientRect();
       // Source and output inherit the host's translation/scale together. DOM
       // client rects already include it; paint placements must stay host-local.
-      const hostSize = readPaintSize(this.shell), scaleX = host.width / hostSize.width || 1, scaleY = host.height / hostSize.height || 1;
-      const left = (origin.x - host.x) / scaleX, top = (origin.y - host.y) / scaleY;
-      const width = this.source.clientWidth, height = this.source.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const hostBasis = readBasis(this.shell);
+      const hostSize = isAxisAligned(hostBasis) ? null : readPaintSize(this.shell);
+      const scaleX = hostSize ? host.width / hostSize.width || 1 : hostBasis.a;
+      const scaleY = hostSize ? host.height / hostSize.height || 1 : hostBasis.d;
+      const page = this.source === document.body;
+      // The fixed page host measures the viewport without clientWidth's CSS-pixel rounding.
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const viewportExtent = (size: number) => {
+        const aligned = Math.round(size * dpr) / dpr;
+        // DOMRect stores these native coordinates as floats (e.g. 1201.5999756).
+        // Edge can report the adjacent float after converting device pixels
+        // to CSS pixels. Allow one float's relative precision on either side.
+        return Math.abs(aligned - size) <= size * 2 ** -23 ? aligned : size;
+      };
+      const width = page ? viewportExtent(host.width / scaleX) : this.source.clientWidth;
+      const height = page ? viewportExtent(host.height / scaleY) : this.source.clientHeight;
       if (!width || !height) {
         this.canvas.style.width = this.canvas.style.height = "0px";
         this.scrollbars?.hide();
@@ -356,9 +369,8 @@ export class DOMCanvasRenderer {
         return r.width > 0 && r.height > 0 && r.bottom > origin.top && r.top < origin.bottom && r.right > origin.left && r.left < origin.right;
       });
       this.compositor.resize(width, height, dpr);
-      // A composited canvas layer can round a fractional CSS box to whole CSS
-      // pixels before mapping the framebuffer. Keep the layout box integral
-      // and apply the backing's fractional edge padding in the final transform.
+      // Native viewport edges on the device grid need no CSS transform. For a
+      // partial final texel, display the allocated extent without squeezing it.
       const displayScaleX = this.canvas.width / (width * dpr), displayScaleY = this.canvas.height / (height * dpr);
       Object.assign(this.canvas.style, { left: `${canvasLeft}px`, top: `${canvasTop}px`, width: `${width}px`, height: `${height}px`,
         transform: displayScaleX === 1 && displayScaleY === 1 ? "none" : `scale(${displayScaleX}, ${displayScaleY})` });
@@ -404,7 +416,7 @@ export class DOMCanvasRenderer {
             const right = Math.max(quad.x,quad.x+quad.ax,quad.x+quad.bx,quad.x+quad.ax+quad.bx), bottom = Math.max(quad.y,quad.y+quad.ay,quad.y+quad.by,quad.y+quad.ay+quad.by);
             return { ...placement, texture, flip: !!s.filter, quad, rect: {x,y,width:right-x,height:bottom-y} };
           }
-          const sx = s.layoutWidth ? placement.rect.width / s.layoutWidth : 1, sy = s.layoutHeight ? placement.rect.height / s.layoutHeight : 1;
+          const sx = basis.a / scaleX, sy = basis.d / scaleY;
           let x = placement.rect.x + s.offsetX * sx, y = placement.rect.y + s.offsetY * sy;
           // Keep cached, unscaled texels on the output pixel grid. Intentional
           // CSS scaling retains its geometry and LINEAR texture sampling.

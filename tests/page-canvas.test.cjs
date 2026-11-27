@@ -38,7 +38,7 @@ class CDP {
   }
 }
 
-async function browser(t) {
+async function browser(t, launchArgs = []) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'musiccloud-canvas-'));
   const requests = [];
   const wav = Buffer.alloc(44 + 8000 * 120, 128);
@@ -72,7 +72,7 @@ async function browser(t) {
     fs.createReadStream(file).pipe(res);
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const proc = spawn(chromium, ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required', '--remote-debugging-port=0', `--user-data-dir=${directory}/profile`, 'about:blank']);
+  const proc = spawn(chromium, ['--headless=new', ...launchArgs, '--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required', '--remote-debugging-port=0', `--user-data-dir=${directory}/profile`, 'about:blank']);
   let log = '', api;
   t.after(async () => {
     if (api) { try { await api.call('Browser.close'); } catch {} api.ws.close(); }
@@ -90,7 +90,7 @@ async function browser(t) {
   api = new CDP(pages.find(page => page.type === 'page').webSocketDebuggerUrl);
   await api.call('Page.enable'); await api.call('Runtime.enable'); await api.call('Network.enable');
   await api.call('Network.setBypassServiceWorker', { bypass: true });
-  await api.call('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
+  if (!launchArgs.length) await api.call('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
   await api.call('Page.addScriptToEvaluateOnNewDocument', {source:`window.canvasWarnings=[];window.canvasErrors=[];addEventListener('error',e=>canvasErrors.push(String(e.error?.stack||e.message)));addEventListener('unhandledrejection',e=>canvasErrors.push(String(e.reason?.stack||e.reason)));const warn=console.warn;console.warn=(...args)=>{canvasWarnings.push(args.map(x=>String(x)).join(' '));warn(...args)}`});
   await api.call('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/` });
   for (let i = 0; i < 100; i++) { if (await api.js('Boolean(window.mcloud?.listIndex.section)')) break; if (i === 99) throw Error('App initialization timeout'); await delay(100); }
@@ -196,9 +196,23 @@ test('displayed playlist text preserves framebuffer pixels at fractional viewpor
   const {api} = await browser(t);
   await api.call('Emulation.setDeviceMetricsOverride', {width:1201,height:850,deviceScaleFactor:1.25,mobile:false});
   await wait(api, 'pageRenderer.canvas.width===1502 && pageRenderer.canvas.height===1063');
+  await compareDisplayedTitles(api);
+});
+
+test('native 125% device scale retains sharp playlist text at a fractional CSS viewport width', {skip:!supported, timeout:60000}, async t => {
+  const {api} = await browser(t, ['--force-device-scale-factor=1.25', '--window-size=1199,851']);
+  const size = await api.js(`({css:pageRenderer.shell.getBoundingClientRect().width, pixels:pageRenderer.canvas.width, cssHeight:pageRenderer.shell.getBoundingClientRect().height, pixelHeight:pageRenderer.canvas.height, dpr:devicePixelRatio})`);
+  assert.equal(size.dpr, 1.25);
+  assert.ok(Math.abs(size.css - Math.round(size.css)) > .1, JSON.stringify(size));
+  assert.equal(size.pixels, Math.round(size.css*size.dpr));
+  assert.equal(size.pixelHeight, Math.round(size.cssHeight*size.dpr));
+  await compareDisplayedTitles(api);
+});
+
+async function compareDisplayedTitles(api) {
   const capture = async () => (await api.call('Page.captureScreenshot', {format:'png'})).data;
   const displayed = await capture();
-  await api.js(`pageRenderer.canvas.style.visibility='hidden';document.body.removeAttribute('data-canvas-rendered')`);
+  await api.js(`document.head.appendChild(document.createElement('style')).textContent='html [data-canvas-rendered]{opacity:1!important}.page-canvas-host{visibility:hidden!important}'`);
   const native = await capture();
   const result = await api.js(`(async () => {
     async function decode(data) {
@@ -228,7 +242,7 @@ test('displayed playlist text preserves framebuffer pixels at fractional viewpor
     return {nativeInk, displayError:displayError/(3*pixels), nativeError:nativeError/(3*pixels)};
   })()`);
   assert.ok(result.nativeInk > 10000 && result.displayError < 0.02 && result.nativeError < 0.5, JSON.stringify(result));
-});
+}
 
 async function evidence(api,name){if(!process.env.CANVAS_EVIDENCE_DIR)return;fs.mkdirSync(process.env.CANVAS_EVIDENCE_DIR,{recursive:true});const png=await api.call('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(process.env.CANVAS_EVIDENCE_DIR,name+'.png'),Buffer.from(png.data,'base64'));}
 
@@ -296,7 +310,9 @@ test('one scene updates real player, background video and Canvas without reraste
   await click(api,await point(api,'playerBar.btnFullscreen.dom'));await wait(api,'document.fullscreenElement===document.documentElement');
   assert.equal(await api.js('document.body.hasAttribute("data-canvas-rendered") && pageRenderer===mcloud.ui.pageCanvas.renderer && document.querySelectorAll(".page-canvas").length===1'),true,'The actual video fullscreen button retains the same App Canvas inside documentElement');
   await api.js('document.exitFullscreen()');await wait(api,'!document.fullscreenElement && document.body.hasAttribute("data-canvas-rendered")');
-  await api.js('mcloud.playerCore.pause()');await delay(300);
+  await api.js('mcloud.playerCore.pause()');
+  // Fullscreen exit, the last video frame and the final timeupdate can arrive after pause.
+  await wait(api, `mcloud.playerCore.audio.paused && new Promise(resolve=>{const frames=pageRenderer.stats.frames;setTimeout(()=>resolve(frames===pageRenderer.stats.frames),350)})`);
   const idle=await api.js('({...pageRenderer.stats})');await delay(250);assert.deepEqual(await api.js('({...pageRenderer.stats})'),idle,'Paused video and unchanged page stop scheduling paints');
   await api.js(`mcloud.playerCore.setTrack(list.tracks[0]);window.effectCanvas=document.createElement('canvas');effectCanvas.width=100;effectCanvas.height=40;effectCanvas.style.cssText='position:fixed;left:450px;top:200px;width:100px;height:40px;z-index:9000';document.body.append(effectCanvas);const c=effectCanvas.getContext('2d');c.fillStyle='red';c.fillRect(0,0,100,40);effectCanvas.dispatchEvent(new Event('canvas-content-changed',{bubbles:true}))`);await delay(150);
   const red=await api.js('scenePixel(pageRenderer,470,220)');await api.js(`effectCanvas.getContext('2d').fillStyle='blue';effectCanvas.getContext('2d').fillRect(0,0,100,40);effectCanvas.dispatchEvent(new Event('canvas-content-changed',{bubbles:true}))`);await delay(150);
@@ -400,6 +416,7 @@ test('ordinary lyrics and search routes share the page scene across theme, DPR a
   await api.js('mcloud.ui.sidebar.toggleHide(true)');await delay(400);
   await api.call('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
   const touch=async(type,x,y)=>api.call('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'?[]:[{id:0,x,y,radiusX:4,radiusY:4,force:1}]});
+  await wait(api, 'mcloud.ui.content.container.dom.contains(document.elementFromPoint(24,260))');
   await touch('touchStart',24,260);await touch('touchMove',49,264);await delay(150);
   await api.js(`window.panReads=0;window.panStyle=getComputedStyle;window.getComputedStyle=function(...args){panReads++;return panStyle.apply(this,args)};window.panCache=new Map([...pageRenderer.resources].filter(([e])=>e.classList.contains('trackitem')).map(([e,r])=>[e,r.canvas]))`);
   for(let x=74;x<=299;x+=25){await touch('touchMove',x,264);await delay(60)}
